@@ -1,0 +1,2573 @@
+<!doctype html>
+<html lang="en" data-hub-lab="36-partitioning-and-rebalancing">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>36. partitioning-and-rebalancing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 36 of 71 · Stage 5</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 36 · Copies and Agreement</p><article id="readme"><h1 id="readme-partitioning--rebalancing">Partitioning &amp; Rebalancing</h1>
+<p><em>One dataset, many machines — and the day the set of machines changes.</em></p>
+<blockquote>
+<p><strong>Lab format</strong> (no-code): this document + <a href="visualization.html"><code>visualization.html</code></a>
+(interactive simulator, also published as an artifact) + <a href="notes.html#exercises"><code>EXERCISES.md</code></a>
+/ <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Everything here is demonstrated by hand-worked
+traces, by the simulator, or by a measured result cited from a prior lab —
+never by code you have to run.</p>
+</blockquote>
+<blockquote>
+<p><strong>Where you are:</strong> you already know <em>how to hash a key onto a machine</em> from the
+<a href="../35-consistent-hashing/notes.html#readme">consistent-hashing lab</a> — the ring, virtual nodes,
+fixed slots, and the measured disaster of <code>hash(key) % n</code>. That lab ended with
+an honest confession: <em>&quot;the ring is a pure placement function; it says where
+things belong and moves nothing — joining a node is a separate throttled
+streaming operation with its own state machine.&quot;</em> <strong>This lab is that state
+machine</strong>, plus everything the placement function alone can't answer: how to
+draw the boundaries in the first place (by key order, not just by hash), what
+happens when the data or the traffic is lopsided, how queries <em>find</em> their
+partition, and how a piece of a live database physically moves from one
+machine to another without dropping a single write.</p>
+</blockquote>
+<hr />
+<h2 id="readme-layer-guide">Layer guide</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Stages</th>
+  <th>What you can do afterwards</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>BEGINNER MODEL</strong></td>
+  <td>1–9</td>
+  <td>Explain why data gets split, why splitting evenly is hard, and what &quot;rebalancing&quot; means</td>
+</tr>
+<tr>
+  <td><strong>INTERMEDIATE MODEL</strong></td>
+  <td>10</td>
+  <td>Choose a partitioning scheme and a rebalancing strategy for a given workload, describe the migration protocol step by step, price a change to the partition count, and say where a partition is allowed to live</td>
+</tr>
+<tr>
+  <td><strong>ENGINEERING MODEL</strong></td>
+  <td>11–12</td>
+  <td>Predict the nine failure modes — including the three that present as silence — name the invariants, and say what each design trades away</td>
+</tr>
+<tr>
+  <td><strong>PRODUCTION MODEL</strong></td>
+  <td>13</td>
+  <td>Map all of it onto Kafka, Cassandra, HBase, CockroachDB, DynamoDB, Elasticsearch — and know what to monitor</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-1-why--the-problem-nobody-can-dodge">1. WHY — the problem nobody can dodge</h2>
+<p>Every system you've studied so far in these labs quietly assumed the data fits
+on the machines you have. Eventually it doesn't: the dataset grows past one
+machine's disk, or — usually first — the <em>traffic</em> grows past one machine's
+CPU and network. Replication (the <a href="../34-quorums-and-replication/notes.html#readme">quorums-and-replication lab</a>)
+doesn't rescue you: replication makes <strong>more copies of everything</strong>, which
+helps reads and survives crashes but does nothing when <em>everything</em> is too big,
+and nothing at all for write traffic — every replica still receives every write.</p>
+<p>So you must <strong>split</strong> the data: each machine holds only a piece. The moment you
+split, three questions appear that never existed before, and each one has a
+famous way of going wrong:</p>
+<ol>
+<li><strong>Where does each record live?</strong> Draw the boundaries badly and one machine
+does all the work while the others idle.</li>
+<li><strong>How does a query find its record?</strong> Route badly and every query interrogates
+every machine.</li>
+<li><strong>What happens when the set of machines changes?</strong> Handle growth badly and
+adding capacity — the thing you did to make the system healthier — triggers
+a self-inflicted outage while terabytes shuffle between nodes.</li>
+</ol>
+<p>Question 3 is the one that separates toy designs from real ones. In the
+consistent-hashing lab the cost of getting it wrong was a cache miss storm that
+healed in a minute. Here the data is the <strong>source of truth</strong>: what moves is not
+re-fetchable cache entries but the only authoritative copy, the move takes hours
+at disk-and-network speed, and writes keep arriving <em>while</em> it moves.</p>
+<hr />
+<h2 id="readme-2-the-problem--meeras-library-outgrows-its-building">2. THE PROBLEM — Meera's library outgrows its building</h2>
+<p>Meera runs the public library in the town of Deodar (the same town whose
+noticeboards taught you eventual consistency). The collection has grown to
+60,000 books and the building holds 20,000. The town council gives her two more
+buildings across town.</p>
+<p>Now every book needs a home in exactly one building, and two kinds of people
+need to find it fast:</p>
+<ul>
+<li>A <strong>reader</strong> who wants one specific book (&quot;<em>The Cedar Gate</em> by R. Sharma&quot;)
+should walk to one building — not wander all three.</li>
+<li>A <strong>browser</strong> who wants <em>everything by one author</em> should ideally find those
+books shelved together, not scattered.</li>
+</ul>
+<p>And Meera knows the town keeps growing. A fourth building is a matter of time.
+Whatever scheme she picks today, she will one day have to <strong>re-home books while
+the library stays open</strong> — readers borrowing and returning the whole time.</p>
+<p>No jargon yet. Just: 60,000 books, 3 buildings, and a future fourth.</p>
+<hr />
+<h2 id="readme-3-the-naive-solution--split-by-the-alphabet">3. THE NAIVE SOLUTION — split by the alphabet</h2>
+<p>Meera does the obvious thing: split by author surname.</p>
+<ul>
+<li>Building 1: authors <strong>A–H</strong></li>
+<li>Building 2: authors <strong>I–Q</strong></li>
+<li>Building 3: authors <strong>R–Z</strong></li>
+</ul>
+<p>It has real virtues. Any clerk can compute a book's home in their head — no
+lookup table needed. The specific-book reader walks to one building. The
+browser is delighted: all of R. Sharma's novels stand on one shelf, in order.
+Splitting by key order keeps <em>neighbouring keys together</em>, and &quot;everything by
+one author&quot; is exactly a neighbourhood.</p>
+<hr />
+<h2 id="readme-4-the-failure--even-thirds-of-the-alphabet-are-not-even-thirds-of-anything">4. THE FAILURE — even thirds of the alphabet are not even thirds of anything</h2>
+<p>Three months in, the scheme is failing in two different ways — and telling
+them apart is the first real lesson of this lab.</p>
+<p><strong>Failure A — the counts are uneven.</strong> Surnames are not spread evenly across
+the alphabet. Building 3 (R–Z) holds 31,000 books — S alone is enormous
+(Sharma, Singh, Shah, Sen...) — while Building 2 (I–Q) holds 9,000. Building 3's
+shelves overflow while Building 2 echoes. Call this what it is: the <em>amount of
+data</em> per building is lopsided. This failure is annoying but <strong>fixable by
+redrawing the lines</strong>: nothing forced Meera to cut the alphabet into equal
+<em>letter spans</em>; she could cut it into equal <em>book counts</em> (A–G / H–R / S–Z, say).
+The boundaries should follow the data, not the alphabet.</p>
+<p><strong>Failure B — the queues are uneven, and no boundary fixes it.</strong> R. Sharma
+publishes a new novel and it becomes a phenomenon. Every day, hundreds of
+people come to borrow, return, or reserve <em>that one book</em>. They all queue at
+Building 3. Buildings 1 and 2 sit idle while Building 3's line goes around the
+block. Now watch carefully: <strong>redrawing boundaries cannot help</strong>, because all
+the demand is for a <em>single title</em> — however you cut the collection, that title
+lands somewhere, and wherever it lands drowns. Uneven <em>demand</em> is a different
+disease from uneven <em>data</em>, and it needs different medicine.</p>
+<p><strong>🔮 Predict:</strong> <em>Meera gives up on the alphabet and instead assigns each book to
+a building by rolling a die (uniformly at random, recorded in the catalog).
+Which of the two failures does this fix — A, B, or both?</em></p>
+<details><summary>Reveal</summary>
+
+<p>It fixes <strong>A completely and B not at all</strong> — and it <em>creates a third problem</em>.
+Random assignment spreads the 60,000 books almost perfectly evenly (that's what
+randomness is good at). But the Sharma novel still lives in exactly one
+building, and the whole town still queues there: one popular <em>record</em> beats any
+<em>placement</em> scheme, because every scheme agrees each record has one home — you
+met this as the hot-key result in the consistent-hashing lab, and the fix
+(splitting the record itself) comes in stage 11.</p>
+<p>The new problem: the browser is ruined. Sharma's twelve novels are now
+scattered across all three buildings at random. &quot;Everything by one author&quot; went
+from a one-shelf visit to a three-building tour. Random placement (and hashing,
+its deterministic cousin) destroys neighbourhoods.</p>
+</details>
+
+<p>And looming behind both failures is the fourth building. Recall the measured
+result from the consistent-hashing lab rather than re-deriving it: assign books
+by <code>hash(book) % number_of_buildings</code> and going from 10 buildings to 11 moved
+<strong>99.0% of all keys</strong> when only 1/11 ≈ 9% had anything to gain by moving —
+163,679 of 181,668 moved keys went <em>sideways between old buildings</em>, achieving
+nothing. For a cache that was a miss storm; for a library it is re-shelving
+essentially the entire collection to add one building.</p>
+<hr />
+<h2 id="readme-5-the-real-requirement">5. THE REAL REQUIREMENT</h2>
+<p>Strip away the story and four requirements remain. Every real partitioned
+system is a set of compromises between exactly these:</p>
+<ol>
+<li><strong>One computable home.</strong> Every record has exactly one authoritative location,
+and finding it must be cheap (a formula, or one lookup in a small table).</li>
+<li><strong>Balanced <em>load</em>, not just balanced <em>data</em>.</strong> Even byte-counts per machine
+is necessary but not sufficient; the requests per second must spread too.</li>
+<li><strong>Queries touch few pieces.</strong> The common query shapes — point lookup,
+&quot;everything in this key range&quot; — should hit one piece, or few.</li>
+<li><strong>Cheap, safe change.</strong> Adding or removing a machine must move roughly
+<code>1/n</code>-th of the data (the minimum that accomplishes anything), only <em>to or
+from the changed machine</em>, throttled, and <strong>without ever losing a write or
+serving from a half-copied piece</strong> while the library stays open.</li>
+</ol>
+<p>Requirement 4 is where this lab earns its second noun. Requirements 1–3 are
+about <em>partitioning</em>; requirement 4 is <em>rebalancing</em>.</p>
+<hr />
+<h2 id="readme-6-the-key-idea">6. THE KEY IDEA</h2>
+<p>Two sentences generate everything that follows:</p>
+<blockquote>
+<p><strong>Cut the data into many more pieces than you have machines — choosing the
+cut to match your queries (by key order, or by hash) — and make the <em>piece</em>,
+never the record, the unit of ownership and movement.</strong></p>
+<p><strong>Then &quot;rebalancing&quot; stops being a re-shuffle of records and becomes two
+smaller, tractable problems: <em>reassigning whole pieces</em> to machines, and a
+careful <em>handover protocol</em> that moves one piece while it keeps serving.</strong></p>
+</blockquote>
+<p>Meera's version: put every book on a <strong>wheeled shelf</strong> of manageable size, keep
+a <strong>card catalog</strong> saying which building each shelf currently lives in, and
+when Building 4 opens, roll a few entire shelves across town — never re-sort
+individual books, and update the catalog card as each shelf lands.</p>
+<hr />
+<h2 id="readme-7-terminology--naming-what-youve-already-felt">7. TERMINOLOGY — naming what you've already felt</h2>
+<p>You have now personally felt every problem these words exist to name. The
+load-bearing terms, full treatment:</p>
+<p><strong>Partition</strong> (also called a <strong>shard</strong>; Kafka says <em>partition</em>, MongoDB says
+<em>shard</em>+<em>chunk</em>, HBase says <em>region</em>, Cassandra says <em>token range</em>).
+<em>Plain:</em> one of the pieces the data is cut into — a wheeled shelf.
+<em>Precise:</em> a contiguous subset of the keyspace that is owned, served, and
+<strong>moved as a unit</strong>. <em>Why the term exists:</em> to give the unit of ownership a name
+that is deliberately NOT &quot;machine&quot; — the whole trick of stage 6 is that
+partitions and machines are different things, with a many-to-one mapping
+between them. <em>Example:</em> &quot;partition 7 of 16 holds all keys whose hash lands in
+slot 7; today node B serves it.&quot; <em>Connects to:</em> the consistent-hashing lab's
+vnodes and hash slots were both partitions in this sense — you've met the
+mechanism, and now the concept gets its proper name.</p>
+<p><strong>Partition key.</strong>
+<em>Plain:</em> the part of the record that decides which shelf it goes on.
+<em>Precise:</em> the attribute (or attribute tuple) fed to the placement rule; records
+sharing a partition key are guaranteed co-located. <em>Why:</em> because <em>you</em> choose
+it, and the choice decides which queries are cheap (one partition) and which
+are scatter-everything — the single highest-leverage schema decision in a
+partitioned store. <em>Example:</em> keying orders by <code>order_id</code> makes &quot;fetch order&quot;
+cheap and &quot;all orders for customer 42&quot; expensive; keying by <code>customer_id</code> flips
+both. <em>Connects to:</em> the database-landscape lab's &quot;partition key / hot
+partition&quot; bullets, now with the mechanism attached.</p>
+<p><strong>Range partitioning.</strong>
+<em>Plain:</em> cut by key order — the alphabet scheme.
+<em>Precise:</em> each partition owns a contiguous key interval <code>[lo, hi)</code>; boundaries
+are chosen (and re-chosen) to follow the data. <em>Why:</em> it is the only scheme
+where a <strong>range scan</strong> (&quot;all Sharma&quot;, &quot;all events between 09:00 and 10:00&quot;)
+touches one or few partitions. <em>Example:</em> HBase and Bigtable partition rows
+this way; so do CockroachDB and TiDB. <em>Connects to:</em> btree-and-lsm — inside
+each partition the keys are typically stored sorted anyway, so range
+partitioning extends the B-tree's sortedness across machines.</p>
+<p><strong>Hash partitioning.</strong>
+<em>Plain:</em> cut by dice-roll — but a deterministic dice-roll, so the home is
+computable.
+<em>Precise:</em> partition = <code>hash(partition key) mod P</code> (fixed <code>P</code>), or a position
+on a hash ring. <em>Why:</em> hashing destroys the correlation between &quot;similar keys&quot;
+and &quot;same partition&quot;, which is exactly what kills skew from clustered keys —
+and exactly what kills range scans. Same coin, both faces. <em>Connects to:</em> the
+entire consistent-hashing lab lives inside this bullet.</p>
+<p><strong>Skew</strong>, and its two species you met as Failures A and B:
+<strong>data skew</strong> (uneven <em>bytes</em> per partition — fixable by moving boundaries) and
+<strong>load skew</strong> (uneven <em>requests</em> per partition — boundary moves don't help when
+the heat is a single key). A partition drowning in either is a <strong>hot
+partition</strong> (the consistent-hashing lab's <em>hot key</em> is the extreme case: one
+key hotter than everything else combined).</p>
+<p><strong>Rebalancing.</strong>
+<em>Plain:</em> moving shelves when buildings change — or when a shelf gets too fat.
+<em>Precise:</em> changing the partition→node assignment (and sometimes the partition
+boundaries themselves) and physically migrating the data, while serving.
+<em>Why the term:</em> the &quot;re&quot; matters — it names an <em>ongoing operational activity</em>,
+not a one-time setup. A partitioned system that cannot rebalance is a system
+you must size perfectly on day one, forever.</p>
+<p><strong>Partition map</strong> (routing table).
+<em>Plain:</em> the card catalog: shelf → building.
+<em>Precise:</em> the authoritative table <code>partition → owning node</code> (plus, per entry,
+an ownership generation number — the <em>epoch</em>, properly earned in stage 10.5),
+and cached copies of it in clients and nodes — cached copies that <strong>go stale</strong>
+whenever rebalancing moves something. <em>Connects to:</em> the consistent-hashing
+lab's &quot;membership propagation window&quot; — the ring made the map implicit;
+fixed-partition systems make it an explicit table someone must store and serve.</p>
+<p><strong>Scatter/gather.</strong>
+<em>Plain:</em> asking every building and merging the answers.
+<em>Precise:</em> a query that cannot be routed by partition key is broadcast to all
+partitions and the results merged. Legal, sometimes necessary, and quietly
+expensive in a way stage 10.7 will make exact.</p>
+<p>Minor terms get one-liners at first use, and everything lands in the glossary
+(stage 16).</p>
+<hr />
+<h2 id="readme-8-two-mental-models">8. TWO MENTAL MODELS</h2>
+<p><strong>The simple model — the library on wheels.</strong> Books on wheeled shelves; shelves
+assigned to buildings; a card catalog in every clerk's pocket saying which
+building each shelf is in today. Growth = roll whole shelves to the new
+building, one at a time, catalog card updated as each lands. A fat shelf gets
+<em>split</em> into two shelves. A scorching-hot book gets special handling.</p>
+<p><strong>The engineering model.</strong> Three pieces of state and one protocol:</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>State</th>
+  <th>Owned by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><strong>Placement rule</strong> — <code>key → partition</code> (a hash formula, or a sorted boundary list for ranges)</td>
+  <td>agreed by everyone, changes rarely (range splits)</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><strong>Partition map</strong> — <code>partition → node</code> (+ the epoch, stage 10.5)</td>
+  <td>one authoritative copy (a coordinator or consensus group), many stale caches</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><strong>The data</strong> — each partition's records, living on its owner</td>
+  <td>the owning node</td>
+</tr>
+</tbody>
+</table></div>
+<p>…plus the <strong>migration protocol</strong> (stage 10.5): the choreography that moves one
+partition's data to a new owner and flips its map entry, under live writes,
+without violating &quot;exactly one authoritative owner&quot;.</p>
+<p><strong>The mapping between the models:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Library</th>
+  <th>Engineering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Book</td>
+  <td>Record</td>
+</tr>
+<tr>
+  <td>Author surname on the spine</td>
+  <td>Partition key</td>
+</tr>
+<tr>
+  <td>Wheeled shelf</td>
+  <td>Partition</td>
+</tr>
+<tr>
+  <td>Building</td>
+  <td>Node</td>
+</tr>
+<tr>
+  <td>Card catalog</td>
+  <td>Partition map</td>
+</tr>
+<tr>
+  <td>Clerk's memorized rule &quot;A–H → Building 1&quot;</td>
+  <td>Placement rule</td>
+</tr>
+<tr>
+  <td>Rolling a shelf across town</td>
+  <td>Partition migration</td>
+</tr>
+<tr>
+  <td>Splitting a fat shelf into two</td>
+  <td>Partition split</td>
+</tr>
+<tr>
+  <td>The queue at the borrow desk</td>
+  <td>Per-partition request load</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the analogy breaks</strong> (read this — an unbroken analogy is a lie):</p>
+<ol>
+<li><strong>A book exists once; a partition exists N times.</strong> Real systems replicate
+every partition (the quorums lab's N copies — often each partition is a
+whole Raft group). This lab's toy tracks one copy per partition to keep the
+movement visible; stage 13 says what replication adds back.</li>
+<li><strong>Rolling a shelf is atomic; copying 10 GB is not.</strong> The shelf is
+unavailable for an hour, then wholly present. A partition must keep serving
+<em>during</em> its own move, which is why the handover protocol exists at all —
+the hard part has no library equivalent.</li>
+<li><strong>One catalog; many stale caches.</strong> Meera has one catalog and updates it
+with a pen. A real partition map is cached by every client and node, and
+the caches learn of a move <em>after</em> it happened. The redirect machinery of
+stage 10.4 exists purely because of this gap.</li>
+<li><strong>Books don't arrive mid-roll.</strong> Writes do. The entire drama of stage 10.5
+is the writes that arrive while the shelf is on the truck.</li>
+</ol>
+<hr />
+<h2 id="readme-9-visualization--the-moving-shelves">9. VISUALIZATION — <em>The Moving Shelves</em></h2>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a> (or the published artifact
+link). It is a deterministic simulator with four tabs. The first two match the two
+halves of the key idea; the last two are the decisions that arrive later in a
+cluster's life:</p>
+<ul>
+<li><strong>Tab 1 — The Map.</strong> A cluster of nodes drawn as buildings, partitions as
+shelf-blocks inside them, each showing key count (width) and recent request
+heat (color). You choose the placement scheme (<code>hash mod N</code> / fixed
+partitions / range / range with auto-split), feed it workloads (uniform
+keys, timestamp keys, one celebrity key), and add or remove nodes — the page
+reports exactly how many keys moved, and how many <em>needed</em> to.</li>
+<li><strong>Tab 2 — The Move.</strong> One partition migrating from node A to node B in slow
+motion: snapshot copy, catch-up, cutover — with a write button you can press
+<em>mid-copy</em>, a protocol switch (naive → catch-up → catch-up + epoch fencing),
+a stale client that still routes by the old map, and a tick-box deciding
+whether the deposed owner keeps answering reads after the flip.</li>
+<li><strong>Tab 3 — The Recount.</strong> What it costs to change the <em>number</em> of partitions.
+Two counters run side by side and they are deliberately not the same number:
+keys whose <strong>address</strong> changed, and keys whose <strong>bytes</strong> had to cross the
+network. Double the partition count, set it to a non-multiple, or switch to
+a rule where each partition owns a <em>slice</em> of the hash space — and then cut
+one partition in half without touching any other.</li>
+<li><strong>Tab 4 — The Rules.</strong> Placement when evenness is not the goal: machines
+carry a zone and a rack, each partition wants three copies, and you switch on
+rules (copies in different racks; EU data in EU machines) and watch which
+partitions become impossible to place.</li>
+</ul>
+<p>Twelve <strong>predict-then-run scenarios</strong> (buttons on the page) mirror this doc's
+prediction checkpoints. Do scenarios 1–3 after stage 10.3, scenarios 4–6 after
+stage 10.5, scenario 7 after stage 10.6, scenarios 8–11 after stage 10.8, and
+scenario 12 after stage 10.9.
+Every event is narrated in a full sentence in the log, and the verdict bar
+always states the current outcome in plain English.</p>
+<hr />
+<blockquote>
+<p><strong>CHECKPOINT — you now hold the beginner model.</strong> You can explain why data is
+split, why &quot;even pieces&quot; is two different requirements wearing one word
+(bytes vs load), and what the unit-of-movement idea buys. Next: the actual
+machinery — how boundaries are drawn, how pieces are assigned and moved, and
+how requests find them.</p>
+</blockquote>
+<hr />
+<h2 id="readme-10-the-actual-mechanism">10. THE ACTUAL MECHANISM</h2>
+<p>The key idea said there are two decisions. Take them in order, letting each
+version break before refining it.</p>
+<pre class="mermaid">flowchart LR
+    K[key] --&gt;|&quot;decision 1: placement rule&lt;br/&gt;(range or hash)&quot;| P[partition]
+    P --&gt;|&quot;decision 2: partition map&lt;br/&gt;(assignment + rebalancing)&quot;| N[node]
+</pre>
+<p>Keep this two-hop picture: <strong>key → partition → node</strong>. Decision 1 (key →
+partition) is about your <em>queries and skew</em>. Decision 2 (partition → node) is
+about <em>balance and movement</em>. Almost every confusion in this subject comes from
+mashing the two hops into one.</p>
+<h3 id="readme-101-drawing-boundaries-by-key-order--range-partitioning-done-right">10.1 Drawing boundaries by key order — range partitioning done right</h3>
+<p>Fix Failure A properly. The alphabet cut failed because the boundaries were
+chosen by <em>letter arithmetic</em>; choose them by <em>data</em> instead. Concretely, with
+60,000 books and a target of ~7,500 books per partition, walk the sorted
+author list and cut every 7,500 books:</p>
+<div class="code"><pre><code>p1: [A          … Chatterjee)   7,500 books
+p2: [Chatterjee … Gupta)        7,500
+p3: [Gupta      … Khan)         7,500
+p4: [Khan       … Mehta)        7,500
+p5: [Mehta      … Rao)          7,500
+p6: [Rao        … Sharma)       7,500
+p7: [Sharma     … Singh)        7,500   ← two boundary names this close is normal:
+p8: [Singh      … Z]            7,500     the data is dense there, so the cuts are too
+</code></pre></div>
+<p>The boundary list IS the placement rule: to place or find a key, binary-search
+the sorted boundaries — 3–4 comparisons for thousands of partitions. Range
+scans still work: &quot;everything by Sharma&quot; is one partition (p7); &quot;authors Rao
+through Singh&quot; is three adjacent ones.</p>
+<p>But data <em>changes</em>. p7 fattens as Sharma-adjacent authors keep publishing.
+The fix that makes range partitioning viable long-term is <strong>dynamic
+splitting</strong>: when a partition exceeds a size threshold, split it at its
+<em>median key</em> into two partitions; when two adjacent partitions shrink, merge
+them. The partition count now tracks the data automatically. This is exactly
+how HBase regions and CockroachDB/TiDB ranges work (typical thresholds:
+HBase ~10 GB regions, CockroachDB ~512 MB ranges).</p>
+<p>One caveat that bites new deployments: a brand-new table is <strong>one partition</strong>
+until enough data arrives to trigger splits — so a bulk import hammers a
+single node while the system slowly splits behind it. The production fix is
+<strong>pre-splitting</strong>: declare expected boundaries at creation time (HBase lets
+you; so does CockroachDB's <code>SPLIT AT</code>).</p>
+<p><strong>🔮 Predict:</strong> <em>Meera also archives the daily newspaper, keyed by date
+(<code>2026-08-29</code>, <code>2026-08-30</code>, ...), range-partitioned. Where do today's writes
+land? And tomorrow's?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Always the last partition.</strong> Date keys are ever-increasing, so every new key
+is greater than every existing key and lands in the final range — today, and
+tomorrow, and forever. Dynamic splitting does not save you: the moment the last
+partition splits, all new writes fall into the <em>new</em> last partition. One node
+takes 100% of the write load while the rest of the cluster stores cold history.
+This is the <strong>sequential-key hotspot</strong>, and it is not a rare trap — timestamps,
+auto-increment IDs, and Kafka-style offsets are the most natural keys in the
+world, and all three are sequential.</p>
+</details>
+
+<p>The cure is not a different rebalancer — no assignment of partitions to nodes
+helps when <em>one partition</em> gets all the writes. The cure is <strong>key design</strong>:</p>
+<ul>
+<li><strong>Compound key.</strong> Key sensor readings by <code>(sensor_id, timestamp)</code> instead of
+<code>timestamp</code>. The first component spreads writes across partitions (thousands
+of sensors → thousands of insertion points); the second keeps each sensor's
+readings sorted <em>within</em> its partition, so &quot;sensor 17, 09:00–10:00&quot; is still
+one cheap range scan. Cassandra formalizes this: the <strong>partition key</strong> (first
+part) is <em>hashed</em> for placement, the <strong>clustering key</strong> (second part) is
+<em>range-ordered</em> within the partition — hash's balance and range's scans,
+by putting each where it helps.</li>
+<li><strong>Bucketing/salting.</strong> No natural first component? Manufacture one:
+prefix the key with <code>hash(key) mod 20</code> (a <strong>salt</strong>), turning one insertion
+point into 20. The tax: a range scan must now query all 20 buckets and merge
+— the scatter cost comes right back, scaled by the salt count. (You met the
+same remedy as &quot;sub-key splitting&quot; in the distributed-rate-limiting lab.)</li>
+</ul>
+<h3 id="readme-102-drawing-boundaries-by-hash--and-the-mod-that-is-safe">10.2 Drawing boundaries by hash — and the mod that is safe</h3>
+<p>For workloads that never range-scan (session stores, user profiles, caches),
+hash partitioning is simpler: no boundary list to maintain, balance for free.
+But <strong>do not</strong> hash onto <em>nodes</em> — that's the <code>mod n</code> corpse from the
+consistent-hashing lab. Hash onto <strong>partitions</strong>:</p>
+<div class="code"><pre><code>partition = hash(key) mod P        where P = fixed partition count, P ≫ nodes
+</code></pre></div>
+<p>The insight that makes this modulo safe where the other one was fatal: <strong>P
+never changes.</strong> The thing that made <code>mod n</code> catastrophic was <code>n</code> changing;
+here the node count can change all it likes — it appears nowhere in the
+formula. <code>key → partition</code> is frozen forever; only the second hop,
+<code>partition → node</code> (a small table with P rows), ever changes. This is
+precisely the Redis Cluster design you met as a <em>contrast</em> in the
+consistent-hashing lab — <code>CRC16(key) mod 16384</code> slots — now recognized as one
+of the two standard answers rather than an oddity.</p>
+<p>The price is a judgement call you must make on day one: <strong>choose P</strong>. Too low,
+and partitions grow monstrous (a 10-node cluster with P=16 can never spread
+load more finely than 16 ways, and each partition's eventual size makes every
+future move slow). Too high, and per-partition overhead (files, metadata,
+connections, recovery bookkeeping) multiplies. Elasticsearch is the cautionary
+tale: an index's primary shard count is fixed at creation. That is the
+standard telling, and it is not quite the whole truth — there is one shape of
+P-change that costs almost nothing, and one partitioning rule that removes the
+decision altogether. Stage 10.8 does that arithmetic; for now, treat P as a
+number to think hard about on day one. Kafka allows
+<em>increasing</em> a topic's partition count but never decreasing — and increasing
+it silently breaks the promise that all messages for one key sit in one
+partition's history (old messages for key k stay in <code>hash(k) mod P_old</code>; new
+ones go to <code>hash(k) mod P_new</code>).</p>
+<h3 id="readme-103-assigning-partitions-to-nodes--the-rebalancing-strategies">10.3 Assigning partitions to nodes — the rebalancing strategies</h3>
+<p>Decision 2. You hold P partitions (16, say) and n nodes (3). Assign each
+partition a home; when n changes, reassign as little as possible.</p>
+<p><strong>v1 — no partitions, hash keys straight onto nodes (<code>mod n</code>).</strong> Dead on
+arrival; the consistent-hashing lab measured the corpse (99.0% of keys moved
+for a 1-machine addition, 163,679 of 181,668 moves pure waste). Cited, not
+re-run. Its failure is what makes v2's guarantee visible.</p>
+<p><strong>v2 — fixed partitions, moved whole.</strong> With P=16 over nodes {A, B, C}:</p>
+<div class="code"><pre><code>A: p1 p2 p3 p4 p5 p6         (6 partitions)
+B: p7 p8 p9 p10 p11          (5)
+C: p12 p13 p14 p15 p16       (5)
+</code></pre></div>
+<p>Node D joins. Fair share is 16/4 = 4 partitions. D <strong>steals whole partitions
+from the most-loaded nodes</strong> until even:</p>
+<div class="code"><pre><code>A: p1 p2 p3 p4               (gave p5, p6)
+B: p7 p8 p9 p10              (gave p11)
+C: p12 p13 p14 p15           (gave p16)
+D: p5 p6 p11 p16             (4 stolen partitions)
+</code></pre></div>
+<p>Count what moved: 4 of 16 partitions = <strong>exactly 1/4 of the data, all of it
+onto the newcomer, none of it sideways</strong>. That is the same <em>monotonicity</em>
+guarantee the hash ring bought with geometry — achieved here with a lookup
+table and grade-school arithmetic. Node removal is the mirror: the dead node's
+partitions are dealt out to the survivors, ~1/n each, nobody else disturbed.
+(Scenario 1 in the visualization runs this exact comparison against <code>mod n</code>;
+predict the two moved-fractions before pressing run.)</p>
+<p><strong>v3 — dynamic partitions</strong> (the range-splitting scheme of 10.1): partition
+count proportional to <em>data</em>, so the unit of movement stays a sane size
+forever, at the cost of running split/merge machinery. <strong>v4 — many small
+partitions per node</strong> (the ring + virtual nodes from the consistent-hashing
+lab): partition count proportional to <em>nodes</em>. All four in one table:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Strategy</th>
+  <th>Partition count</th>
+  <th>Move on node change</th>
+  <th>Range scans</th>
+  <th>Used by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>mod n</code> on nodes</td>
+  <td>— (none)</td>
+  <td>~everything ☠️</td>
+  <td>no</td>
+  <td>nobody, on purpose</td>
+</tr>
+<tr>
+  <td>Fixed P, whole-partition moves</td>
+  <td>fixed at creation</td>
+  <td>1/n, minimal</td>
+  <td>only if ranges, not hash</td>
+  <td>Riak, Elasticsearch, Couchbase, Redis Cluster, Kafka</td>
+</tr>
+<tr>
+  <td>Dynamic split/merge</td>
+  <td>∝ data size</td>
+  <td>1/n, minimal</td>
+  <td><strong>yes</strong></td>
+  <td>HBase, Bigtable, CockroachDB, TiDB, MongoDB</td>
+</tr>
+<tr>
+  <td>Ring + vnodes</td>
+  <td>∝ node count</td>
+  <td>1/n, statistical</td>
+  <td>no</td>
+  <td>Cassandra, ScyllaDB, Riak</td>
+</tr>
+</tbody>
+</table></div>
+<p>The consistent-hashing lab's closing judgement holds and extends: fixed slots
+trade <strong>coordination for control</strong> (someone must store and serve the map —
+but placement is exact and hand-movable); the ring needs no coordinator but
+gives only statistical balance. Dynamic splitting sits with the
+coordinator camp and adds the split machinery in exchange for range scans and
+right-sized partitions forever.</p>
+<h3 id="readme-104-routing--who-knows-where-partition-7-lives-today">10.4 Routing — who knows where partition 7 lives today?</h3>
+<p>A client holds <code>GET user:4711</code>. It can compute the partition (hash or boundary
+search — the placement rule is public and stable). But <em>which node serves
+partition 7 today</em> is exactly the thing rebalancing keeps changing. Three
+standard answers, in increasing client sophistication:</p>
+<ol>
+<li><strong>Ask any node.</strong> Every node keeps a (possibly stale) copy of the map,
+learned via gossip; if the wrong node is asked, it forwards or redirects.
+No extra infrastructure; one extra hop sometimes. (Cassandra: any node acts
+as coordinator — the quorums lab's coordinator-with-no-authority.)</li>
+<li><strong>A routing tier.</strong> A dedicated proxy layer holds the map and forwards all
+requests; clients stay dumb. (MongoDB's <code>mongos</code>; HBase clients consult
+ZooKeeper + a META table.)</li>
+<li><strong>A partition-aware client.</strong> The client library caches the map and talks
+straight to the owner — zero extra hops, and now <em>client caches</em> are the
+stale copies to manage. (Kafka clients, Redis Cluster clients, most
+Cassandra drivers do a hybrid.)</li>
+</ol>
+<p>Whatever the answer, two hard sub-problems remain:</p>
+<p><strong>Stale maps are normal, so wrongness must be cheap.</strong> During any rebalance
+there is a window where caches disagree with reality — the consistent-hashing
+lab measured that window at 9.5% of the keyspace for a gossiped ring, 90.8%
+for <code>mod n</code>. The standard machinery makes the stale request <em>self-correcting</em>:
+the old owner answers with a redirect. Redis Cluster's two redirects make the
+distinction precise: <strong>MOVED</strong> = &quot;permanently elsewhere — go there AND update
+your cached map&quot;, <strong>ASK</strong> = &quot;for this one request go there, but do NOT update
+your map — the partition is mid-migration and I still own it&quot;. A stale client
+pays one extra round trip, never a wrong answer. (Scenario 6 in the
+visualization lets you route with a deliberately stale client.)</p>
+<p><strong>The authoritative map is itself data that must survive and be agreed on.</strong>
+Cached copies may be sloppy, but <em>somebody</em> must hold the truth, or two nodes
+can both believe they own p7. Real systems put the map in a consensus store —
+ZooKeeper (HBase, Kafka's controller before KRaft), etcd (Kubernetes-hosted
+systems), or a built-in Raft group (CockroachDB's meta ranges, TiDB's
+Placement Driver). This is where the raft lab plugs in: consensus is not
+needed for the <em>data</em> path, but the <em>map</em> is exactly the small,
+rarely-changing, must-agree state consensus was built for. Cassandra is the
+one big exception — no consensus, the map is gossiped and eventually
+consistent, which it gets away with because vnode ownership changes are
+operator-paced and the quorum overlap absorbs small disagreements.</p>
+<h3 id="readme-105-the-move-itself--a-partition-migrates-while-it-serves">10.5 The move itself — a partition migrates while it serves</h3>
+<p>Everything so far decided <em>what</em> should move <em>where</em>. Now the part the
+consistent-hashing lab refused to cover: partition p11 (2 GB, ~9,000 writes/hour
+arriving) must move from node B to new node D. The library stays open.</p>
+<p><strong>Migration v1 — copy, then flip.</strong> Obvious plan: D copies p11's data from B
+(takes, say, 10 minutes at throttled speed); when the copy finishes, the map
+flips <code>p11 → D</code>; B deletes its copy.</p>
+<p><strong>🔮 Predict:</strong> <em>During the 10-minute copy, a user updates their address —
+a write to a key in p11, sent (per the current map) to B. The copy had already
+passed that key's position when the write landed. After the flip, the user
+reads their address from D. What do they see?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>The old address.</strong> The write landed on B <em>behind</em> the copy cursor, so it
+exists only in B's copy — which B deletes after the flip. The write is
+acknowledged, durable, and <strong>gone</strong>. Not lost in a crash — lost by protocol
+design, on a healthy cluster. Any write landing in the already-copied region
+during those 10 minutes suffers the same fate; at 9,000 writes/hour that's up
+to ~1,500 candidates. A 10-minute migration silently shredding a fistful of
+acknowledged writes is how this bug actually presents in the wild: rare,
+unreproducible, discovered weeks later. (Scenario 4 in the visualization plays
+this exact trace.)</p>
+</details>
+
+<p><strong>Migration v2 — copy + catch-up + cutover.</strong> The fix mirrors how replicas
+bootstrap everywhere (you saw the shape in quorums' anti-entropy): the copy
+alone can never be current, so pair it with a live feed.</p>
+<pre class="mermaid">stateDiagram-v2
+    [*] --&gt; SNAPSHOT: D asks B for p11
+    SNAPSHOT: SNAPSHOT COPY — D streams a point-in-time copy;&lt;br/&gt;B serves normally AND logs every new p11 write to a delta log
+    SNAPSHOT --&gt; CATCHUP: snapshot done
+    CATCHUP: CATCH-UP — D drains the delta log;&lt;br/&gt;new writes still land on B, still appended to the log
+    CATCHUP --&gt; CUTOVER: delta log nearly empty
+    CUTOVER: CUTOVER — B briefly pauses p11 writes,&lt;br/&gt;D drains the last entries, map flips p11 → D (epoch++)
+    CUTOVER --&gt; SERVING: flip done
+    SERVING: D serves; B forwards stragglers (ASK/MOVED), then deletes
+    SERVING --&gt; [*]
+</pre>
+<p>Walk it with concrete values. Snapshot: 10 minutes, during which 240 writes
+arrive at B — all served normally, all appended to the delta log. Catch-up: D
+drains those 240 while 12 more arrive; drains the 12 while 1 arrives. The log
+is now nearly empty and <em>shrinking</em> — the drain rate outruns the write rate,
+so the gap converges (if it doesn't — writes faster than the throttled drain —
+the migration can never finish; the throttle, not the protocol, is what you
+tune). Cutover: B pauses p11 writes for the final handful (milliseconds of
+write-pause for one partition, not an outage), D drains to zero, the map flips.
+<strong>Nothing was lost: every write either made the snapshot, or the delta log, or
+arrived after the flip at D.</strong> That sentence is the invariant the whole
+choreography exists to guarantee.</p>
+<p><strong>Migration v3 — v2 + an epoch on the ownership.</strong> One failure survives v2.</p>
+<p><strong>🔮 Predict:</strong> <em>Right at cutover, B stalls — a long GC pause (the
+distributed-locking lab's &quot;a process cannot observe its own delays&quot;). The
+migration machinery times B out, completes the flip, D starts serving. B wakes,
+unaware, still believing it owns p11 — and a client with a stale map sends it
+a write. What happens?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>B accepts it.</strong> B's local state says &quot;I own p11&quot; — the wake-up looks like any
+other moment of normal service. Now B and D are <em>both</em> accepting writes for
+p11: split-brain on a partition, and the write B accepted will be silently
+lost when B's copy is deleted (or worse, resurrected if B's copy is ever used
+for recovery). This is the distributed-locking lab's stale-holder disaster
+with &quot;lock&quot; replaced by &quot;partition ownership&quot; — and the fix is the same fix:
+<strong>fencing</strong>. Give every map entry an <strong>epoch</strong> (a monotonically increasing
+ownership generation: p11@e5 means &quot;5th owner&quot;). The flip writes <code>p11 → D, epoch 6</code> to the authoritative map. Every write request carries the epoch its
+sender believes; every owner checks it against the authoritative epoch it
+holds a lease on. B, at epoch 5, either refuses the write outright (&quot;I can no
+longer prove I'm the owner — my lease expired during the pause&quot;) or accepts
+and is refused downstream. Either way the stale write dies with an error the
+client retries against the true owner — loud and safe instead of silent and
+lost. Scenario 5 in the visualization runs both variants.</p>
+</details>
+
+<p>That's the complete mechanism: epoch-fenced ownership, snapshot + delta
+handover, redirect-corrected routing. Real systems dress it differently
+(Cassandra &quot;streaming&quot;, HBase region transitions, CockroachDB replica
+rebalancing via Raft snapshots + config change) but every one of them is
+recognizably this state machine.</p>
+<h3 id="readme-106-two-things-the-migration-protocol-still-gets-wrong">10.6 Two things the migration protocol still gets wrong</h3>
+<p>Stage 10.5 built the handover up to v3 and stopped at a strong claim: every
+acknowledged <strong>write</strong> is at the new owner or still legitimately at the old
+one. That claim is true and it is narrower than it sounds, because a store
+does two things. Here are the two holes it leaves, both of which produce
+<em>plausible wrong answers</em> rather than errors.</p>
+<p><strong>Hole 1 — nobody said anything about reads.</strong></p>
+<p>While p11 is copying from B to D, D holds a growing but incomplete pile of
+records. Ask D for a key it has not reached yet and it truthfully answers &quot;I
+don't have that&quot; — which a client cannot distinguish from &quot;that key does not
+exist&quot;. So during the copy, <strong>reads must follow ownership, not copy
+progress</strong>: B answers everything until the map flips, even for keys D already
+has. Copy progress is D's private business.</p>
+<p>Now the flip happens, and the hazard reverses. B still has a complete copy of
+p11 on disk — it is <em>deleted afterwards</em>, not at the instant of cutover, and
+usually not for a while (you keep it as insurance until the new owner is
+verified). A client with a stale map sends a read to B. If B answers from that
+copy, the client gets a well-formed, plausible, entirely stale record, with no
+error, no timeout, and no way to tell. And it gets <em>worse over time</em>: B's copy
+froze at cutover, so the staleness grows without bound.</p>
+<p>Note what the v3 epoch fence did and did not do. It checks the epoch on
+<strong>writes</strong> — that is why the woken owner's write bounced in stage 10.5. A
+system that fences writes but serves reads unconditionally has closed the loud
+failure and left the silent one open. So the rule is symmetric:</p>
+<blockquote>
+<p><strong>The epoch check belongs on every request that touches a partition, not
+just on the ones that change it.</strong> Fencing writes protects the future.
+Fencing reads protects the truth of the present.</p>
+</blockquote>
+<p>The cheapest correct implementation is to make the demoted owner <strong>seal</strong> the
+partition at cutover — refuse everything for p11 and answer <code>MOVED</code> — which is
+the same machinery as F3's redirect, now understood as a <em>safety</em> mechanism
+rather than a convenience. Redis Cluster nodes reply <code>MOVED</code> for any slot they
+do not currently own; Kafka fetch requests carry a leader epoch and a replica
+rejects a fetch that names a stale one; HBase closes a region on the old
+RegionServer before the master reassigns it. In each case the deposed owner is
+made structurally incapable of answering, rather than trusted to be polite.</p>
+<p><em>Watch it happen:</em> viz Tab 2, scenario 7 — untick &quot;old owner seals the shelf
+at cutover&quot;, finish a move, send one write (it routes to D), then press
+<strong>Stale client READS from the old owner</strong>. The verdict bar reports a wrong
+answer with zero writes lost. Tick the box and press the same button: the
+identical request comes back as a <code>MOVED</code> redirect — the seal doing its job.</p>
+<p><strong>Hole 2 — the delete that came back from the dead.</strong></p>
+<p><strong>🔮 Predict:</strong> <em>The snapshot copies key <code>asha</code> (version 3) to D at 10:00. At
+10:04, still mid-copy, the user deletes <code>asha</code>; B removes it and records the
+change in the delta log. At 10:10 the delta drains and the map flips. Does
+<code>asha</code> exist on D?</em></p>
+<details><summary>Reveal</summary>
+
+<p>It depends on something the protocol never specified: <strong>what a delta log entry
+is.</strong> There are two obvious implementations and only one of them is correct.</p>
+<p><em>Implementation A — &quot;the delta log is a list of keys that changed.&quot;</em> At drain
+time, D asks B for the current value of each listed key and stores it. Trace
+it:</p>
+<div class="code"><pre><code>10:00  snapshot: D receives asha = v3
+10:04  delete asha   → B removes asha; delta log records the KEY &quot;asha&quot;
+10:10  drain: D asks B &quot;what is asha now?&quot; → B: (nothing)
+       D reads &quot;nothing&quot; as &quot;no update to apply&quot; → keeps asha = v3
+10:11  cutover. D now serves asha = v3.
+</code></pre></div>
+<p><strong><code>asha</code> is back.</strong> She deleted her account, the deletion was acknowledged,
+and a routine rebalancing operation resurrected it. No node crashed, no
+message was lost, nothing timed out.</p>
+<p><em>Implementation B — &quot;the delta log is a list of operations.&quot;</em> The entry is
+<code>DELETE asha @ 10:04</code>, D applies a deletion, and <code>asha</code> stays gone.</p>
+<p>The general shape of the bug is one you have already met twice: <strong>absence
+cannot be shipped.</strong> The eventual-consistency and CRDT labs both hit it — a
+replica cannot distinguish &quot;this key was deleted&quot; from &quot;I never heard about
+this key&quot;, so deletion must travel as an explicit record (a <strong>tombstone</strong>),
+never as a gap. Migration is replication with a shorter lifespan, so it
+inherits the same requirement. The same reasoning forces a second one: the
+delta must preserve <strong>per-key order</strong> (delete-then-recreate must not land as
+recreate-then-delete), which is why real delta streams are ordered logs with
+per-key versions rather than sets of dirty keys.</p>
+<p>And this is exactly why the &quot;next lab&quot; suggestion at the end of this doc is
+change-data-capture: a stream of ordered operations including explicit deletes
+is not a migration detail, it is a product.</p>
+</details>
+
+<p>Both holes share a diagnosis worth stating on its own, because it generalizes
+past this lab: <strong>a protocol is only correct with respect to the operations it
+was checked against.</strong> v3 was verified against writes and was silent about
+reads; the delta was specified as &quot;changes&quot; and was silent about the shape of
+a change. Neither silence produced an error message. When you review a
+handover design — anyone's — the useful question is not &quot;does it lose writes&quot;
+but &quot;what is the complete list of things a client can ask, and which of them
+did we check?&quot;</p>
+<h3 id="readme-107-secondary-indexes--the-query-that-has-no-partition-key">10.7 Secondary indexes — the query that has no partition key</h3>
+<p>One mechanism left, because real queries aren't all by primary key: <em>&quot;all
+books tagged 'poetry'&quot;</em> — and <code>tag</code> is not the partition key, so no placement
+rule routes it. Two designs, trading read cost against write cost:</p>
+<ul>
+<li><strong>Local index</strong> (document-partitioned): each partition indexes <em>its own</em>
+records. Writes stay single-partition (record + its index entries co-live —
+cheap, atomic). Reads by tag must <strong>scatter/gather all P partitions</strong>,
+because matching records could be anywhere.</li>
+<li><strong>Global index</strong> (term-partitioned): the index is itself a partitioned
+structure, partitioned <em>by the indexed term</em> — all of <code>tag=poetry</code> lives in
+one index partition. Reads route to one partition. But now a single record
+write touches its data partition <em>plus</em> one index partition per indexed
+term — a multi-partition write, which (per the distributed-transactions
+lab's price list) is either slow or asynchronous. DynamoDB chose async: its
+Global Secondary Indexes lag the base table by an eventually-consistent
+window (the eventual-consistency lab's exact subject matter).</li>
+</ul>
+<p>The scatter cost deserves its number, because it compounds in a way averages
+hide. Suppose each partition answers fast except for its slowest 1% of
+requests (a p99 tail — GC, compaction, a queue blip; the quorums lab measured
+this shape). A scatter query across 100 partitions must wait for <strong>all 100</strong>
+answers, so it hits the tail if <em>any</em> partition does:</p>
+<div class="code"><pre><code>P(all 100 fast) = 0.99^100 ≈ 36.6%  →  ~63% of scatter queries eat tail latency
+</code></pre></div>
+<p>One machine's 1% problem becomes the fleet's 63% problem. This <strong>tail latency
+amplification</strong> is why partition-count decisions and scatter-query budgets are
+made together, and why global indexes exist despite their write cost.</p>
+<h3 id="readme-108-the-number-you-got-wrong-three-years-ago--changing-p">10.8 The number you got wrong three years ago — changing P</h3>
+<p>Stage 10.2 sold fixed partitions on one promise: <strong>P never changes, so the
+<code>mod</code> is safe</strong>. Then it charged you for that promise — &quot;P is a forever
+decision&quot;. Sooner or later everyone tests whether &quot;forever&quot; is literally true.
+It usually happens like this: you chose P = 16 when the table was 40 GB across
+three machines. Three years later it is 2 TB across twenty machines, each
+partition is 125 GB, and every rebalancing move now takes hours because <em>the
+unit of movement is enormous</em>. You do not have a balance problem. You have a
+granularity problem, and the only cure is more pieces.</p>
+<p>So: can you change P after all? The answer is the most useful piece of
+arithmetic in this lab, and it is not &quot;no&quot;. It is <strong>&quot;only if you double&quot;</strong>.</p>
+<p><strong>🔮 Predict:</strong> <em>P goes from 16 to 32. Every key's shelf is computed as
+<code>hash(key) mod P</code>, so changing P re-addresses a large share of the data. Of
+420 keys, how many bytes actually have to travel across the network to another
+machine?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>None.</strong> Measured in the visualization's Tab 3 on its 420-key sample: 48.8%
+of keys land on a different partition — and 0% change machine.</p>
+<p>The reason is one line of modular arithmetic. If <code>hash(k) mod 16 = 3</code>, then
+<code>hash(k) mod 32</code> can only be <strong>3 or 19</strong> — because <code>h mod 32</code> is either <code>h mod 16</code> or <code>h mod 16 + 16</code>, and nothing else is possible. So partition 3 does not
+<em>scatter</em> when P doubles; it <strong>cleanly cuts in two</strong>, into new partitions 3 and
+19, and no key from any other partition can arrive in either. Every byte of
+the new partition 19 is already sitting on the machine that held partition 3.
+The split is a local file operation plus a one-row map edit — the newborn
+partition is created where its data already lives.</p>
+<p>Elasticsearch's <code>_split</code> API is exactly this, which is why it <em>refuses</em> any
+target shard count that is not a multiple of the current one, and why it can
+implement a split by hard-linking the existing segment files and then dropping
+the documents that no longer belong, rather than copying anything. (It still
+makes a new index and requires writes to be blocked while it runs — the
+mechanism is cheap, the operation is not free.)</p>
+<p>One condition is hiding in that &quot;0%&quot;, and it is not arithmetic. The split is
+<em>local</em> only if the placer creates the child <strong>on the machine that holds the
+parent</strong>. A placer that re-derives placement from a formula on the partition
+id instead — a perfectly reasonable-looking <code>partition mod nodes</code> — sends the
+children elsewhere and turns the free split back into a full redistribution.
+(Exercise 5.3 works this out on eight keys by hand: 0 crossings when children
+stay home, 4 of 8 when they are re-dealt.) This is why real systems ship
+splitting and rebalancing as two separate commands: split in place now,
+rebalance later if you want to. The two hops again.</p>
+</details>
+
+<p><strong>Now the other direction — the number in between.</strong> You do not want 32
+partitions, you want 24. Same 420 keys, P from 16 to 24: <strong>68.8% of keys
+change partition, and 68.8% must cross the network</strong> (measured, Tab 3,
+scenario 9). Nothing cleanly cuts in half. <code>h mod 16</code> tells you nothing useful
+about <code>h mod 24</code>: keys sharing an old partition are spread over several new
+ones — the pattern only repeats every <code>lcm(16, 24) = 48</code> — so the new
+partitions cannot be carved out of the old ones locally, and the data has to
+be shipped.</p>
+<p>That is the honest content of &quot;P is a forever decision&quot;: <strong>P is doublable,
+and otherwise frozen.</strong> Halving is the mirror image (Elasticsearch's <code>_shrink</code>
+requires the target to be a <em>factor</em> of the source, for the same reason read
+backwards). Any other target is a full redistribution wearing the costume of a
+config change.</p>
+<p><strong>The escape hatch: partition by hash RANGE, not by hash remainder.</strong> Here is
+the move that dissolves the problem instead of managing it. Keep hashing the
+key — you still want hash's balance — but instead of taking a remainder, give
+each partition a <strong>slice of the hash space</strong>:</p>
+<div class="code"><pre><code>    hash space: 0 ────────────────────────────────────── 2³²
+                [   h0   ][   h1   ][   h2   ][   h3   ]  ← 4 partitions
+    key k  →  hash(k) = 0x6A2F…  →  falls inside h1 → partition h1
+</code></pre></div>
+<p>Look at what vanished from the rule: <strong>P</strong>. The lookup is &quot;which slice
+contains this hash&quot;, and no partition's boundaries are computed from the total
+count. So partition h1 can be cut at its own midpoint any afternoon, into
+h1-left and h1-right, and <strong>no other partition is affected at all</strong> — measured
+in Tab 3 (scenario 10): splitting the fattest partition re-addressed 6% of keys (the ones
+inside the partition being cut) and moved 0% across the network, with P going
+from 16 to 17. Not a multiple. Not a redistribution. Just a boundary list
+getting one entry longer.</p>
+<p>You have seen both halves of this before and can now see they were the same
+idea twice: this is stage 10.1's range partitioning with auto-split, applied
+to the <em>hash</em> of the key rather than the key itself. It buys splittability
+forever and hash's balance, and it forfeits exactly one thing — range scans on
+the original key, which the hash destroyed anyway.</p>
+<p>That completes the table from 10.3 with the column nobody puts in it:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Rule</th>
+  <th>key → partition</th>
+  <th>Can P change later?</th>
+  <th>Range scans</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>hash mod n</code> on <strong>nodes</strong></td>
+  <td>changes whenever a node joins ☠️</td>
+  <td>n/a — it is the bug</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td><code>hash mod P</code> on partitions</td>
+  <td>frozen</td>
+  <td><strong>doubling only</strong> (cheap: local split); any other target = full redistribution</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td><strong>hash range</strong> partitions</td>
+  <td>frozen</td>
+  <td><strong>any partition, any time</strong> (cheap: local split)</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>key range partitions</td>
+  <td>frozen</td>
+  <td>any partition, any time</td>
+  <td><strong>yes</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>So why does anyone still use <code>mod P</code>?</strong> Because a remainder needs no state.
+A hash-range scheme has a boundary list that must be stored, agreed on, and
+kept current at every client — the map is bigger and it changes shape, not
+just contents. <code>mod P</code> needs no boundary list at all: a client with only the
+number P can compute hop 1 offline forever. Kafka and Redis Cluster take that
+deal deliberately, and Redis takes it to its conclusion — <strong>16,384 slots,
+frozen for all time</strong>. Read in the light of this section, that number stops
+being an oddity and becomes the actual solution to resharding: pick P so
+absurdly large that no cluster will ever outgrow the granularity, and you
+never need to change it. The cost is paid up front and forever (a 16,384-row
+map, always), instead of unpredictably later.</p>
+<p><strong>How to choose P, if you must choose one.</strong> Work backwards from the unit of
+movement, not from today's node count:</p>
+<ol>
+<li>Pick a <strong>target partition size</strong> — the size at which moving one is
+comfortable. Real systems land between 512 MB and 10 GB (CockroachDB
+~512 MB, HBase ~10 GB); call it 5 GB.</li>
+<li>Estimate the data volume at the <strong>furthest horizon you would bet on</strong> — not
+today's, and not infinity. Say 2 TB.</li>
+<li><code>P ≈ 2 TB / 5 GB ≈ 400</code>. Round to a power of two — <strong>512</strong> — because
+powers of two are the only numbers you can later double <em>and</em> halve
+cheaply.</li>
+<li>Sanity-check the floor: P must be at least a small multiple of the largest
+node count you will run (you cannot balance 20 nodes with 16 partitions),
+and the ceiling: P files, P memtables, P recovery jobs, P entries of fan-out
+on every scatter query.</li>
+</ol>
+<p>If that sizing exercise makes you uncomfortable — you genuinely do not know
+the horizon — that discomfort <em>is</em> the argument for hash-range partitions or
+for Redis's absurd constant. Both remove the guess.</p>
+<p><strong>One correction to a promise made earlier.</strong> Stage 10.2 said Kafka lets you
+increase a topic's partition count but never decrease it, and that increasing
+breaks the &quot;all messages for key k live in one partition&quot; property. Both true
+— and note where Kafka sits in this section's arithmetic: increasing partitions
+in Kafka moves <strong>no bytes at all</strong> (existing messages stay exactly where they
+are; only future producer routing changes). Kafka's resharding is free in
+bandwidth and expensive in <em>semantics</em>. Elasticsearch's <code>_split</code> is the
+opposite trade — semantics preserved exactly, at the cost of a new index and a
+write freeze. There is no scheme where changing P is free in both.</p>
+<h3 id="readme-109-where-a-partition-is-allowed-to-live--placement-constraints">10.9 Where a partition is <em>allowed</em> to live — placement constraints</h3>
+<p>Every rebalancing rule so far has had one goal: <strong>evenness</strong>. Give each node
+about the same number of partitions, about the same number of bytes, about the
+same heat. That is the only goal a toy needs. It is never the first goal of a
+real cluster, and the reason is a sentence you can feel without any
+distributed-systems vocabulary at all:</p>
+<blockquote>
+<p>Three copies of your data in three machines <em>on the same rack</em> is not three
+copies. It is one copy, plus two spares that share a power supply, a
+top-of-rack switch, and a maintenance window.</p>
+</blockquote>
+<p>Replication buys you survival of <em>independent</em> failures. Two machines in one
+rack do not fail independently — that is what the consistent-hashing lab named
+a <strong>failure domain</strong>, and it has been sitting in your vocabulary without a job
+since. Here is its job: the placer must not merely spread partitions, it must
+spread each partition's <strong>copies</strong> across failure domains. And once the placer
+takes orders about <em>where copies may go</em>, other people join the queue with
+orders of their own:</p>
+<ul>
+<li><strong>Rack / zone / region diversity</strong> — no two copies of a partition in one
+rack; ideally one copy per availability zone.</li>
+<li><strong>Data residency</strong> — an EU customer's rows must be stored on machines in the
+EU. Not a preference; a legal constraint, and it depends on the <em>content</em> of
+the partition, not on load at all.</li>
+<li><strong>Latency locality</strong> — put the partitions serving Tokyo users on the Tokyo
+nodes, so the common read is 5 ms and not 150 ms.</li>
+<li><strong>Heterogeneous hardware</strong> — the new machines have 4× the disk; they should
+hold 4× the partitions (the consistent-hashing lab's <em>weight</em>, which was a
+count of ring positions there and is a capacity number here).</li>
+</ul>
+<p>Balance has quietly changed from <em>the objective</em> into <em>the tie-breaker</em>. The
+placer is now a constraint solver: first the set of legal homes, then the
+evenest choice within it.</p>
+<p><strong>🔮 Predict:</strong> <em>Three machines, all in rack r1. Six partitions, three copies
+each. You switch on the rule &quot;no two copies of a partition in the same rack&quot;.
+What does the rebalancer do?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>It places nothing, and says nothing loudly.</strong> All six partitions become
+unplaceable at the third copy — there is no second rack to put it in, let
+alone a third. (Tab 4, scenario 12: 6 of 6 unplaceable with one rack; still
+6 of 6 with two racks, though now each partition gets 2 of its 3 copies —
+under-replicated, which <em>looks</em> half-fine on a dashboard; 0 of 6 unplaceable
+once a third rack exists.)</p>
+<p>The thing worth carrying away is the shape of the failure, not the arithmetic.
+A constrained placer that cannot satisfy its rules does not compromise, does
+not pick the least-bad option, and does not page anyone. <strong>It stops moving.</strong>
+And a rebalancer that is not moving looks exactly like a rebalancer that has
+nothing to do — a calm cluster, flat graphs, no errors. The only difference is
+a status field somebody has to go and read.</p>
+<p>This is precisely what an Elasticsearch <strong>YELLOW</strong> cluster with UNASSIGNED
+shards is: not a bug, not a slow copy, but a constraint solver reporting <em>no
+legal solution</em> — usually for <code>cluster.routing.allocation.awareness</code> (rack
+rules) or a disk watermark. The cluster is telling you it refuses to lie about
+your redundancy. <code>_cluster/allocation/explain</code> exists solely because &quot;why is
+nothing happening?&quot; is the standard question this failure produces.</p>
+</details>
+
+<p>The rule interacts with the <em>content</em> of a partition, too. Turn on data
+residency with no European machines running and exactly the European
+partitions freeze while the rest of the cluster rebalances happily around them
+(Tab 4: toggle &quot;EU shelves may only live in EU buildings&quot; with no EU node —
+half the library stalls). A partial outage on a legal boundary, invisible in
+any cluster-wide average.</p>
+<p>Real names for all of this, so the docs are readable: Cassandra's
+<strong>NetworkTopologyStrategy</strong> (replicas per datacenter, rack-aware within one),
+Elasticsearch's <strong>shard allocation awareness</strong> plus forced awareness,
+CockroachDB's <strong>zone configurations</strong> and partition-level replica constraints
+(the mechanism behind its data-domiciling feature), MongoDB's <strong>zone
+sharding</strong> (tag a shard-key range to a zone), Kafka's <strong>rack-aware replica
+assignment</strong>, and Kubernetes' <strong>pod topology spread constraints</strong> — the same
+idea for stateless pods, which is a good hint that this is a general
+scheduling problem that partition placement happens to be an instance of.</p>
+<p><strong>The tradeoff, stated plainly.</strong> Every constraint you add removes degrees of
+freedom from the placer. With enough constraints there is no legal placement
+at all, and the system's correct response — refusing to place — is
+indistinguishable from idleness. So constraints are worth exactly what they
+protect: rack diversity earns its cost the first time a rack dies; a residency
+rule earns it the first time a regulator asks. A locality preference that is
+enforced as a <em>hard</em> rule and only worth 20 ms of latency does not — and that
+distinction, hard constraint versus soft preference, is one real systems make
+explicit (Elasticsearch's <code>include</code>/<code>require</code>/<code>exclude</code>, Cassandra's
+strategy-per-keyspace, Kubernetes' <code>requiredDuringScheduling</code> versus
+<code>preferredDuringScheduling</code>). Get it wrong in the &quot;hard&quot; direction and your
+cluster stops rebalancing at 3 a.m. for a reason that is entirely your own.</p>
+<hr />
+<blockquote>
+<p><strong>CHECKPOINT — intermediate model complete.</strong> You can now pick boundaries
+(range vs hash vs compound), pick a rebalancing strategy (fixed / dynamic /
+vnodes), route with stale maps, narrate the three-phase migration with its
+invariant — and, from the three sections just added, say what a handover
+owes <em>reads</em> and <em>deletes</em>, price a change to the partition count before
+anyone runs it, and state where a partition is allowed to live and what
+happens when nowhere is. Next: the ways all of this fails in production,
+and what is actually guaranteed.</p>
+</blockquote>
+<hr />
+<h2 id="readme-11-failure-scenarios">11. FAILURE SCENARIOS</h2>
+<p>Each one: how it arises → where to watch it → what happens and why → what
+survives, what's lost → how production handles it. Read F7–F9 with one
+question in mind: <strong>how would you find out this was happening?</strong> Those three
+produce no error, no latency spike and no failed request.</p>
+<p><strong>F1 — The celebrity key (load skew that no scheme fixes).</strong> One key (viral
+post, flash-sale SKU, the Sharma novel) out-heats the rest of the keyspace
+combined. <em>Watch:</em> viz Tab 1, workload &quot;celebrity&quot;, any scheme — the owning
+partition glows red; add nodes and press rebalance: the hot partition just
+moves house, still glowing (Scenario 3). <em>Why:</em> every scheme agrees one key
+has one home; that agreement is load-bearing (it's what makes reads findable),
+so no placement change helps. <em>Response:</em> split the <strong>key itself</strong> — append a
+salt to writes (<code>sharma-novel#0..19</code>), scatter the 20 sub-keys, merge on read;
+or absorb reads in a cache layer (the caching lab). <em>Guarantee kept:</em> every
+sub-key still findable. <em>Lost:</em> single-key atomicity across the sub-keys, read
+simplicity. <em>Production:</em> DynamoDB's throttling made &quot;hot partition&quot; a
+household word (its adaptive capacity now auto-shifts throughput toward hot
+partitions, and it can split a partition <em>by load</em>); Twitter/X famously
+special-cases celebrity accounts.</p>
+<p><strong>F2 — Sequential keys (the write hotspot you designed in).</strong> Timestamp or
+auto-increment partition key + range partitioning → all writes land on the
+last partition forever (stage 10.1's checkpoint). <em>Watch:</em> viz Tab 1, range
+scheme + &quot;timestamps&quot; workload (Scenario 2) — one partition's write heat pins
+while the cluster idles. <em>Why:</em> ever-increasing keys have a single insertion
+frontier. <em>Response:</em> compound key or bucketing (10.1); or accept it
+deliberately for append-mostly history where the frontier node is sized for
+the whole write load and old partitions serve reads (this is roughly Kafka's
+life: the head of each partition takes all appends — Kafka spreads load by
+having <em>many</em> partitions via key hashing, not by range). <em>Production:</em> HBase's
+docs warn about &quot;monotonically increasing row keys&quot; on page one;
+Bigtable's schema guide leads with &quot;field promotion&quot; (their name for the
+compound-key fix).</p>
+<p><strong>F3 — The stale map that never learns.</strong> A client caches <code>p7 → B</code>, p7 moves
+to D. <em>Watch:</em> viz Tab 2's stale client (Scenario 6). <em>Why it's benign when
+done right:</em> B answers MOVED → client retries at D <em>and repairs its cache</em> —
+one wasted round trip. <em>How it goes wrong:</em> B is dead (can't redirect —
+client must refetch the whole map from the authority: the map service just
+became a dependency of the data path), or the redirect chain itself is stale
+(bounded redirect-hops + full-map refresh is the standard escape). <em>Guarantee
+kept:</em> no wrong answers, ever — redirects or errors, never silently stale
+routing to a node that answers with old data it shouldn't own (that
+protection is F6's epoch). <em>Production:</em> Redis Cluster MOVED/ASK; Kafka
+clients refetch metadata on <code>NotLeaderForPartition</code>; MongoDB's mongos
+versioned chunk maps.</p>
+<p><strong>F4 — The naive handover (acknowledged writes shredded).</strong> Copy-then-flip
+migration loses every write that lands behind the copy cursor (10.5 v1).
+<em>Watch:</em> viz Tab 2, protocol &quot;naive&quot;, press <em>write</em> mid-snapshot (Scenario 4)
+— the verdict bar turns red naming the lost key. <em>Why:</em> the snapshot is a
+past; only a delta feed makes the destination current. <em>Response:</em> v2's
+catch-up log. <em>Guarantee lost in v1:</em> durability of acknowledged writes — the
+worst guarantee to lose, because nothing errors. <em>Production:</em> every serious
+system ships the v2 shape (Cassandra streaming + hints, CockroachDB Raft
+snapshot + log catch-up, MongoDB chunk migration's &quot;catch up on mods&quot; phase —
+its docs narrate literally this state machine).</p>
+<p><strong>F5 — The rebalance storm (the cure at scale becomes the disease).</strong> Wire an
+automatic rebalancer to a failure detector and let both react fast. Node C
+pauses (GC, 90 seconds — the gossip lab's slow-vs-dead undecidability). The
+detector declares C dead; the rebalancer starts re-replicating/moving C's 40
+partitions; the copy traffic loads B and D, whose heartbeats now lag; the
+detector suspects <em>them</em>... <em>Watch:</em> this one is a hand-trace (stage 11's
+box), not a viz scenario — the mechanism is the gossip lab's detector
+meltdown (100% false-DEAD at 90% packet loss) with a <strong>payload attached</strong>:
+every false verdict now triggers terabytes of movement, and the movement
+manufactures the next false verdict. <em>Why:</em> the feedback loop — movement
+causes load causes silence causes verdicts causes movement. <em>Response:</em>
+rate-limit the rebalancer (max concurrent moves, bandwidth caps), require
+sustained evidence before moving data (minutes, not seconds — moving data is
+expensive; a dead node's partitions served by replicas can wait), and keep a
+human approval gate for large-scale movement. This is why DDIA flatly
+recommends rebalancing <em>not</em> be fully automatic. <em>Production:</em> Cassandra
+separates &quot;down&quot; (route around, cheap, fast) from &quot;removed&quot; (stream data,
+operator-invoked <code>removenode</code>); Elasticsearch has <code>cluster.routing.allocation</code>
+throttles and a <code>delayed_timeout</code> precisely so a rebooting node doesn't
+trigger shard shuffling; Kafka's Cruise Control caps concurrent moves.</p>
+<p><strong>F6 — Two owners (split-brain on a partition).</strong> The cutover races a paused
+old owner (10.5 v3's checkpoint). <em>Watch:</em> viz Tab 2, fencing OFF, &quot;pause old
+owner at cutover&quot; (Scenario 5) — both nodes accept writes for p11; flip
+fencing ON and rerun: the stale write bounces with an epoch error. <em>Why:</em> a
+node's belief about its own ownership is a cached fact like any other, and it
+goes stale like any other; only an epoch check at write time makes staleness
+detectable. <em>Guarantee:</em> with epochs, at most one <em>effect lineage</em> per
+partition per epoch — the distributed-locking lab's exact formulation,
+because it is the exact mechanism (ownership = a lease; epoch = the fencing
+token; the partition = the resource). <em>Production:</em> HBase fences via
+ZooKeeper region ownership + WAL fencing; Kafka partitions have <strong>leader
+epochs</strong> checked on every fetch/produce; CockroachDB replica ownership rides
+Raft terms, which are epochs by construction.</p>
+<p><strong>F7 — The rule with no solution (the rebalancer that goes quiet).</strong> Placement
+constraints that cannot all be satisfied: three copies required, two racks
+available, rack-diversity enforced; or EU-residency enforced with every EU
+machine down for maintenance. <em>Watch:</em> viz Tab 4, scenario 12 — switch on the
+rack rule with all buildings in one rack and read the status column. <em>Why:</em> a
+constrained placer treats rules as a hard filter and balance only as a
+tie-break, so with an empty legal set it does the correct thing and places
+nothing. <em>How it presents:</em> as <strong>nothing happening</strong>. No error rate, no
+latency spike, no moves — a cluster that looks calm and is quietly running
+below its promised redundancy. <em>Guarantee kept:</em> the constraint itself (the
+system never lies about your rack diversity or your residency). <em>Lost:</em>
+durability margin, silently — you believe you have three copies and you have
+two. <em>Production:</em> Elasticsearch UNASSIGNED shards and a YELLOW cluster, with
+<code>_cluster/allocation/explain</code> existing purely to answer &quot;why is nothing
+happening?&quot;; Cassandra refusing to satisfy a NetworkTopologyStrategy that
+names a datacenter with too few racks; Kubernetes pods stuck <code>Pending</code> on
+unsatisfiable topology spread constraints. The monitoring lesson is specific:
+<strong>alarm on under-replicated partitions, not on rebalancing activity</strong> — the
+dangerous state is the one with no activity at all.</p>
+<p><strong>F8 — The stale read from the deposed owner.</strong> After cutover, the old owner
+still holds a full, frozen copy of the partition on disk; a client with a
+stale map reads from it. <em>Watch:</em> viz Tab 2, scenario 7 — with fencing ON
+and sealing OFF, the stale write bounces loudly while the stale read is
+answered with old data and no complaint. <em>Why:</em> v3's epoch check was specified for writes, and reads were never
+mentioned. <em>What the client sees:</em> a well-formed, plausible record with no
+error and no timeout, growing staler every minute, because the old copy stopped
+advancing at the flip. <em>Guarantee kept:</em> nothing is corrupted — the true state
+is intact at the new owner. <em>Lost:</em> the read's freshness guarantee entirely,
+and worse, its <em>detectability</em>. <em>Response:</em> seal the partition at cutover —
+the demoted owner refuses every request for it and answers <code>MOVED</code>, so
+staleness becomes a redirect rather than an answer. <em>Production:</em> Redis
+Cluster answers <code>MOVED</code> for any slot it does not own; Kafka fetches carry a
+leader epoch and a replica rejects a stale one; HBase closes the region before
+reassignment. Note the pattern: the deposed owner is made structurally unable
+to answer rather than trusted to behave.</p>
+<p><strong>F9 — The resurrected delete.</strong> A key deleted during the snapshot phase comes
+back alive at the new owner. <em>Watch:</em> stage 10.6's hole 2 — the hand trace
+with <code>asha</code> at 10:00/10:04/10:10. <em>Why:</em> the delta log recorded <em>which keys
+changed</em> rather than <em>what happened to them</em>, and reading a deleted key back
+yields nothing, which is indistinguishable from &quot;no update&quot;. <em>Guarantee lost:</em>
+durability of an acknowledged <strong>delete</strong> — the one write whose loss is a
+compliance incident rather than an inconvenience (the user asked to be
+forgotten and was not). <em>Response:</em> deltas are ordered logs of <em>operations</em>
+with explicit tombstones and per-key versions, never sets of dirty keys. <em>Why
+it is familiar:</em> the eventual-consistency and CRDT labs established that
+absence cannot be shipped; migration is short-lived replication and inherits
+the rule. <em>Production:</em> every replication and CDC stream carries explicit
+delete events for exactly this reason — and tombstone lifetime becomes its own
+operational concern (Cassandra's <code>gc_grace_seconds</code> exists so a tombstone
+outlives the repair window that could otherwise resurrect the row).</p>
+<hr />
+<h2 id="readme-12-correctness--what-is-actually-guaranteed">12. CORRECTNESS — what is actually guaranteed</h2>
+<p><strong>The invariants</strong> a correct partitioned store maintains:</p>
+<ol>
+<li><strong>Complete coverage, no overlap.</strong> Every possible key maps to exactly one
+partition (the boundary list has no gaps; the hash's range is fully
+covered). Trivial-sounding; real bugs live here (the consistent-hashing
+lab's 32-bit-hash-on-64-bit-ring bug put 100% of keys on one node
+<em>silently</em>).</li>
+<li><strong>One authoritative owner per partition per epoch.</strong> Enforced by the
+epoch/fencing machinery, not by hope (F6).</li>
+<li><strong>Handover completeness.</strong> A new owner serves only after snapshot + delta
+drain — every acknowledged <strong>operation</strong>, deletes included, is at the new
+owner or still legitimately at the old one, never in neither (10.5's
+invariant, corrected by 10.6: a delete shipped as an absence is a delete
+lost, F9).</li>
+<li><strong>Routing safety.</strong> A stale map costs extra hops, never wrong answers —
+<em>provided the epoch check guards reads as well as writes</em>. Fence only
+writes and this invariant fails silently at the deposed owner (10.6's hole
+1, F8): the standard implementation is that a demoted owner <strong>seals</strong> the
+partition and answers <code>MOVED</code> to everything.</li>
+<li><strong>Rules before balance.</strong> A copy is placed only where the placement
+constraints allow; balance decides among the legal options and never
+overrules them. When the legal set is empty the placer stops rather than
+compromising — correct, and indistinguishable from idle (10.9, F7).</li>
+</ol>
+<p><strong>What is explicitly NOT guaranteed:</strong></p>
+<ul>
+<li><strong>Perfect balance.</strong> Fixed partitions balance to the granularity of one
+partition; vnodes balance statistically (the consistent-hashing lab measured
+1.06× at 100 vnodes, never 1.00×); load balance is chased, not proven —
+a hot key defeats all of it (F1).</li>
+<li><strong>Cross-partition atomicity.</strong> Partitioning is precisely the thing that
+makes a multi-key write span machines; nothing in THIS lab restores
+all-or-nothing across partitions — that bill is the distributed-transactions
+lab's whole subject (2PC/Percolator), and its cost is why partition-key
+design tries so hard to keep transactional neighbours co-located.</li>
+<li><strong>Global index freshness</strong> when indexes are async (10.7) — an
+eventually-consistent window, with everything the eventual-consistency lab
+says about un-promised behavior.</li>
+<li><strong>Continuous perfect availability during rebalancing.</strong> The cutover pause is
+real (milliseconds per partition, done right); done wrong it's the outage.</li>
+<li><strong>That a legal placement exists at all.</strong> Constraints are hard filters, and
+a set of them can be jointly unsatisfiable (three copies, two racks). The
+system's response is silence, not an error (F7) — which is why the alarm
+belongs on <em>under-replicated partitions</em>, never on rebalancing activity.</li>
+<li><strong>That the partition count you chose is revisable.</strong> Under <code>hash mod P</code>,
+only doubling and halving are cheap; every other target is a full
+redistribution (10.8). Hash-range partitions give the revisability back, at
+the cost of carrying a boundary list.</li>
+</ul>
+<p><strong>What was traded, per choice</strong> — the compact ledger:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Choice</th>
+  <th>You gain</th>
+  <th>You pay</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Range boundaries</td>
+  <td>cheap range scans, natural splits</td>
+  <td>sequential-key hotspots, boundary management</td>
+</tr>
+<tr>
+  <td>Hash boundaries</td>
+  <td>balance for free, no boundary state</td>
+  <td>range scans become scatter/gather</td>
+</tr>
+<tr>
+  <td>Fixed P (<code>hash mod P</code>)</td>
+  <td>dead-simple placement, no boundary state, clients compute hop 1 offline</td>
+  <td>P is doublable and otherwise frozen; any other target redistributes everything (10.8)</td>
+</tr>
+<tr>
+  <td>Hash-<strong>range</strong> partitions</td>
+  <td>split any partition, any time, locally — P is never a decision</td>
+  <td>a boundary list to store, agree on and propagate; a bigger, shape-changing map</td>
+</tr>
+<tr>
+  <td>Dynamic split/merge</td>
+  <td>right-sized partitions forever</td>
+  <td>split machinery + coordinator to run it</td>
+</tr>
+<tr>
+  <td>More partitions</td>
+  <td>finer balance, smaller moves</td>
+  <td>per-partition overhead ×P, more scatter fan-out</td>
+</tr>
+<tr>
+  <td>Automatic rebalancing</td>
+  <td>no 3 a.m. operator</td>
+  <td>F5's storm risk — automation + failure detection is a loaded gun</td>
+</tr>
+<tr>
+  <td>Placement constraints (rack, zone, residency)</td>
+  <td>survive a rack loss; satisfy the law; keep reads local</td>
+  <td>degrees of freedom the placer no longer has — and an unsatisfiable set stalls it silently (F7)</td>
+</tr>
+<tr>
+  <td>Fencing reads as well as writes</td>
+  <td>a stale map can never yield a stale answer</td>
+  <td>one more check on the hottest path, and a redirect where a read used to be served</td>
+</tr>
+<tr>
+  <td>Global secondary index</td>
+  <td>one-hop term reads</td>
+  <td>multi-partition (or async) writes</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<blockquote>
+<p><strong>CHECKPOINT — engineering model complete.</strong> You can state the five
+invariants, name which one each of the nine failure scenarios attacks, and
+price every design choice. You can also name the three failures that arrive
+as <em>silence</em> rather than as errors — the stalled placer (F7), the stale read
+(F8), the resurrected delete (F9) — which is the difference between a design
+review and a checklist. Last layer: the real systems and the operator's view.</p>
+</blockquote>
+<hr />
+<h2 id="readme-13-production--the-same-machine-in-every-costume">13. PRODUCTION — the same machine in every costume</h2>
+<p><strong>The toy → real chain.</strong> This lab's model (one copy per partition, one map,
+explicit migrations) maps onto real systems with one big addition: <strong>every
+partition is itself replicated</strong> — usually each partition is a replication
+group (leader + followers, or a Raft group). That composition resolves cleanly:
+<em>rebalancing moves replicas, not the partition-in-the-abstract</em> — adding a
+node means some partitions add a replica there and drop one elsewhere (the
+snapshot+catch-up protocol IS how a new replica bootstraps), and &quot;moving&quot; a
+leader is often just a leadership transfer with zero data motion, the cheapest
+rebalancing there is. The quorums lab's machinery lives <em>inside</em> each
+partition; this lab's machinery decides <em>where</em> each partition's replicas
+live. And once there are several replicas to place, stage 10.9's constraints
+stop being optional: &quot;three copies&quot; only means something if the three cannot
+die together, so every production placer is rack- and zone-aware before it is
+balance-aware.</p>
+<p><strong>The bestiary</strong>, one line each, all recognizable now:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>System</th>
+  <th>key→partition</th>
+  <th>partition→node &amp; rebalancing</th>
+  <th>Map lives in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Kafka</strong></td>
+  <td><code>hash(key) mod P</code> per topic, P increase-only</td>
+  <td>operator/Cruise Control moves replicas; leader epochs fence</td>
+  <td>controller (ZooKeeper → KRaft, i.e. Raft)</td>
+</tr>
+<tr>
+  <td><strong>Cassandra / ScyllaDB</strong></td>
+  <td>hash onto ring</td>
+  <td>vnodes (256→16-token history you know); operator-paced streaming</td>
+  <td>gossip, no consensus</td>
+</tr>
+<tr>
+  <td><strong>HBase / Bigtable</strong></td>
+  <td>range</td>
+  <td>auto split/merge of regions; master assigns; pre-split + salting guidance</td>
+  <td>ZooKeeper + META / Chubby</td>
+</tr>
+<tr>
+  <td><strong>CockroachDB / TiDB</strong></td>
+  <td>range (~512 MB / ~96 MB)</td>
+  <td>auto split/merge <strong>including load-based splits</strong>; rebalancer moves Raft replicas</td>
+  <td>meta ranges / Placement Driver (both Raft)</td>
+</tr>
+<tr>
+  <td><strong>Redis Cluster</strong></td>
+  <td><code>CRC16 mod 16384</code> slots</td>
+  <td>operator moves slots; MOVED/ASK</td>
+  <td>gossiped slot table</td>
+</tr>
+<tr>
+  <td><strong>Elasticsearch</strong></td>
+  <td><code>hash(routing) mod primaries</code>, fixed</td>
+  <td>auto shard allocation with throttles + delay timers</td>
+  <td>cluster state (master-elected)</td>
+</tr>
+<tr>
+  <td><strong>MongoDB</strong></td>
+  <td>range or hashed, chunks</td>
+  <td>background balancer migrates chunks (max ~2 concurrent); mongos routes</td>
+  <td>config servers (replica set)</td>
+</tr>
+<tr>
+  <td><strong>DynamoDB</strong></td>
+  <td>hash on partition key</td>
+  <td>fully managed: auto-splits by size AND by heat (adaptive capacity)</td>
+  <td>internal</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>How each of them lets you change P</strong>, since that is the decision you cannot
+undo: Kafka increases only, moving no bytes but breaking per-key history;
+Elasticsearch <code>_split</code>s to a multiple and <code>_shrink</code>s to a factor (cheap, via
+hard-linked segments, on a write-blocked index) and otherwise wants a reindex;
+Redis Cluster never changes its 16,384 and moves slots instead; HBase,
+Bigtable, CockroachDB, TiDB, MongoDB and DynamoDB split partitions
+individually and continuously, so &quot;choosing P&quot; is not a decision anyone makes
+there. Stage 10.8 is the arithmetic behind that table.</p>
+<p>Two of these deserve a paragraph because they extend the concept:</p>
+<ul>
+<li><strong>Kafka's consumer groups rebalance <em>consumption</em>, not data.</strong> The
+partitions don't move; the <em>assignment of partitions to consumers</em> does, on
+every membership change — and the original (&quot;eager&quot;) protocol was
+stop-the-world: all consumers drop all partitions, wait, get reassigned.
+A deploy of 50 consumers = 50 rebalances = minutes of paused consumption.
+Cooperative sticky rebalancing (KIP-429) made it incremental — only the
+partitions actually changing hands stop. Same lab, different resource:
+assignment churn is a cost even when zero bytes move.</li>
+<li><strong>DynamoDB's adaptive capacity is F1 institutionalized:</strong> it splits
+partitions by observed <em>heat</em>, not just size — load-based splitting as a
+managed service, with the hot-key ceiling still yours to design around
+(their docs still open with &quot;distribute your partition keys&quot;).</li>
+</ul>
+<p><strong>What the educational version omitted</strong>, honestly listed: replication inside
+each partition (quorums/raft labs — the biggest omission, addressed above);
+cross-partition transactions (distributed-transactions lab); how the map's
+consensus store itself scales; multi-tenant fairness and per-partition quotas
+(one customer's partition starving its neighbours is F1 with a billing
+relationship attached); backpressure during migrations; and split
+<em>hysteresis</em> (real systems split at 10 GB but merge at 2 GB, not 5 — a gap
+that prevents flapping at the threshold). Geo-placement and rack awareness
+<em>were</em> on this list and are now stage 10.9; the toy still models them as a
+single from-scratch solve, where a real placer computes the minimal set of
+moves from the current placement to a legal one — the difference between
+knowing the answer and getting there without a storm (F5).</p>
+<p><strong>The operator's dashboard</strong> — what on-call actually watches, each metric
+traceable to a stage of this lab:</p>
+<ul>
+<li><strong>Per-partition size histogram</strong> (data skew, F2 creep, jumbo partitions —
+&quot;jumbo&quot; being MongoDB's official word for a chunk too fat to migrate).</li>
+<li><strong>Per-partition request rate / heat map</strong> (load skew, F1 — the ratio
+busiest:median is the number to alarm on, not any absolute).</li>
+<li><strong>Rebalance in flight</strong>: moves running, bytes queued, ETA, and the
+<strong>throttle utilization</strong> — a migration that can't outrun the write rate
+never converges (10.5's drain race).</li>
+<li><strong>Stale-routing rate</strong> (MOVED/redirect counts — a spike means the map churned
+faster than caches heal; F3).</li>
+<li><strong>Epoch-rejection count</strong> (should be ~0; a burst = something stale is
+writing — F6 caught in the act, which is the fence <em>working</em>).</li>
+<li><strong>Under-replicated / unplaceable partition count</strong> (F7) — the one metric
+whose healthy value is a hard zero, and the only warning you get that the
+placer has quietly given up. Alarm on this, never on &quot;rebalancing is idle&quot;,
+because idle is exactly what the failure looks like.</li>
+<li><strong>Requests refused for un-owned partitions</strong> (F8) — the seal working. Like
+the epoch-rejection count, a burst is informative rather than alarming; a
+permanent zero on a cluster that rebalances is suspicious, because it may
+mean nothing is checking.</li>
+<li><strong>The F5 tripwire</strong>: movement triggered per hour + detector verdict rate on
+one graph — the storm announces itself as both climbing together.</li>
+</ul>
+<hr />
+<h2 id="readme-14-exercises">14. EXERCISES</h2>
+<p>The eight-rung ladder lives in <a href="notes.html#exercises"><code>EXERCISES.md</code></a> — explain,
+identify (in the viz), predict, modify, trace the migration by hand, spot the
+planted flaw in a described design, extend a design to survive a failure it
+currently doesn't, and a full production design (rung 8: partition a payments
+ledger — your system-design curriculum's home turf). Attempt before opening
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<hr />
+<h2 id="readme-15-knowledge-map--next-steps">15. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">flowchart TD
+    CH[consistent-hashing&lt;br/&gt;placement functions] --&gt; THIS
+    QR[quorums-and-replication&lt;br/&gt;N copies of each partition] --&gt; THIS
+    GP[gossip-protocols&lt;br/&gt;membership + map spread] --&gt; THIS
+    DL[distributed-locking&lt;br/&gt;fencing → ownership epochs] --&gt; THIS
+    THIS[partitioning-and-rebalancing]
+    THIS --&gt; K[kafka?&lt;br/&gt;partitions + consumer rebalancing, lived-in]
+    THIS --&gt; CDC[change-data-capture?&lt;br/&gt;the delta log as a product]
+    THIS --&gt; DT[distributed-transactions&lt;br/&gt;when a write spans partitions ✓ learned]
+    THIS -.-&gt;|do not confuse| LB[load balancing:&lt;br/&gt;stateless request spreading —&lt;br/&gt;any server can take any request;&lt;br/&gt;partitioning is stateFUL spreading —&lt;br/&gt;only the owner can]
+    THIS -.-&gt;|do not confuse| SH[replication:&lt;br/&gt;same data, many places;&lt;br/&gt;partitioning: different data,&lt;br/&gt;different places — real systems do both,&lt;br/&gt;replication INSIDE each partition]
+</pre>
+<p>Commonly confused, one sentence each: <strong>partitioning vs replication</strong> — split
+vs copy; orthogonal, composed in every real system. <strong>Partitioning vs load
+balancing</strong> — a load balancer may send a request anywhere because servers are
+interchangeable; a partition router has no choice, because state lives
+somewhere specific. <strong>Rebalancing vs failover</strong> — failover changes which
+<em>replica</em> leads (fast, no data motion); rebalancing changes where replicas
+<em>live</em> (slow, moves data) — F5 is what happens when a system confuses them.</p>
+<p>Ready to type: <strong><code>/learn kafka</code></strong> (now unlocked properly: partitions, leader
+epochs, consumer-group rebalancing, Cruise Control — every prerequisite is in
+place, and it's been the most-suggested next step across nine labs) ·
+<strong><code>/learn change-data-capture</code></strong> (10.5's delta log, promoted to a first-class
+product) · <strong><code>/learn geospatial-indexing</code></strong> (partitioning where the keyspace
+is the planet).</p>
+<hr />
+<h2 id="readme-16-glossary">16. GLOSSARY</h2>
+<p>In order of first appearance:</p>
+<ul>
+<li><strong>Partition (shard / region / chunk / token range)</strong> — a contiguous piece of the keyspace, owned and moved as a unit.</li>
+<li><strong>Data skew</strong> — uneven bytes per partition; fixed by moving boundaries.</li>
+<li><strong>Load skew</strong> — uneven requests per partition; boundary moves don't fix the single-hot-key case.</li>
+<li><strong>Hot partition</strong> — the partition currently drowning (in either skew).</li>
+<li><strong>Partition key</strong> — the record attribute that determines placement; the highest-leverage schema choice.</li>
+<li><strong>Range partitioning</strong> — boundaries by key order; buys range scans, risks sequential hotspots.</li>
+<li><strong>Hash partitioning</strong> — boundaries by hash; buys balance, forfeits range scans.</li>
+<li><strong>Rebalancing</strong> — changing partition→node assignment (and sometimes boundaries) with data migration, live.</li>
+<li><strong>Partition map / routing table</strong> — authoritative <code>partition → node (+epoch)</code> table, plus its many stale caches.</li>
+<li><strong>Scatter/gather</strong> — broadcasting a query to all partitions and merging results.</li>
+<li><strong>Dynamic splitting</strong> — auto-split a partition at a size/load threshold at its median key; auto-merge shrunken neighbours.</li>
+<li><strong>Pre-splitting</strong> — declaring partition boundaries at table creation so bulk loads don't hammer one node.</li>
+<li><strong>Sequential-key hotspot</strong> — ever-increasing keys (timestamps, auto-increment) pinning all writes to the last range partition.</li>
+<li><strong>Compound key</strong> — (partition component, ordering component); hash-spread across partitions, range-ordered within. Cassandra: partition key + <strong>clustering key</strong>.</li>
+<li><strong>Salting / bucketing</strong> — manufacturing a spreading prefix (<code>hash mod B</code>) for a hot or sequential key; costs B-way scatter on reads.</li>
+<li><strong>Fixed partitions</strong> — <code>hash(key) mod P</code> with P frozen forever; only the small partition→node table ever changes.</li>
+<li><strong>Monotonicity</strong> (recalled from consistent-hashing) — node changes move keys only to/from the changed node, never sideways.</li>
+<li><strong>Routing tier</strong> — a proxy layer that owns map lookups so clients stay dumb (mongos).</li>
+<li><strong>Partition-aware client</strong> — a client library caching the map and talking straight to owners.</li>
+<li><strong>MOVED / ASK</strong> — Redis Cluster's redirects: permanently-moved-update-your-map vs mid-migration-one-request-only.</li>
+<li><strong>Migration</strong> — the snapshot → catch-up → cutover protocol moving one partition between nodes under live writes.</li>
+<li><strong>Delta log (catch-up log)</strong> — writes accepted by the old owner during the snapshot, replayed to the new owner; the thing whose absence loses acknowledged writes.</li>
+<li><strong>Cutover</strong> — the brief write-pause + final drain + map flip ending a migration.</li>
+<li><strong>Ownership epoch</strong> — monotonically increasing generation number per partition; the fencing token (distributed-locking lab) worn by rebalancing.</li>
+<li><strong>Split-brain (partition ownership)</strong> — two nodes concurrently believing they own one partition; prevented by epoch checks, not by timeouts.</li>
+<li><strong>Tombstone</strong> — an explicit &quot;this was deleted&quot; record; deletion must travel as a record because absence cannot be shipped (a gap is indistinguishable from never-heard-of-it).</li>
+<li><strong>Sealing a partition</strong> — the demoted owner refuses every request for a partition at cutover and answers <code>MOVED</code>, making stale reads structurally impossible rather than merely impolite.</li>
+<li><strong>Read fencing</strong> — applying the ownership-epoch check to reads, not only writes; without it a stale map yields a plausible stale answer instead of a redirect.</li>
+<li><strong>Rebalance storm</strong> — the movement→load→false-verdict→more-movement feedback loop; why rebalancers are throttled and gated.</li>
+<li><strong>Local (document-partitioned) secondary index</strong> — each partition indexes its own records; cheap writes, scatter reads.</li>
+<li><strong>Global (term-partitioned) secondary index</strong> — index partitioned by indexed value; one-hop reads, multi-partition (often async) writes.</li>
+<li><strong>Tail latency amplification</strong> — a scatter query is as slow as its slowest partition: per-partition 1% tails become fleet-level 63% at 100-way fan-out.</li>
+<li><strong>Hash-range partitioning</strong> — each partition owns a slice of the hash space rather than a remainder class; keeps hash's balance and restores the ability to split one partition at a time.</li>
+<li><strong>Partition doubling</strong> — the one cheap change to a fixed P: <code>h mod 2P</code> is either <code>h mod P</code> or <code>h mod P + P</code>, so every partition cuts locally in two and no bytes cross the network.</li>
+<li><strong><code>_split</code> / <code>_shrink</code></strong> — Elasticsearch's names for doubling-style and halving-style resharding; the multiple/factor requirement in their APIs is this arithmetic showing through.</li>
+<li><strong>Failure domain</strong> (recalled from consistent-hashing) — a set of machines that can fail together (rack, zone, power feed); replicas of a partition must be spread across them or &quot;three copies&quot; is a fiction.</li>
+<li><strong>Placement constraint</strong> — a hard rule about where a partition's copies may live (rack diversity, zone, residency); filters the legal set before balance chooses within it.</li>
+<li><strong>Hard constraint vs soft preference</strong> — whether an unsatisfiable rule blocks placement or merely loses a tie; the distinction real systems make explicit (Elasticsearch <code>require</code>/<code>prefer</code>, Kubernetes <code>required</code>/<code>preferred</code>).</li>
+<li><strong>Data residency</strong> — a legal requirement that certain records be stored in a certain jurisdiction; placement driven by the content of a partition rather than by load.</li>
+<li><strong>Shard allocation awareness</strong> — Elasticsearch's name for rack/zone-aware placement; Cassandra's equivalent is NetworkTopologyStrategy, CockroachDB's is zone configurations, MongoDB's is zone sharding.</li>
+<li><strong>Under-replicated / UNASSIGNED</strong> — a partition with fewer legal copies than required, or none; the state a constrained placer enters instead of breaking a rule, and the only thing worth alarming on when a rebalancer goes quiet.</li>
+<li><strong>Jumbo partition</strong> — one too fat to migrate (MongoDB's term); the failure mode of unsplittable growth.</li>
+<li><strong>Leader epoch (Kafka) / Raft term</strong> — production names for the ownership epoch.</li>
+<li><strong>Consumer group rebalance</strong> — Kafka reassigning partition <em>consumption</em> (not data) across consumers; eager (stop-the-world) vs cooperative (incremental).</li>
+<li><strong>Adaptive capacity</strong> — DynamoDB's load-based splitting and throughput shifting; F1 management as a service.</li>
+</ul>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--partitioning--rebalancing">Exercises — Partitioning &amp; Rebalancing</h1>
+<p>Pencil-and-paper and visualization work only. Attempt each rung before opening
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. The visualization is
+<a href="visualization.html"><code>visualization.html</code></a> (&quot;The Moving Shelves&quot;).</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p>1.1 In your own words, no jargon: why must data be split across machines, and
+why doesn't replication solve the same problem?</p>
+<p>1.2 The lab's key idea is &quot;cut the data into many more pieces than you have
+machines, and make the piece the unit of movement.&quot; Explain to a colleague
+<em>why</em> the piece-count being larger than the machine-count is the load-bearing
+part — what goes wrong at pieces == machines?</p>
+<p>1.3 Explain the difference between data skew and load skew, with one concrete
+example of each, and say which of the two can be fixed by moving partition
+boundaries.</p>
+<p>1.4 A colleague says &quot;we can't add partitions, the partition count is frozen
+forever&quot;. In your own words — no arithmetic — explain in what sense they are
+right, in what sense they are wrong, and what question you would ask about
+their system before agreeing with either half.</p>
+<p>1.5 Explain to a non-engineer why &quot;we keep three copies of your data&quot; can be
+technically true and practically false, and what a rack has to do with it.</p>
+<h2 id="exercises-rung-2--identify-in-the-visualization">Rung 2 — Identify (in the visualization)</h2>
+<p>2.1 Tab 1, scheme &quot;fixed shelves&quot;, press &quot;+60 books&quot; twice. Which building
+holds the most books right now? Which <em>shelf</em> is the fattest, and what is its
+book count? What is the current data-balance number, and what would 1.00×
+mean?</p>
+<p>2.2 Press &quot;40 borrows of the Sharma novel&quot;. Which shelf is glowing, in which
+building? Read the two balance numbers — which one moved, and why only that
+one?</p>
+<p>2.3 Tab 2, before starting a move: who owns p11 according to the catalog, at
+which epoch? What version does every record hold?</p>
+<p>2.4 Tab 3, mode &quot;hash mod P&quot;. Press &quot;Double the shelf count&quot; once. Read both
+big numbers: what does each one count, and why is one of them zero? Then find
+shelf p3 and shelf p19 — which building is each in, and why is that not a
+coincidence?</p>
+<p>2.5 Tab 4, tick &quot;each copy of a shelf in a different rack&quot;. Read the shelf
+table: how many copies did p0 actually get, what reason is printed next to it,
+and what is the total number of copies missing across the whole cluster? Now
+say which single number on this screen an on-call engineer should be paged
+about.</p>
+<p>2.6 Tab 2, untick &quot;old owner seals the shelf at cutover&quot;, run a move to
+completion, press &quot;A reader updates an address&quot; once, then &quot;Stale client READS
+from the old owner&quot;. Which version did the client receive, which version is
+current, and how many writes were lost?</p>
+<h2 id="exercises-rung-3--predict-then-check-in-the-viz">Rung 3 — Predict (then check in the viz)</h2>
+<p>3.1 Tab 1, scheme &quot;fixed shelves&quot;, P=12, 3 buildings with ~120 books. You
+open a 4th building. Predict: (a) how many shelves move, (b) what percentage
+of <em>books</em> move, (c) how many books move <em>between the three old buildings</em>.
+Run Scenario 1 (or press &quot;Open a new building&quot;) and check all three.</p>
+<p>3.2 Tab 1, scheme &quot;by key order + auto-split&quot;. Predict what the shelf layout
+looks like after &quot;+40 newspapers (date keys)&quot; pressed twice: how many shelves
+hold newspapers, and which shelf will take <em>tomorrow's</em> newspaper? Check with
+Scenario 2.</p>
+<p>3.3 Tab 2, protocol v2 (catch-up). You press &quot;write&quot; twice during the
+snapshot copy and once during catch-up. Predict the verdict at the end, and
+predict what the delta log's maximum length was along the way.</p>
+<p>3.4 Tab 3, mode &quot;hash mod P&quot;, P=16. Predict, before pressing anything: after
+&quot;Double the shelf count&quot;, (a) roughly what percentage of keys land on a
+different partition, (b) what percentage must be copied over the network, and
+(c) what P becomes. Then predict the same three numbers for &quot;Set P to 24&quot;.
+Run scenarios 8 and 9 and check all six.</p>
+<p>3.5 Tab 4, with three buildings in three different racks, rack rule ON and
+three copies required. Predict what happens when you close one building —
+how many shelves become unplaceable, and how many copies each of them keeps.
+Check it, then predict what happens if you drop the requirement to 2 copies.</p>
+<p>3.6 Tab 3, mode &quot;hash RANGE&quot;. Predict what the two big numbers show after
+&quot;Split the fattest shelf in half&quot;, and predict what P becomes. Now predict
+whether pressing it ten more times ever forces a key to cross the network.
+Check with scenario 10 and then by pressing it repeatedly.</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>4.1 In Tab 1, set P=8 with 3 buildings. What is the <em>best possible</em>
+data-balance number the fixed-shelf scheme can achieve (assume all shelves
+equal size)? Now answer for P=24. What did raising P buy, and what does it
+cost (name two per-partition costs from the doc)?</p>
+<p>4.2 Suppose the migration protocol's catch-up drain runs at 100 writes/second
+(throttled) and the partition receives 130 writes/second. Describe the
+delta log's length over time, and what the operator must change for the
+migration to ever finish. Which dashboard metric from stage 13 catches this?</p>
+<p>4.3 The auto-split threshold in the viz is 30 books. What would change —
+good and bad — if it were 5? If it were 10,000? Connect each answer to a
+line in the trade-off table of stage 12.</p>
+<p>4.4 You inherit a store with P = 1,024 fixed partitions holding 30 GB of data
+on 4 machines, and it will never grow past 100 GB. Name three concrete costs
+this is paying, name the operation that fixes it, state the only target
+partition counts that operation can accept, and say what the operation costs
+in availability.</p>
+<p>4.5 Take the migration protocol v3 and remove exactly one thing: the epoch
+check on <strong>reads</strong> (keep it on writes). Which invariant of stage 12 breaks?
+Construct the shortest sequence of events that produces a wrong answer, and
+say how a monitoring system could ever detect that it happened. Then answer
+the harder half: with the read check present, what does the client see
+instead, and what has that cost you?</p>
+<p>4.6 The placer in Tab 4 treats every rule as a hard constraint. Suppose
+&quot;keep Tokyo users' partitions on Tokyo machines&quot; were worth 100 ms of latency
+but nothing else. Should it be a hard constraint or a soft preference, and
+what specifically goes wrong if you get that choice backwards in each
+direction?</p>
+<h2 id="exercises-rung-5--trace-by-hand-then-verify">Rung 5 — Trace (by hand, then verify)</h2>
+<p>5.1 Fixed partitions, P=6, nodes {A, B}, assignment: A={p0,p2,p4},
+B={p1,p3,p5}. Node C joins. Using the &quot;steal whole partitions from the
+most-loaded node until the newcomer reaches fair share&quot; rule (ties: steal the
+highest-numbered partition), write the final assignment, list every partition
+that moved, and compute the moved fraction of keys (assume equal keys per
+partition). Then say which of the five invariants of stage 12 your trace
+preserved and how you'd check each.</p>
+<p>5.2 Trace migration protocol v2 by hand. Partition holds keys
+{asha:v1, ben:v1, chirag:v1}; copy order is alphabetical, one key per step.
+Events, in order: copy asha → <strong>write asha</strong> → copy ben → copy chirag →
+<strong>write ben</strong> → (catch-up begins) → drain → drain → cutover.
+Write down, after every event: the copy cursor, B's versions, D's versions,
+and the delta log contents. What does D hold at cutover, and is the
+verdict &quot;nothing lost&quot;? Then answer: which of the two writes would have
+been lost under protocol v1, and why exactly those? (The viz's write button
+cycles asha, ben, chirag, … in order, so you can reproduce the same shape
+in Tab 2 — it just has six records instead of three.)</p>
+<p>5.3 By hand, no simulator. Eight keys have hashes <strong>3, 11, 20, 28, 37, 45,
+54, 62</strong>. P = 8, the rule is <code>partition = hash mod P</code>, and partitions are
+dealt to nodes {A, B, C} by <code>partition mod 3</code>. Write the partition and node
+for all eight keys.</p>
+<p>Now double P to 16 and write them again. Report three numbers: (a) how many
+keys changed partition; (b) how many changed node <strong>if each new partition
+p + 8 is created on the machine that already held partition p</strong>; (c) how many
+changed node <strong>if instead the placer re-deals all 16 partitions by
+<code>partition mod 3</code></strong>. Compare (b) and (c), then say in one sentence what the
+&quot;doubling is free&quot; claim of stage 10.8 actually depends on — because it is not
+only the arithmetic.</p>
+<p>Finally redo it for P = 12 and report (a) and (c) again. Why can no
+&quot;stays-home&quot; rule rescue this case?</p>
+<p>5.4 Trace the resurrected delete (stage 10.6, hole 2) on three keys.
+Partition holds {asha:v1, ben:v1, chirag:v1}; copy order alphabetical, one key
+per step. Events: copy asha → <strong>delete ben</strong> → copy ben → <strong>delete asha</strong> →
+copy chirag → catch-up → cutover. Track after every event: B's contents, D's
+contents, and the delta log. Do it twice — once with the delta log recording
+<em>keys that changed</em>, once recording <em>operations</em>. State exactly which records
+exist on D at cutover under each, and which of the two deletions each version
+loses. Which one is worse, and why?</p>
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p>Each design below is described, not coded. Find the planted mistake,
+construct a concrete run where it gives a wrong outcome, and name the
+violated invariant or guarantee.</p>
+<p>6.1 <em>&quot;Our migration is safe: the destination copies a snapshot, then replays
+the delta log, and we never pause writes — when the delta log is empty we
+just flip the map.&quot;</em> (Hint: the log was empty at the moment we <em>checked</em>.)</p>
+<p>6.2 <em>&quot;We don't need ownership epochs: before serving any write, the old owner
+checks a <code>still_owner</code> boolean it keeps in memory, which the rebalancer sets
+to false at cutover.&quot;</em> (Hint: the distributed-locking lab's Act 3.)</p>
+<p>6.3 <em>&quot;To fix our hot timestamp key, we salted it: writes go to
+<code>key#rand(0..19)</code>. Reads pick a random salt too, so load spreads evenly.&quot;</em></p>
+<p>6.4 <em>&quot;Our auto-rebalancer keeps the cluster healthy: any node that misses
+3 heartbeats (3 seconds) is drained — its partitions immediately stream to
+the survivors. We tested it by killing nodes; it works great.&quot;</em></p>
+<p>6.5 <em>&quot;Resharding is easy: we run <code>hash mod P</code> with P = 64, and when we need
+more granularity we just bump P to 100 and let the rebalancer sort it out
+overnight. It's the same operation as adding a node, only bigger.&quot;</em></p>
+<p>6.6 <em>&quot;Our placer is rack-aware: it never puts two copies of a partition in
+the same rack. To keep the cluster balanced it also moves partitions
+continuously toward the emptiest machine. Last week we consolidated from
+three racks to two for cost reasons — the dashboards stayed green all week,
+so the change was safe.&quot;</em></p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>7.1 Extend migration protocol v3, on paper, to survive this: <strong>the
+destination node D crashes halfway through the catch-up phase.</strong> Specify:
+what state exists where at the moment of the crash, who notices, what
+happens to the partly-copied data, whether the migration restarts from
+scratch or resumes, and what B must have kept for either answer. What is
+the invariant your extension must never violate, and what is the cheapest
+piece of durable bookkeeping that guarantees it?</p>
+<p>7.2 A stale-map client's redirect (F3) requires the old owner to be alive.
+Design the complete client-side routing loop that is correct even when the
+old owner is dead: what does the client try, in what order, with what
+fallback, and what stops a thundering herd of clients all hammering the map
+authority at once? (Two prior labs supply the herd fix.)</p>
+<p>7.3 Your cluster enforces &quot;one copy of each partition per availability zone,
+three zones&quot;. Zone C goes offline for four hours (network, not data loss).
+Design the response on paper: what should the placer do at minute 1, minute
+30, and hour 4; what should it do differently if zone C is gone permanently;
+and what is the single decision that separates those two cases when nobody
+knows yet which one it is. Name the metric you would page on and the metric
+you would deliberately <em>not</em> page on, and connect both to F5 and F7.</p>
+<h2 id="exercises-rung-8--design-production-scale">Rung 8 — Design (production scale)</h2>
+<p>Design the partitioning and rebalancing story for a <strong>payments ledger</strong> —
+your system-design curriculum's home turf. Requirements:</p>
+<ul>
+<li>500M accounts; each account has a balance row and an append-only entry
+stream (~2 KB/entry, ~50 entries/account/year, heavy-tailed: 0.1% of
+accounts produce 100× the median).</li>
+<li>Queries: (a) post an entry and update the balance atomically (99% of
+traffic), (b) statement for one account for a date range, (c) daily
+regulator scan of <em>all</em> entries for one calendar day.</li>
+<li>Growth: the fleet doubles roughly yearly; migrations must never lose an
+acknowledged entry (it's money — the idempotency lab applies).</li>
+</ul>
+<p>Decide and defend: the partition key and scheme (and what happens to query
+(c) under your choice); fixed vs dynamic partitions and why; how the 0.1%
+whale accounts are handled; the migration protocol and where epochs are
+checked; what the map lives in; which rebalancing operations are automatic
+and which need a human; and the five dashboards you build first. Then list
+the two requirements that are in genuine tension and state the compromise
+you chose.</p>
+<p>8.2 <strong>The resharding you inherited.</strong> A service you now own stores 4 TB of
+user documents in a home-grown store: <code>partition = md5(user_id) mod 64</code>, 64
+partitions over 24 machines, a partition→node table in ZooKeeper, and a
+partition-aware client library used by nine teams. Each partition is now
+~62 GB; a single migration takes eleven hours, so the cluster effectively
+cannot be rebalanced during business hours, and last quarter a machine failure
+took two days to fully re-replicate.</p>
+<p>Produce the plan. Cover: the target partition count and how you justify the
+number; which of the three P-change routes from stage 10.8 you take and why
+the other two are rejected; whether the client library must change and what
+happens to the nine teams if it does; how you sequence the change so that no
+acknowledged write and no acknowledged delete is lost at any point; what you
+do about reads during the change; how long the whole thing takes and what
+fraction of it must happen with writes blocked; and the rollback plan for the
+moment it goes wrong at 40% complete. Finally: name the one property of the
+current design that made this expensive, and write the one sentence you would
+put in the design doc of the <em>next</em> system to avoid inheriting this again.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--partitioning--rebalancing">Solutions — Partitioning &amp; Rebalancing</h1>
+<p>Attempt the exercises first. For rungs 7–8 these are worked design
+discussions, not single correct answers.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> One machine eventually can't hold all the data (disk) or serve all the
+traffic (CPU/network) — usually traffic breaks first. Replication makes <em>more
+copies of everything</em>: every replica still stores the full dataset and still
+receives every write, so it multiplies read capacity and survivability but
+does nothing for total size or write throughput. Splitting gives each machine
+a <em>different piece</em>, so both storage and write load divide across the fleet.
+They're orthogonal and composed: real systems replicate each piece.</p>
+<p><strong>1.2</strong> At pieces == machines, &quot;rebalance&quot; and &quot;re-cut the data&quot; are the same
+operation — to change the machine count you must redraw boundaries through the
+records themselves, which is <code>mod n</code>'s disease (the consistent-hashing lab
+measured 99% of keys moving). With many pieces per machine, the piece-to-key
+mapping is frozen; only the small piece-to-machine table changes, so growth
+means relocating whole pieces — a table edit plus bulk copies — and the moved
+fraction drops to the theoretical minimum of ~1/n. The surplus of pieces is
+also the balance granularity: you can't spread 3 pieces evenly over 4 machines.</p>
+<p><strong>1.3</strong> Data skew: uneven <em>bytes</em> — the S-surname shelf holds 3× the books of
+the X shelf. Load skew: uneven <em>requests</em> — one bestseller gets more borrows
+than the rest of the library combined. Boundary moves (split the S shelf, merge
+quiet neighbours) fix data skew and the <em>multi-key</em> kind of load skew; they
+cannot fix a single hot key, because every scheme gives one key one home.
+That needs key-level surgery (salting) or a cache in front.</p>
+<p><strong>1.4</strong> Both halves are true of different systems, and the question tells you
+which. They are right that under <code>hash mod P</code> the <em>formula</em> freezes P: every
+client computes <code>hash(key) mod P</code> offline, so changing P re-addresses data
+everywhere at once. They are wrong that this makes P unchangeable — doubling
+(and halving) is cheap, because <code>h mod 2P</code> is either <code>h mod P</code> or <code>h mod P + P</code>,
+so each partition cuts locally in two with nothing crossing the network. And
+they are wrong in a second, bigger way if their system partitions by hash
+<em>range</em> rather than by remainder: then P is not in the rule at all and any
+partition can be split at any time. <strong>The question to ask: &quot;is our rule a
+remainder or a range?&quot;</strong> Everything else follows from the answer.</p>
+<p><strong>1.5</strong> Three copies protect you against <em>independent</em> accidents — one disk
+dies, one machine reboots, one process crashes. Put all three copies in the
+same rack and they stop being independent: one power supply, one network
+switch, one clumsy afternoon of maintenance takes all three at once. So you
+have three copies of the data and one copy of the <em>risk</em>. A rack is the unit
+of &quot;things that fail together&quot;, which is why serious systems refuse to place
+copies without knowing which rack each machine is in. (In cloud terms the same
+argument climbs a level: availability zone, then region.)</p>
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> (Deterministic, so your numbers should match.) With P=12 over 3
+buildings the shelves sit 4/4/4; the fattest shelf is whichever collected the
+most hash collisions of the 120 keys — read it off the widest count. Balance
+1.00× would mean the busiest building holds exactly total/3; the displayed
+number is busiest ÷ that fair share.</p>
+<p><strong>2.2</strong> The shelf owning <code>sharma-the-cedar-gate</code> glows (its heat bar fills);
+only the <strong>load</strong> balance number jumps, because 40 borrows added almost no
+<em>data</em> (one key) but lots of <em>traffic</em>. That split — data balance calm, heat
+balance spiking — is exactly how a hot partition looks on a real dashboard.</p>
+<p><strong>2.3</strong> Catalog: p11 → <strong>B</strong> at <strong>epoch 5</strong>; every record at <strong>v1</strong>; D's table
+is empty (nothing copied yet).</p>
+<p><strong>2.4</strong> The first number counts keys whose <em>address</em> changed (48.8% — a
+bookkeeping fact); the second counts keys whose <em>bytes</em> had to be carried to
+another machine (0%). The second is zero because partition p19 is created out
+of p3 by splitting the data already sitting on p3's machine — there is nothing
+to send. p3 and p19 are in the same building, and that is the whole mechanism:
+every key of p19 was a key of p3 a moment ago, since <code>h mod 32 = 19</code> implies
+<code>h mod 16 = 3</code>.</p>
+<p><strong>2.5</strong> p0 gets <strong>one</strong> copy, with the reason &quot;every remaining building is in
+a rack this shelf already uses&quot;; all six shelves are short two copies, so 12
+copies are missing cluster-wide. The number to page on is the count of
+under-replicated/unplaceable shelves — <strong>not</strong> rebalancing activity, which is
+zero and looks perfectly healthy (F7).</p>
+<p><strong>2.6</strong> The client receives v1; the current value at D is v2; <strong>zero</strong> writes
+were lost. That combination — nothing lost, and a wrong answer served — is the
+whole point of F8: the write fence and the read fence protect different things,
+and having one does not give you the other.</p>
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> (a) 3 shelves move (12/4 = 3 is the newcomer's fair share); (b) ~25%
+of books (3 of 12 shelves, subject to shelf-size noise); (c) <strong>zero</strong> books
+move between old buildings — monotonicity. Scenario 1 shows ~75% for <code>mod N</code>
+on the same change, with most moves sideways.</p>
+<p><strong>3.2</strong> All newspapers occupy a run of shelves at the <em>end</em> of key order (the
+<code>zz-day-…</code> keys sort after every surname); after enough filings the tail shelf
+splits, but tomorrow's paper always lands on whichever shelf currently ends at
++∞ — the newest last shelf. The frontier is a property of the <em>keys</em>, not of
+any particular shelf.</p>
+<p><strong>3.3</strong> Verdict: nothing lost — every write went into the delta log (during
+copy) or the delta log (during catch-up), and the drain empties it before the
+flip. Max delta length: 2 (the two snapshot-phase writes queue; the catch-up
+write arrives while draining, so the log briefly holds it too — depending on
+interleaving you'll see 2 or 3; the point is it <em>shrinks to zero</em> before
+cutover).</p>
+<p><strong>3.4</strong> Doubling: (a) ~49% change partition, (b) <strong>0%</strong> cross the network,
+(c) P = 32. P → 24: (a) ~69%, (b) ~69%, (c) P = 24. The instructive part is
+the second column: the same &quot;change P&quot; operation costs nothing or costs a full
+redistribution depending only on whether the target is a multiple.</p>
+<p><strong>3.5</strong> Closing one of three racks makes all six shelves unplaceable at the
+third copy — each keeps 2 of 3. Dropping the requirement to 2 copies makes all
+six placeable immediately, which is worth pausing on: <em>lowering your durability
+target is always available as a way to make the red go away</em>, and it is a real
+decision (fewer copies, legally placed) rather than a fix. Choosing it
+deliberately is fine; drifting into it because the dashboard turned green is
+how clusters end up under-replicated for months.</p>
+<p><strong>3.6</strong> ~6% change partition, 0% cross the network, P = 17. Pressing it ten
+more times never forces a key across the network: a split always creates the
+new partition where the data already is. Movement between machines is the
+<em>separate</em> decision of rebalancing, and keeping the two apart is exactly why
+hash-range partitioning can resize forever.</p>
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> P=8 over 3 nodes: best split is 3/3/2, so best balance = (8/3)/(8/3)…
+in shelf counts the busiest holds 3 shelves against a fair share of 8/3 ≈ 2.67
+→ <strong>1.125×</strong>. P=24 over 3: 8/8/8 → <strong>1.00×</strong>, and over 4 nodes 6/6/6/6 →
+still 1.00×. Raising P buys balance granularity and smaller (cheaper, faster)
+moves; it costs per-partition overhead ×P (files, metadata, recovery
+bookkeeping) and wider scatter fan-out (a local-index query now asks 24
+partitions, not 8 — and the tail-amplification math worsens with fan-out).</p>
+<p><strong>4.2</strong> The delta log grows at 30 writes/second forever — the drain never
+catches up, so the migration literally cannot reach cutover; it is a queue
+with arrival rate &gt; service rate (the replication-lag lesson from the quorums
+lab). The operator must raise the migration throttle (or move the partition
+during a quieter window, or split the partition first so each half's write
+rate fits under the throttle). Dashboard: <strong>rebalance in flight — bytes
+queued/ETA and throttle utilization</strong>; the tell is an ETA that grows instead
+of shrinking.</p>
+<p><strong>4.3</strong> Threshold 5: partitions stay tiny — near-perfect balance and cheap
+moves, but per-partition overhead explodes and every query fans wider; the
+split machinery runs constantly (and each split churns the map, so stale-map
+redirects rise). Threshold 10,000: splits almost never happen — minimal
+overhead, but partitions become jumbo (slow, risky moves; coarse balance;
+the unit of movement stops being &quot;manageable&quot;). Rows implicated: &quot;more
+partitions&quot; (both directions) and &quot;dynamic split/merge&quot; in stage 12's table.</p>
+<p><strong>4.4</strong> Costs: (1) per-partition overhead ×1,024 — files, memtables, open
+handles, recovery bookkeeping, heartbeat and metadata rows, for partitions
+averaging 30 MB; (2) every scatter query fans out 1,024 ways, so tail-latency
+amplification is at its worst (the 0.99^n curve of stage 10.7 is essentially
+zero at n = 1,024); (3) the map is 1,024 rows to store, agree on, propagate and
+keep fresh in every client cache, for a cluster of four machines. The fix is
+<strong>halving</strong> — Elasticsearch's <code>_shrink</code>, or its equivalent — and it can only
+target a <strong>factor</strong> of the current count: 512, 256, 128, … 1. Cost in
+availability: shrink-style operations typically require the source shards to be
+collected onto one node first and writes blocked for the duration, so it is a
+planned-maintenance operation, not a background one.</p>
+<p><strong>4.5</strong> The broken invariant is <strong>routing safety</strong> (&quot;a stale map costs extra
+hops, never wrong answers&quot;). Shortest run: migrate p11 from B to D; cut over;
+one write lands at D (the true value advances); a client whose cached map still
+says B issues a read; B answers from the copy still on its disk. Three events
+and a wrong answer, with no node failure, no pause and no partition. Detection
+is the nasty part: nothing errors, so there is no rate to alarm on — the only
+signals are indirect (clients reporting impossible sequences, a read-repair or
+checksum job noticing divergence, or the age of the deposed owner's copy). With
+the read check present the client gets a <code>MOVED</code> redirect instead: it pays one
+extra round trip and repairs its map. That is the cost — an extra hop on some
+reads, plus a check on the hottest path — and it buys the difference between
+&quot;slow sometimes&quot; and &quot;wrong invisibly&quot;.</p>
+<p><strong>4.6</strong> Soft preference. Hard is wrong here because a rule worth 100 ms should
+never be able to stop the placer entirely: lose the Tokyo machines to
+maintenance and a hard rule leaves those partitions unplaced and <em>unavailable</em>
+— you traded 100 ms for an outage. Backwards in the other direction (soft when
+it should be hard) is worse in a quieter way: a residency rule expressed as a
+preference will be silently violated the first time the EU machines are full,
+and nothing will report it, because a satisfied-preference system considers
+itself healthy. Rule of thumb: constraints that protect <strong>correctness or
+legality</strong> are hard; constraints that protect <strong>performance</strong> are soft.</p>
+<h2 id="solutions-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1</strong> Fair share = ⌊6/3⌋ = 2. Steal 1: A and B tie at 3; node-name order
+picks A; A's highest is p4 → C. (A:{p0,p2}, B:{p1,p3,p5}, C:{p4}.) Steal 2:
+B is most-loaded at 3; B's highest is p5 → C. Final: <strong>A={p0,p2},
+B={p1,p3}, C={p4,p5}</strong>. Moved: p4, p5 → <strong>2/6 = 33.3% of keys</strong>, which is
+exactly the newcomer's fair share — minimal, zero sideways. Invariant checks:
+<em>coverage</em> — p0…p5 each appear exactly once in the final assignment (count
+them); <em>single owner per epoch</em> — each stolen partition's map entry flips
+once, epoch bumped; <em>handover completeness</em> — each of the two moves runs the
+v2/v3 protocol; <em>routing safety</em> — old owners redirect until caches heal.</p>
+<p><strong>5.2</strong> Trace (cursor = next key to copy; log = delta log):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Event</th>
+  <th>Cursor</th>
+  <th>B (src)</th>
+  <th>D (dst)</th>
+  <th>Delta log</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0</td>
+  <td>start</td>
+  <td>asha</td>
+  <td>a:1 b:1 c:1</td>
+  <td>—</td>
+  <td>∅</td>
+</tr>
+<tr>
+  <td>1</td>
+  <td>copy asha</td>
+  <td>ben</td>
+  <td>a:1 b:1 c:1</td>
+  <td>a:1</td>
+  <td>∅</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><strong>write asha</strong> → v2</td>
+  <td>ben</td>
+  <td><strong>a:2</strong> b:1 c:1</td>
+  <td>a:1</td>
+  <td>[a→2]</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>copy ben</td>
+  <td>chirag</td>
+  <td>a:2 b:1 c:1</td>
+  <td>a:1 b:1</td>
+  <td>[a→2]</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>copy chirag</td>
+  <td>done</td>
+  <td>a:2 b:1 c:1</td>
+  <td>a:1 b:1 c:1</td>
+  <td>[a→2]</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><strong>write ben</strong> → v2</td>
+  <td>—</td>
+  <td>a:2 <strong>b:2</strong> c:1</td>
+  <td>a:1 b:1 c:1</td>
+  <td>[a→2, b→2]</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>drain</td>
+  <td>—</td>
+  <td>a:2 b:2 c:1</td>
+  <td><strong>a:2</strong> b:1 c:1</td>
+  <td>[b→2]</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>drain</td>
+  <td>—</td>
+  <td>a:2 b:2 c:1</td>
+  <td>a:2 <strong>b:2</strong> c:1</td>
+  <td>∅</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>cutover (pause, drain ∅, flip)</td>
+  <td>—</td>
+  <td>(former)</td>
+  <td>a:2 b:2 c:1</td>
+  <td>∅</td>
+</tr>
+</tbody>
+</table></div>
+<p>D holds a:2, b:2, c:1 — every acknowledged version. Verdict: nothing lost.
+Under v1, <strong>both</strong> writes die: the asha write landed behind the cursor at
+step 2 (snapshot already took a:1), and the ben write landed after the whole
+snapshot (step 5) — v1 flips straight from step 4's copy, so D would serve
+a:1 and b:1 forever. A write is lost under v1 exactly when it lands at the
+old owner in a region the snapshot has already passed — and by the end of the
+copy, that's <em>every</em> region.</p>
+<p><strong>5.3</strong> P = 8, <code>partition = h mod 8</code>, node = <code>partition mod 3</code>:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>h</th>
+  <th>3</th>
+  <th>11</th>
+  <th>20</th>
+  <th>28</th>
+  <th>37</th>
+  <th>45</th>
+  <th>54</th>
+  <th>62</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>P=8 partition</td>
+  <td>3</td>
+  <td>3</td>
+  <td>4</td>
+  <td>4</td>
+  <td>5</td>
+  <td>5</td>
+  <td>6</td>
+  <td>6</td>
+</tr>
+<tr>
+  <td>node</td>
+  <td>A</td>
+  <td>A</td>
+  <td>B</td>
+  <td>B</td>
+  <td>C</td>
+  <td>C</td>
+  <td>A</td>
+  <td>A</td>
+</tr>
+<tr>
+  <td>P=16 partition</td>
+  <td>3</td>
+  <td><strong>11</strong></td>
+  <td>4</td>
+  <td><strong>12</strong></td>
+  <td>5</td>
+  <td><strong>13</strong></td>
+  <td>6</td>
+  <td><strong>14</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>(a) <strong>4 of 8</strong> keys changed partition — exactly the half whose hash had the
+16-bit set, which is the arithmetic of stage 10.8 in miniature.
+(b) With children created where their parents live (p11 with p3, p12 with p4,
+p13 with p5, p14 with p6), the node column is unchanged for all eight keys:
+<strong>0 crossings</strong>.
+(c) Re-dealt by <code>partition mod 3</code>, the new nodes are A, C, B, A, C, B, A, C —
+<strong>4 crossings</strong>, i.e. every key that changed partition also changed machine.</p>
+<p>So &quot;doubling is free&quot; depends on <strong>two</strong> things, and only one of them is
+arithmetic. The arithmetic guarantees the split is <em>local</em>; the placer has to
+then choose to keep the child where the parent was. A placer that re-derives
+placement from a formula on the partition id throws the gift away and turns a
+free split into a full redistribution. (This is why real split APIs are
+explicitly &quot;split in place, rebalance afterwards if you want to&quot; — two
+operations, deliberately separate, exactly the two hops of stage 6.)</p>
+<p>For P = 12 the partitions become 3, 11, 8, 4, 1, 9, 6, 2: <strong>5 of 8</strong> changed,
+and all 5 cross. No stays-home rule can help, because there is no
+parent-child relationship to exploit — a key from old partition 5 can land in
+new partition 1 or 9, and old partition 5's other keys land elsewhere again.
+Nothing was split; everything was re-shuffled.</p>
+<p><strong>5.4</strong> Delta log as <em>keys that changed</em> — the resurrection version:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>after</th>
+  <th>B holds</th>
+  <th>D holds</th>
+  <th>delta log</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>copy asha</td>
+  <td>asha,ben,chirag</td>
+  <td>asha</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td><strong>delete ben</strong></td>
+  <td>asha,chirag</td>
+  <td>asha</td>
+  <td>{ben}</td>
+</tr>
+<tr>
+  <td>copy ben</td>
+  <td>asha,chirag</td>
+  <td>asha</td>
+  <td>{ben} <em>(nothing to copy; D's ben stays absent)</em></td>
+</tr>
+<tr>
+  <td><strong>delete asha</strong></td>
+  <td>chirag</td>
+  <td>asha</td>
+  <td>{ben, asha}</td>
+</tr>
+<tr>
+  <td>copy chirag</td>
+  <td>chirag</td>
+  <td>asha,chirag</td>
+  <td>{ben, asha}</td>
+</tr>
+<tr>
+  <td>catch-up</td>
+  <td>chirag</td>
+  <td>asha,chirag</td>
+  <td>drains: &quot;what is ben now?&quot; → nothing → no change; &quot;what is asha now?&quot; → nothing → no change</td>
+</tr>
+<tr>
+  <td>cutover</td>
+  <td>—</td>
+  <td><strong>asha, chirag</strong></td>
+  <td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p>D serves <strong>asha</strong>, which was deleted. The ben deletion survived only by luck —
+the copy cursor reached ben <em>after</em> the delete, so it copied nothing. That luck
+is the tell: correctness that depends on the race between the cursor and the
+workload is not correctness.</p>
+<p>Delta log as <em>operations</em>: entries are <code>DELETE ben @t2</code>, <code>DELETE asha @t4</code>;
+catch-up applies both; D holds <strong>chirag</strong> only, which is right. Both deletions
+survive regardless of cursor position.</p>
+<p>Which is worse? The asha case, and not because one row differs. A lost <em>write</em>
+means a user's change is undone and they will usually notice and redo it. A
+lost <em>delete</em> means data the user asked you to destroy is quietly alive again
+on a new machine — that is a compliance incident, it is invisible to the user
+who requested it, and it is discovered by an auditor rather than by a customer.</p>
+<h2 id="solutions-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p><strong>6.1</strong> &quot;Empty when we checked&quot; is a check-then-act gap (third lab running):
+between D observing the empty log and the map flipping, B accepts write W and
+appends it — W is on B, invisible to D, and B's copy is deleted. Concrete
+run: log empties at t=1; W arrives at t=2; flip at t=3; W gone. Violated:
+handover completeness. The brief write-pause exists precisely to make
+&quot;empty&quot; still true at the instant of the flip — drain-then-flip must be
+atomic with respect to new writes.</p>
+<p><strong>6.2</strong> An in-memory flag read by the node <em>about itself</em> is exactly the
+stale holder's self-belief. Run: rebalancer calls B to set <code>still_owner=false</code>
+→ the call races B's GC pause (or B is partitioned from the rebalancer, or B
+restarts and re-initializes the flag to true) → B wakes/reconnects, flag
+still true, accepts writes → two owners. The flag is a <em>push</em> of a fact to
+the least reliable witness; the epoch is a <em>check</em> against an authoritative
+fact carried by every request. Violated: single owner per epoch. (Also note
+the restart case: the distributed-locking lab's token-counter-in-memory bug,
+same shape.)</p>
+<p><strong>6.3</strong> Salting must be <strong>write-random, read-ALL</strong>. Writes scattering to
+<code>key#0..19</code> while reads sample one random salt means each read sees 1/20th of
+the writes — reads silently miss ~95% of the data (e.g. a counter reads ~5%
+of its true value). Correct: reads fan to all 20 sub-keys and merge (that's
+the tax salting pays), or maintain a merged rollup. The flaw isn't load
+balance — load <em>is</em> even — it's correctness: the salt made one logical key
+into 20 physical keys and the read pretended otherwise.</p>
+<p><strong>6.4</strong> Three seconds of silence triggers terabytes of movement: this is F5
+armed. Run: normal GC pause of 5 s on node C → C declared dead → C's
+partitions stream to survivors → streaming saturates B and D's network →
+their heartbeats miss → more drains → the movement manufactures the next
+verdict (gossip lab: silence is the only symptom, and load supplies it).
+&quot;We tested by killing nodes&quot; tested only the true-positive path — the
+detector's <em>false positives</em> under load were never exercised (the falsifying
+test: pause, don't kill). Fixes: sustained-evidence thresholds (minutes),
+concurrent-move and bandwidth caps, route-around-first (replicas serve while
+the node is merely suspected), human gate for bulk movement.</p>
+<p><strong>6.5</strong> Two planted mistakes, one arithmetic and one categorical. The
+arithmetic: 100 is not a multiple of 64, so there is no local split — <code>h mod 64</code> tells you nothing about <code>h mod 100</code>, and essentially the whole dataset is
+re-addressed and must be shipped. (64 → 128 would have been nearly free.) The
+categorical error is the last sentence: this is <em>not</em> the same operation as
+adding a node, only bigger. Adding a node changes hop 2 — a table of
+partition→node rows — and moves ~1/n of the data with the key→partition
+mapping untouched, so clients' cached arithmetic stays correct throughout.
+Changing P changes hop 1, the mapping every client computes for itself, which
+means there is a window where clients disagree about <em>which partition a key
+belongs to</em> — not merely about where a partition lives. Redirects cannot repair
+that: a <code>MOVED</code> tells you where a partition is, and here the partition itself is
+the wrong one. Violated: nothing in the invariant list — which is the point.
+This design breaks an assumption underneath the list, that key→partition is
+stable. &quot;Overnight&quot; is also wrong on its own terms: at 4 TB with a throttled
+rebalancer this is days, and during them the cluster is neither in the old
+scheme nor the new one.</p>
+<p><strong>6.6</strong> The mistake is in the evidence, not the design: <em>&quot;the dashboards stayed
+green all week&quot;</em>. Consolidating three racks into two makes every three-copy
+partition unplaceable under the rack rule (F7) — and a constrained placer's
+response to &quot;no legal placement&quot; is to stop moving, which registers on a
+dashboard as zero rebalancing activity, zero errors and normal latency.
+Concrete run: rack C is decommissioned on Monday; each partition's third copy
+becomes homeless; the cluster serves reads and writes perfectly all week from
+two copies; on Friday a rack loses power and partitions that were supposed to
+survive it lose their only remaining copy. The violated guarantee is the
+<em>durability margin</em> the replication factor was purchased for, and it was lost
+on Monday, silently. Secondary flaw worth naming: &quot;moves partitions
+continuously toward the emptiest machine&quot; is a rebalancer with no hysteresis and
+no throttle, which is F5's other half — it will chase noise. The monitoring
+lesson is the one from F7: alarm on <strong>under-replicated partitions</strong>, never on
+rebalancing activity, because the dangerous state is the one with no activity.</p>
+<h2 id="solutions-rung-7--handle-failure-worked-designs">Rung 7 — Handle failure (worked designs)</h2>
+<p><strong>7.1 D crashes mid-catch-up.</strong> State at crash: B has all data + the delta
+log + is still map owner (epoch unchanged — the flip never happened); D has
+a partial snapshot + partially applied deltas, all of it <em>non-authoritative</em>.
+Who notices: the migration coordinator (whoever drives the state machine —
+the rebalancer) via D's death or lease expiry; B also notices the drain
+stopped. Safety consequence: <strong>none</strong> — clients were routed to B throughout,
+so no acknowledged write ever depended on D. The migration simply aborts:
+B discards the delta log, D's partial copy is garbage-collected on restart.
+Resume vs restart: restart-from-scratch is always <em>correct</em>; resume is an
+optimization needing (a) the snapshot copy to be durably checkpointed on D
+with its copy-cursor position, and (b) B to retain the delta log from the
+snapshot's start point (or a WAL position — which is why real systems anchor
+migrations to a log offset: &quot;resume&quot; = re-ship deltas since offset X).
+The invariant that must hold: <strong>D never serves until it holds
+snapshot + complete delta</strong>; the cheapest durable bookkeeping is a single
+migration record in the authoritative map store — <code>p11: migrating B→D, started@offset X, state=COPYING</code> — because whoever recovers (a new
+coordinator, a restarted D) can read it and know the flip never happened, so
+B is still the owner. The one thing that must NOT exist: any path where D
+serves based on local state alone.</p>
+<p><strong>7.2 Routing loop for a dead old owner.</strong> (1) Send to the cached owner with
+a short timeout. (2) On MOVED: update cache, retry at the named node — done.
+(3) On timeout/connection-refused: don't retry the same node; fetch the map
+entry from the authority (or ask any other cluster node, who forwards or
+answers from <em>its</em> cache — a second opinion is cheaper than the authority).
+(4) Cap redirect-chains (2–3 hops) then fall back to the authority. (5) Herd
+control, from the caching + distributed-locking labs: <strong>single-flight</strong> the
+map fetch per process (one in-flight refresh, everyone else waits on it) and
+<strong>exponential backoff with jitter</strong> on retries — otherwise the owner's death
+converts every client into a synchronized stampede on the map service (which
+is exactly when the map service can least afford it). (6) Negative-cache the
+death briefly so new requests don't re-probe the corpse.</p>
+<p><strong>7.3</strong> The shape of the answer matters more than the specific minutes.</p>
+<p><em>Minute 1:</em> do nothing about data. Serve from the two surviving copies, mark
+the zone-C replicas unavailable, and route around them. Data movement is the
+most expensive action available and the evidence so far (&quot;we cannot reach zone
+C&quot;) is the cheapest kind.</p>
+<p><em>Minute 30:</em> still no re-replication, but the state should now be <em>visible</em> —
+every partition is under-replicated by one copy, and that is the number on the
+dashboard. This is the window where an automatic rebalancer would already have
+started copying a third of the cluster, which is precisely F5: the movement
+would load the surviving two zones, whose heartbeats would then lag.</p>
+<p><em>Hour 4:</em> a judgement call, and the honest answer is that it should be a human's
+unless the outage is well past any plausible network event. Re-replicating into
+two zones means either violating the one-copy-per-zone rule (creating two copies
+in one zone — durability you do not actually have) or leaving the partitions
+under-replicated legally. Both are defensible; picking silently is not.</p>
+<p><em>If zone C is gone permanently:</em> re-replicate, deliberately, throttled, with the
+placement rule either relaxed on purpose or a third zone provisioned first.</p>
+<p><em>The decision that separates the two cases when nobody knows which it is:</em> <strong>is
+the loss of a machine treated as a change in membership, or as a temporary
+absence?</strong> Cassandra makes this the difference between a node being &quot;down&quot;
+(route around; free) and <code>removenode</code> (stream data; operator-invoked);
+Elasticsearch makes it <code>index.unassigned.node_left.delayed_timeout</code>. The rule
+is the same everywhere: <em>routing around is automatic and instant; moving data is
+delayed and gated</em>, because the first is cheap and reversible and the second is
+neither.</p>
+<p>Page on: <strong>under-replicated partition count</strong> (F7 — it is the actual loss of
+durability margin). Deliberately do <em>not</em> page on: rebalancing activity, either
+its presence or its absence — high activity is normal during a planned move and
+zero activity is normal during a healthy day, so both alarm shapes generate
+noise while missing the real failures (F5 is caught by movement <em>and</em> detector
+verdicts climbing together, not by movement alone).</p>
+<h2 id="solutions-rung-8--design-the-payments-ledger-worked-discussion">Rung 8 — Design: the payments ledger (worked discussion)</h2>
+<p><strong>Partition key &amp; scheme.</strong> Key everything by <code>account_id</code>, hash-partitioned;
+within a partition, entries clustered by <code>(account_id, entry_time)</code> (compound
+key: hash spreads accounts; the clustering component keeps one account's
+entries contiguous and time-ordered). Query (a) — post entry + update
+balance — is single-partition (balance row and entry stream share the
+account's partition), so it can be a local transaction: no 2PC on the hot
+path, which is the whole game (distributed-transactions lab's decision
+ladder: &quot;co-locate keys on one shard&quot; beats everything above it). Query (b)
+statement = one-partition range scan over the clustering key. Query (c) —
+all entries for a calendar day — is the sacrifice: it becomes scatter/gather
+across all partitions. Defend the sacrifice: it runs once daily, offline,
+latency-tolerant; better still, don't scan the ledger at all — stream entries
+via CDC/outbox into a date-partitioned analytical copy (database-landscape
+lab: derived, rebuildable, its own partitioning matched to <em>its</em> query
+shape). Never range-partition by time here: F2 would put every posting on
+one partition.</p>
+<p><strong>Fixed vs dynamic.</strong> Fixed P with a generous pre-split — e.g. P = 4,096 —
+because the fleet doubles yearly and fixed-P rebalancing is table-edit +
+whole-partition streams with zero boundary churn; 4,096 partitions over even
+a few hundred nodes keeps ~10+ partitions/node for balance granularity.
+(Dynamic splitting is defensible too — CockroachDB would be a fine
+substrate — but with a hash scheme and a known key population, fixed-P is
+simpler and P can be sized once, honestly: 500M accounts × ~100 KB/account
+lifetime ≈ 50 TB → ~12 GB/partition at P=4,096, moveable in minutes at a
+tame throttle.)</p>
+<p><strong>Whales (0.1% at 100×).</strong> 100× the <em>median write rate</em> on one account is a
+load-skew problem inside one partition. Data answer: the entry <em>stream</em> for a
+whale can be bucketed (<code>account_id + month</code>-style clustering, or salt the
+stream sub-key while keeping the balance row single) — but the <strong>balance row
+itself must not be salted</strong>: it's the thing query (a) atomically updates, and
+splitting it recreates the distributed-rate-limiting lab's invariant problem.
+So: keep the balance row single (it's one row — 100× a median row's write
+rate is hot but bounded), give whale partitions dedicated placement (a
+partition holding a whale gets a node with headroom — placement constraints,
+stage 13's omission list), and alarm on per-partition heat so new whales are
+noticed, not discovered.</p>
+<p><strong>Migration &amp; epochs.</strong> Protocol v3 verbatim: snapshot at a WAL offset,
+delta = WAL tail, brief write-pause cutover, epoch bump in the map; the
+store checks the epoch on <strong>every write</strong> (reads too, if you serve reads
+from partition owners — the distributed-locking lab's read fence). Because
+it's money, add the idempotency lab's layer: entry posts carry idempotency
+keys, so a client retry across a MOVED/epoch-refused boundary can never
+double-post — the migration machinery <em>will</em> cause retries, and retries must
+be harmless before you rebalance anything.</p>
+<p><strong>The map</strong> lives in a Raft-backed store (etcd or equivalent): P=4,096 rows
+plus epochs is tiny, changes rarely, must never fork. Clients are
+partition-aware with the rung-7.2 routing loop.</p>
+<p><strong>Automatic vs manual.</strong> Automatic: leadership transfers (no data motion),
+single-partition migrations under caps (≤2 concurrent, bandwidth-throttled,
+sustained-evidence health checks), split of a partition that trips size/heat
+alarms — with hysteresis. Manual (human approves): anything moving &gt;1% of
+partitions at once (fleet doubling is a planned, staged campaign), any
+response to a <em>suspected</em> node (route around automatically; never bulk-move
+on suspicion — F5), and the annual P-adequacy review.</p>
+<p><strong>Five dashboards first:</strong> (1) per-partition heat histogram + busiest:median
+ratio (whale detector); (2) per-partition size histogram (jumbo detector);
+(3) migrations in flight: bytes queued, ETA trend, throttle utilization;
+(4) epoch-rejection + MOVED rates (should be ~0 / low-and-spiky-only-during-
+moves); (5) movement-per-hour vs detector-verdicts-per-hour on one graph
+(the F5 tripwire). Plus the idempotency lab's oldest-RUNNING age on the
+posting path, because ledger.</p>
+<p><strong>The honest tension:</strong> (a) &quot;post atomically&quot; wants everything about an
+account on one partition forever; (d) &quot;never lose an acknowledged entry
+while doubling the fleet yearly&quot; wants aggressive movement. The compromise:
+movement happens at partition granularity with v3 + idempotent posts, and
+the posting path is designed to <em>tolerate</em> migration (retries harmless,
+epoch checks loud) rather than migrations being scheduled around the posting
+path. The second tension — query (c) vs the hash scheme — is resolved by
+refusing to serve it from the ledger at all: a derived, date-partitioned
+copy answers it, one day behind, and the regulator's SLA (daily) makes that
+honest.</p>
+<hr />
+<h2 id="solutions-82--the-resharding-you-inherited-worked-discussion">8.2 — The resharding you inherited (worked discussion)</h2>
+<p><strong>Target partition count.</strong> Work from the unit of movement, not the machine
+count. Eleven hours per 62 GB partition is the symptom; pick a target
+partition size that makes a move routine — say 4–8 GB, i.e. under an hour
+throttled. 4 TB / 6 GB ≈ 680, so <strong>1,024</strong> is the number to reach for: it is
+a power of two, so it is reachable by doubling from 64 (64 → 128 → 256 → 512 →
+1024, four doublings) and it can be halved later if you overshoot.</p>
+<p><strong>Which route.</strong> Three exist and only one survives contact with this system.
+<em>Full redistribution to an arbitrary P</em> is rejected: 4 TB re-shuffled, days of
+it, with every client's <code>mod 64</code> arithmetic wrong the whole time — and, worse,
+wrong in a way redirects cannot repair (exercise 6.5). <em>Switching to hash-range
+partitions</em> is the right destination and the wrong migration: it changes hop 1
+for every one of nine client teams simultaneously, so it belongs in the next
+system, not this quarter. <em>Repeated doubling</em> is the answer: each step splits
+every partition locally into two, moves nothing across the network, and can be
+done one partition at a time.</p>
+<p><strong>Does the client library change?</strong> Yes, and this is the real project. Clients
+hardcode 64 in <code>md5(user_id) mod 64</code>, so the number must become
+data — fetched from ZooKeeper, versioned, and cached with the partition map
+rather than compiled in. That change must ship to all nine teams and be fully
+adopted <em>before</em> the first split, because a client computing <code>mod 64</code> while the
+cluster is at 128 addresses a partition that no longer exists. Sequence:
+(1) ship a library that reads P from the map and understands redirects;
+(2) verify adoption — no client on an old version, measured, not assumed;
+(3) only then split. If any team cannot upgrade, a routing tier in front is the
+fallback: it costs a hop and buys independence from the slowest team.</p>
+<p><strong>Losing nothing in the process.</strong> Each split is: freeze writes for that one
+partition (milliseconds), record the split point and the new ownership epoch in
+ZooKeeper atomically, open the two children, unfreeze. Because no data moves,
+there is no snapshot/delta problem for the split itself — the delta machinery
+matters for the <em>rebalancing</em> afterwards, when children are spread across
+machines, and there it is the full v3 protocol including <strong>operations, not
+dirty keys</strong>, so deletes cannot resurrect (10.6 hole 2). Deletes deserve
+explicit attention here because this is user-document storage: a resurrected
+document is a deletion request quietly reversed.</p>
+<p><strong>Reads during the change.</strong> Two hazards, both from 10.6. During a child's
+rebalancing move, reads follow ownership, not copy progress — the old owner
+serves until the map flips. After the flip, the old owner must <strong>seal</strong> the
+partition and answer <code>MOVED</code>, or nine teams' cached maps will silently harvest
+stale documents. Since this store did not previously have per-partition epochs
+at all, adding them is part of the client-library work, not an afterthought.</p>
+<p><strong>Duration and write-blocking.</strong> The splits themselves are fast — the blocked
+window is per-partition and measured in milliseconds, so four doublings across
+64 → 1,024 partitions is thousands of tiny freezes, not one long outage. The
+slow part is optional and afterwards: rebalancing 1,024 small partitions across
+24 machines to even things out, throttled, over days, with no write blocking at
+all. That split (cheap-and-atomic vs slow-and-background) is the payoff of
+keeping the two hops separate.</p>
+<p><strong>Rollback at 40%.</strong> Splits are individually committed, so &quot;rollback&quot; means
+<em>stop</em>, not <em>undo</em> — a cluster with 600 of its partitions split and 424 not is
+a perfectly valid cluster, because the map is a table and nothing requires the
+partitions to be uniform. That is the property to verify before starting: the
+map must express per-partition boundaries rather than a single global P. If it
+cannot, fix that first, because a design where the intermediate state is
+invalid has no rollback at any percentage.</p>
+<p><strong>The one property that made this expensive:</strong> hop 1 was a formula compiled
+into nine independent clients, so changing the shape of the data required a
+synchronized change to code owned by other people. <strong>The sentence for the next
+design doc:</strong> <em>the number of partitions is data, not a constant — it lives in
+the map, clients read it, and no client may assume it.</em></p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../35-consistent-hashing/notes.html"><small>← Lab 35</small>consistent-hashing</a><a href="../37-gossip-protocols/notes.html" style="text-align:right"><small>Lab 37 →</small>gossip-protocols</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-layer-guide">Layer guide</a><a href="#readme-1-why--the-problem-nobody-can-dodge">1. WHY — the problem nobody can dodge</a><a href="#readme-2-the-problem--meeras-library-outgrows-its-building">2. THE PROBLEM — Meera&#x27;s library outgrows its building</a><a href="#readme-3-the-naive-solution--split-by-the-alphabet">3. THE NAIVE SOLUTION — split by the alphabet</a><a href="#readme-4-the-failure--even-thirds-of-the-alphabet-are-not-even-thirds-of-anything">4. THE FAILURE — even thirds of the alphabet are not even thirds of anything</a><a href="#readme-5-the-real-requirement">5. THE REAL REQUIREMENT</a><a href="#readme-6-the-key-idea">6. THE KEY IDEA</a><a href="#readme-7-terminology--naming-what-youve-already-felt">7. TERMINOLOGY — naming what you&#x27;ve already felt</a><a href="#readme-8-two-mental-models">8. TWO MENTAL MODELS</a><a href="#readme-9-visualization--the-moving-shelves">9. VISUALIZATION — The Moving Shelves</a><a href="#readme-10-the-actual-mechanism">10. THE ACTUAL MECHANISM</a><a href="#readme-11-failure-scenarios">11. FAILURE SCENARIOS</a><a href="#readme-12-correctness--what-is-actually-guaranteed">12. CORRECTNESS — what is actually guaranteed</a><a href="#readme-13-production--the-same-machine-in-every-costume">13. PRODUCTION — the same machine in every costume</a><a href="#readme-14-exercises">14. EXERCISES</a><a href="#readme-15-knowledge-map--next-steps">15. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-16-glossary">16. GLOSSARY</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

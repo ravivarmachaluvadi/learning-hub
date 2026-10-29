@@ -1,0 +1,2990 @@
+<!doctype html>
+<html lang="en" data-hub-lab="07-acid">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>7. acid</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 7 of 71 · Stage 2</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 7 · One Machine, Done Right</p><article id="readme"><h1 id="readme-acid--the-four-promises-and-the-one-machine-that-keeps-two-of-them">ACID — the four promises, and the one machine that keeps two of them</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Asha the cashier moves ₹500 from Ravi's page to Meera's
+page in one big paper ledger, and the fire alarm can go off between her two
+pen strokes. ACID is the name for four promises a database makes. They exist
+so that Vikram, the cashier who opens up the next morning, can still put the
+books right from paper alone. Here is the surprise the whole lab is built on:
+the four letters do not come from one place. <strong>A</strong> and <strong>D</strong> are a single
+machine, a rough day-book written before the ledger. <strong>I</strong> is a completely
+different machine. <strong>C</strong> is not a machine at all; it is your job. ACID is a
+contract, not a mechanism, and this lab is the audit of who signs which line.</p>
+</blockquote>
+<p>Watch the alarm go off in <a href="visualization.html"><code>visualization.html</code></a>, or at
+<a href="https://claude.ai/code/artifact/584af82b-f8f6-4e22-8580-5d955149d4cf" target="_blank" rel="noopener">https://claude.ai/code/artifact/584af82b-f8f6-4e22-8580-5d955149d4cf</a>.
+Where every number came from, and why this lab is shaped the way it is, is in
+<a href="#readme-17-about-this-lab">section 17</a>.</p>
+<hr />
+<h2 id="readme-1-why-does-this-problem-exist-at-all">1. Why does this problem exist at all?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A machine can stop halfway through changing two numbers.
+When it comes back, one number changed and the other did not. Nobody gets an
+error, and the money is simply gone.</p>
+</blockquote>
+<p>Somewhere tonight a server loses power in the middle of doing something. Not
+during an error. Not during a bug. During perfectly ordinary work, halfway
+through changing two numbers.</p>
+<p>When it comes back up, one of three things is true. Either both numbers
+changed, or neither did, or <strong>one did</strong>. The third outcome is the one that ends
+careers.</p>
+<p>Here is what that looks like in a real business.</p>
+<ul>
+<li>A payment was taken from one account and never added to the other.</li>
+<li>A seat was released and never re-sold.</li>
+<li>An order was marked shipped and its stock was never decremented.</li>
+</ul>
+<p>Now notice what is missing from that list. Nobody gets an error message. No
+exception is thrown. Nothing is logged as a failure. The system comes back up
+and carries on being wrong, quietly, forever, until a human notices months
+later that the totals don't add up.</p>
+<p>The other half of the same problem is the exact opposite. A customer was
+<strong>told</strong> their transfer succeeded. The machine died a second later. When it
+came back, the transfer wasn't there. No error there either. Just a customer
+holding a receipt for something the system has no memory of.</p>
+<p>ACID is the name for the promise that neither of those happens. This lab is
+about how that promise is actually kept. It is just as much about exactly where
+it stops being kept.</p>
+<h2 id="readme-2-what-happens-to-ravis-500-when-the-fire-alarm-goes-off">2. What happens to Ravi's ₹500 when the fire alarm goes off?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A cashier moves money by making two marks in a book. If
+the building is evacuated between the two marks, the money vanishes — and
+nothing in the book says anything is wrong.</p>
+</blockquote>
+<p>Forget computers for a while. We are in a small branch office, before
+computers. Everything here will map onto a real database, piece by piece.</p>
+<p><strong>Asha</strong> is the cashier. The branch keeps one enormous bound book, <strong>the
+ledger</strong>, with one page per customer. <strong>Ravi's</strong> balance is written on <strong>page
+5</strong>. <strong>Meera's</strong> balance is on <strong>page 9</strong>.</p>
+<p>Read the last row of this table first. It is the single fact we will check
+after every disaster in this lab.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Page</th>
+  <th>Customer</th>
+  <th>Balance</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>5</td>
+  <td>Ravi</td>
+  <td>₹700</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>Meera</td>
+  <td>₹300</td>
+</tr>
+<tr>
+  <td></td>
+  <td><strong>Total</strong></td>
+  <td><strong>₹1000</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Money is only ever <em>moved</em> between customers in this branch. It is never
+created and never destroyed. So <strong>the total must always be ₹1000</strong>.</p>
+<p>Ravi comes to the counter and asks to send <strong>₹500 to Meera</strong>. For Asha that is
+two pen strokes in the ledger:</p>
+<ol>
+<li>On page 5, cross out ₹700, write <strong>₹200</strong>.</li>
+<li>On page 9, cross out ₹300, write <strong>₹800</strong>.</li>
+</ol>
+<p>There is one more thing she does, and it is not a pen stroke at all. At some
+point she looks up, tells Ravi <strong>&quot;done&quot;</strong>, and hands him a receipt. That moment
+is a promise. From then on Ravi walks out of the building believing this
+happened.</p>
+<p>Now the constraint that makes this whole subject exist. <strong>At any instant, the
+fire alarm can go off.</strong> It is a real evacuation. Everyone leaves immediately —
+mid-stroke, mid-sentence, mid-thought.</p>
+<p>The next morning the branch reopens and a <em>different</em> cashier, <strong>Vikram</strong>, is
+at the counter. Vikram was not there. He has no idea what Asha was doing. He
+cannot ask her. Everything that existed only in Asha's head, or as a note on
+her desk, is gone. <strong>Vikram knows only what is written in books that survived
+the night.</strong></p>
+<p>That is the entire problem of this lab, and it comes in two halves.</p>
+<p><strong>Half one — the alarm goes off between stroke 1 and stroke 2.</strong> The ledger now
+says Ravi has ₹200 and Meera has ₹300. Total: <strong>₹500</strong>. The ₹500 left Ravi and
+never arrived. It has ceased to exist, and nobody is aware of it.</p>
+<p><strong>Half two — the alarm goes off just after Asha said &quot;done&quot; to Ravi, but before
+she wrote anything down.</strong> Ravi has a receipt. The books have nothing.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Suppose we tell Asha &quot;always do stroke 1 and stroke 2 as fast
+as you can, right next to each other, and only then say <em>done</em>.&quot; Does that
+fix either half of the problem?</p>
+<details><summary>Reveal</summary>
+**Neither half, and this is the most important idea in the lab.** Speed
+changes the *probability* of being interrupted between the two strokes. It
+does not change the *possibility*. There is no pair of actions so fast that
+nothing can happen between them. The alarm is not polite; it fires in the gap
+however narrow you make the gap.
+
+<p>If you guessed &quot;it fixes half two, because she promises only at the very
+end&quot;, look again. She still has to say &quot;done&quot; at some particular moment, and
+the alarm can fire in the instant right after she says it.</p>
+<p>&quot;Rare&quot; is not &quot;impossible&quot;. At ten thousand transfers a second, &quot;rare&quot;
+happens several times a day.</p>
+<p>Every correct answer in this lab has the same shape. <strong>Not &quot;make the gap
+small&quot; but &quot;make the gap survivable&quot;.</strong> Arrange things so that whoever
+arrives after the interruption can work out what to do.</p>
+</details>
+
+</blockquote>
+<p><strong>How deep this goes.</strong> Stop at any checkpoint and you still have something
+whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–9</td>
+  <td>tell the fire-alarm story, and say why &quot;be fast and careful&quot; cannot work</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>10</td>
+  <td>derive the recovery machine yourself, and run its three passes by hand</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>11–12</td>
+  <td>reason about every failure, and audit what each of the four letters really promises</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>13</td>
+  <td>map the machine onto PostgreSQL, InnoDB, SQLite and Oracle, and read their dials</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-why-cant-asha-just-be-careful">3. Why can't Asha just be careful?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Work straight into the ledger, quickly and carefully, and
+tell Ravi at the end. It is the design everybody writes first, and it is
+perfect whenever nothing interrupts it.</p>
+</blockquote>
+<p>The obvious plan is the one nearly everyone writes first. Work directly in the
+ledger, in place, and be careful:</p>
+<ul>
+<li>Change page 5.</li>
+<li>Change page 9.</li>
+<li>Tell Ravi &quot;done&quot;.</li>
+</ul>
+<p>Let's give it every advantage. Asha is careful. She is fast. She does the two
+strokes back to back. She says &quot;done&quot; only after both are on paper.</p>
+<p>This is the design equivalent of an application that issues two <code>UPDATE</code>
+statements and then returns success.</p>
+<p>It has one genuinely good property. After both strokes the ledger is right, and
+it is right <em>permanently</em>, because the ledger is the thing that survives the
+night. If nothing interrupts her, this design cannot be beaten.</p>
+<h2 id="readme-4-what-are-the-two-ways-be-careful-breaks">4. What are the two ways &quot;be careful&quot; breaks?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The alarm can catch Asha between the two strokes, which
+loses money silently. It can also catch her mid-stroke, which destroys the
+old number as well as the new one. The second is worse.</p>
+</blockquote>
+<p><strong>Failure A — the gap.</strong> The alarm fires between stroke 1 and stroke 2.</p>
+<div class="code"><pre><code>Ledger after the fire:   page 5: Ravi ₹200      page 9: Meera ₹300
+                         Total: ₹500            ← ₹500 gone
+</code></pre></div>
+<p>Vikram opens the branch. He sees ₹200 and ₹300. He has <strong>no way to know</strong>
+anything is wrong. ₹200 is a perfectly plausible balance for Ravi, and ₹300 is
+a perfectly plausible balance for Meera.</p>
+<p>The ₹500 that left Ravi and never reached Meera has simply ceased to exist.
+Nothing in the ledger says &quot;this page was changed as part of something bigger
+that never finished&quot;. The evidence of the half-finished job was in Asha's head,
+and Asha's head is not in the building.</p>
+<p>This is the failure of <strong>all-or-nothing</strong>. The two strokes were meant to be one
+indivisible act, and the ledger has no idea they were related.</p>
+<p><strong>Failure B — the smudge.</strong> This one is easy to miss, and it is worse. The
+alarm fires <em>while Asha's pen is on page 5</em>. She has crossed out the old number
+and written &quot;2&quot; of &quot;200&quot;. The page now reads <code>₹2</code>.</p>
+<p>The version that actually happens to computers is nastier. The page is left
+<strong>half old and half new</strong>, and there is no way to tell by looking at it.</p>
+<p>Failure A leaves the ledger <em>plausible but wrong</em>. Failure B leaves a page
+<em>damaged</em>, and the original value is gone too. Even a very clever Vikram cannot
+reconstruct it from the ledger alone.</p>
+<p>Whatever we invent has to handle both. And note the shape of the second one,
+because an entire later section exists only because of it: <strong>the old value was
+destroyed by the very act of writing the new one.</strong></p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Asha's own fix attempt. &quot;I'll write the new balances on a
+scrap of paper on my desk first, and copy them into the ledger only once both
+are ready.&quot; Does that fix Failure A?</p>
+<details><summary>Reveal</summary>
+**No. It moves the gap; it does not close it.** There are still two strokes
+into the ledger, page 5 and then page 9, and the alarm can still fire between
+them.
+
+<p>If you guessed &quot;yes, because now everything is prepared before anything is
+committed to the book&quot;, you are counting the preparation as the dangerous
+part. It isn't. The dangerous part is the pair of writes into the book that
+survives the night.</p>
+<p>Worse: if the alarm fires while the scrap is still on the desk, the scrap
+burns and <em>nothing</em> happened. That is at least safe for Failure A. But if
+Asha had already said &quot;done&quot; to Ravi, we have just built the second half of
+section 2's problem instead.</p>
+<p>The scrap of paper is a real idea and we will keep it. It is exactly what a
+database's memory is. On its own, it just relocates the danger.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-5-what-exactly-must-vikram-be-able-to-do">5. What exactly must Vikram be able to do?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Strip away every mechanism and one sentence is left. The
+books must end up holding every transfer Ravi was promised, and no part of
+any transfer he wasn't.</p>
+</blockquote>
+<p>Here is the goal in plain words. It must be true <strong>at every single instant</strong>,
+so that it holds no matter when the alarm fires.</p>
+<blockquote>
+<p>When Vikram opens the branch, he must be able to bring the books to a state
+that contains <strong>every transfer Ravi was told was done</strong>, and <strong>no part of any
+transfer that was not</strong>.</p>
+</blockquote>
+<p>Read it twice, because two separate promises are hiding in that one sentence.
+They will get separate names in a moment.</p>
+<ul>
+<li><strong>No part of an unfinished job may survive.</strong> Not one of its two strokes. It
+is all of it, or none of it.</li>
+<li><strong>Every finished job must survive.</strong> If a receipt was handed over, the books
+must eventually agree, and no fire may take it back.</li>
+</ul>
+<p>There is a third thing we need, and it is easy to overlook. <strong>Vikram must be
+able to do this himself, from paper alone, without asking anybody.</strong> A design
+that requires Asha's memory is not a design. Asha is not in the building.</p>
+<p>Everything from here on is the pursuit of that sentence.</p>
+<h2 id="readme-6-what-is-the-one-idea-that-makes-the-gap-survivable">6. What is the one idea that makes the gap survivable?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Before you touch the ledger, write down what you are about
+to do, in a book that survives fires. Then the gap stops being dangerous,
+because the next person can read your intention and finish it.</p>
+</blockquote>
+<p>Here is the whole invention, in one line:</p>
+<blockquote>
+<p><strong>Before touching the ledger, write your intention in a separate book that is
+safe — and say &quot;done&quot; to the customer only once your intention is safely
+written.</strong></p>
+</blockquote>
+<p>Asha gets a second, much smaller book: <strong>the day-book</strong>. It is never neat. It
+is append-only: she only ever adds a line at the bottom, and never crosses
+anything out. Each line says what she is about to do, in enough detail either
+to <strong>finish it</strong> or to <strong>take it back</strong>.</p>
+<p>For Ravi's transfer, the day-book gets these four lines.</p>
+<div class="code"><pre><code>#10   transfer T1 begins
+#11   T1: page 5 (Ravi)   was ₹700   →  will be ₹200
+#12   T1: page 9 (Meera)  was ₹300   →  will be ₹800
+#13   T1 COMMITTED                                     ← the &quot;done&quot; moment
+</code></pre></div>
+<p>Look at lines #11 and #12 for a second. Each one records <strong>both the old value
+and the new value</strong>. That is not redundancy. It is the two directions of
+travel.</p>
+<ul>
+<li>The <strong>new</strong> value lets Vikram <strong>finish</strong> a job that was promised but not
+fully written into the ledger.</li>
+<li>The <strong>old</strong> value lets Vikram <strong>take back</strong> a job that was written into the
+ledger but never promised.</li>
+</ul>
+<p>Line #13 is the hinge of the entire subject. <strong>Asha may not say &quot;done&quot; to Ravi
+until line #13 is safely written.</strong> Once it is written, the transfer is real
+forever, even if not one stroke has touched the ledger yet. The day-book alone
+contains everything Vikram needs to make the ledger right.</p>
+<p>Notice what just happened to the ledger's job. It is no longer the thing that
+records the truth first. It is a <strong>slow, tidy copy</strong> of a truth that already
+lives in the day-book. The ledger can lag by minutes and it does not matter.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Asha now has two books. Which one has to be in the fireproof
+safe before she is allowed to say &quot;done&quot; to Ravi — the day-book, the ledger,
+or both?</p>
+<details><summary>Reveal</summary>
+**Only the day-book.** That is the whole trade, and it is what buys the
+speed.
+
+<p>If you guessed &quot;both&quot;, you have described a design that works and that every
+real database rejects. Putting the ledger in the safe at every &quot;done&quot; means
+scattering writes across a huge book before every customer can leave. Section
+10.2 gives that design its real name and prices it exactly.</p>
+<p>If you guessed &quot;the ledger&quot;, ask what Vikram would do with a ledger that is
+right but has no record of <em>why</em>. He could not tell a finished transfer from
+a half-finished one.</p>
+<p>The day-book is small, it is written strictly in order, and it is appended to
+at one end. Those three properties are why it is cheap to make safe, and
+section 10.7 is about the price even so.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-7-what-do-engineers-call-the-things-in-ashas-branch">7. What do engineers call the things in Asha's branch?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You have already felt every idea in this section. Now each
+one gets its professional name, and the four famous letters turn out to come
+from three different places.</p>
+</blockquote>
+<h3 id="readme-71-what-do-the-four-letters-promise-and-where-does-each-one-come-from">7.1 What do the four letters promise, and where does each one come from?</h3>
+<p>Start with the three words that describe the job itself.</p>
+<p>A <strong>transaction</strong> is one job that should count as a single act, even though it
+is made of several steps. Ravi's transfer is a transaction; the lab calls it
+T1, and it is made of two pen strokes. Precisely, it is a unit of work with a
+defined start and a defined end, <code>BEGIN</code> … <code>COMMIT</code>/<code>ROLLBACK</code>, to which the
+database attaches guarantees.</p>
+<p>The word is Latin, <em>trans-agere</em>, &quot;to drive through&quot;. The point is that the job
+is driven through to a single conclusion. You used this word constantly in
+<a href="../08-isolation-levels/notes.html#readme">isolation-levels</a>. Here we finally look at what
+happens to it when the machine dies.</p>
+<p>A <strong>commit</strong> is the moment the job officially counts. In the branch it is
+day-book line #13, and only then telling Ravi &quot;done&quot;. Precisely, it is the
+point at which the database's promise attaches to the transaction; after it,
+the effects are guaranteed to survive. The word is the ordinary English one.
+Before this point you may still change your mind. After it, you may not.</p>
+<p>An <strong>abort</strong> is changing your mind, and a <strong>rollback</strong> is the work of undoing
+what the job already did. In the branch: Ravi says &quot;actually, cancel that&quot;
+after stroke 1, so Asha must put page 5 back to ₹700, using the &quot;was ₹700&quot; she
+wrote in line #11. Precisely, it is terminating a transaction so that none of
+its effects remain. Two words, because <em>abort</em> is the decision and <em>rollback</em>
+is the labour of carrying it out.</p>
+<p>Now the four letters. <strong>ACID is not a mechanism. It is a contract</strong> — four
+promises a database makes about transactions. Take them one at a time, because
+each one is a different moment in Asha's day.</p>
+<p><strong>A, atomicity, is about the gap.</strong> It is Failure A from section 4, forbidden.
+Both pen strokes land or neither does, and Vikram must never find one without
+the other. The day-book is what makes that possible, and Vikram's morning is
+what carries it out.</p>
+<p><strong>D, durability, is about Ravi's receipt.</strong> It is half two of section 2,
+forbidden. Once Asha has said &quot;done&quot;, the fire may not take it back. What buys
+it is not the ledger at all. It is line #13 being safe <em>before</em> she speaks.</p>
+<p><strong>I, isolation, is about the second counter.</strong> Imagine Asha is not alone. A
+second cashier is serving Meera at the same moment, touching page 9 while
+Asha's pen is still hovering over it. Nothing in the day-book has an opinion
+about that. Isolation is a different machine entirely, and you already took it
+apart in <a href="../08-isolation-levels/notes.html#readme">isolation-levels</a>.</p>
+<p><strong>C, consistency, is about the number nobody is checking.</strong> Look back at the
+₹1000 total in section 2. Who enforces it? Not Asha; she writes what she is
+told. Not the day-book; it records intentions, it does not judge them. Not
+Vikram; he restores whatever the books say. If Ravi asks to send ₹5000 he does
+not have, and nobody has written that rule down anywhere, the branch will
+process it atomically, durably and in perfect isolation. And be wrong.</p>
+<p>There is the surprise. Read the fourth column of this table downwards, and
+notice that it names <strong>three different things, not one</strong>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Letter</th>
+  <th>The promise, in plain words</th>
+  <th>The moment in Asha's branch</th>
+  <th>What actually keeps it</th>
+  <th>Where you learn it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>A</strong> — Atomicity</td>
+  <td>All of the job happens, or none of it.</td>
+  <td>Both pen strokes, or neither (§4, Failure A).</td>
+  <td>The day-book, plus Vikram's morning.</td>
+  <td>Here, in depth (§10).</td>
+</tr>
+<tr>
+  <td><strong>C</strong> — Consistency</td>
+  <td>The data still obeys its rules afterwards.</td>
+  <td>The ₹1000 total, which nobody is watching.</td>
+  <td><strong>You</strong>, through rules you declare.</td>
+  <td>Here, §12.2 — the odd one out.</td>
+</tr>
+<tr>
+  <td><strong>I</strong> — Isolation</td>
+  <td>Concurrent jobs don't corrupt each other.</td>
+  <td>A second cashier on page 9 at the same instant.</td>
+  <td>A separate machine: locks or versions.</td>
+  <td><a href="../08-isolation-levels/notes.html#readme">isolation-levels</a> — you already own this.</td>
+</tr>
+<tr>
+  <td><strong>D</strong> — Durability</td>
+  <td>Once committed, it survives crashes.</td>
+  <td>Ravi's receipt honoured after the fire.</td>
+  <td>The safe, plus the rule about when to say &quot;done&quot;.</td>
+  <td>Here, in depth (§10, §12.3).</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>A and D come from one machine. I comes from another. C comes from nobody
+inside the database at all.</strong> That is why this lab is shaped the way it is. It
+is also why isolation could be a <em>dial</em> in the first place: you can turn the
+concurrency machine down without touching the crash machine.</p>
+<p>One-line refresher on <strong>I</strong>, since you proved all of this yourself. Isolation
+is a separate dial with its own settings, and its default setting permits real
+data loss. Here is the figure you got, and what it meant.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Your result from the isolation lab</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>8 threads × 40 increments</td>
+  <td>320 increments were issued, every one inside a transaction that committed successfully</td>
+</tr>
+<tr>
+  <td>ended on ~60 of 320</td>
+  <td>about 80% of the work vanished, with nothing anywhere reporting an error</td>
+</tr>
+</tbody>
+</table></div>
+<p>That lab has its own mechanisms: two-phase locking, MVCC, snapshot isolation
+and SSI. It has its own anomalies too: dirty read, lost update, write skew. All
+of that is its material, and this lab will not repeat it.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> You turn a database's isolation level all the way down to
+<code>READ UNCOMMITTED</code>. Which of the four letters have you weakened?</p>
+<details><summary>Reveal</summary>
+**Only I.** Atomicity and durability are untouched. The log is still written
+before the pages, the commit record is still made safe before the "done", and
+recovery still puts the books right after a crash.
+
+<p>If you guessed &quot;A as well, because now other people can see my half-finished
+work&quot;, you have hit the most common confusion in this subject, and it is
+worth being precise about. Atomicity is about <strong>what survives a crash or an
+abort</strong>. Isolation is about <strong>what a concurrent reader may observe</strong>. A
+database can be perfectly atomic and still show a neighbour a state that
+never legally existed. Section 12.1 states this exactly.</p>
+<p>If you guessed &quot;C&quot;, you are closer than it looks. A weaker isolation level
+can certainly let your application write nonsense. But the letter C was never
+promising to stop that, and section 12.2 is the whole argument.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-72-where-does-the-data-live-and-when-is-something-really-written">7.2 Where does the data live, and when is something really &quot;written&quot;?</h3>
+<p>Three places hold Asha's work, and only one of them survives the night.</p>
+<p>A <strong>page</strong> is the fixed-size chunk a database reads and writes at a time. In
+the branch it is one numbered page of the ledger, holding Ravi's balance.
+Precisely, it is the unit of storage input and output, typically 8 KB in
+PostgreSQL and 16 KB in InnoDB. Rows live inside pages, and a database never
+reads or writes less than one whole page.</p>
+<p>The word exists to name the fact that storage has a <em>granularity</em>. You cannot
+change one byte on disk; you replace a whole page. You already counted these.
+In <a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a> you counted cold pages and found 119×
+write amplification for a B-tree. That was this same page, and this lab
+explains what else has to happen every time one of them is written.</p>
+<p>The <strong>buffer pool</strong> is the database's working memory, holding copies of the
+pages it is currently using. In the branch it is Asha's desk, where she keeps
+the couple of ledger pages she is working on right now. Precisely, it is an
+in-memory cache of disk pages, finite in size, where all reads and writes
+actually happen. It <em>buffers</em> between a fast processor and a slow disk. And in
+the branch, it burns.</p>
+<p>A <strong>dirty page</strong> is a page in memory that has been changed, but whose change
+has not reached the disk yet. Asha has mentally decided Ravi's balance is ₹200,
+while page 5 in the bound ledger still says ₹700. &quot;Dirty&quot; means <em>needs
+cleaning</em>, which here means <em>needs writing out</em>. Be careful with this word. It
+is the same adjective as in <em>dirty read</em> from the isolation lab, and a
+completely different concern. A dirty read is about <strong>who can see it</strong>. A dirty
+page is about <strong>where it is stored</strong>. Same adjective, two unrelated axes.</p>
+<p>The <strong>write-ahead log</strong>, or <strong>WAL</strong>, is the day-book: a separate append-only
+file where every intended change is recorded <strong>before</strong> the change is made.
+Precisely, it is a sequential on-disk log of log records, and the rule is that
+a log record describing a change must reach durable storage before the modified
+page does. The name says what it is. The log is <em>written ahead</em> of the data. In
+the branch it is lines #10 to #13.</p>
+<p>You have met it twice before. It was the LSM's write path in
+<a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a>, where the term &quot;WAL-before-ack&quot; is
+already in your knowledge map. It was Redis's AOF in <a href="../13-redis/notes.html#readme">redis</a>.
+This lab is where you finally take it apart.</p>
+<p>A <strong>log record</strong> is one line in the day-book. The usual kinds are <em>begin</em>,
+<em>update</em> (carrying both the before-image and the after-image), <em>commit</em> and
+<em>abort</em>. There is one more, and it does not exist yet. Section 10.5 has to
+invent it, because recovery itself can be interrupted.</p>
+<p>An <strong>LSN</strong>, or <strong>log sequence number</strong>, is the line number in the day-book. In
+our listing it is the <code>#11</code> and the <code>#12</code>. Precisely, it is a monotonically
+increasing identifier for a position in the log, usually a byte offset, so it
+doubles as &quot;how far into the log is this&quot;.</p>
+<p>It exists because it gives every change in the entire database <strong>one global
+order</strong>, and a name you can point at from elsewhere. That is the trick that
+makes recovery repeatable, and section 10.4 is where it earns its keep.
+PostgreSQL exposes it directly: an LSN like <code>0/16B3A50</code> in
+<code>pg_stat_replication</code> is exactly this number, and &quot;replication lag&quot; is a
+subtraction between two of them.</p>
+<p><strong>Now the three moments.</strong> You already own this one from <a href="../13-redis/notes.html#readme">redis</a>,
+where you established that &quot;written&quot; is three distinct events, not one. Read
+the last column: only the bottom row survives a power cut.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Moment</th>
+  <th>Where the bytes are</th>
+  <th>Survives the process dying?</th>
+  <th>Survives power loss?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>in the application's own buffer</td>
+  <td>our own memory</td>
+  <td>❌</td>
+  <td>❌</td>
+</tr>
+<tr>
+  <td>after <code>write()</code></td>
+  <td>the <strong>OS page cache</strong> — kernel memory</td>
+  <td>✅</td>
+  <td>❌</td>
+</tr>
+<tr>
+  <td>after <code>fsync()</code></td>
+  <td>the physical device</td>
+  <td>✅</td>
+  <td>✅</td>
+</tr>
+</tbody>
+</table></div>
+<p>Here are the three numbers you got from that lab. They are the same three
+moments, wearing a Redis costume.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Setting and event</th>
+  <th>Result</th>
+  <th>What it proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>kill -9</code> with <code>appendfsync no</code></td>
+  <td>nothing lost</td>
+  <td>the page cache belongs to the kernel, and the kernel did not die</td>
+</tr>
+<tr>
+  <td>power loss with <code>appendfsync no</code></td>
+  <td>530 ms of traffic gone</td>
+  <td>one fsync window is exactly what a power cut costs you</td>
+</tr>
+<tr>
+  <td><code>appendfsync always</code></td>
+  <td>zero loss, 3.4× lower throughput</td>
+  <td>safety against power loss is bought with throughput</td>
+</tr>
+</tbody>
+</table></div>
+<p>Everything in section 13 about <code>synchronous_commit</code> and
+<code>innodb_flush_log_at_trx_commit</code> is that same three-way distinction wearing a
+different vendor's clothes.</p>
+<p><strong>fsync</strong> is the call that means &quot;actually put it on the physical device, and
+don't come back until you have&quot;. Precisely, it is a system call that forces
+previously written data for a file out of kernel caches to stable storage. In
+the branch, Asha does not just write the day-book line on a slip in her
+out-tray. She posts the slip into a <strong>fireproof safe bolted to the floor</strong>. The
+out-tray burns. The safe does not.</p>
+<p><strong>Durable</strong> means it will still be there tomorrow. Precisely, it means present
+on storage that survives <em>the failure you are designing against</em> — and that
+last clause is doing enormous work. Section 12.3 is entirely about it.</p>
+<h3 id="readme-73-what-are-the-two-directions-of-repair">7.3 What are the two directions of repair?</h3>
+<p>Vikram can walk in either of two directions, and the day-book was designed so
+that he can.</p>
+<p><strong>Redo</strong> means finishing a job that was promised but never fully written into
+the ledger. Line #13 exists, but page 9 still says ₹300, so Vikram writes ₹800
+into page 9. Precisely, it is re-applying a committed change to a page using
+the log record's <strong>after-image</strong>. The word says it: the work is being <em>done
+again</em>.</p>
+<p><strong>Undo</strong> means taking back a job that reached the ledger but was never
+promised. Page 9 says ₹700 because of a transfer that never committed, so
+Vikram writes ₹800 back. Precisely, it is reverting a change using the log
+record's <strong>before-image</strong>.</p>
+<p><strong>Recovery</strong> is what Vikram does before he opens the counter. He reads the
+day-book cover to cover, before he serves anyone. Precisely, it is the startup
+procedure that reads the log and brings the data files to the state defined by
+section 5's sentence.</p>
+<p>A <strong>checkpoint</strong> is a note saying &quot;everything before this line is already
+safely in the ledger, don't bother reading further back&quot;. In the branch it
+happens at 4 p.m. Asha copies every pending change into the bound ledger. Then
+she writes one more line in the day-book: <em>&quot;#500 — checkpoint: ledger is
+current as of here.&quot;</em></p>
+<p>Precisely, a checkpoint is a record marking a point from which recovery can
+start, plus the flushing work that makes it true. The word is already in your
+knowledge map twice, from <a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a> and from
+Redis's RDB snapshots. Same idea, third context.</p>
+<h2 id="readme-8-what-picture-should-you-carry-in-your-head">8. What picture should you carry in your head?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two books and a safe. Or, in engineering terms, two places
+in memory, two files on disk, and one law about the order they get written
+in.</p>
+</blockquote>
+<h3 id="readme-81-what-is-the-picture-a-friend-would-understand">8.1 What is the picture a friend would understand?</h3>
+<p>Carry this around:</p>
+<blockquote>
+<p>A cashier writes every intention in a <strong>rough day-book</strong> the instant she
+decides it, and posts it into a <strong>fireproof safe</strong>. Only then does she tell
+the customer &quot;done&quot;. The neat <strong>bound ledger</strong> gets updated whenever she has
+a spare moment. If the building is evacuated, the next cashier reads the
+day-book and makes the ledger agree with it: <strong>finishing</strong> anything marked
+committed, and <strong>taking back</strong> anything that isn't.</p>
+</blockquote>
+<h3 id="readme-82-what-does-the-same-picture-look-like-to-an-engineer">8.2 What does the same picture look like to an engineer?</h3>
+<p>Four boxes in two bands. The top band evaporates when the power goes; the
+bottom band does not. Watch the two solid arrows between them. They behave
+completely differently, and that difference is the entire design.</p>
+<pre class="mermaid">flowchart TD
+  subgraph RAM[&quot;RAM — evaporates on power loss&quot;]
+    BP[&quot;Buffer pool&lt;br/&gt;page 5: Ravi ₹200 (dirty)&lt;br/&gt;page 9: Meera ₹800 (dirty)&quot;]
+    LB[&quot;Log buffer&lt;br/&gt;#11 #12 #13 not yet flushed&quot;]
+  end
+  subgraph DISK[&quot;DISK — survives power loss (after fsync)&quot;]
+    WAL[&quot;WAL file (append-only)&lt;br/&gt;#10 #11 #12 #13&quot;]
+    DF[&quot;Data file (random access)&lt;br/&gt;page 5: ₹700   page 9: ₹300&quot;]
+  end
+  BP -- &quot;flushed later, in bulk, in any order&quot; --&gt; DF
+  LB -- &quot;flushed at commit, in order&quot; --&gt; WAL
+  WAL -. &quot;recovery reads this to fix that&quot; .-&gt; DF
+</pre>
+<p>Two things to notice in that diagram, because together they are the whole
+design.</p>
+<ul>
+<li>The arrow into the <strong>data file</strong> is lazy and unordered. It can happen at any
+time, including for changes that have not committed.</li>
+<li>The arrow into the <strong>WAL</strong> is eager and strictly ordered.</li>
+</ul>
+<p>One law governs the relationship between them.</p>
+<blockquote>
+<p><strong>The WAL rule.</strong> A log record describing a change to a page must be durable
+<strong>before</strong> that page's new contents are written to the data file. And a
+transaction's commit record must be durable <strong>before</strong> the client is told
+&quot;committed&quot;.</p>
+</blockquote>
+<p>Everything else in this lab is a consequence of that two-sentence rule.</p>
+<h3 id="readme-83-how-does-the-branch-line-up-with-a-database">8.3 How does the branch line up with a database?</h3>
+<p>Two tables, because the mapping has two halves. First, where things are kept,
+and what a fire does to each.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In Asha's branch</th>
+  <th>In a database</th>
+  <th>What the fire does to it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Asha herself</td>
+  <td>the running database process</td>
+  <td>dies with the machine</td>
+</tr>
+<tr>
+  <td>Asha's desk</td>
+  <td>the <strong>buffer pool</strong> (RAM)</td>
+  <td>lost on any crash</td>
+</tr>
+<tr>
+  <td>The out-tray of written slips</td>
+  <td>the <strong>OS page cache</strong></td>
+  <td>survives a process crash, lost on power loss</td>
+</tr>
+<tr>
+  <td>The fireproof safe</td>
+  <td>the physical <strong>disk</strong> after <code>fsync</code></td>
+  <td>survives both</td>
+</tr>
+<tr>
+  <td>The rough <strong>day-book</strong>, in the safe</td>
+  <td>the <strong>WAL file</strong></td>
+  <td>append-only, sequential</td>
+</tr>
+<tr>
+  <td>The bound <strong>ledger</strong>, in the safe</td>
+  <td>the <strong>data file</strong></td>
+  <td>random-access, updated lazily</td>
+</tr>
+</tbody>
+</table></div>
+<p>Second, the events — the things that <em>happen</em>, rather than the things that sit
+there. The last column says where in this lab each one turns up.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In Asha's branch</th>
+  <th>In a database</th>
+  <th>Met in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Line number in the day-book</td>
+  <td>the <strong>LSN</strong></td>
+  <td>§7.2</td>
+</tr>
+<tr>
+  <td>Telling Ravi &quot;done&quot;</td>
+  <td>the <strong>commit ack</strong> to the client</td>
+  <td>§2 and §6</td>
+</tr>
+<tr>
+  <td>The <strong>fire alarm</strong></td>
+  <td>power loss, <code>kill -9</code>, kernel panic</td>
+  <td>§2</td>
+</tr>
+<tr>
+  <td><strong>Vikram's morning</strong></td>
+  <td><strong>crash recovery</strong> at startup</td>
+  <td>§5 and §10.5</td>
+</tr>
+<tr>
+  <td>The 4 p.m. tidy-up</td>
+  <td>the <strong>checkpoint</strong></td>
+  <td>§7.3 and §10.4</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-84-where-does-the-story-lie-to-you">8.4 Where does the story lie to you?</h3>
+<p>An analogy left unqualified becomes a wrong belief. This one lies in four
+places, and each lie hides a real piece of engineering.</p>
+<p><strong>Paper is never half-written in a way you can't see.</strong> If Asha's pen stops
+mid-digit, you can <em>tell</em>. A disk writing an 8 KB page can be interrupted after
+2 KB and leave a page that is half old and half new, <strong>and looks completely
+normal</strong>. There is no checksum in the page contents, and nothing obviously
+wrong. This is a <strong>torn page</strong>. Section 10.6 exists entirely because of it, and
+the engineering model must therefore assume that a page write is <em>not</em> atomic.
+The paper model would never suggest that.</p>
+<p><strong>Vikram can read the whole day-book in a minute; a real WAL can be gigabytes.</strong>
+Recovery time is a production number that people get paged about. That gap is
+exactly why checkpoints exist (§10.4), and why the checkpoint interval is a
+tuning knob with a real trade-off.</p>
+<p><strong>Paper never lies about being in the safe.</strong> A disk absolutely does. Many
+consumer SSDs, and some virtualised or misconfigured storage stacks,
+acknowledge <code>fsync</code> while the data is still in a volatile on-device write
+cache. PostgreSQL warns about this in its own reliability chapter. The paper
+model has no equivalent of &quot;the safe lied&quot;, so it cannot teach you to be
+suspicious. You should be anyway.</p>
+<p><strong>Asha is one person, so her work is naturally serial.</strong> A real database has
+many transactions in flight at once, interleaved, sharing pages. That is the
+<em>isolation</em> problem, and this analogy quietly hides it. It hides it so well
+that the point is worth saying out loud. <strong>Nothing in this lab's mechanism
+prevents two concurrent transactions from corrupting each other's logic.</strong> The
+log gives you A and D. It does not give you I. That separation is the lab's
+punchline, and section 12.1 states it precisely.</p>
+<h2 id="readme-9-can-you-watch-the-alarm-go-off">9. Can you watch the alarm go off?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Yes. There is a page where you press CRASH whenever you
+like, then press RECOVER, and watch three passes put ₹1000 back.</p>
+</blockquote>
+<p>Open <strong><code>visualization.html</code></strong> in this directory, or the published version:
+<a href="https://claude.ai/code/artifact/584af82b-f8f6-4e22-8580-5d955149d4cf" target="_blank" rel="noopener">https://claude.ai/code/artifact/584af82b-f8f6-4e22-8580-5d955149d4cf</a></p>
+<p><strong>What you are looking at.</strong> Three stacked bands, matching the diagram in §8.2.
+Your transactions at the top. <strong>RAM</strong> in the middle — buffer pool and log
+buffer, in amber, because it will evaporate. <strong>DISK</strong> at the bottom — WAL file
+and data file, in teal, because it survives. Every box shows real values: the
+actual balances, the actual log lines with their LSNs.</p>
+<p><strong>What to do first.</strong> Press <strong>&quot;Run the whole story&quot;</strong>. It plays the transfer,
+crashes the machine at the worst possible moment, and recovers, narrating each
+step in a full sentence. Watch the <strong>Total</strong> readout. It must return to ₹1000.</p>
+<p><strong>Then experiment.</strong> Four groups of controls matter.</p>
+<ul>
+<li><strong>CRASH</strong> kills it at any instant you like. Then press <strong>RECOVER</strong> and watch
+the three passes run.</li>
+<li><strong>Process crash vs power loss</strong> is the difference between losing Asha's desk
+and losing the out-tray too. This is the redis lab's three moments, live.</li>
+<li><strong>Policy switches</strong> turn the WAL off entirely, switch between <em>steal</em> and
+<em>no-steal</em> and between <em>force</em> and <em>no-force</em>, and turn off full-page writes.
+Each switch breaks something specific, and the verdict panel names which
+promise died.</li>
+<li><strong>Six predict-then-run scenarios</strong> cover committing before the ack, a crash
+during the undo pass, a torn page, and more. Guess before you press.</li>
+</ul>
+<p>Everything in sections 10 and 11 below has a scenario on that page. Read a
+section, then go and run its scenario.</p>
+<hr />
+<h2 id="readme--checkpoint-can-you-say-the-beginner-model-back">✅ Checkpoint: can you say the beginner model back?</h2>
+<p>If you stop here you can already explain, correctly and to anyone: what a
+transaction is, what the four letters promise, why &quot;be fast and careful&quot; cannot
+work, and the one idea that fixes it. You could sit in a design review, ask
+&quot;where's the write-ahead log in this?&quot;, and mean it.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>log</em>, <em>WAL</em>, <em>commit</em> or
+<em>durable</em>, explain to a friend why Asha is allowed to tell Ravi &quot;done&quot; before
+either balance in the big ledger has changed.</p>
+<details><summary>A good answer sounds like</summary>
+"She has already written down what she is about to do, in a small book she
+keeps in a fireproof safe. That note says both the old amounts and the new
+amounts. If the building burns down tonight, tomorrow's cashier can read the
+note and finish the job himself. So the big book being out of date doesn't
+matter. It can be caught up from the note at any time."
+</details>
+
+</blockquote>
+<p>Next up: the actual mechanism, built the way it was historically arrived at. A
+first version a smart engineer would design, then the specific failure that
+breaks it, then the refinement that fixes it — five times over. By the end of
+section 10 you will be able to <em>derive</em> ARIES, the recovery algorithm
+essentially every relational database uses, rather than memorise it.</p>
+<hr />
+<h2 id="readme-10-what-is-the-machinery-underneath-built-five-times-because-the-first-four-break">10. What is the machinery underneath? Built five times, because the first four break</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Start with the simplest day-book that could work. Four
+times, a specific disaster breaks it, and the repair is a feature you will
+recognise from a real database's manual. The fifth version is what PostgreSQL
+and InnoDB actually do.</p>
+</blockquote>
+<p>We are going to build the recovery machine the way it was actually arrived at.
+Each version is what a competent engineer would design given what they knew.
+Each one then meets a specific failure, and the fix for that failure is a
+feature with a name in the documentation.</p>
+<p>Throughout, the branch's state stays concrete. Meera now sends money back, so
+there are two transfers in flight.</p>
+<div class="code"><pre><code>Ravi   = page 5   Meera = page 9   Total must always be ₹1000
+T1 = &quot;move ₹500 Ravi → Meera&quot;   T2 = &quot;move ₹100 Meera → Ravi&quot;
+</code></pre></div>
+<h3 id="readme-101-version-1-what-if-we-log-the-new-values-and-write-the-pages-later">10.1 Version 1: what if we log the new values and write the pages later?</h3>
+<p>The simplest design that respects section 6 is four steps.</p>
+<ol>
+<li><code>BEGIN</code> — append a <em>begin</em> record.</li>
+<li>Each change: append an <em>update</em> record holding the <strong>after-image</strong>, the new
+value, then change the page <strong>in memory only</strong>.</li>
+<li><code>COMMIT</code> — append a <em>commit</em> record, <strong>fsync the log</strong>, then tell the client
+&quot;committed&quot;.</li>
+<li>Whenever convenient, later, in the background: write the changed pages out
+to the data file.</li>
+</ol>
+<p>Two rules come with it.</p>
+<ul>
+<li><strong>Never write a page belonging to an uncommitted transaction to disk.</strong> We
+will name this policy in a moment.</li>
+<li><strong>Don't force the pages out at commit time.</strong> The log record is enough.</li>
+</ul>
+<p><strong>Why this works for the obvious crash.</strong> Crash right after step 3, with page 5
+and page 9 both still only in memory:</p>
+<div class="code"><pre><code>Log on disk:   #101 T1 BEGIN
+               #102 T1 p5 → ₹200
+               #103 T1 p9 → ₹800
+               #104 T1 COMMIT
+Data file:     page 5: ₹700     page 9: ₹300        ← nothing applied yet
+</code></pre></div>
+<p>Vikram scans the log, sees T1 has a commit record, and <strong>redoes</strong> #102 and #103
+against the data file. Result: ₹200 and ₹800, total ₹1000, and Ravi's receipt
+is honoured. The commit ack was given at step 3 and it was legitimate. By then
+the log was in the safe, and the log was the only thing that mattered.</p>
+<p>Note what version 1 needs: <strong>redo only</strong>. It never needs before-images, because
+an uncommitted change never reaches disk.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> The buffer pool is finite. Say it holds 4 pages, and it is
+full. A new transaction needs a page that isn't in memory, so one page must be
+evicted to make room. Every page currently in the buffer pool has been
+modified by a transaction that hasn't committed yet. What does version 1 do?</p>
+<details><summary>Reveal</summary>
+**Version 1 is stuck.** Its rule forbids writing an uncommitted page to disk,
+so it cannot evict any of them, so it cannot free a frame, so it cannot
+proceed until one of those transactions commits.
+
+<p>If you guessed &quot;it just waits a moment and then continues&quot;, that is the
+optimistic reading, and it hides two consequences that are both fatal in
+practice.</p>
+<ul>
+<li><strong>A transaction can never modify more data than fits in the buffer pool.</strong>
+<code>UPDATE orders SET status='archived'</code> over ten million rows would need ten
+million rows' worth of pages pinned in RAM at the same time.</li>
+<li><strong>Long transactions strangle everyone else</strong>, because their pages are
+unevictable for their entire lifetime.</li>
+</ul>
+<p>The obvious fix is to allow the eviction. And the instant you allow it, the
+disk can contain changes from a transaction that never commits — which
+version 1 has no way to take back, because it only ever recorded new values.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-102-version-2-what-happens-when-memory-runs-out">10.2 Version 2: what happens when memory runs out?</h3>
+<p>We now permit the buffer manager to <strong>steal</strong>: to write out a dirty page even
+though the transaction that dirtied it hasn't committed. This is not an
+optional nicety. Without it, a database cannot process more data than it has
+RAM.</p>
+<p>The price is exact. <strong>Every update record must also carry the before-image.</strong></p>
+<div class="code"><pre><code>#106  T2  page 9   before = ₹800   after = ₹700   prevLSN = #105
+        ^^^^^^^^^^^^^^^^^^^^^^^^  the new half — this is what buys undo
+</code></pre></div>
+<p>Two named policies now exist, and between them they make the 2×2 that every
+storage engineer knows.</p>
+<p><strong>Steal or no-steal</strong> answers: may a dirty page from an <em>uncommitted</em>
+transaction be written to disk? <em>Steal</em> means yes. The word is literal. The
+buffer manager &quot;steals&quot; the frame back from the transaction that was using it.</p>
+<p><strong>Force or no-force</strong> answers: must <strong>all</strong> of a transaction's dirty pages be
+written to disk <em>before</em> commit returns? <em>Force</em> means yes.</p>
+<p>Find the bottom-right cell. That is the corner every serious database lives in.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th><strong>force</strong></th>
+  <th><strong>no-force</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>no-steal</strong></td>
+  <td>need neither undo nor redo</td>
+  <td>need <strong>redo</strong> only</td>
+</tr>
+<tr>
+  <td><strong>steal</strong></td>
+  <td>need <strong>undo</strong> only</td>
+  <td>need <strong>undo and redo</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Why the other three corners lose:</p>
+<ul>
+<li><strong>no-steal</strong> fails for the reason you just predicted. Transaction size is
+capped by RAM.</li>
+<li><strong>force</strong> fails on cost. Committing would mean writing every touched page
+before the client hears &quot;committed&quot;. That is scattered <em>random</em> input and
+output across the data file. A hot page touched by a thousand transactions
+gets written a thousand times.</li>
+<li><strong>no-force</strong>, by contrast, makes commit <strong>one sequential append plus one
+fsync to a single file</strong>. The hot page is written once, eventually, carrying
+all thousand changes at once.</li>
+</ul>
+<p>So essentially every serious database picks <strong>steal plus no-force</strong>, which is
+exactly the corner requiring <strong>both</strong> undo and redo. That is not a coincidence
+or a complication. It is what you buy with the two cheapest properties in the
+table.</p>
+<h3 id="readme-103-why-does-the-same-machinery-do-an-ordinary-rollback">10.3 Why does the same machinery do an ordinary rollback?</h3>
+<p>Before moving on, notice something that saves an entire subsystem.</p>
+<p>Ravi says &quot;cancel that&quot; and T1 aborts <em>while the database is running</em>. No crash
+is involved. What does the database do? It walks T1's log records backward and
+applies their before-images. <strong>That is exactly the undo pass, on a healthy
+system.</strong></p>
+<p>This is why each record carries a <strong>prevLSN</strong>: a pointer to the previous log
+record <em>of the same transaction</em>. One transaction's records form a backward
+chain through a log full of everybody else's records.</p>
+<div class="code"><pre><code>T2&#x27;s chain:   #106 ──prevLSN──▶ #105 (BEGIN)
+T1&#x27;s chain:   #104 ──▶ #103 ──▶ #102 ──▶ #101 (BEGIN)
+</code></pre></div>
+<p>Rollback is: follow the chain, revert each step. One implementation serves both
+&quot;the user changed their mind&quot; and &quot;the building burned down&quot;.</p>
+<h3 id="readme-104-version-3-how-do-we-stop-reading-the-whole-day-book-and-stop-doing-anything-twice">10.4 Version 3: how do we stop reading the whole day-book, and stop doing anything twice?</h3>
+<p>Two problems remain with version 2. Both of them show up on production
+dashboards.</p>
+<p><strong>Recovery scans from the beginning of time.</strong> The log is append-only and never
+rewritten, so Vikram's morning gets longer every day. A database that takes
+four hours to start is not available, and availability is the thing you were
+buying.</p>
+<p>The fix is the <strong>checkpoint</strong>. Periodically the database writes a checkpoint
+record naming two things: which transactions are currently running, and which
+pages are currently dirty and from which LSN. Recovery starts there instead of
+at the beginning. In the branch, it is Asha's 4 p.m. note.</p>
+<p>The trade-off is a straight dial, and you will meet it as a config parameter.
+<strong>Frequent checkpoints mean fast recovery and more constant background input
+and output. Rare checkpoints mean less input and output, and a longer outage
+after a crash.</strong></p>
+<p><strong>Redo may be applied to a page that already has it.</strong> In the crash below, page
+9 was stolen to disk <em>after</em> T1's change was applied to it. If recovery blindly
+re-applies #103, that is fine for a &quot;set balance to ₹800&quot; record. But for any
+record expressed as a <em>change</em> rather than a <em>value</em>, such as &quot;add ₹500&quot;, it
+would double the money. And recovery itself can crash and re-run, so &quot;applied exactly
+once&quot; is not something we can arrange by being careful.</p>
+<p>The fix is to <strong>put the LSN on the page</strong>. Every data page carries a
+<strong>pageLSN</strong>: the LSN of the most recent log record whose change is already
+reflected in this page. Redo then has a rule.</p>
+<blockquote>
+<p>Apply log record <em>L</em> to page <em>P</em> <strong>only if</strong> <code>L.LSN &gt; P.pageLSN</code>.</p>
+</blockquote>
+<p>That single comparison makes redo <strong>idempotent</strong>. Running it once, twice or
+fifty times produces the same page, so recovery can crash and restart as often
+as it likes.</p>
+<p>You have seen this shape twice already. It is the same idea as the idempotency
+key in the <a href="../49-idempotency/notes.html#readme">idempotency</a> lab. It is the same idea again as
+&quot;expected version&quot; in <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>. All three are
+<strong>a stored marker that lets a repeated operation recognise itself.</strong> Third
+context, same trick.</p>
+<h3 id="readme-105-what-do-the-three-passes-look-like-worked-by-hand">10.5 What do the three passes look like, worked by hand?</h3>
+<p>Here is the full recovery, with real numbers. This is the trace to remember.</p>
+<p><strong>The log on disk when the machine died:</strong></p>
+<div class="code"><pre><code>#100  CHECKPOINT        active transactions: (none)   dirty pages: (none)
+#101  T1 BEGIN
+#102  T1  page 5  before ₹700  after ₹200   prevLSN #101
+#103  T1  page 9  before ₹300  after ₹800   prevLSN #102
+#104  T1 COMMIT                             prevLSN #103   ← Ravi was told &quot;done&quot;
+#105  T2 BEGIN
+#106  T2  page 9  before ₹800  after ₹700   prevLSN #105
+      *** CRASH ***
+</code></pre></div>
+<p>Now the data file at the same instant. This is the messy, realistic part. The
+buffer manager happened to evict page 9 — steal! — after T2 had touched it, and
+never got around to page 5.</p>
+<div class="code"><pre><code>page 5:  ₹700   pageLSN #100      ← T1&#x27;s change never reached disk
+page 9:  ₹700   pageLSN #106      ← BOTH T1&#x27;s and T2&#x27;s changes reached disk
+Total on disk: ₹1400              ← wrong in a way that flatters nobody
+</code></pre></div>
+<p><strong>What correctness demands:</strong> T1 committed, so its effects must be present. T2
+did not, so its effects must be gone. Target: page 5 = ₹200, page 9 = ₹800,
+total ₹1000.</p>
+<hr />
+<p><strong>PASS 1 — ANALYSIS.</strong> <em>What was going on when the lights went out?</em> Scan
+<strong>forward</strong> from the last checkpoint, #100, building two tables. Read the
+middle column: it is who was still running.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Read</th>
+  <th>Transaction table</th>
+  <th>Dirty page table</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>#101 T1 BEGIN</td>
+  <td>T1: running</td>
+  <td></td>
+</tr>
+<tr>
+  <td>#102 T1 p5</td>
+  <td></td>
+  <td>p5 first dirtied at #102</td>
+</tr>
+<tr>
+  <td>#103 T1 p9</td>
+  <td></td>
+  <td>p9 first dirtied at #103</td>
+</tr>
+<tr>
+  <td>#104 T1 COMMIT</td>
+  <td>T1: <strong>committed → winner</strong>, remove</td>
+  <td></td>
+</tr>
+<tr>
+  <td>#105 T2 BEGIN</td>
+  <td>T2: running</td>
+  <td></td>
+</tr>
+<tr>
+  <td>#106 T2 p9</td>
+  <td></td>
+  <td>(p9 already listed)</td>
+</tr>
+<tr>
+  <td><em>end of log</em></td>
+  <td>T2 still running → <strong>loser</strong></td>
+  <td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Analysis writes nothing and changes nothing. It produces two answers:
+<strong>losers = {T2}</strong>, and <strong>redo must begin at LSN #102</strong>, the earliest point at
+which any page might have fallen behind.</p>
+<p><strong>PASS 2 — REDO.</strong> <em>Put the world back exactly as it was at the instant of the
+crash.</em> Scan <strong>forward</strong> from #102. For every update record, compare against
+the page's pageLSN.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Record</th>
+  <th>Page's pageLSN</th>
+  <th>Decision</th>
+  <th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>#102 p5 → ₹200</td>
+  <td>#100 &lt; #102</td>
+  <td><strong>apply</strong></td>
+  <td>p5 = ₹200, pageLSN #102</td>
+</tr>
+<tr>
+  <td>#103 p9 → ₹800</td>
+  <td>#106 ≥ #103</td>
+  <td><strong>skip</strong> — already there</td>
+  <td>p9 unchanged</td>
+</tr>
+<tr>
+  <td>#106 p9 → ₹700</td>
+  <td>#106 ≥ #106</td>
+  <td><strong>skip</strong> — already there</td>
+  <td>p9 unchanged</td>
+</tr>
+</tbody>
+</table></div>
+<p>State after redo: <strong>page 5 = ₹200, page 9 = ₹700, total ₹900.</strong></p>
+<p>Stop and look at that total. <strong>It is wrong, and it is supposed to be.</strong> Redo
+did not try to produce a correct database. It re-created the crash instant
+faithfully, including T2's half-finished damage. This is called <strong>repeating
+history</strong>, and it is the design decision that makes ARIES simpler than its
+predecessors.</p>
+<blockquote>
+<p><strong>Why redo a loser's change just to undo it three lines later?</strong> Because if
+redo skipped losers, the undo pass would face two possible starting states
+per page. Either the loser's change is there, or it isn't, and undo would have
+to check every time. By repeating history first, undo always starts from a
+state identical to the pre-crash state. That is exactly the state <strong>ordinary runtime
+rollback</strong> (§10.3) starts from too. One undo implementation, one set of
+assumptions, no special cases. The extra work is paid once; the removed
+complexity is paid forever.</p>
+</blockquote>
+<p><strong>PASS 3 — UNDO.</strong> <em>Take back everything the losers did.</em> Walk T2's prevLSN
+chain <strong>backward</strong> from its last record.</p>
+<p>Two new pieces of vocabulary arrive here, and both were invented for one
+reason: <strong>undo must survive being interrupted</strong>, because recovery can itself be
+interrupted.</p>
+<ul>
+<li>A <strong>CLR</strong>, or <strong>compensation log record</strong>, is a log record saying <em>&quot;the undo
+of record X has been performed&quot;</em>. It is written to the log <strong>before</strong> the
+revert touches the page, exactly like any other change. The WAL rule has no
+exceptions. Its defining rule: <strong>a CLR is never itself undone.</strong></li>
+<li><strong>undoNext</strong> is a pointer inside a CLR, naming the next record of that
+transaction still needing undo. It is what lets a restarted rollback resume
+in the middle instead of beginning again.</li>
+</ul>
+<p>With those, the pass runs in two steps.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>Action</th>
+  <th>Log written</th>
+  <th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>at #106</td>
+  <td>revert p9 to its before-image ₹800</td>
+  <td><strong>#107 CLR</strong>: undoes #106, p9 = ₹800, <strong>undoNext = #105</strong></td>
+  <td>p9 = ₹800, pageLSN #107</td>
+</tr>
+<tr>
+  <td>follow undoNext → #105</td>
+  <td>that's T2's BEGIN — nothing to revert</td>
+  <td>#108 T2 <strong>END</strong> (abort complete)</td>
+  <td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Final state: page 5 = ₹200, page 9 = ₹800, total ₹1000.</strong> T1 present, T2
+absent. Section 5's sentence is satisfied.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> The machine crashes <em>again</em>, right in the middle of Pass 3 —
+after page 9 was reverted to ₹800, but before recovery finished. We restart
+and run the whole thing again from the checkpoint. Does it come out right?</p>
+<details><summary>Reveal</summary>
+**Yes, but only because of that CLR, and the reason is not the one most
+people guess.**
+
+<p>The common guess is &quot;without a CLR we'd undo twice and double-undo the
+money&quot;. For <em>this</em> record that is not true. The undo writes the literal value
+₹800, a physical before-image, so doing it twice is harmless. Being precise
+about this matters, so here is what CLRs actually buy.</p>
+<ol>
+<li><strong>Undo isn't always idempotent.</strong> Real databases log much of their undo
+<em>logically</em> or <em>physiologically</em>. It reads like &quot;remove key K from this
+index page&quot;, or &quot;give back 100&quot;. They do that because a physical
+before-image of an 8 KB page per row change is ruinously large. Re-running
+&quot;give back 100&quot; twice gives back ₹200. The CLR records that this
+particular undo <strong>has already happened</strong>.</li>
+<li><strong>Rollback must terminate.</strong> Without a record of progress, a crash during
+undo restarts the rollback from scratch. A transaction that modified ten
+million rows, crashing 90% of the way through its rollback, would start
+over — and could, in a crash loop, never finish. With CLRs, each restart
+resumes from <code>undoNext</code>, and the remaining work only shrinks.</li>
+<li><strong>A CLR is never undone.</strong> It is redo-only, by rule. That closes the door
+on the pathological case of undoing an undo.</li>
+</ol>
+<p>So, on restart: analysis reads #107 and sees T2's undo has progressed to
+<code>undoNext = #105</code>. Redo re-applies the CLR if page 9 hasn't got it. Undo then
+resumes at #105, which is just the BEGIN. Done, correctly, from any number of
+nested crashes.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-106-version-4-what-if-a-page-is-half-old-and-half-new">10.6 Version 4: what if a page is half old and half new?</h3>
+<p>Redo assumes something we have not justified: that a page on disk is a
+<em>coherent</em> page, just possibly an old one. Take that away and redo breaks.</p>
+<p>A page write is one <code>write()</code> of 8 KB or 16 KB. The storage device underneath
+works in sectors — historically 512 bytes, commonly 4 KB. <strong>A power loss during
+the write can leave some sectors updated and others not.</strong> The result is a
+<strong>torn page</strong>: internally inconsistent, and nothing about it looks wrong from
+the outside. This is Failure B, the smudge, in its computer form.</p>
+<p>Why can't redo fix it? Because most redo records are <em>physiological</em> — &quot;on page
+9, set the balance field of the row at slot 3 to ₹800&quot;. That instruction is
+only meaningful if the page's slot directory, row offsets and headers are
+coherent. If half the page is from before a row was moved and half from after,
+redo writes ₹800 into a location that is now garbage. Worse, the pageLSN itself
+may come from either half, so recovery cannot even tell which records to apply.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> The log already holds a <em>before</em> value and an <em>after</em> value
+for every change. So why can't recovery just put back the before-image and
+replay?</p>
+<details><summary>Reveal</summary>
+**Because the before-image is not a whole page either.** It is a field inside
+a page, and writing a field back requires the page's structure to be
+readable. A torn page has no trustworthy structure.
+
+<p>If you guessed &quot;it can, that's the point of before-images&quot;, you have found
+exactly the assumption every version so far has quietly made: that the page
+around the field is intact. The two production answers below both work by
+stopping making that assumption — one of them stores a whole page image in
+the log, the other stores a whole second copy on disk.</p>
+</details>
+
+</blockquote>
+<p>Two production answers, and you should recognise both.</p>
+<p><strong>Full-page writes</strong> are PostgreSQL's answer, controlled by
+<code>full_page_writes = on</code>, which is the default. The first time a page is
+modified after each checkpoint, the <strong>entire page image</strong> goes into the WAL,
+not just the change. If that page is later found torn, recovery replaces it
+wholesale from the log copy, then replays subsequent changes onto a known-good
+page. The cost is that WAL volume spikes right after every checkpoint, which is
+why checkpoint tuning shows up in complaints about WAL size.</p>
+<p><strong>The doublewrite buffer</strong> is MySQL and InnoDB's answer, controlled by
+<code>innodb_doublewrite = ON</code>, again the default. Every page is written <strong>twice</strong>:
+first sequentially into a scratch area, then to its real home. If the home copy
+is torn, InnoDB restores it from the scratch copy. The cost is roughly double
+the page-write traffic — sequential, so cheaper than it sounds.</p>
+<p>Same problem, two different bills. Neither is free, and turning either off is a
+&quot;my data is expendable&quot; switch, not a performance tip.</p>
+<h3 id="readme-107-version-5-what-does-the-fsync-in-the-commit-path-really-cost">10.7 Version 5: what does the fsync in the commit path really cost?</h3>
+<p>One thing has been glossed over. Section 10.1 said &quot;append a commit record,
+<strong>fsync the log</strong>, then tell the client committed&quot;. That fsync is the single
+most expensive thing in the commit path, and it is unavoidable. It is the exact
+moment the promise becomes real. Everything else in a commit can be lazy; this
+cannot.</p>
+<p>So the commit path costs at minimum <strong>one durable write to one sequential
+file</strong>. That is the best possible shape for a disk: no seeking, one file. The
+whole no-force design exists to make that sentence true.</p>
+<p>But a naive implementation does one fsync <strong>per transaction</strong>, and now
+throughput is capped by the device's sync rate no matter how many processors
+you own. The fix is a batching trick that appears in every mature engine.</p>
+<p><strong>Group commit</strong> works like this. When several transactions want to commit at
+nearly the same time, their commit records are already adjacent in the same log
+file. One <code>fsync</code> makes <em>all</em> of them durable. So the engine waits a moment,
+collects the commit records that arrive in that window, syncs once, and
+acknowledges everyone.</p>
+<p>The trade is explicit. <strong>Each transaction pays a little extra latency; the
+system gains a large multiple of throughput.</strong> PostgreSQL exposes the waiting
+window as <code>commit_delay</code> and <code>commit_siblings</code>. MySQL has binary-log group
+commit, tuned with <code>binlog_group_commit_sync_delay</code>.</p>
+<p>This is the identical shape as batching you have seen elsewhere: one expensive
+synchronous step amortised over many callers, paid for in latency. Your
+<a href="../61-work-pressure-and-deadlines/notes.html#readme">work-pressure-and-deadlines</a> lab's queueing
+arithmetic applies to it directly.</p>
+<h3 id="readme-108-what-does-the-finished-machine-look-like">10.8 What does the finished machine look like?</h3>
+<p>Read the diagram top to bottom. The one line that matters is the <code>fsync</code>,
+because everything above it is reversible and everything below it is not.</p>
+<pre class="mermaid">sequenceDiagram
+  participant C as Client
+  participant DB as Database (RAM)
+  participant W as WAL (disk)
+  participant D as Data file (disk)
+  C-&gt;&gt;DB: BEGIN#59; UPDATE Ravi#59; UPDATE Meera
+  DB-&gt;&gt;DB: change pages in buffer pool (dirty)
+  DB-&gt;&gt;W: append #102, #103 (before+after images)
+  C-&gt;&gt;DB: COMMIT
+  DB-&gt;&gt;W: append #104 COMMIT
+  W-&gt;&gt;W: fsync  ← the promise becomes real here
+  DB--&gt;&gt;C: &quot;committed&quot;
+  Note over DB,D: later, lazily, in any order
+  DB-&gt;&gt;D: write page 5, page 9
+  Note over W,D: after a crash
+  W-&gt;&gt;D: analysis → redo → undo
+</pre>
+<p>Every feature in that picture is a scar. Read the right column as a list of
+disasters that already happened to somebody.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Feature</th>
+  <th>The failure that forced it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The log at all</td>
+  <td>crash between two changes (§4)</td>
+</tr>
+<tr>
+  <td>Before-images (undo)</td>
+  <td>evicting an uncommitted dirty page (§10.1)</td>
+</tr>
+<tr>
+  <td>After-images (redo)</td>
+  <td>committing without writing the pages (§10.1)</td>
+</tr>
+<tr>
+  <td>pageLSN comparison</td>
+  <td>recovery applying a change twice (§10.4)</td>
+</tr>
+<tr>
+  <td>Checkpoints</td>
+  <td>recovery scanning the whole log (§10.4)</td>
+</tr>
+<tr>
+  <td>Repeating history in redo</td>
+  <td>undo needing two different starting states (§10.5)</td>
+</tr>
+<tr>
+  <td>CLRs plus undoNext</td>
+  <td>crash during rollback (§10.5)</td>
+</tr>
+<tr>
+  <td>Full-page writes / doublewrite</td>
+  <td>torn page (§10.6)</td>
+</tr>
+<tr>
+  <td>Group commit</td>
+  <td>one fsync per transaction (§10.7)</td>
+</tr>
+</tbody>
+</table></div>
+<p>That machine, with those exact parts, is <strong>ARIES</strong> — Mohan and colleagues, IBM,
+1992. It is the algorithm that PostgreSQL, MySQL/InnoDB, SQL Server, DB2 and
+Oracle all implement variants of. You did not memorise it. You derived it.</p>
+<hr />
+<h2 id="readme--checkpoint-can-you-say-the-intermediate-model-back">✅ Checkpoint: can you say the intermediate model back?</h2>
+<p>You can now read the ARIES paper, or PostgreSQL's
+<code>src/backend/access/transam</code> README, and recognise every noun in it. You can
+explain to a colleague why <code>full_page_writes</code> exists, why <code>innodb_doublewrite</code>
+exists, and why a database that &quot;just writes carefully&quot; cannot be correct.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>redo</em>, <em>undo</em>, <em>idempotent</em> or
+<em>pageLSN</em>, explain to a friend why Vikram deliberately re-does the damage
+from a transfer that never finished, only to take it back a moment later.</p>
+<details><summary>A good answer sounds like</summary>
+"He wants the books to look exactly the way they looked at the instant of the
+fire, before he starts cleaning anything up. If he cleaned up as he went, he
+would have to keep asking 'did this half-finished change reach the book or
+not?' for every single page. By first putting the world back to how it was,
+every clean-up step starts from the same known place — the same place a
+cancelled transfer starts from on an ordinary day. One rule instead of two."
+</details>
+
+</blockquote>
+<p>Next up: the failure modes one at a time, including the ones this machine does
+<strong>not</strong> handle. Then a precise audit of what the four letters do and don't
+promise. This is the layer that changes how you review a design.</p>
+<hr />
+<h2 id="readme-11-what-are-the-eleven-ways-it-goes-wrong-and-what-survives-each">11. What are the eleven ways it goes wrong, and what survives each?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eleven disasters. The machine handles most of them
+completely and uneventfully. Three of them it does not handle at all, and
+those three are the ones worth memorising.</p>
+</blockquote>
+<p>Each of these has a scenario on the visualization page. Read one, go and run
+it, come back. The eleven keep their numbers, F1 to F11, because the exercises
+refer to them.</p>
+<p><strong>F1 — Crash before the commit record is durable.</strong> Start the transfer, let
+both update records be written, then hit CRASH before pressing COMMIT. Leaving
+<code>fsync-on-commit</code> still pending amounts to the same thing. Analysis
+finds T1 with no commit record, marks it a loser, and undo reverts whatever
+reached disk. Balances go back to ₹700 and ₹300. This is correct because the
+promise was never made: section 5's sentence only obliges us to preserve
+transfers the client was <strong>told</strong> about. In production this is the
+overwhelmingly common crash case, and it is completely uneventful — which is
+the point. From the client's side it is indistinguishable from a connection
+error, and that ambiguity is F9.</p>
+<p><strong>F2 — Crash after the commit record is durable, before the pages are
+written.</strong> Commit, then CRASH before the background writer flushes. Redo
+re-applies #102 and #103 from the log, and Ravi has ₹200 while Meera has ₹800.
+No-force means committed changes routinely exist only in the log at crash time.
+This is not an edge case; it is the normal state of affairs. Every crash of a
+busy database is this. &quot;Recovery took 90 seconds&quot; is exactly this quantity, and
+it is tuned with the checkpoint interval.</p>
+<p><strong>F3 — Crash with an uncommitted change already on disk.</strong> Start T2, force a
+buffer eviction using the page's &quot;buffer full → steal a page&quot; control, then
+CRASH. Redo repeats history, taking page 9 to ₹700 and the total to ₹900, wrong
+on purpose. Then undo reverts T2 using its before-image and writes a CLR, and
+₹1000 is restored. Steal is mandatory for a database that handles more data
+than RAM (§10.2), so uncommitted data on disk is a designed-for state. Recovery
+now has a third pass, and it is the slow one — undo does random reads and
+writes over whatever the losers touched. This is why killing a database in the
+middle of a giant <code>DELETE</code> produces a long, un-skippable rollback on restart,
+and why the advice is always &quot;let it finish&quot;. InnoDB reports it as
+<code>InnoDB: Rolling back trx ... N% complete</code>.</p>
+<p><strong>F4 — Crash during recovery itself.</strong> Run recovery, hit CRASH mid-undo, then
+recover again. You land in the same final state. Redo is idempotent because of
+the pageLSN comparison, and undo resumes from the last CLR's <code>undoNext</code> instead
+of restarting. Recovery is not a privileged mode. It can be interrupted like
+anything else, so it had to be designed to be restartable (§10.4, §10.5). Crash
+loops are real: bad memory, a failing disk, an OOM killer with a taste for the
+database. A recovery that were not restartable would turn a transient fault
+into permanent corruption.</p>
+<p><strong>F5 — Torn page.</strong> Switch off full-page writes in the visualization, then
+CRASH during a page write. With the protection on, recovery restores the whole
+page from the log's full image and replays forward, and the result is correct.
+With it off, the page is half old and half new, and redo's physiological
+instructions land on incoherent structure. The visualization marks the page
+<strong>corrupt</strong>, and the total is unrecoverable from the log alone. A multi-sector
+write is not atomic (§10.6). In a real system this surfaces later as
+<code>invalid page header in block ...</code>, a checksum error at read time, long after
+the crash. This is exactly why <code>full_page_writes=off</code> and
+<code>innodb_doublewrite=OFF</code> are documented as unsafe, except on storage that
+guarantees atomic page writes.</p>
+<p><strong>F6 — The device that lies about fsync.</strong> Set the visualization's safe to
+&quot;lies about the seal&quot;. Commit records are acknowledged as durable while still
+sitting in a volatile on-device cache. Power loss then destroys transactions
+the client was told had committed. Recovery cannot detect it; the log simply
+ends earlier than the client's receipts imply. Durability is a claim by every
+layer beneath you, and a claim is only as good as the weakest layer (§12.3).
+This is the worst failure in the lab, because nothing anywhere reports an
+error. PostgreSQL's own reliability documentation discusses drives that
+acknowledge writes before they are stable, and the same class of problem
+appears with misconfigured virtualised storage. The self-inflicted version is
+<code>fsync = off</code>, which is a benchmark-only setting.</p>
+<p><strong>F7 — Process crash versus power loss.</strong> The CRASH control has two modes. A
+<code>kill -9</code> of the database process loses the buffer pool but <strong>not</strong> the OS page
+cache, so log bytes that reached <code>write()</code> are still there and recovery finds
+them. A power cut loses the page cache too, so anything not <code>fsync</code>ed is gone.
+The page cache belongs to the kernel, not to the process. You have your own
+figures for this from <a href="../13-redis/notes.html#readme">redis</a>: <code>kill -9</code> with <code>appendfsync no</code>
+lost nothing, power loss cost 530 ms of traffic, and <code>always</code> gave zero loss at
+3.4× lower throughput. Same three moments, same arithmetic, different product.
+This is why a setting like <code>innodb_flush_log_at_trx_commit = 2</code> is not simply
+&quot;unsafe&quot;. It is <em>safe against process crash and unsafe against power loss</em>,
+which is a real and sometimes acceptable distinction.</p>
+<p><strong>F8 — The log disk fills up.</strong> This one is not simulated in the visualization;
+it is here from vendor documentation, not from a run. The WAL cannot be
+appended, so <strong>no transaction can commit</strong>, because committing <em>is</em> appending.
+The database stops accepting writes, and PostgreSQL will <code>PANIC</code> and shut down
+when it cannot write WAL. The log is on the critical path of every commit by
+construction. Nothing is corrupted, but availability is gone completely. The
+classic cause is a replication slot or an archiver that stopped consuming WAL,
+so the log cannot be recycled and grows without bound. &quot;Disk full on the WAL
+volume&quot; is an outage, not a warning.</p>
+<p><strong>F9 — The client never learns the outcome.</strong> CRASH in the window between the
+commit fsync and the acknowledgement reaching the client. The transaction
+<strong>is</strong> committed and durable, but the client sees a timeout or a dropped
+connection and does not know it. The acknowledgement travels over a network,
+and the network is not part of the transaction. Atomicity and durability are
+both perfect. What is lost is the client's certainty — and if it retries, you
+get the transfer twice. This is precisely the problem your
+<a href="../49-idempotency/notes.html#readme">idempotency</a> lab solves. The boundary is worth stating
+bluntly. <strong>ACID gives you a correct database. It tells you nothing about
+whether the caller knows it.</strong> The fix lives above the database: an idempotency
+key stored inside the same transaction, so the retry recognises itself.</p>
+<p><strong>F10 — Failover to a replica that was behind.</strong> This one is not in this lab's
+visualization either, since the lab is single-node; it is described from the
+labs that ran it. The primary acknowledges a commit after its own local fsync,
+then dies. An asynchronous replica is promoted. Transactions committed inside
+the replication lag window are gone — <strong>and they were acknowledged</strong>. The fsync
+made the write durable <strong>on that machine</strong>, the machine was the failure domain,
+and the machine is what failed. Your own figures from <a href="../13-redis/notes.html#readme">redis</a>:
+<strong>500 acked writes, 500 lost</strong> across a failover, with <code>WAIT</code> able to measure
+the window but not to close it. Single-node atomicity is intact and now
+irrelevant; durability, as the user understands the word, is gone. This is what
+<code>synchronous_commit = remote_apply</code>, <code>min-replicas-to-write</code>, and Kafka's
+<code>acks=all</code> with <code>min.insync.replicas</code> are for. They move the durability
+boundary from <em>one disk</em> to <em>a quorum of machines</em>, and charge you a network
+round trip per commit. Section 12.3.</p>
+<p><strong>F11 — The application commits nonsense.</strong> Press the visualization's &quot;commit a
+balance of −₹50&quot; button. It commits. Atomically. Durably. Forever. Nothing in
+the WAL machinery has an opinion about what a valid balance is. Unless you
+declared <code>CHECK (balance &gt;= 0)</code>, the database was never asked. A, I and D all
+performed flawlessly. C is what died, in the only sense that matters to your
+business. This is the single most common misunderstanding of ACID, and section
+12.2 is about it.</p>
+<p><strong>The eleven, side by side.</strong> Read the last column first: a <em>silent</em> loss is
+the one that hurts, because nothing anywhere tells you it happened.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Failure</th>
+  <th>Still intact</th>
+  <th>What is lost</th>
+  <th>Loud or silent?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1 — crash before commit is durable</td>
+  <td>atomicity; total ₹1000</td>
+  <td>nothing that was promised</td>
+  <td>loud: the client sees an error</td>
+</tr>
+<tr>
+  <td>F2 — crash after commit, before pages</td>
+  <td>durability and atomicity</td>
+  <td>nothing; recovery time only</td>
+  <td>loud: a slow startup</td>
+</tr>
+<tr>
+  <td>F3 — uncommitted change already on disk</td>
+  <td>atomicity</td>
+  <td>nothing; a slow third pass</td>
+  <td>loud: rollback progress messages</td>
+</tr>
+<tr>
+  <td>F4 — crash during recovery</td>
+  <td>everything</td>
+  <td>time only</td>
+  <td>loud: it restarts</td>
+</tr>
+<tr>
+  <td>F5 — torn page</td>
+  <td>nothing you can rely on for that page</td>
+  <td>the page</td>
+  <td>silent until a later read</td>
+</tr>
+<tr>
+  <td>F6 — the device lies about fsync</td>
+  <td>atomicity: whole transactions, just fewer</td>
+  <td><strong>durability, silently</strong></td>
+  <td>silent, always</td>
+</tr>
+<tr>
+  <td>F7 — process crash vs power loss</td>
+  <td>depends which one; see the three moments</td>
+  <td>the un-<code>fsync</code>ed window on power loss</td>
+  <td>silent</td>
+</tr>
+<tr>
+  <td>F8 — log disk full</td>
+  <td>correctness; nothing corrupted</td>
+  <td>availability, completely</td>
+  <td>loud: <code>PANIC</code> and shutdown</td>
+</tr>
+<tr>
+  <td>F9 — client never learns the outcome</td>
+  <td>atomicity and durability, perfectly</td>
+  <td>the client's certainty</td>
+  <td>loud to the client, invisible to the database</td>
+</tr>
+<tr>
+  <td>F10 — failover to a behind replica</td>
+  <td>single-node atomicity, now irrelevant</td>
+  <td>durability as users mean it</td>
+  <td>silent until customers complain</td>
+</tr>
+<tr>
+  <td>F11 — application commits nonsense</td>
+  <td>A, I and D — all performed</td>
+  <td>C, in the only sense your business cares about</td>
+  <td>silent forever</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-do-the-four-promises-actually-promise">12. What do the four promises actually promise?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Atomicity is only about crashes and aborts. Durability is
+only about the failures you configured for. Isolation is a different machine.
+And consistency was never the database's job in the first place.</p>
+</blockquote>
+<h3 id="readme-121-what-do-a-and-d-really-guarantee-and-what-do-people-think-they-do">12.1 What do A and D really guarantee, and what do people think they do?</h3>
+<p><strong>Atomicity, precisely stated:</strong> for every transaction, either all of its
+changes are present in the database or none are, with respect to <strong>crashes and
+aborts</strong>. That's it. The two words at the end are the whole scope.</p>
+<p>Three things atomicity is regularly assumed to mean, and does not.</p>
+<p><strong>It does not mean &quot;invisible while running&quot;.</strong> Whether another transaction can
+see your half-finished work is <strong>isolation</strong>, not atomicity. At read
+uncommitted it can; at read committed it cannot; and you measured all of it in
+<a href="../08-isolation-levels/notes.html#readme">isolation-levels</a>. A database can be perfectly atomic
+and still show a concurrent reader a state that never legally existed.</p>
+<p><strong>It does not extend past this database.</strong> Two databases, or a database and a
+message broker, are two commit points. Making them one act is
+<a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a>. Doing it <em>without</em> fracturing
+readers is <a href="../46-distributed-transactions/notes.html#readme">distributed-transactions</a>, whose
+result was <strong>16 fractured audits in 40 runs, with perfect 2PC and zero
+crashes</strong>, because atomic durability is not atomic visibility.</p>
+<p><strong>&quot;Atomic&quot; is now three different words in your vocabulary.</strong> In the
+<a href="../17-java-memory-model/notes.html#readme">java-memory-model</a> it meant &quot;no other thread observes
+a half-written value&quot;. In <a href="../13-redis/notes.html#readme">redis</a> it meant &quot;the command runs to
+completion on the one thread, and there is no rollback&quot;. Here it means &quot;all or
+nothing across a crash&quot;. They are genuinely different guarantees, and
+conflating them is a reliable source of bugs.</p>
+<p><strong>Durability, precisely stated:</strong> once the client has been told &quot;committed&quot;,
+the effects survive <strong>the failures the storage layer was configured to
+survive</strong>. Not &quot;all failures&quot;. Section 12.3.</p>
+<h3 id="readme-122-why-is-c-not-like-the-others">12.2 Why is C not like the others?</h3>
+<p>A, I and D name <strong>mechanisms the database implements</strong>: a log and recovery
+passes for A and D, a concurrency-control scheme for I. Disable any of them and
+something inside the database changes.</p>
+<p><strong>C names an outcome you are responsible for.</strong> Written out fully, the C in
+ACID says: <em>a transaction takes the database from one valid state to another
+valid state.</em> Now ask the obvious question. <strong>Valid by whose definition?</strong> The
+answer is: yours. The database has never heard of your business rules.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Your service layer checks every balance before it writes, and
+refuses anything negative. Does the database now guarantee that no balance is
+ever negative?</p>
+<details><summary>Reveal</summary>
+**No, and the gap is not about bugs in your check.** Your check protects one
+code path. The database has many writers.
+
+<p>If you guessed &quot;yes, because every write goes through our service&quot;, list the
+writers again. The other team's service. Last month's migration script. The
+support engineer typing <code>UPDATE</code> into a psql session at 2 a.m. A bulk import.
+A restored backup. None of those pass through your <code>if</code> statement.</p>
+<p>The one bridge between your definition of valid and the database's ability to
+enforce it is a <strong>declared constraint</strong>. That is the whole of what C buys
+you, and it is why C is a to-do list rather than a feature.</p>
+</details>
+
+</blockquote>
+<p>Go back to the branch for a second. There is exactly one thing Asha's manager
+can do that survives Asha leaving. She can paint the rule on the wall behind
+the counter. Then every cashier has to obey it, including Vikram, and including
+the temp on Saturday. In a database that painted rule is a <strong>declared
+constraint</strong>. Three of them, in plain words first, then as statements:</p>
+<ul>
+<li>No account balance may ever go below zero.</li>
+<li>No two bookings may hold the same room on the same day.</li>
+<li>No order may name a customer who does not exist.</li>
+</ul>
+<p>And the same three, as SQL:</p>
+<div class="code"><pre><code class="language-sql">-- The part of &quot;valid&quot; the database can actually keep for you
+ALTER TABLE accounts ADD CONSTRAINT positive_balance CHECK (balance &gt;= 0);
+ALTER TABLE bookings ADD CONSTRAINT one_per_slot UNIQUE (room_id, day);
+ALTER TABLE orders   ADD CONSTRAINT real_customer
+  FOREIGN KEY (customer_id) REFERENCES customers(id);
+</code></pre></div>
+<p><em>(Read-only illustration — this lab creates no files and runs nothing.)</em></p>
+<p>Everything you declare there, the database will defend against every writer,
+forever: your application, the other team's application, the migration script,
+and the support engineer at 2 a.m.</p>
+<p>Everything you <em>don't</em> declare lives in an <code>if</code> statement in one service.
+&quot;The total across all accounts is ₹1000.&quot; &quot;A shipped order must have a
+payment.&quot; The database will happily, atomically and durably commit their
+violation.</p>
+<p>You reached this same conclusion from the other direction in
+<a href="../08-isolation-levels/notes.html#readme">isolation-levels</a>. It is worth quoting your own
+knowledge map back at you.</p>
+<blockquote>
+<p><em>&quot;a constraint beats an isolation level whenever the rule can be stated about
+the data rather than the decision — an isolation level protects the code
+paths that remember to ask; a constraint protects the table.&quot;</em></p>
+</blockquote>
+<p>That is the practical form of C. <strong>The letter C is a to-do list.</strong> Move as much
+of your definition of &quot;valid&quot; as you can into declarations the engine enforces.
+That portion is the only part of C that ACID is actually buying you.</p>
+<p>Two more traps worth naming.</p>
+<p><strong>The C in ACID is not the C in CAP.</strong> ACID's C is &quot;the data satisfies its
+rules&quot;. CAP's C is <em>linearizability</em>, a recency and ordering guarantee about
+reads on a distributed system, which you have a whole lab on
+(<a href="../26-linearizability/notes.html#readme">linearizability</a>, plus the distinction from
+serializability in <a href="../27-linearizability-vs-serializability/notes.html#readme">linearizability-vs-serializability</a>).
+Same letter, unrelated concepts, and the collision causes real confusion in
+design discussions. When someone says &quot;we need consistency&quot;, make them say
+which one.</p>
+<p><strong>Constraint checking has a timing.</strong> Most constraints are checked per
+statement. Some can be <code>DEFERRABLE INITIALLY DEFERRED</code> and are checked at commit
+instead, which is what lets a transaction pass through an intermediate state
+that violates a foreign key. Worth knowing the switch exists; the details are
+engine-specific.</p>
+<h3 id="readme-123-durable-against-what-exactly">12.3 Durable against what, exactly?</h3>
+<p>There is no such thing as durable. There is a ladder, and every rung survives
+strictly more than the one below it. Read the third column: it is what still
+kills you at that height.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Rung</th>
+  <th>Survives</th>
+  <th>Doesn't survive</th>
+  <th>Costs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>in the process's log buffer</td>
+  <td>nothing</td>
+  <td>a <code>kill -9</code></td>
+  <td>free</td>
+</tr>
+<tr>
+  <td>after <code>write()</code> — OS page cache</td>
+  <td>process crash</td>
+  <td>power loss</td>
+  <td>free</td>
+</tr>
+<tr>
+  <td>after <code>fsync()</code></td>
+  <td>power loss on this same machine</td>
+  <td>this disk dying</td>
+  <td>one sync per commit, or per group</td>
+</tr>
+<tr>
+  <td>on redundant local storage (RAID, cloud block store)</td>
+  <td>one disk dying</td>
+  <td>this machine, this availability zone</td>
+  <td>hardware or service cost</td>
+</tr>
+<tr>
+  <td>acked by a <strong>quorum of replicas</strong></td>
+  <td>machine and zone loss</td>
+  <td>region loss, correlated bugs</td>
+  <td>a network round trip per commit</td>
+</tr>
+<tr>
+  <td>acked by a remote region</td>
+  <td>region loss</td>
+  <td></td>
+  <td>tens of milliseconds per commit</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two consequences decide real architectures.</p>
+<p><strong>&quot;We use an ACID database, so we can't lose data&quot; is a category error.</strong> ACID's
+D is a rung on that ladder, chosen by configuration. F10 is what it looks like
+when the rung you're standing on is lower than the failure you met.</p>
+<p><strong>Every rung above <code>fsync</code> is bought with a network round trip.</strong> That is the
+exact latency-versus-consistency currency you priced in <a href="../25-pacelc/notes.html#readme">pacelc</a>.
+Even with no partition anywhere, stronger durability costs latency on every
+single write. Durability is a PACELC &quot;else&quot; branch.</p>
+<h3 id="readme-124-which-rules-does-the-machine-actually-keep">12.4 Which rules does the machine actually keep?</h3>
+<p>Six rules, and each one was earned by a specific failure above. The bracket at
+the end of each says what happens without it.</p>
+<ul>
+<li><strong>WAL rule:</strong> for any change, its log record is durable before the modified
+page is written to the data file. <em>(Without it: F3 has no before-image to
+undo with.)</em></li>
+<li><strong>Commit rule:</strong> a transaction's commit record is durable before the client
+is told &quot;committed&quot;. <em>(Without it: F6 — silent durability loss.)</em></li>
+<li><strong>Redo idempotence:</strong> apply record <em>L</em> to page <em>P</em> only if
+<code>L.LSN &gt; P.pageLSN</code>. <em>(Without it: F4 corrupts on a second recovery.)</em></li>
+<li><strong>Repeating history:</strong> redo re-applies losers' changes too, so undo always
+starts from the pre-crash state. <em>(Without it: two undo code paths.)</em></li>
+<li><strong>CLRs are never undone</strong>, and each carries <code>undoNext</code>. <em>(Without it: F4's
+rollback may never terminate.)</em></li>
+<li><strong>Page-write atomicity is not assumed.</strong> It is manufactured, by full-page
+writes or a doublewrite buffer. <em>(Without it: F5.)</em></li>
+</ul>
+<h3 id="readme-125-what-did-all-of-this-cost">12.5 What did all of this cost?</h3>
+<p>Nothing here is free, and the bills are specific.</p>
+<p><strong>Every change is written twice</strong>, once to the log and once to the data file.
+That is write amplification on top of the amplification you already found for
+the storage structure itself in <a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a>: 119× for
+a B-tree, 2.5× for an LSM.</p>
+<p><strong>Every commit costs a durable sequential write.</strong> Group commit amortises it.
+Nothing removes it.</p>
+<p><strong>Crash recovery time is not zero</strong>, and it scales with how far the data file
+lagged. That is an availability cost, paid at the worst possible moment.</p>
+<p><strong>Rollback is expensive and unskippable.</strong> A huge aborted transaction must be
+undone before the database is fully usable.</p>
+<p><strong>The log must be retained and recycled.</strong> That introduces a whole class of
+operational failure, F8, that a database without a log would not have.</p>
+<hr />
+<h2 id="readme--checkpoint-can-you-say-the-engineering-model-back">✅ Checkpoint: can you say the engineering model back?</h2>
+<p>You can now audit a design. Given &quot;we use Postgres, so we're fine&quot;, you can ask
+the four questions that matter. Which rung of the durability ladder are you on?
+Which of your business rules are actually declared as constraints? What does
+your caller do when the acknowledgement is lost? And does anything in this
+system need atomicity across two datastores?</p>
+<blockquote>
+<p><strong>Say it back.</strong> A colleague says &quot;our database is ACID, so Ravi can never
+end up with a negative balance&quot;. Without using the words <em>constraint</em>,
+<em>isolation</em> or <em>durability</em>, explain to them what is wrong with that
+sentence.</p>
+<details><summary>A good answer sounds like</summary>
+"The database promises that whatever we ask it to write happens completely,
+or not at all, and then sticks around. It does not promise that what we asked
+for made any sense. If our code sends it a balance of minus fifty, it will
+store minus fifty perfectly and forever. The only way the database itself
+starts refusing is if we tell it the rule up front, in the table definition —
+and then it applies to everybody, not just our code."
+</details>
+
+</blockquote>
+<p>Next up: the mapping from this machine to the actual parameters in PostgreSQL,
+InnoDB, SQLite and Oracle, what an on-call engineer sees when each part
+misbehaves, and an explicit list of what this lab left out.</p>
+<hr />
+<h2 id="readme-13-what-happens-in-production">13. What happens in production?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every part of Asha's branch has a vendor's name and a
+config parameter. Learn the mapping once and four different databases stop
+being four different subjects.</p>
+</blockquote>
+<p>Asha's day-book, her fireproof safe, her 4 p.m. tidy-up and Vikram's morning
+all exist in PostgreSQL, InnoDB, SQLite and Oracle. They just have four
+different sets of labels, and the labels are what you type into a config file.
+This section is that translation, plus what Ravi's transfer looks like on a
+pager at 3 a.m.</p>
+<h3 id="readme-131-what-do-four-vendors-call-the-same-parts">13.1 What do four vendors call the same parts?</h3>
+<p>Every row below is a part of the machine you derived in section 10. Only the
+vocabulary changes.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Our part</th>
+  <th>PostgreSQL</th>
+  <th>MySQL / InnoDB</th>
+  <th>SQLite</th>
+  <th>Oracle</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The log</td>
+  <td>WAL (<code>pg_wal/</code>)</td>
+  <td>redo log (<code>ib_logfile*</code>) + <strong>separate</strong> undo tablespace</td>
+  <td>rollback journal, or WAL file in WAL mode</td>
+  <td>redo log + undo tablespace</td>
+</tr>
+<tr>
+  <td>Before-images live</td>
+  <td>in the same WAL records</td>
+  <td>in <strong>undo logs</strong>, which also serve MVCC reads</td>
+  <td>in the rollback journal</td>
+  <td>in the undo tablespace, also serving flashback/MVCC</td>
+</tr>
+<tr>
+  <td>Line number</td>
+  <td>LSN (<code>0/16B3A50</code>)</td>
+  <td>LSN</td>
+  <td>—</td>
+  <td>SCN</td>
+</tr>
+<tr>
+  <td>Marker on the page</td>
+  <td>pageLSN</td>
+  <td><code>FIL_PAGE_LSN</code></td>
+  <td>—</td>
+  <td></td>
+</tr>
+<tr>
+  <td>Torn-page defence</td>
+  <td><code>full_page_writes</code></td>
+  <td>doublewrite buffer</td>
+  <td>journal/WAL framing + checksums</td>
+  <td></td>
+</tr>
+<tr>
+  <td>Commit durability dial</td>
+  <td><code>synchronous_commit</code></td>
+  <td><code>innodb_flush_log_at_trx_commit</code></td>
+  <td><code>PRAGMA synchronous</code></td>
+  <td><code>COMMIT WRITE [WAIT\|NOWAIT]</code></td>
+</tr>
+<tr>
+  <td>Batching</td>
+  <td><code>commit_delay</code></td>
+  <td>binlog group commit</td>
+  <td>—</td>
+  <td></td>
+</tr>
+<tr>
+  <td>Checkpoint</td>
+  <td><code>checkpoint_timeout</code>, <code>max_wal_size</code></td>
+  <td>adaptive flushing, <code>innodb_max_dirty_pages_pct</code></td>
+  <td>WAL checkpointing</td>
+  <td></td>
+</tr>
+</tbody>
+</table></div>
+<p>Two of those cells deserve a second look.</p>
+<p><strong>InnoDB keeps undo separate from redo, and that is not a detail.</strong> Its undo
+logs are also what serve MVCC reads: an old row version is reconstructed by
+walking undo records backwards. So in InnoDB, the same structure that provides
+<strong>atomicity</strong> also provides <strong>isolation</strong>. That is why a long-running read
+transaction bloats undo, with <code>History list length</code> climbing. It is exactly the
+way an open snapshot bloats PostgreSQL and requires <code>VACUUM</code>. You met that cost as
+&quot;snapshot isolation pays in keeping old versions&quot; in
+<a href="../08-isolation-levels/notes.html#readme">isolation-levels</a>. Same bill, itemised differently.</p>
+<p><strong>SQLite's original design sits in the <em>other</em> corner of section 10.2's table.</strong>
+A rollback journal is <strong>undo-only with force</strong>. Before changing a page it copies
+the original into the journal, then modifies the database file directly. At
+commit it syncs the database file and deletes the journal. After a crash, it
+copies the originals back. It is a complete, correct, simple design, and it
+pays exactly the price the table predicts: every commit forces the changed
+pages out, and readers block writers. SQLite's WAL mode later moved it to the
+redo corner. The release notes list better concurrency and fewer fsyncs as the
+benefits, which is precisely what the table says you get for it.</p>
+<h3 id="readme-132-what-does-the-durability-dial-look-like-in-the-three-forms-youll-meet">13.2 What does the durability dial look like in the three forms you'll meet?</h3>
+<p>All three are the same ladder from section 12.3. All three have a middle
+setting that people misread as &quot;unsafe&quot;, when it really means &quot;safe against
+process crash, unsafe against power loss&quot; (F7).</p>
+<p><strong>PostgreSQL uses <code>synchronous_commit</code>.</strong> Its settings: <code>on</code> means the WAL is
+fsynced locally before the acknowledgement. <code>local</code> means the same, ignoring
+replicas. <code>remote_write</code>, <code>on</code> with <code>synchronous_standby_names</code>, and
+<code>remote_apply</code> all require a standby to have it, which moves you up the ladder
+and costs a round trip. <code>off</code> acknowledges before the local fsync, so you can
+lose a bounded window of <em>committed</em> transactions while the database stays
+<strong>consistent</strong>. Postgres's own documentation is careful about this distinction:
+<code>synchronous_commit=off</code> risks data loss, while <code>fsync=off</code> risks corruption.
+Those are very different bets.</p>
+<p><strong>MySQL and InnoDB use <code>innodb_flush_log_at_trx_commit</code>.</strong> Setting <code>1</code> writes
+and fsyncs at every commit; it is the default and it is fully durable. Setting
+<code>2</code> writes at every commit and fsyncs roughly once a second, so it survives
+<code>mysqld</code> crashing but not the operating system dying. Setting <code>0</code> writes and
+fsyncs about once a second, losing up to a second in any crash. And
+<strong><code>sync_binlog=1</code></strong> is the second half of the story: the binary log has its own
+durability setting, and replication and point-in-time recovery depend on it.</p>
+<p><strong>SQLite uses <code>PRAGMA synchronous</code>.</strong> <code>FULL</code> and <code>EXTRA</code> are the safe settings.
+<code>NORMAL</code>, in WAL mode, does not sync on every commit, so a power loss can lose
+recent commits without corrupting the file. <code>OFF</code> is what it sounds like.</p>
+<h3 id="readme-133-why-is-there-a-two-phase-commit-inside-a-single-mysql-server">13.3 Why is there a two-phase commit inside a single MySQL server?</h3>
+<p>This one is worth knowing because it closes a loop with an earlier lab.</p>
+<p>MySQL has <strong>two</strong> logs that must agree. InnoDB's redo log decides what the
+storage engine recovered. The server's <strong>binary log</strong> decides what replicas and
+point-in-time recovery see. If a crash left them disagreeing, a replica would
+diverge from its primary.</p>
+<p>So MySQL runs an internal <strong>two-phase commit</strong> between them on every commit:
+prepare in InnoDB, write the binlog, commit in InnoDB. On recovery, a
+transaction found <em>prepared</em> in InnoDB is committed if it is present in the
+binlog, and rolled back otherwise.</p>
+<p>Coordinator, participants, prepare and vote, the commit point, in-doubt on
+recovery — every noun from your
+<a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a> lab, running inside one process, on a
+single machine, thousands of times a second. It is the cleanest example there
+is of why that lab's material is not only about distributed systems.</p>
+<h3 id="readme-134-what-does-an-on-call-engineer-actually-see">13.4 What does an on-call engineer actually see?</h3>
+<p>Every row below is Vikram's morning (crash recovery) or Asha's safe (the
+commit fsync), seen from the outside by somebody who has just been woken up.
+Read the middle column: it is the translation from a complaint into a mechanism
+you now understand.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Symptom</th>
+  <th>What it really is</th>
+  <th>Where to look</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>&quot;Database took 4 minutes to start after the crash&quot;</td>
+  <td>redo pass (F2), proportional to checkpoint lag</td>
+  <td>checkpoint interval, <code>max_wal_size</code></td>
+</tr>
+<tr>
+  <td>&quot;It came up but is unusable, CPU pinned on one process&quot;</td>
+  <td>undo pass (F3) rolling back a huge aborted transaction</td>
+  <td>InnoDB <code>Rolling back trx ... N%</code>; wait it out</td>
+</tr>
+<tr>
+  <td>&quot;Commit latency doubled and nothing changed in the app&quot;</td>
+  <td>fsync got slower — noisy neighbour, degraded cloud volume, a failing disk</td>
+  <td>device latency, <code>pg_stat_wal</code>, group-commit settings</td>
+</tr>
+<tr>
+  <td>&quot;WAL volume exploded overnight&quot;</td>
+  <td>full-page writes after checkpoints (§10.6), or a stuck replication slot or archiver (F8)</td>
+  <td>checkpoint frequency, <code>pg_replication_slots</code></td>
+</tr>
+<tr>
+  <td>&quot;The disk filled and the database PANICked&quot;</td>
+  <td>F8 — the log could not be recycled</td>
+  <td>slots, archive command, retention</td>
+</tr>
+<tr>
+  <td>&quot;We failed over and customers say orders vanished&quot;</td>
+  <td>F10 — durability at the wrong failure domain</td>
+  <td>replication mode, sync standbys</td>
+</tr>
+<tr>
+  <td>&quot;<code>invalid page header in block N</code>&quot;</td>
+  <td>a torn or corrupted page surfacing at read time (F5)</td>
+  <td>checksums, storage health, restore from backup</td>
+</tr>
+<tr>
+  <td>&quot;Rows exist that our code could never have written&quot;</td>
+  <td>F11 and §12.2 — an undeclared invariant</td>
+  <td>add the constraint</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-135-what-did-this-lab-deliberately-leave-out">13.5 What did this lab deliberately leave out?</h3>
+<p>The machine in section 10 is complete enough to be correct, and small enough to
+hold in your head. Real engines add more, and this lab does not cover it.</p>
+<ul>
+<li><strong>Log-file management</strong> — segmentation, recycling, archiving, and
+point-in-time recovery by replaying archived WAL onto a base backup. This is
+the feature that makes the log valuable for something other than crashes.</li>
+<li><strong>Physical versus logical logging</strong> — how much of a change to record, and the
+<em>physiological</em> middle ground real engines use. We waved at this in §10.6.</li>
+<li><strong>Index and structural changes</strong> — a B-tree page split is many page changes
+that must be atomic among themselves. Real systems use nested top actions,
+which are CLR-like markers making a structural change un-undoable. Your
+<a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a> lab's split cascade is exactly this case.</li>
+<li><strong>Concurrency in recovery</strong> — parallel redo workers, and the fact that redo
+must respect per-page order while being parallel across pages.</li>
+<li><strong>Isolation and MVCC</strong>, entirely — <a href="../08-isolation-levels/notes.html#readme">isolation-levels</a>.</li>
+<li><strong>Replication</strong>, entirely — the log is also the replication stream. The WAL is
+what a Postgres standby consumes, and what logical decoding turns into a CDC
+feed. That is a lab of its own.</li>
+<li><strong>Backups and verification</strong> — a durable database with an unrestorable backup
+is a slower way to lose data.</li>
+</ul>
+<h3 id="readme-136-what-if-one-databases-acid-isnt-the-shape-of-your-problem">13.6 What if one database's ACID isn't the shape of your problem?</h3>
+<p>The last bridge. Everything above is <strong>one database, one machine</strong>. Real
+systems put a payment in Postgres, an event on Kafka, and a row in a different
+team's service. The moment the work spans two commit points, none of this
+applies.</p>
+<p>You already have the whole decision ladder from other labs. Follow it top to
+bottom, and stop at the first &quot;yes&quot;.</p>
+<pre class="mermaid">flowchart TD
+  A[&quot;Work spans more than one datastore?&quot;] --&gt;|no| B[&quot;Plain ACID transaction.&lt;br/&gt;You are done.&quot;]
+  A --&gt;|yes| C[&quot;Can the data live in ONE database?&quot;]
+  C --&gt;|yes| B
+  C --&gt;|no| D[&quot;Can the second effect be derived&lt;br/&gt;from the first, asynchronously?&quot;]
+  D --&gt;|yes| E[&quot;transactional outbox / CDC&lt;br/&gt;+ idempotent consumer&quot;]
+  D --&gt;|no| F[&quot;Is a visible intermediate state&lt;br/&gt;acceptable to the business?&quot;]
+  F --&gt;|yes| G[&quot;saga with compensations&quot;]
+  F --&gt;|no| H[&quot;distributed transaction&lt;br/&gt;2PC / Percolator / Spanner-style&quot;]
+</pre>
+<p>Your own knowledge map already ranks these: <strong>one DB, then co-locating keys on
+one shard, then <a href="../48-transactional-outbox/notes.html#readme">outbox</a>, then <a href="../47-saga/notes.html#readme">saga</a>,
+then <a href="../46-distributed-transactions/notes.html#readme">distributed transaction</a></strong>, in that order.
+The further right you go, the more machinery you own forever.</p>
+<hr />
+<h2 id="readme--checkpoint-can-you-say-the-production-model-back">✅ Checkpoint: can you say the production model back?</h2>
+<p>You can now read a database's durability settings and say what each one costs
+and what it fails to protect against. You can look at a complaint on a
+dashboard and name which pass of Vikram's morning is responsible, and whether
+Ravi's receipt is still good.</p>
+<blockquote>
+<p><strong>Say it back.</strong> A colleague proposes setting
+<code>innodb_flush_log_at_trx_commit = 2</code> to speed up commits. Without using the
+words <em>fsync</em>, <em>page cache</em> or <em>durability</em>, tell them what they are actually
+buying and what they are actually risking.</p>
+<details><summary>A good answer sounds like</summary>
+"You're telling the database it can hand the commit note to the operating
+system and then answer the customer straight away, instead of waiting for the
+disk to confirm it. If the database program itself dies, the operating system
+still has the note, and nothing is lost. If the power goes out, the note dies
+with everything else in memory, and about a second's worth of transactions we
+already told customers were fine simply never happened. That may be an
+acceptable trade for us. It is not the same as 'safe'."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-14-where-are-the-exercises">14. Where are the exercises?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, in <code>EXERCISES.md</code>, from &quot;explain it in your
+own words&quot; to &quot;design the durability posture for a payments system across
+three regions&quot;.</p>
+</blockquote>
+<p>Answers are in <strong><code>SOLUTIONS.md</code></strong>. Attempt first. Several of them are designed
+so that being wrong is the lesson.</p>
+<p>Rung 5, tracing recovery by hand, and rung 6, spotting the planted flaw, are
+the two that most reliably expose a gap in the model. Do those even if you skip
+the others.</p>
+<h2 id="readme-15-what-else-does-this-connect-to-and-where-should-you-go-next">15. What else does this connect to, and where should you go next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two earlier labs fed into this one, four labs run out of
+it, and the log you just built has a whole second career you have not seen
+yet.</p>
+</blockquote>
+<pre class="mermaid">flowchart TB
+  BT[&quot;btree-and-lsm&lt;br/&gt;&lt;i&gt;pages, WAL-before-ack, torn write&lt;/i&gt;&quot;] --&gt; ACID
+  RD[&quot;redis&lt;br/&gt;&lt;i&gt;buffer → write() → fsync&lt;/i&gt;&quot;] --&gt; ACID
+  ACID[&quot;&lt;b&gt;ACID&lt;/b&gt;&lt;br/&gt;A+D from the log · C is yours&quot;]
+  ACID --&gt; ISO[&quot;isolation-levels&lt;br/&gt;&lt;i&gt;the I, already learned&lt;/i&gt;&quot;]
+  ACID --&gt; TPC[&quot;two-phase-commit&lt;br/&gt;&lt;i&gt;A across two commit points&lt;/i&gt;&quot;]
+  ACID --&gt; IDEM[&quot;idempotency&lt;br/&gt;&lt;i&gt;when the ack is lost&lt;/i&gt;&quot;]
+  ACID --&gt; DT[&quot;distributed-transactions&lt;br/&gt;&lt;i&gt;atomic visibility, not just durability&lt;/i&gt;&quot;]
+  ACID -.-&gt;|next| MVCC[&quot;mvcc-and-vacuum?&quot;]
+  ACID -.-&gt;|next| PITR[&quot;wal-replication-and-pitr?&quot;]
+  ACID -.-&gt;|next| CDC[&quot;change-data-capture?&quot;]
+  ACID -.-&gt;|next| KFK[&quot;kafka?&quot;]
+</pre>
+<p><strong>Commonly confused, separated in one sentence each.</strong></p>
+<ul>
+<li><strong>ACID's C versus CAP's C</strong> — ACID's C is &quot;the data obeys its declared
+rules&quot;; CAP's C is linearizability, a recency guarantee about distributed
+reads. Unrelated. (<a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>,
+<a href="../26-linearizability/notes.html#readme">linearizability</a>)</li>
+<li><strong>Atomicity versus isolation</strong> — atomicity is about crashes and aborts;
+isolation is about what a <em>concurrent</em> transaction may observe.</li>
+<li><strong>Atomic durability versus atomic visibility</strong> — the log makes the write
+all-or-nothing on disk; that does not stop a reader catching it half-applied
+across shards. (<a href="../46-distributed-transactions/notes.html#readme">distributed-transactions</a>,
+where the figure was 16 fractured audits in 40 runs.)</li>
+<li><strong>Durable versus replicated</strong> — <code>fsync</code> protects against power loss on one
+machine; only replication protects against losing the machine.</li>
+<li><strong>WAL, the log, versus WAL mode in SQLite</strong> — the second is SQLite's name for
+switching from an undo-journal design to a redo-log design.</li>
+<li><strong>Undo log versus rollback segment versus before-image</strong> — three names for
+the same idea in three vendors.</li>
+</ul>
+<p><strong>Real technologies built directly on this.</strong></p>
+<ul>
+<li>PostgreSQL WAL, and therefore streaming replication, logical decoding and
+Debezium/CDC.</li>
+<li>InnoDB redo and undo.</li>
+<li>SQLite journal and WAL modes.</li>
+<li>Oracle redo, undo and SCN.</li>
+<li>SQL Server's transaction log.</li>
+<li>Kafka's log segments, with <code>acks</code> and <code>min.insync.replicas</code>.</li>
+<li>Every LSM engine's commit log, in RocksDB and Cassandra. That is the same
+WAL, protecting the memtable.</li>
+</ul>
+<p><strong>Suggested next, in the order I'd actually do them.</strong></p>
+<ul>
+<li><code>/learn wal-replication-and-pitr</code> — the log's <em>second</em> career: streaming to
+replicas, and replaying onto a base backup. This lab deliberately stopped at
+crash recovery, and this is the natural continuation.</li>
+<li><code>/learn mvcc-and-vacuum</code> — your knowledge map has been suggesting this since
+the isolation-levels lab. Now that you know pageLSN and undo, the version
+chains have a place to live.</li>
+<li><code>/learn change-data-capture</code> — how the WAL becomes an event stream, and what
+breaks when it does.</li>
+<li><code>/learn kafka</code> — suggested by four labs now, including this one's <code>acks</code>
+discussion.</li>
+</ul>
+<h2 id="readme-16-glossary--what-does-each-word-mean-in-one-line">16. Glossary — what does each word mean, in one line?</h2>
+<p>Grouped by theme, and in order of first appearance within each group.</p>
+<h3 id="readme-the-contract-itself">The contract itself</h3>
+<ul>
+<li><strong>Transaction</strong> — one job that should count as a single act.</li>
+<li><strong>Commit</strong> — the moment a transaction officially counts and its effects are
+guaranteed.</li>
+<li><strong>Abort / rollback</strong> — ending a transaction so that none of its effects
+remain; <em>abort</em> is the decision, <em>rollback</em> the work.</li>
+<li><strong>Atomicity (A)</strong> — all of a transaction's changes are present, or none, with
+respect to crashes and aborts.</li>
+<li><strong>Consistency (C)</strong> — the data still satisfies its rules afterwards; only the
+rules you <em>declared</em> are enforced by the database.</li>
+<li><strong>Isolation (I)</strong> — concurrent transactions do not corrupt each other's
+logic; a separate dial with its own levels.</li>
+<li><strong>Durability (D)</strong> — once committed, the effects survive the failures the
+storage layer was configured to survive.</li>
+</ul>
+<h3 id="readme-where-the-bytes-actually-sit">Where the bytes actually sit</h3>
+<ul>
+<li><strong>Page</strong> — the fixed-size chunk (8 KB / 16 KB) a database reads and writes at
+a time.</li>
+<li><strong>Buffer pool</strong> — the database's in-memory cache of disk pages, where all
+changes actually happen.</li>
+<li><strong>Dirty page</strong> — an in-memory page whose change hasn't reached disk yet.</li>
+<li><strong>OS page cache</strong> — kernel memory holding written-but-not-synced bytes;
+survives a process crash, not a power loss.</li>
+<li><strong>fsync</strong> — the call that forces written data onto the physical device.</li>
+<li><strong>Failure domain</strong> — the scope of what a given durability guarantee actually
+protects against: a process, a machine, a disk, an availability zone, a
+region.</li>
+</ul>
+<h3 id="readme-the-logs-own-vocabulary">The log's own vocabulary</h3>
+<ul>
+<li><strong>Write-ahead log (WAL)</strong> — an append-only file recording every intended
+change <em>before</em> it is made.</li>
+<li><strong>Log record</strong> — one entry in the log: begin, update, commit, abort, or CLR.</li>
+<li><strong>Before-image / after-image</strong> — the old and new values in an update record;
+they buy undo and redo respectively.</li>
+<li><strong>LSN (log sequence number)</strong> — the position of a record in the log; a global
+order for every change in the database.</li>
+<li><strong>prevLSN</strong> — pointer from a log record to the previous record of the same
+transaction, forming a backward chain used by rollback.</li>
+<li><strong>pageLSN</strong> — the LSN of the most recent change already reflected in a page;
+the comparison that makes redo idempotent.</li>
+<li><strong>Checkpoint</strong> — a log record marking a point recovery can start from, plus
+the flushing that makes it true.</li>
+</ul>
+<h3 id="readme-putting-the-books-right-afterwards">Putting the books right afterwards</h3>
+<ul>
+<li><strong>Redo</strong> — re-applying a committed change using its after-image.</li>
+<li><strong>Undo</strong> — reverting a change using its before-image.</li>
+<li><strong>Recovery</strong> — the startup procedure that reads the log and repairs the data
+files.</li>
+<li><strong>Analysis / redo / undo passes</strong> — the three phases of ARIES recovery.</li>
+<li><strong>Repeating history</strong> — redoing <em>all</em> changes, losers included, so undo
+starts from the pre-crash state.</li>
+<li><strong>Loser / winner</strong> — a transaction that had not committed / had committed at
+the moment of the crash.</li>
+<li><strong>CLR (compensation log record)</strong> — a record of undo work already performed;
+never itself undone, and carrying <code>undoNext</code>.</li>
+<li><strong>undoNext</strong> — the pointer in a CLR to the next record still needing undo,
+making rollback restartable.</li>
+<li><strong>ARIES</strong> — the recovery algorithm (analysis, redo, undo, pageLSN, CLRs) that
+section 10 derives and real engines implement.</li>
+</ul>
+<h3 id="readme-policies-and-the-hazards-they-answer">Policies, and the hazards they answer</h3>
+<ul>
+<li><strong>Steal / no-steal</strong> — whether an uncommitted dirty page may be written to
+disk. Steal requires undo.</li>
+<li><strong>Force / no-force</strong> — whether all of a transaction's pages must reach disk
+before commit returns. No-force requires redo.</li>
+<li><strong>Torn page</strong> — a page left partly old and partly new by an interrupted
+multi-sector write.</li>
+<li><strong>Full-page writes</strong> — logging a whole page image after each checkpoint to
+survive torn pages (PostgreSQL).</li>
+<li><strong>Doublewrite buffer</strong> — writing every page twice, scratch then home, to
+survive torn pages (InnoDB).</li>
+<li><strong>Group commit</strong> — batching several transactions' commit records into one
+fsync; latency for throughput.</li>
+</ul>
+<h2 id="readme-17-about-this-lab">17. About this lab</h2>
+<h3 id="readme-why-is-this-lab-shaped-so-lopsidedly">Why is this lab shaped so lopsidedly?</h3>
+<p><strong>Lab type:</strong> contract / principle, plus the storage mechanism behind it.
+<strong>No runnable code</strong> — the lab is a document, an interactive visualization and
+a set of exercises.</p>
+<p>ACID has four letters, and you already own one of them outright. The
+<a href="../08-isolation-levels/notes.html#readme">isolation-levels</a> lab spent an entire session proving
+that <strong>I</strong> is a separate dial. It has its own anomalies, its own bills, and its
+own mechanisms: 2PL, MVCC, snapshot, SSI. Re-teaching it here would waste your
+time. So this lab does three things instead.</p>
+<ol>
+<li><strong>A</strong> and <strong>D</strong> in full depth, because no lab has taught them yet. They turn
+out to be <em>the same machine</em>: a log written before the change.</li>
+<li><strong>C</strong>, the letter that is not like the others, and the argument for why.</li>
+<li>The <strong>audit</strong> — what the four letters together actually promise you in
+production, and the four places engineers reliably think they promise more
+than they do.</li>
+</ol>
+<h3 id="readme-how-the-depth-layers-are-laid-out">How the depth layers are laid out</h3>
+<p><strong>BEGINNER MODEL</strong> (§1–§9) → <strong>INTERMEDIATE MODEL</strong> (§10) → <strong>ENGINEERING
+MODEL</strong> (§11–§12) → <strong>PRODUCTION MODEL</strong> (§13). A checkpoint at each transition
+tells you what you can do if you stop there, and each one carries a <em>Say it
+back</em> prompt.</p>
+<h3 id="readme-where-do-the-numbers-come-from">Where do the numbers come from?</h3>
+<p>This lab measures nothing itself; it has no runnable code by design. Every
+number in it is either a measured result from one of your earlier labs, named
+as such, or a documented vendor behaviour with the source named. Where
+something is stated that has not been verified and cannot be cited, the text
+says so in the same sentence. The one place you can <em>watch</em> behaviour is the
+visualization, whose simulation is the lab's only executable artifact.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Number, and where it appears</th>
+  <th>How it was produced</th>
+  <th>What that means for you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>8 threads × 40 increments ending on ~60 of 320, about 80% lost (§7.1)</td>
+  <td>measured in <a href="../08-isolation-levels/notes.html#readme">isolation-levels</a> against a real database</td>
+  <td>quote it freely; it is your own result</td>
+</tr>
+<tr>
+  <td>530 ms of traffic lost on power loss; <code>kill -9</code> lost nothing; 3.4× lower throughput with <code>appendfsync always</code> (§7.2, F7)</td>
+  <td>measured in <a href="../13-redis/notes.html#readme">redis</a>, one representative run</td>
+  <td>quote the shapes and orders of magnitude, not the last digit</td>
+</tr>
+<tr>
+  <td>119× write amplification for a B-tree, 2.5× for an LSM (§7.2, §12.5)</td>
+  <td>measured in <a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a></td>
+  <td>your own counted result</td>
+</tr>
+<tr>
+  <td>500 acked writes, 500 lost across a failover (F10)</td>
+  <td>measured in <a href="../13-redis/notes.html#readme">redis</a></td>
+  <td>the failure domain, demonstrated</td>
+</tr>
+<tr>
+  <td>16 fractured audits in 40 runs with perfect 2PC and zero crashes (§12.1, §15)</td>
+  <td>measured in <a href="../46-distributed-transactions/notes.html#readme">distributed-transactions</a></td>
+  <td>atomic durability is not atomic visibility</td>
+</tr>
+<tr>
+  <td>Page sizes, torn-page defences, every config parameter in §13</td>
+  <td>vendor documentation; <strong>not</strong> run in this lab</td>
+  <td>check them against your own version before relying on a row</td>
+</tr>
+<tr>
+  <td>Group commit's parameter names (§10.7)</td>
+  <td>vendor documentation; the mechanism has not been benchmarked here</td>
+  <td>the shape is reliable, the numbers are not stated</td>
+</tr>
+<tr>
+  <td>Recovery times, PANIC behaviour, <code>History list length</code> (§11, §13)</td>
+  <td>vendor documentation and operational reports, not runs</td>
+  <td>treat as descriptions of behaviour, not measurements</td>
+</tr>
+</tbody>
+</table></div>
+<p>A note on the two failures that are not in the visualization. F8, the log disk
+filling up, and F10, failover to a behind replica, are described from vendor
+documentation and from earlier labs. Everything else in section 11 has a
+scenario you can run on the page.</p>
+<h3 id="readme-what-the-visualization-is">What the visualization is</h3>
+<p><a href="visualization.html"><code>visualization.html</code></a> is also published at
+<a href="https://claude.ai/code/artifact/584af82b-f8f6-4e22-8580-5d955149d4cf" target="_blank" rel="noopener">https://claude.ai/code/artifact/584af82b-f8f6-4e22-8580-5d955149d4cf</a>. It
+holds a simulation of the machine in section 10, with the six predict-then-run
+scenarios and the policy switches described in section 9. It is the only piece
+of this lab that executes anything.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-acid--exercises">ACID — exercises</h1>
+<p>Eight rungs, easiest first. Everything here is pencil-and-paper or done in
+<code>visualization.html</code>. <strong>No code.</strong> Answers in <code>SOLUTIONS.md</code> — attempt first;
+rungs 3, 5 and 6 are built so that being wrong teaches you something specific.</p>
+<p>Reference state used throughout, same as the doc and the page:</p>
+<div class="code"><pre><code>page 5 = Ravi ₹700      page 9 = Meera ₹300      total must be ₹1000
+T1 = move ₹500 Ravi → Meera        T2 = move ₹100 Meera → Ravi
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> In your own words, in under five sentences and without using the words
+<em>log</em>, <em>WAL</em>, <em>redo</em> or <em>undo</em>: what problem does a database have that an
+ordinary program writing to a file does not, and what is the one idea that
+solves it?</p>
+<p><strong>1.2</strong> A colleague says: <em>&quot;We do both updates inside one method and it's fast,
+so a crash in between is basically impossible.&quot;</em> Give the one-sentence reply
+that shows why &quot;fast&quot; is not an answer.</p>
+<p><strong>1.3</strong> Explain to a non-engineer why a transaction can be <em>committed</em> even
+though not one byte of the changed data has been written to the data file yet.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open <code>visualization.html</code>, press <strong>Run the whole story</strong>, and pause partway.</p>
+<p><strong>2.1</strong> At any moment, name which of the four boxes on screen would still exist
+after (a) <code>kill -9</code> on the database process, (b) a power cut.</p>
+<p><strong>2.2</strong> Click page 9 in the bound ledger. What is its <em>stamp</em>, what is that
+stamp called in a real database, and what single decision does recovery use it
+for?</p>
+<p><strong>2.3</strong> Click a day-book line of type <code>update</code>. Which field would recovery use
+to <strong>finish</strong> the job, and which to <strong>take it back</strong>?</p>
+<p><strong>2.4</strong> After the whole story finishes, count the lines in the sealed day-book.
+Which of them were written by <em>recovery itself</em> rather than by Asha, and why do
+they need to be in the log at all?</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Write your answer down before touching the page.</p>
+<p><strong>3.1</strong> T1 has committed and both its pages have already been written to the
+safe. The power is cut. How many of recovery's three passes actually change
+anything?</p>
+<p><strong>3.2</strong> The log has <code>#101 T1 BEGIN</code>, <code>#102 T1 p5 ₹700→₹200</code>, and nothing else.
+Page 5 on disk reads ₹200 with stamp <code>#102</code>. Is that state legal? What will
+recovery do, and what will the total be afterwards?</p>
+<p><strong>3.3</strong> Two transactions, T1 and T2, are both running. T1 commits. The power is
+cut. During the <strong>redo</strong> pass, does recovery re-apply T2's changes? Give the
+reason, not just the answer.</p>
+<p><strong>3.4</strong> You turn <em>off</em> &quot;seal the log before saying done&quot; and <em>on</em> &quot;the safe lies
+about sealing&quot;, then commit T1 and kill the <strong>process</strong>. Predict the verdict.
+Now predict it for a power cut.</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>Each of these changes exactly one switch on the page. For each: say what breaks,
+name <strong>which of A / C / I / D</strong> is lost, and say whether the loss is <em>loud</em> (an
+error appears) or <em>silent</em>.</p>
+<p><strong>4.1</strong> Turn the day-book off entirely.</p>
+<p><strong>4.2</strong> Turn &quot;allow stealing pages&quot; off. Nothing breaks in the simulation — so
+what does it cost instead, and why does no production engine choose it?</p>
+<p><strong>4.3</strong> Turn &quot;force pages at commit&quot; on. What does this buy, what does it cost,
+and which of the two recovery passes could you now delete?</p>
+<p><strong>4.4</strong> Turn &quot;keep a full page copy in the log&quot; off, then crash during a page
+write. Why can redo not repair the result, when redo can repair a page that is
+simply out of date?</p>
+<hr />
+<h2 id="exercises-rung-5--trace">Rung 5 — Trace</h2>
+<p>Do this on paper. Then check it against §10.5 of the README and against the
+page.</p>
+<p>Starting state: page 5 = ₹700 stamp <code>#100</code>, page 9 = ₹300 stamp <code>#100</code>.
+The sealed day-book after the crash reads:</p>
+<div class="code"><pre><code>#100  CHECKPOINT
+#101  T1 BEGIN
+#102  T1  p5  before ₹700  after ₹200   prevLSN #101
+#103  T1  p9  before ₹300  after ₹800   prevLSN #102
+#104  T1 COMMIT
+#105  T2 BEGIN
+#106  T2  p5  before ₹200  after ₹300   prevLSN #105
+#107  T2  p9  before ₹800  after ₹700   prevLSN #106
+</code></pre></div>
+<p>The data file at crash time: <strong>page 5 = ₹300 stamp <code>#106</code></strong>,
+<strong>page 9 = ₹300 stamp <code>#100</code></strong>.</p>
+<p><strong>5.1</strong> Run the analysis pass. Write down the losers and the LSN redo starts
+from.</p>
+<p><strong>5.2</strong> Run the redo pass. For each record, write <em>apply</em> or <em>skip</em>, the reason,
+and the resulting page value. State the total at the end of redo.</p>
+<p><strong>5.3</strong> Run the undo pass. Write every compensation record you produce,
+including its <code>undoNext</code>, and the page value after each.</p>
+<p><strong>5.4</strong> Give the final balances and the total. Which transaction survived?</p>
+<p><strong>5.5</strong> Now suppose the machine dies again immediately after your <strong>first</strong>
+compensation record was sealed. Redo the whole recovery from #100 and show that
+you land in the same place.</p>
+<hr />
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p>Each variant below is described in words. For each: construct a <strong>concrete run</strong>
+with real values where it produces a wrong answer, and name the guarantee that
+run violates.</p>
+<p><strong>6.1</strong> <em>&quot;Before-images are wasteful. We'll log only the new value, and to roll
+back a transaction we'll just re-read the row from the data file and put that
+value back.&quot;</em></p>
+<p><strong>6.2</strong> <em>&quot;The pageLSN check is redundant — we only redo transactions that
+committed, and a committed transaction's changes are correct, so applying them
+twice is harmless.&quot;</em></p>
+<p><strong>6.3</strong> <em>&quot;The undo pass should skip losers whose changes never reached the data
+file. It's faster: check whether the page on disk has the change, and only undo
+if it does.&quot;</em></p>
+<p><strong>6.4</strong> <em>&quot;Group commit is just batching. Let's ack each transaction as soon as
+its commit record is in the log buffer, and fsync in the background every 10 ms
+— clients get their answer sooner and the data reaches the disk almost
+immediately anyway.&quot;</em></p>
+<p><strong>6.5</strong> <em>&quot;Our schema has no CHECK constraints because the service layer
+validates everything before writing. It's the same guarantee, just enforced
+earlier.&quot;</em></p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>Design work on paper. State your assumptions.</p>
+<p><strong>7.1</strong> F9 in the README: the client sends a transfer, the database commits it
+durably, and the ack is lost. The client retries. Design the smallest change
+that makes the retry harmless — say exactly what is stored, <em>where</em>, and <em>in
+which transaction</em>, and explain why storing it anywhere else fails.</p>
+<p><strong>7.2</strong> A transaction updates one million rows and is aborted 90% of the way
+through. The machine then crashes in a loop, coming up and dying again every
+two minutes. Explain, step by step, why this terminates — and what would happen
+in a design without compensation records.</p>
+<p><strong>7.3</strong> Your database's storage turns out to acknowledge <code>fsync</code> before the data
+is stable (F6). You cannot change the hardware this quarter. Describe two
+different mitigations that operate at <em>different rungs of the durability
+ladder</em>, and say what each one does and does not cover.</p>
+<p><strong>7.4</strong> Extend the lab's design so that a crash <strong>during the analysis pass</strong> is
+survivable, and explain why this one is easier than surviving a crash during
+undo.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p>Open-ended. There is no single right answer; there are answers that name the
+right tradeoffs.</p>
+<p><strong>8.1 — A payments ledger across three regions.</strong>
+You are designing the store of record for payments. Three regions, ~80 ms
+apart. The business rule: <em>a payment acknowledged to a merchant must never be
+lost, even if a region is destroyed.</em> Traffic: 3,000 writes/second, p99 latency
+budget 250 ms end to end.</p>
+<p>State: which rung of the durability ladder you commit to and why; what that
+costs per write; what your commit path looks like; what you monitor; and what
+happens to your latency budget during a failover. Then name the part of your
+design that you would be least surprised to be woken up about.</p>
+<p><strong>8.2 — The order that must also become a Kafka event.</strong>
+An order must be persisted <em>and</em> an <code>OrderPlaced</code> event must reach Kafka.
+Walk the decision tree in README §13.6, choose a design, and defend it. Then
+state precisely which ACID letters your chosen design still gives you and which
+it gives up, and what the business consequence of each loss is.</p>
+<p><strong>8.3 — Tuning under a real complaint.</strong>
+A team reports: after every crash their database takes 6 minutes to accept
+connections, and separately their WAL volume fills up twice a month. They ask
+you to &quot;make checkpoints less frequent, since checkpoints cause the disk
+writes&quot;. Say whether that helps or hurts each of the two problems, name the
+actual cause of each, and give the change you would make first plus the metric
+you would watch to confirm it.</p>
+<p><strong>8.4 — The invariant that isn't a constraint.</strong>
+Your system must guarantee: <em>the sum of all account balances equals the sum of
+all deposits minus all withdrawals.</em> You cannot express that as a <code>CHECK</code> on a
+row. Given README §12.2, describe three different places this rule could be
+enforced, and rank them by how many writers each one actually protects against.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-acid--solutions">ACID — solutions</h1>
+<p>Attempt <code>EXERCISES.md</code> first. Rungs 7–8 are worked discussions, not single
+answers — judge yours by whether it names the same tradeoffs, not by wording.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> A program writing to a file can be interrupted halfway and leave the
+file in a state that looks perfectly normal but is wrong, with nothing left
+anywhere to say what was in progress. A database has to survive that, because
+the thing it's changing is often two separate numbers that must always agree.
+The idea that solves it: <strong>write down what you're about to do, somewhere that
+survives, before you do it</strong> — then whoever comes along after the interruption
+can either finish the job or take it back.</p>
+<p><strong>1.2</strong> Being fast changes how <em>often</em> you land in the gap between the two
+updates; it never removes the gap. At any real write rate, &quot;rare&quot; happens
+several times a day — and each occurrence is silent.</p>
+<p><strong>1.3</strong> Because &quot;committed&quot; doesn't mean &quot;the data is in its final place&quot;. It
+means the <em>record of what to do</em> is somewhere that survives. The tidy version
+of the data gets written later; if the machine dies first, the record is enough
+to reproduce it exactly. It's the difference between &quot;the cheque has cleared&quot;
+and &quot;the money has been physically moved to the right shelf&quot;.</p>
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> (a) <code>kill -9</code>: everything except the buffer pool and the log buffer —
+so the OS page cache, the device cache and the disk all survive. (b) power cut:
+only the disk band survives.</p>
+<p><strong>2.2</strong> The stamp is the page's <strong>pageLSN</strong> — the LSN of the most recent log
+record already reflected in that page. Recovery uses it for exactly one
+decision: <em>apply this log record, or skip it</em> (<code>record.LSN &gt; page.pageLSN</code>).
+That single comparison is what makes redo safe to run any number of times.</p>
+<p><strong>2.3</strong> The <strong>after-image</strong> finishes the job (redo). The <strong>before-image</strong> takes
+it back (undo). Both are on the same record, which is why steal + no-force is
+affordable.</p>
+<p><strong>2.4</strong> Recovery wrote the <code>CLR</code> line(s) and the <code>END</code> line. They must be in the
+log because recovery can itself be interrupted: the CLR is the only evidence
+that a particular piece of undo already happened, and <code>END</code> is the only evidence
+that a rollback finished. Without them, the next recovery would start the
+rollback again from the beginning.</p>
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> <strong>Analysis only</strong> changes anything internally; redo and undo each do
+nothing visible. Redo checks both pages, sees each page's stamp is already at
+or beyond the record's LSN, and skips. Undo has no losers. This is the fastest
+possible recovery, and it is what a clean checkpoint just before the crash buys
+you.</p>
+<p><strong>3.2</strong> It is completely legal, and it is the <em>whole point of steal</em>: page 5
+carries an uncommitted change. Recovery's analysis marks T1 a loser (no commit
+record), redo re-applies #102 (skipped here — the stamp already matches), and
+undo reverts page 5 to ₹700 using the before-image, writing a CLR. Total
+afterwards: <strong>₹1000</strong>.</p>
+<p><strong>3.3</strong> <strong>Yes, it re-applies them</strong> — and then undoes them moments later. The
+reason is not efficiency, it's simplicity: by <em>repeating history</em>, the undo pass
+always begins from a state identical to the pre-crash state, which is exactly
+the state ordinary runtime rollback begins from. One undo implementation serves
+both cases with no special-casing. Skipping losers in redo would force undo to
+ask &quot;is this change even here?&quot; on every record.</p>
+<p><strong>3.4</strong> <strong>Process kill:</strong> the transfer survives. The commit record was handed
+to the out-tray (<code>write()</code>), and the out-tray is the kernel's, not the process's
+— so recovery finds it. The lying safe is irrelevant here because nothing had to
+be sealed. <strong>Power cut:</strong> the transfer is lost, and the verdict says
+<em>Durability broken</em>, because the client was told &quot;done&quot;. Two switches, both
+&quot;unsafe&quot;, and only one of them bites in each failure — which is the entire
+argument of README §12.3.</p>
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1 Day-book off.</strong> A crash between the two page writes leaves ₹500 and no
+trace that the two changes belonged together. <strong>Atomicity</strong>, lost <strong>silently</strong> —
+no error at crash time, none at startup, none at read time. The books are simply
+wrong forever. This is §3's naive design and it is why the log exists.</p>
+<p><strong>4.2 Stealing off.</strong> Nothing breaks <em>in this simulation</em>, and that is the
+lesson: correctness is fine, capacity is not. A transaction can now never modify
+more data than fits in the buffer pool, and a long transaction makes its pages
+unevictable for its whole lifetime, starving everyone else. No production engine
+chooses it because &quot;your <code>UPDATE</code> must fit in RAM&quot; is not a database.</p>
+<p><strong>4.3 Force on.</strong> It buys the ability to <strong>delete the redo pass entirely</strong> —
+every committed change is already on disk, so there is nothing to finish. It
+costs random I/O across every touched page inside the commit path, before the
+client hears anything, and a hot page gets rewritten once per transaction
+instead of once per checkpoint. That is why real engines pay for redo instead:
+one sequential append plus one fsync beats scattered page writes, every time.</p>
+<p><strong>4.4 Full page copies off.</strong> Redo can repair an <em>out-of-date</em> page because such
+a page is still internally coherent — the row offsets, headers and slot
+directory all agree, they're just older. A torn page is <em>incoherent</em>: half its
+structure is from before and half from after. A redo record saying &quot;set the
+balance field of the row in slot 3&quot; has no valid target. Neither is the page's
+own stamp trustworthy, since it may have come from either half. <strong>Durability
+and Atomicity</strong>, lost <strong>silently at crash time</strong> and discovered much later as a
+checksum error at read time.</p>
+<h2 id="solutions-rung-5--trace">Rung 5 — Trace</h2>
+<p><em>(Verified against the simulator: the same run there numbers the checkpoint #101
+rather than #100, so every LSN below is one lower than the page shows. Nothing
+else differs.)</em></p>
+<p><strong>5.1 Analysis.</strong> Start at #100.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Read</th>
+  <th>Effect</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>#101 T1 BEGIN</td>
+  <td>T1 running</td>
+</tr>
+<tr>
+  <td>#102 T1 p5</td>
+  <td>p5 first dirtied at #102</td>
+</tr>
+<tr>
+  <td>#103 T1 p9</td>
+  <td>p9 first dirtied at #103</td>
+</tr>
+<tr>
+  <td>#104 T1 COMMIT</td>
+  <td>T1 committed → <strong>winner</strong></td>
+</tr>
+<tr>
+  <td>#105 T2 BEGIN</td>
+  <td>T2 running</td>
+</tr>
+<tr>
+  <td>#106 T2 p5</td>
+  <td>(p5 already listed)</td>
+</tr>
+<tr>
+  <td>#107 T2 p9</td>
+  <td>(p9 already listed)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Losers = {T2}</strong>, its last record is <strong>#107</strong>. <strong>Redo starts at #102.</strong></p>
+<p><strong>5.2 Redo.</strong> Disk starts at p5 = ₹300 stamp #106, p9 = ₹300 stamp #100.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Record</th>
+  <th>Stamp on page</th>
+  <th>Decision</th>
+  <th>Page after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>#102 p5 → ₹200</td>
+  <td>#106 ≥ #102</td>
+  <td><strong>skip</strong></td>
+  <td>p5 = ₹300</td>
+</tr>
+<tr>
+  <td>#103 p9 → ₹800</td>
+  <td>#100 &lt; #103</td>
+  <td><strong>apply</strong></td>
+  <td>p9 = ₹800, stamp #103</td>
+</tr>
+<tr>
+  <td>#106 p5 → ₹300</td>
+  <td>#106 ≥ #106</td>
+  <td><strong>skip</strong></td>
+  <td>p5 = ₹300</td>
+</tr>
+<tr>
+  <td>#107 p9 → ₹700</td>
+  <td>#103 &lt; #107</td>
+  <td><strong>apply</strong></td>
+  <td>p9 = ₹700, stamp #107</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Total after redo: ₹300 + ₹700 = ₹1000.</strong> Note the trap: the total is <em>right</em>
+and the database is still <em>wrong</em> — a loser's changes are fully present. A
+balanced total is not evidence of correctness.</p>
+<p><strong>5.3 Undo.</strong> Walk T2's chain backward from #107.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Undoing</th>
+  <th>Compensation record written</th>
+  <th>Page after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>#107 (p9 ₹800→₹700)</td>
+  <td><strong>#108 CLR</strong> — undoes #107, p9 = ₹800, <code>undoNext = #106</code></td>
+  <td>p9 = ₹800, stamp #108</td>
+</tr>
+<tr>
+  <td>#106 (p5 ₹200→₹300)</td>
+  <td><strong>#109 CLR</strong> — undoes #106, p5 = ₹200, <code>undoNext = #105</code></td>
+  <td>p5 = ₹200, stamp #109</td>
+</tr>
+<tr>
+  <td>#105 is T2's BEGIN</td>
+  <td><strong>#110 T2 END</strong></td>
+  <td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>5.4</strong> p5 = ₹200, p9 = ₹800, <strong>total ₹1000</strong>. <strong>T1 survived</strong>; T2 is gone
+entirely.</p>
+<p><strong>5.5 Crash again after #108 was sealed.</strong> Assume the redo pass's page changes
+were still in the buffer pool, so the disk is back to p5 = ₹300 stamp #106,
+p9 = ₹300 stamp #100 — only the log survived, now including CLR #108.</p>
+<ul>
+<li><strong>Analysis:</strong> #108 is a CLR belonging to T2, so T2's last record is now #108.
+Losers = {T2}. Redo still starts at #102.</li>
+<li><strong>Redo:</strong> #102 skip · #103 apply (p9 = ₹800) · #106 skip · #107 apply
+(p9 = ₹700) · <strong>#108 apply</strong> — a CLR is a redoable log record like any other
+(p9 = ₹800, stamp #108).</li>
+<li><strong>Undo:</strong> T2's last record is #108, a <strong>CLR</strong> — so its work is not repeated;
+recovery jumps straight to <code>undoNext = #106</code>. It undoes #106 (p5 → ₹200,
+CLR #109), reaches #105 BEGIN, writes END.</li>
+<li><strong>Final: p5 = ₹200, p9 = ₹800, total ₹1000.</strong> Identical.</li>
+</ul>
+<p>The thing to notice: <strong>#107 was undone exactly once across two recoveries.</strong>
+That is what the CLR bought, and it is why the second recovery was also
+<em>shorter</em> than the first.</p>
+<h2 id="solutions-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p><strong>6.1 &quot;Re-read the row to roll back.&quot;</strong> The data file does not hold the old
+value — it holds whatever is there <em>now</em>, which may already be your own new
+value (the page was stolen to disk), or someone else's. Concrete run: T1 sets
+p5 ₹700 → ₹200; the page is written to disk; T1 aborts. Rolling back by
+re-reading page 5 reads ₹200 and &quot;restores&quot; ₹200. <strong>Atomicity violated</strong>, and
+the money is gone with no error. The before-image exists precisely because the
+old value is destroyed by the act of writing the new one (README §4, Failure B).</p>
+<p><strong>6.2 &quot;The pageLSN check is redundant.&quot;</strong> Two problems. First, real redo records
+are often <em>changes</em>, not values (&quot;add ₹500&quot;); applying one twice doubles it.
+Second, and fatal even for absolute values: <strong>recovery can crash and re-run</strong>,
+and it can also legitimately re-apply records to a page that already has them
+because the page was stolen to disk after the change. Concrete run: T1 commits
+&quot;p9 += ₹500&quot;; page 9 reaches disk with the change; crash; redo re-applies →
+₹1300; total ₹1500. Violated: <strong>Atomicity/Durability's arithmetic</strong>, silently.</p>
+<p><strong>6.3 &quot;Skip undo for changes that never reached disk.&quot;</strong> This is exactly what
+<em>repeating history</em> was invented to avoid, and it breaks on partial page
+history. Concrete run: T2 changes p9 twice — ₹800→₹700 (#106) and ₹700→₹650
+(#107). Page 9 is stolen to disk after #106 but before #107. The optimisation
+inspects page 9, sees ₹700, concludes &quot;#107 never landed, skip it&quot; — correct —
+then inspects #106, sees ₹700 present, undoes it to ₹800. That happens to work
+here; now reverse the steal order or add a third update and the check has to
+reason about <em>which</em> of several changes a page reflects, using only one stamp.
+The real cost is that undo now needs a different code path from runtime
+rollback, and every future refinement has to be correct in both. Redo-then-undo
+is more work and less machinery.</p>
+<p><strong>6.4 &quot;Ack from the log buffer, fsync in the background.&quot;</strong> The log buffer is
+<em>process memory</em>. A <code>kill -9</code> — not even a power cut — destroys it. Concrete
+run: 10 ms of transactions are acked; the process is OOM-killed; those
+transactions never existed. <strong>Durability broken</strong>, and worse than the
+<code>synchronous_commit=off</code> case, which at least survives a process kill because
+the bytes reached the kernel. Group commit is <em>not</em> this: group commit still
+does a real fsync before any ack, it just shares one fsync between many
+transactions. The distinction is the entire content of README §7.2's three
+moments.</p>
+<p><strong>6.5 &quot;The service layer validates, so we don't need constraints.&quot;</strong> The service
+layer protects the code paths that remember to ask. The constraint protects the
+table. Concrete run: a data migration written by another team, a backfill
+script, an admin's psql session, a second service added next quarter, or your
+own code path added by someone who didn't know the rule — any of these writes a
+negative balance, atomically and durably, and no error is raised. <strong>Consistency
+broken</strong>, and the database performed perfectly. See README §12.2: this is what
+the C in ACID actually asks of you.</p>
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1 The lost ack.</strong> Store an <strong>idempotency key</strong> — the client's own request
+identifier — in a table with a <code>UNIQUE</code> constraint, written <strong>inside the same
+transaction as the transfer</strong>. On a retry, the insert violates the constraint,
+the transaction aborts, and the service returns the stored original outcome
+instead of transferring again.</p>
+<p>Why nowhere else fails:</p>
+<ul>
+<li><em>In a cache (Redis) instead:</em> the key and the money are now two commit points,
+so a crash between them re-opens the exact hole you were closing. Your
+<a href="../13-redis/notes.html#readme">redis</a> lab measured the general version of this.</li>
+<li><em>In a separate transaction, before:</em> crash after writing the key and before
+the transfer, and the retry is rejected for work that never happened.</li>
+<li><em>In a separate transaction, after:</em> crash after the transfer and before the
+key, and the retry duplicates it.
+The key must be in the same atomic unit as the effect, which is the whole point
+of having atomicity in the first place. See the <a href="../49-idempotency/notes.html#readme">idempotency</a>
+lab for the response-replay contract that goes with it.</li>
+</ul>
+<p><strong>7.2 The crash-looping rollback.</strong> Each undo step writes a CLR <em>before</em> it
+touches the page, and each CLR names <code>undoNext</code>. So after every crash, the next
+recovery's analysis finds the transaction's most recent CLR, reads <code>undoNext</code>,
+and resumes there. The remaining work only ever shrinks, so with each crash the
+rollback gets closer to done and eventually finishes even if it is interrupted
+hundreds of times. <strong>Without CLRs</strong>, every restart would begin the rollback from
+the transaction's last record — a 900,000-row rollback restarting every two
+minutes never completes, and the database is permanently unavailable while
+being, technically, perfectly correct.</p>
+<p><strong>7.3 The lying storage.</strong> Two mitigations at different rungs:</p>
+<ul>
+<li><em>Same machine, lower rung:</em> battery-backed or capacitor-backed write cache
+(a proper RAID controller with BBU, or an enterprise SSD with power-loss
+protection). This makes the device's acknowledgement honest, so <code>fsync</code>
+regains its meaning. Covers power loss on that machine. Does <strong>not</strong> cover the
+machine dying, the disk dying, or firmware that lies about <em>having</em> power-loss
+protection.</li>
+<li><em>Above the machine, higher rung:</em> synchronous replication — require a second
+machine to have the commit record before acking (<code>synchronous_commit</code> with a
+sync standby, <code>min-replicas-to-write</code>, <code>acks=all</code> + <code>min.insync.replicas</code>).
+Now durability no longer depends on any single device telling the truth.
+Covers the machine and the disk. Does <strong>not</strong> cover a correlated failure
+(identical firmware bug on both), a region loss, or the extra ~1 network round
+trip on every write — which is the <a href="../25-pacelc/notes.html#readme">pacelc</a> &quot;else&quot; branch, priced.</li>
+</ul>
+<p>Both are mitigations, not fixes. The fix is storage that doesn't lie.</p>
+<p><strong>7.4 Crash during analysis.</strong> Nothing needs to be added: analysis <strong>writes
+nothing and changes nothing</strong>. It only builds two in-memory tables from the log.
+A crash during it loses only that in-memory work, and the next recovery rebuilds
+the identical tables from the identical log — the log did not change. It is
+easier than surviving a crash during undo for exactly one reason: <strong>undo
+mutates</strong>, so it needs a durable record of its own progress (the CLR), whereas
+analysis is a pure function of the log.</p>
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 Payments across three regions.</strong></p>
+<p>The rule &quot;must never be lost even if a region is destroyed&quot; puts you on the
+<strong>quorum-of-replicas</strong> rung, minimum. Local <code>fsync</code> and even a local sync
+standby both fail the stated requirement.</p>
+<ul>
+<li><strong>Commit path:</strong> local WAL fsync, then wait for at least one <em>remote-region</em>
+replica to have the record durably, then ack. Cost: ~80 ms one way, so
+≥ 80 ms added to every write, before any local work. Against a 250 ms p99
+budget that is affordable but it is now the dominant term — you have spent a
+third of the budget on durability, deliberately.</li>
+<li><strong>Shape:</strong> 3,000 writes/s against one sync round trip means the log's group
+commit is doing heavy lifting; check that the engine batches replication
+acknowledgements rather than paying 80 ms serially per transaction.</li>
+<li><strong>Monitor:</strong> replication lag <em>in LSN bytes and in seconds</em> per replica; the
+number of currently-synchronous replicas (a silent demotion to async is the
+failure that looks like a latency improvement); commit latency p50/p99 split
+by &quot;local fsync&quot; and &quot;waiting for remote&quot;; WAL volume and free space on the
+log volume; and time-to-recover after a crash.</li>
+<li><strong>During failover:</strong> the sync replica becomes primary with no acked data lost
+— that is what you paid for. But the <em>quorum shrinks</em>, so either you drop to
+a lower durability rung (faster, weaker) or you block writes until a
+replacement joins (safe, an outage). Decide which <strong>before</strong> the incident;
+the default is usually the one you didn't choose deliberately.</li>
+<li><strong>What I would least be surprised to be paged about:</strong> the sync replica
+silently falling out of the synchronous set — writes get faster, nothing
+alerts, and durability quietly drops a rung. Alert on the <em>count</em> of
+synchronous replicas, not just on lag.</li>
+</ul>
+<p><strong>8.2 Order plus Kafka event.</strong> Walk §13.6: the work spans two datastores; they
+cannot live in one; and the event <em>is</em> derivable from the order. That lands on
+<strong>transactional outbox</strong>: write the order and an outbox row in one local ACID
+transaction, and a relay publishes to Kafka afterwards with an idempotent
+consumer downstream.</p>
+<ul>
+<li><strong>Kept:</strong> full A, C, I, D on the order itself — the part that is the source of
+truth.</li>
+<li><strong>Given up:</strong> atomicity <em>across</em> the two systems, and immediacy. The event is
+eventually published, not simultaneously; consumers may see it late, and may
+see it twice.</li>
+<li><strong>Business consequence:</strong> a customer can be shown &quot;order placed&quot; before any
+downstream service reacts, so anything that must be instantly consistent with
+the order (a stock count on the same page, say) has to read the database, not
+the event stream. The duplicate delivery is harmless only if every consumer is
+idempotent — which is a requirement you now own forever, not a detail.</li>
+<li><strong>Why not 2PC:</strong> it makes Kafka and your database into each other's
+availability dependency and reintroduces the blocking problem, for a guarantee
+the business did not ask for. Why not a saga: there is no multi-step business
+workflow to compensate here, just one derived effect.</li>
+</ul>
+<p><strong>8.3 The tuning complaint.</strong> Their proposal helps one problem and worsens the
+other, and neither is the actual cause of the WAL growth.</p>
+<ul>
+<li><em>6-minute startup</em> is the <strong>redo pass</strong>: the data file was far behind the log
+when the crash happened. <strong>Less frequent checkpoints make this strictly
+worse</strong> — more log to replay. To fix it you want checkpoints <em>more</em> frequent
+(or a smaller <code>max_wal_size</code>), paying steadier background I/O for a shorter
+outage.</li>
+<li><em>WAL volume filling twice a month</em> is almost never checkpoint frequency. The
+usual cause is that WAL cannot be <strong>recycled</strong>: an abandoned replication slot,
+a failing archive command, or a very long-running transaction. Checkpoint
+frequency affects WAL <em>generation</em> a little (via full-page writes, which spike
+right after each checkpoint — so more frequent checkpoints generate <em>more</em>
+WAL), but it cannot cause unbounded growth. Something is holding the log.</li>
+<li><strong>First change:</strong> find and fix what is pinning WAL (inspect replication slots
+and the archiver), and add an alert on the oldest retained WAL position — not
+just on disk free space, which alerts only when it is already an outage.</li>
+<li><strong>Then:</strong> shorten the checkpoint interval to bring recovery time down, and
+watch background write I/O and WAL generation rate to confirm the cost is
+acceptable. Note the tension you have just made explicit: more frequent
+checkpoints shorten recovery <em>and</em> increase WAL volume. That is the real
+tradeoff, and it is not the one they proposed.</li>
+</ul>
+<p><strong>8.4 The invariant that isn't a constraint.</strong> Three places, ranked by how many
+writers each protects against:</p>
+<ol>
+<li><strong>In the schema, by restructuring so the rule <em>becomes</em> declarable</strong> — the
+strongest answer and the one most often missed. Store deposits and
+withdrawals as immutable rows and <em>derive</em> balances, or hold the invariant
+as a per-account rule the engine can check. If the rule can be restated as a
+property of rows rather than of a decision, a constraint can hold it, and
+then it protects <strong>every writer that will ever exist</strong>, including migrations
+and a human at a psql prompt.</li>
+<li><strong>In the database, in code the database runs</strong> — a trigger or an assertion at
+commit. Protects every writer that goes through the database, which is all of
+them, but costs correctness-critical logic living in a place that is hard to
+test and easy to forget during a schema change.</li>
+<li><strong>In one service's application code</strong> — protects only the code paths that
+call it. The moment a second service, a backfill, or an admin writes
+directly, the rule is gone. This is the option most systems actually have,
+which is why the reconciliation job in option 4 exists.</li>
+<li><strong>(The one everyone ends up with anyway)</strong> A periodic <strong>reconciliation
+check</strong> that recomputes the sum and alerts on drift. It protects nothing —
+it only tells you the rule has already been broken. Worth having regardless,
+because it is the only one of the four that detects a bug in the other three.</li>
+</ol>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../06-software-architecture-patterns/notes.html"><small>← Lab 6</small>software-architecture-patterns</a><a href="../08-isolation-levels/notes.html" style="text-align:right"><small>Lab 8 →</small>isolation-levels</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-problem-exist-at-all">1. Why does this problem exist at all?</a><a href="#readme-2-what-happens-to-ravis-500-when-the-fire-alarm-goes-off">2. What happens to Ravi&#x27;s ₹500 when the fire alarm goes off?</a><a href="#readme-3-why-cant-asha-just-be-careful">3. Why can&#x27;t Asha just be careful?</a><a href="#readme-4-what-are-the-two-ways-be-careful-breaks">4. What are the two ways &quot;be careful&quot; breaks?</a><a href="#readme-5-what-exactly-must-vikram-be-able-to-do">5. What exactly must Vikram be able to do?</a><a href="#readme-6-what-is-the-one-idea-that-makes-the-gap-survivable">6. What is the one idea that makes the gap survivable?</a><a href="#readme-7-what-do-engineers-call-the-things-in-ashas-branch">7. What do engineers call the things in Asha&#x27;s branch?</a><a href="#readme-8-what-picture-should-you-carry-in-your-head">8. What picture should you carry in your head?</a><a href="#readme-9-can-you-watch-the-alarm-go-off">9. Can you watch the alarm go off?</a><a href="#readme--checkpoint-can-you-say-the-beginner-model-back">✅ Checkpoint: can you say the beginner model back?</a><a href="#readme-10-what-is-the-machinery-underneath-built-five-times-because-the-first-four-break">10. What is the machinery underneath? Built five times, because the first four break</a><a href="#readme--checkpoint-can-you-say-the-intermediate-model-back">✅ Checkpoint: can you say the intermediate model back?</a><a href="#readme-11-what-are-the-eleven-ways-it-goes-wrong-and-what-survives-each">11. What are the eleven ways it goes wrong, and what survives each?</a><a href="#readme-12-what-do-the-four-promises-actually-promise">12. What do the four promises actually promise?</a><a href="#readme--checkpoint-can-you-say-the-engineering-model-back">✅ Checkpoint: can you say the engineering model back?</a><a href="#readme-13-what-happens-in-production">13. What happens in production?</a><a href="#readme--checkpoint-can-you-say-the-production-model-back">✅ Checkpoint: can you say the production model back?</a><a href="#readme-14-where-are-the-exercises">14. Where are the exercises?</a><a href="#readme-15-what-else-does-this-connect-to-and-where-should-you-go-next">15. What else does this connect to, and where should you go next?</a><a href="#readme-16-glossary--what-does-each-word-mean-in-one-line">16. Glossary — what does each word mean, in one line?</a><a href="#readme-17-about-this-lab">17. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

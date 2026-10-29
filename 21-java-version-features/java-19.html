@@ -1,0 +1,289 @@
+<!doctype html>
+<html lang="en" data-hub-lab="21-java-version-features">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Java 19 — virtual threads appear</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 21 · java-19.md</span><nav class="tabs" aria-label="This lab"><a href="notes.html">Lab notes</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 21 · java-version-features</p><h1 id="doc-java-19--virtual-threads-appear">Java 19 — virtual threads appear</h1>
+<p><strong>GA:</strong> September 2022 · <strong>LTS:</strong> no · <strong>Class file major version:</strong> 63 ·
+<strong>Oracle support:</strong> ended March 2023 <strong>[documented — Oracle roadmap]</strong></p>
+<p><strong>Previous:</strong> <a href="java-18.html">Java 18</a> · <strong>Next:</strong> <a href="java-20.html">Java 20</a> ·
+<strong>Back to:</strong> <a href="notes.html#readme">the story</a></p>
+<hr />
+<h2 id="doc-the-one-thing-to-remember">The one thing to remember</h2>
+<p><strong>Java 19 is where Project Loom becomes visible.</strong> Virtual threads, structured
+concurrency and record patterns all arrive as preview or incubator here. None
+of them are usable in production from this release — that is the point of the
+gates — but this is the release where the shape of Java's concurrency future
+became public.</p>
+<p>You already know two of these features from other labs:
+<a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a> and
+<a href="../19-structured-concurrency/notes.html#readme">structured-concurrency</a>. What this file adds is
+<em>where they sit in the pipeline</em>, which turns out to matter a great deal for
+whether you should use them.</p>
+<h2 id="doc-what-you-actually-get">What you actually get</h2>
+<h3 id="doc-virtual-threads--jep-425-first-preview">Virtual threads — JEP 425 (<strong>first preview</strong>)</h3>
+<p>A thread that is scheduled by the JVM onto a small pool of OS carrier threads,
+so that blocking becomes cheap and thread-per-request scales to hundreds of
+thousands of concurrent operations.</p>
+<div class="code"><pre><code class="language-java">Thread.startVirtualThread(() -&gt; handle(request));
+
+try (var exec = Executors.newVirtualThreadPerTaskExecutor()) {
+    for (var r : requests) exec.submit(() -&gt; handle(r));
+}   // close() waits for all tasks
+</code></pre></div>
+<p>You have the full treatment in the
+<a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a> lab. The relevant fact <em>for
+this lab</em> is the ladder: preview in 19, second preview in <a href="java-20.html">20</a>,
+<strong>final in <a href="java-21.html">21</a></strong> (JEP 444). Three ticks, eighteen months — the
+healthy shape from the README.</p>
+<p><strong>One correction to that lab, caused by a later release:</strong> it describes
+<code>synchronized</code> blocks <strong>pinning</strong> a virtual thread to its carrier, and
+recommends <code>ReentrantLock</code> instead. That was correct for JDK 21. <strong>JEP 491 in
+<a href="java-24.html">Java 24</a> fixed it</strong> — <code>synchronized</code> no longer pins. On 24+, the
+pinning-avoidance advice no longer applies for that reason. (Native frames and
+JNI still pin.)</p>
+<h3 id="doc-structured-concurrency--jep-428-first-incubator">Structured concurrency — JEP 428 (<strong>first incubator</strong>)</h3>
+<p>Confine concurrent subtasks' lifetimes to a syntactic block, so that errors
+propagate up and cancellation propagates down.</p>
+<p>Note the gate: <strong>incubator</strong>, <code>jdk.incubator.concurrent</code>, requiring
+<code>--add-modules</code>. It later moves to <em>preview</em> and into <code>java.util.concurrent</code>.</p>
+<p>The ladder for this one is the outlier in the whole dataset:
+19 (incubator) → 20 (2nd incubator) → 21 (preview) → 22 (2nd preview) →
+23 (3rd preview) → 24 (4th preview) → <strong>25 (5th preview, JEP 505)</strong> →
+26 (6th preview, JEP 525). <strong>Seven years and still not final.</strong></p>
+<p>And the API was substantially redesigned in the middle: JDK 21's
+<code>StructuredTaskScope.ShutdownOnFailure()</code> became JDK 25's
+<code>StructuredTaskScope.open(joiner)</code>. The <a href="../19-structured-concurrency/notes.html#readme">structured-concurrency</a>
+lab documents the JDK 25 shape. <strong>Do not build a library on it</strong> — this is
+exactly the situation the README's
+<a href="notes.html#readme-f5--the-preview-jar-that-runs-on-exactly-one-jdk">F5</a> warns about.</p>
+<h3 id="doc-record-patterns--jep-405-first-preview">Record patterns — JEP 405 (<strong>first preview</strong>)</h3>
+<p>Destructure a record inside a pattern:</p>
+<div class="code"><pre><code class="language-java">// without record patterns
+if (o instanceof Point p) {
+    int x = p.x(), y = p.y();
+    ...
+}
+
+// with them
+if (o instanceof Point(int x, int y)) { ... }
+
+// and nested
+if (o instanceof Line(Point(var x1, var y1), Point(var x2, var y2))) { ... }
+</code></pre></div>
+<p>This is the third of Project Amber's three pieces — records
+(<a href="java-16.html">16</a>) say what data is, sealed types (<a href="java-17.html">17</a>) say what
+the alternatives are, and patterns take them apart. Final in
+<a href="java-21.html">21</a>.</p>
+<h3 id="doc-foreign-function--memory-api--jep-424-preview">Foreign Function &amp; Memory API — JEP 424 (<strong>preview</strong>)</h3>
+<p>The transition from <em>incubator</em> to <em>preview</em>, which is the graduation that
+<strong>renames the package</strong>: <code>jdk.incubator.foreign</code> → <code>java.lang.foreign</code>. Every
+early adopter's imports break here, by design — this is the incubator mechanism
+from the README doing its job.</p>
+<h3 id="doc-linuxrisc-v-port--jep-422">Linux/RISC-V port — JEP 422</h3>
+<h2 id="doc-pipeline-movement-this-release">Pipeline movement this release</h2>
+<p>This is the busiest pipeline release in the lab:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Feature</th>
+  <th>State here</th>
+  <th>Ends up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Virtual threads (JEP 425)</strong></td>
+  <td>1st preview</td>
+  <td><strong>Final in <a href="java-21.html">21</a></strong></td>
+</tr>
+<tr>
+  <td><strong>Structured concurrency (JEP 428)</strong></td>
+  <td>1st incubator</td>
+  <td>Still preview in <a href="java-25.html">25</a> and 26</td>
+</tr>
+<tr>
+  <td><strong>Record patterns (JEP 405)</strong></td>
+  <td>1st preview</td>
+  <td>Final in <a href="java-21.html">21</a></td>
+</tr>
+<tr>
+  <td>Pattern matching for <code>switch</code> (JEP 427)</td>
+  <td>3rd preview</td>
+  <td>Final in <a href="java-21.html">21</a></td>
+</tr>
+<tr>
+  <td><strong>FFM (JEP 424)</strong></td>
+  <td><strong>Preview</strong> — graduated from incubator, package renamed</td>
+  <td>Final in <a href="java-22.html">22</a></td>
+</tr>
+<tr>
+  <td>Vector API (JEP 426)</td>
+  <td>4th incubator</td>
+  <td>Still incubating in <a href="java-25.html">25</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>Look at that table next to the &quot;healthy shape is three ticks&quot; rule from the
+README. Virtual threads and record patterns take three. Structured concurrency
+takes more than seven. Same team, same release, same process — the difference
+is entirely in how much design risk each carries.</p>
+<h2 id="doc-what-broke">What broke</h2>
+<p>Nothing significant.</p>
+<h2 id="doc-verdict-for-your-day-job">Verdict for your day job</h2>
+<p><strong>Don't target it.</strong> Six months, ended March 2023.</p>
+<p>Read this file for the pipeline table. It is the single clearest snapshot of
+&quot;four features enter, at four different maturity levels, and end up in four
+different places&quot; — which is the mechanism this lab is about, visible in one
+release.</p>
+</main><aside aria-label="On this page"><h2>On this page</h2><a href="#doc-the-one-thing-to-remember">The one thing to remember</a><a href="#doc-what-you-actually-get">What you actually get</a><a href="#doc-pipeline-movement-this-release">Pipeline movement this release</a><a href="#doc-what-broke">What broke</a><a href="#doc-verdict-for-your-day-job">Verdict for your day job</a><h2>More in this lab</h2><a href="java-09.html">java-09</a><a href="java-10.html">java-10</a><a href="java-11.html">java-11</a><a href="java-12.html">java-12</a><a href="java-13.html">java-13</a><a href="java-14.html">java-14</a><a href="java-15.html">java-15</a><a href="java-16.html">java-16</a><a href="java-17.html">java-17</a><a href="java-18.html">java-18</a><a href="java-19.html">java-19</a><a href="java-20.html">java-20</a><a href="java-21.html">java-21</a><a href="java-22.html">java-22</a><a href="java-23.html">java-23</a><a href="java-24.html">java-24</a><a href="java-25.html">java-25</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

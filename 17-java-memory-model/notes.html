@@ -1,0 +1,3100 @@
+<!doctype html>
+<html lang="en" data-hub-lab="17-java-memory-model">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>17. java-memory-model</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 17 of 71 · Stage 3</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 17 · The JVM Underneath: One Machine, Many Threads</p><article id="readme"><h1 id="readme-the-java-memory-model--the-rules-that-decide-which-of-your-writes-another-thread-is-allowed-to-see">The Java Memory Model — the rules that decide which of your writes another thread is allowed to see</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Ana and Ben share one whiteboard in a stockroom. Ana rubs
+out the number and writes a new one, and Ben can carry on reading the old one
+— not for a moment, for ever. Nobody made a mistake. The compiler is allowed
+to give Ben a private copy in his pocket. The CPU is allowed to leave Ana's
+new number in her out-tray. Both are legal, because each of those workers
+alone still sees a sensible story. The Java Memory Model is the short list of
+handshakes that force those two to line up, and <em>happens-before</em> is its name
+for &quot;you must see what I did&quot;. Skip the handshake and you do not have a slow
+program or an unlucky one. You have a program whose answer the language
+declines to define.</p>
+</blockquote>
+<p>Step the two threads yourself in <strong>Store Buffer Theatre</strong>:
+<a href="visualization.html"><code>visualization.html</code></a> — every button is a legal next move.
+What this lab is made of, and which command printed which number, is section 22.</p>
+<hr />
+<h1 id="readme-beginner-model--sections-1-to-8">BEGINNER MODEL — sections 1 to 8</h1>
+<h2 id="readme-1-why-isnt-the-same-variable-in-the-same-program-enough">1. Why isn't &quot;the same variable in the same program&quot; enough?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two threads sharing one field feels like two people sharing
+one whiteboard. It is not. Each of them may be reading a private copy, and
+each may be writing into a tray that nobody has emptied yet.</p>
+</blockquote>
+<p>You already know this stockroom. In <code>java-multithreading</code>, Ana and Ben each
+added a box of paper and each wrote the new total on the whiteboard. Both read
+<strong>10</strong>, both wrote <strong>11</strong>, and one box vanished from the record. That bug was
+about <em>overlap</em>: two people doing a three-step job at the same time.</p>
+<p>This lab is about something worse, and it starts with a question that sounds
+silly.</p>
+<p>When Ana writes <strong>11</strong> on the board, is Ben looking at the board at all?</p>
+<p>Meet the third person in the building. <strong>Omar</strong> is the efficiency manager. His
+whole job is to make the work faster, and he has exactly one rule:</p>
+<blockquote>
+<p>Rearrange the work however you like, as long as <strong>a person working alone</strong>
+ends the shift with the same answer.</p>
+</blockquote>
+<p>That rule is not a loophole. It is the deal that makes fast code possible.
+Engineers call it <strong>as-if-serial semantics</strong>: the optimiser must preserve what a
+single thread would compute, and it owes nothing at all to anybody else.</p>
+<p>Read the next table as three things Omar is allowed to do. The middle column is
+why a solo worker never notices. The right column is what it does to a second
+worker in the room.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What Omar does</th>
+  <th>Why a solo worker cannot tell</th>
+  <th>What it does to a second worker</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>copies the board's number onto Ben's notepad once, then has him reuse it</td>
+  <td>nobody else changes the board on a solo shift</td>
+  <td>Ben never sees Ana's update, ever</td>
+</tr>
+<tr>
+  <td>lets Ana drop her new number in an out-tray and walk away</td>
+  <td>the tray reaches the board eventually</td>
+  <td>the board is stale while the tray is full</td>
+</tr>
+<tr>
+  <td>swaps two of Ana's unrelated steps</td>
+  <td>the end state is identical</td>
+  <td>Ben sees them in the swapped order</td>
+</tr>
+</tbody>
+</table></div>
+<p>Those three rows are the whole lab. Everything after this is one of them, made
+concrete, with a command you can run.</p>
+<p>And notice what none of them is: a bug. Every row is the optimiser doing its job
+correctly. The problem is that <em>you</em> were reasoning as if there were one
+whiteboard and no trays.</p>
+<h2 id="readme-2-what-did-ana-and-ben-leave-unfinished-in-the-last-lab">2. What did Ana and Ben leave unfinished in the last lab?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The last lab found two separate promises hiding inside one
+bug. It nailed the first one and pointed at this lab for the second. This is
+the second.</p>
+</blockquote>
+<p><code>java-multithreading</code> ended up with two questions, and it was careful to keep
+them apart.</p>
+<ol>
+<li>Can Ana and Ben both be inside the stockroom at once?</li>
+<li>Is either of them guaranteed to <strong>see</strong> what the other did?</li>
+</ol>
+<p>A lock answers both. <code>volatile</code> answers only the second. And the second question
+never got a precise answer in that lab — it got a name, <em>happens-before</em>, and a
+pointer to this door.</p>
+<p>So this lab has one job: turn &quot;is either guaranteed to see the other&quot; into a
+rule you can apply to a specific piece of code and get a yes or a no.</p>
+<p>Here is how the document is laid out, and what each layer leaves you able to do.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–8</td>
+  <td>run the first three experiments in your head, and say why a clean run proves nothing</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>9–12</td>
+  <td>name every handshake that creates the promise, and every look-alike that does not</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>13–17</td>
+  <td>hand an object to another thread safely, and read double-checked locking correctly</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>18</td>
+  <td>pick the right tool per situation, and explain a vanishing bug to an on-call peer</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-can-ana-write-on-the-board-and-ben-never-see-it">3. Can Ana write on the board and Ben never see it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Yes. Not &quot;after a delay&quot;. Never.</p>
+</blockquote>
+<p>Ben's job today is simple. Keep counting until the board says stop. Ana will
+write <strong>stop</strong> on the board in a second or so.</p>
+<p>Omar looks at Ben's loop and notices something true: <em>Ben's loop never changes
+the board.</em> So why should Ben walk to the board a billion times? Omar has him
+copy the value onto his notepad once, before he starts, and check the notepad
+each time round instead.</p>
+<p>Ben is now roughly a hundred times faster and permanently wrong.</p>
+<p>The experiment is <code>Visibility.java</code>. One field, <code>plainFlag</code>, is a plain
+<code>boolean</code>. The same field declared <code>volatile</code> is <code>volatileFlag</code>. A worker thread
+spins on whichever one you picked. The main thread waits one second, writes
+<code>true</code>, then waits three more seconds and reports.</p>
+<blockquote>
+<p>🔮 <strong>Predict.</strong> The main thread writes <code>true</code> at one second and then waits
+three whole seconds. What does the plain worker do?
+<strong>(a)</strong> stops immediately · <strong>(b)</strong> stops within a few milliseconds ·
+<strong>(c)</strong> is still spinning three seconds later.</p>
+</blockquote>
+<div class="code"><pre><code>./run.sh Visibility plain            # the plain boolean
+./run.sh Visibility volatile         # the same field, declared volatile
+./run.sh -Xint Visibility plain      # plain again, with the JIT switched off
+</code></pre></div>
+<p>The answer is <strong>(c)</strong>, and the program says so out loud. Here is what those
+three commands printed on one run.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Command</th>
+  <th>How the flag was declared</th>
+  <th>What the worker did</th>
+  <th>What that tells you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Visibility plain</code></td>
+  <td>plain <code>boolean</code></td>
+  <td>still spinning 3 s after the write</td>
+  <td>the load was lifted out of the loop; it will spin for ever</td>
+</tr>
+<tr>
+  <td><code>Visibility volatile</code></td>
+  <td><code>volatile boolean</code></td>
+  <td>exited after 1,820,894,830 spins</td>
+  <td>picked up on the very next pass of the loop</td>
+</tr>
+<tr>
+  <td><code>-Xint Visibility plain</code></td>
+  <td>plain <code>boolean</code></td>
+  <td>exited after 147,698,840 spins</td>
+  <td>same source, same CPU, only the optimiser changed</td>
+</tr>
+</tbody>
+</table></div>
+<p>If you guessed <strong>(b)</strong>, you were thinking about cache latency — the small delay
+before one core's write shows up in another core's cache. That delay is real and
+it is measured in nanoseconds. It is not what happened here. Caches are
+<em>coherent</em>: they agree with each other automatically, and quickly. What happened
+here is that Ben never read a cache at all. He read his notepad.</p>
+<p>The engineers' name for Omar's trick is <strong>hoisting the load out of the loop</strong>,
+and the notepad is a <strong>CPU register</strong>. Once the value is in a register, no cache,
+no bus and no other core can change it. Only Ben's own code can.</p>
+<h2 id="readme-4-why-did-switching-the-optimiser-off-fix-the-program">4. Why did switching the optimiser off <em>fix</em> the program?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Because the bug was never in the source you wrote. It is in
+the faster program the optimiser is allowed to build out of your source.</p>
+</blockquote>
+<p><code>-Xint</code> tells the JVM to interpret every bytecode and never compile anything.
+Omar goes home. Ben walks to the board on every single pass. The program is
+maybe a hundred times slower and completely correct.</p>
+<p>Stare at rows one and three of the table in section 3 until it is uncomfortable.
+Same file. Same laptop. Same JVM. One is correct and one hangs for ever, and the
+only difference is whether the optimiser was allowed to work.</p>
+<p>That is why <strong>&quot;it worked on my machine&quot; is not evidence of correctness here.</strong>
+It is evidence about one optimiser's mood on one afternoon.</p>
+<blockquote>
+<p>🔮 <strong>Predict.</strong> Your service hangs in production. You add a
+<code>System.out.println</code> inside the spinning loop to see the stale value. What
+happens to the hang?</p>
+</blockquote>
+<p>It usually disappears. Two reasons, and neither is the one people expect.
+<code>System.out</code> is a synchronized stream, so the print itself is a handshake of the
+kind section 10 lists. And a loop with a call in it is no longer simple enough
+for Omar to rewrite the way he wanted to.</p>
+<p>If you predicted &quot;the print will show me the stale value&quot;, you assumed the print
+is a passive observer. It is not. It joins in, and it fixes the thing you were
+trying to watch.</p>
+<p>A bug that vanishes when you look at it has a name: a <strong>heisenbug</strong>. Almost
+every memory-model bug is one. Almost every debugging tool you would reach for
+adds synchronisation or defeats an optimisation: a print, a breakpoint, a
+sleep, a profiler attach.</p>
+<p>The practical rule that falls out of this: <strong>never let a print statement, a
+<code>sleep</code>, or a debugger be your fix.</strong> They change the odds. The rules in section
+10 change the guarantee.</p>
+<h2 id="readme-5-can-both-of-them-read-the-old-number-when-both-wrote-first">5. Can both of them read the old number, when both wrote first?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ana writes her number, then reads Ben's. Ben writes his,
+then reads Ana's. Both can come away with zero. No ordering of those four
+steps explains that.</p>
+</blockquote>
+<p>Two boxes on the board, one for Ana and one for Ben. Both start at <strong>0</strong>. Each
+of them does exactly two things, in this order.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Ana does</th>
+  <th>Ben does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>write <strong>1</strong> in her own box</td>
+  <td>write <strong>1</strong> in his own box</td>
+</tr>
+<tr>
+  <td>read Ben's box, remember it</td>
+  <td>read Ana's box, remember it</td>
+</tr>
+</tbody>
+</table></div>
+<p>Now reason about it the way everybody naturally does. Assume the four steps get
+shuffled together in <em>some</em> order, but that neither person's own two steps swap
+places. There are only three shapes of answer.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>How it played out</th>
+  <th>What Ana read</th>
+  <th>What Ben read</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Ana finished completely first</td>
+  <td>0</td>
+  <td>1</td>
+</tr>
+<tr>
+  <td>Ben finished completely first</td>
+  <td>1</td>
+  <td>0</td>
+</tr>
+<tr>
+  <td>they interleaved</td>
+  <td>1</td>
+  <td>1</td>
+</tr>
+</tbody>
+</table></div>
+<p>There is no shuffle at all that gives <strong>0 and 0</strong>. For Ana to read 0, she must
+have read before Ben wrote. For Ben to read 0, he must have read before Ana
+wrote. But each of them wrote <em>before</em> they read. It is a flat contradiction.</p>
+<blockquote>
+<p>🔮 <strong>Predict.</strong> <code>Reordering.java</code> runs that pair of threads a million times
+and counts the outcomes. How many times does 0-and-0 come up?
+<strong>(a)</strong> never · <strong>(b)</strong> a handful · <strong>(c)</strong> tens of thousands.</p>
+</blockquote>
+<div class="code"><pre><code>./run.sh Reordering plain               # plain int x, y
+./run.sh Reordering volatile            # the same variables, declared volatile
+./run.sh -Dtrials=5000000 Reordering plain
+</code></pre></div>
+<p>The answer is <strong>(c)</strong>. Read the last row of the next table first; it is the one
+that is supposed to be impossible.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What the two of them read</th>
+  <th>What it means</th>
+  <th style="text-align:right">plain, 1,000,000 trials</th>
+  <th style="text-align:right">volatile, 1,000,000 trials</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1 and 1</td>
+  <td>each saw the other's write</td>
+  <td style="text-align:right">1,093</td>
+  <td style="text-align:right">43,931</td>
+</tr>
+<tr>
+  <td>1 and 0</td>
+  <td>Ben effectively went first</td>
+  <td style="text-align:right">88,961</td>
+  <td style="text-align:right">304,554</td>
+</tr>
+<tr>
+  <td>0 and 1</td>
+  <td>Ana effectively went first</td>
+  <td style="text-align:right">848,592</td>
+  <td style="text-align:right">651,515</td>
+</tr>
+<tr>
+  <td><strong>0 and 0</strong></td>
+  <td><strong>no ordering explains it</strong></td>
+  <td style="text-align:right"><strong>61,354</strong></td>
+  <td style="text-align:right"><strong>0</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The whole run took 256 ms with plain variables and 413 ms with volatile ones.</p>
+<p>If you guessed <strong>(a)</strong>, you were doing exactly what the code encourages: treating
+threads as steps that get dealt together like cards. That model is called
+<strong>sequential consistency</strong>, and it is the model your intuition ships with. Java
+does not give it to you unless you ask.</p>
+<p>Now the part that matters more than the count. That count is not a property of
+Java. It is a property of one afternoon on one laptop. Here are three answers to
+the very same question, from the very same machine and code.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Where the count came from</th>
+  <th style="text-align:right">Trials</th>
+  <th style="text-align:right">Times 0-and-0 appeared</th>
+  <th>Roughly</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Reordering plain</code>, the run above</td>
+  <td style="text-align:right">1,000,000</td>
+  <td style="text-align:right">61,354</td>
+  <td>1 in 16</td>
+</tr>
+<tr>
+  <td><code>Tests</code>, its Dekker observation</td>
+  <td style="text-align:right">500,000</td>
+  <td style="text-align:right">122,096</td>
+  <td>1 in 4</td>
+</tr>
+<tr>
+  <td>the figure printed on the visualization page</td>
+  <td style="text-align:right">1,000,000</td>
+  <td style="text-align:right">23,500</td>
+  <td>1 in 42</td>
+</tr>
+</tbody>
+</table></div>
+<p>One in four, one in sixteen, one in forty-two. Same question, same rules, three
+different rates. Never quote a rate like this as a fact about a program. The
+verdict is the fact: <em>it happens, and volatile forbids it.</em></p>
+<h2 id="readme-6-where-does-the-impossible-answer-actually-come-from">6. Where does the impossible answer actually come from?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ana's write never went to the board. It went into her own
+out-tray, and she walked away without waiting.</p>
+</blockquote>
+<p>Writing to memory is slow. A core that waited for every write to land in the
+shared cache line would spend most of its life stalled, on the order of a
+hundred cycles at a time. So it does not wait. It posts the write into a small
+private queue and carries straight on. That queue is the <strong>store buffer</strong>, and
+it is Ana's out-tray.</p>
+<p>Two things about the out-tray decide everything in section 5.</p>
+<ul>
+<li>Ana can read her own out-tray. If she looks up her own number, she gets the
+new one even though the board still shows the old one.</li>
+<li>Nobody else can read Ana's out-tray. Ben sees the board, and only the board.</li>
+</ul>
+<p>Now replay the four steps with the tray in the picture.</p>
+<pre class="mermaid">flowchart TD
+  A1[&quot;Ana writes 1&lt;br&gt;into her own out-tray&quot;] --&gt; A2[&quot;Ana reads Ben&#x27;s box&lt;br&gt;from the board: still 0&quot;]
+  B1[&quot;Ben writes 1&lt;br&gt;into his own out-tray&quot;] --&gt; B2[&quot;Ben reads Ana&#x27;s box&lt;br&gt;from the board: still 0&quot;]
+  A2 --&gt; R[&quot;Both remembered 0&lt;br&gt;No ordering explains it&quot;]
+  B2 --&gt; R
+  R --&gt; F[&quot;Only now do the trays&lt;br&gt;drain to the board&quot;]
+</pre>
+<p>Neither of them ran their two lines out of order. If you froze each of them with
+a debugger you would see the write happen before the read, every time, in both
+threads. The write simply had not reached the place the other one was looking.</p>
+<p><strong>Go and drive it.</strong> Open <a href="visualization.html"><code>visualization.html</code></a>, tab <strong>The
+impossible outcome</strong>. Press these four buttons, in this order:</p>
+<ol>
+<li><em>Core 0: run next line</em> — Ana's write lands in her tray, not memory.</li>
+<li><em>Core 1: run next line</em> — Ben's write lands in his tray.</li>
+<li><em>Core 0: run next line</em> — Ana reads Ben's box from memory: 0.</li>
+<li><em>Core 1: run next line</em> — Ben reads Ana's box from memory: 0.</li>
+</ol>
+<p>The verdict panel turns red and the forbidden row of the tally goes to 1. The
+<em>Run the classic sequence</em> button plays exactly that, one step every second and
+a half, with commentary. <em>Auto-run randomly</em> picks a legal move at random for
+you, which is a fair picture of what the machine is actually doing.</p>
+<blockquote>
+<p>🔮 <strong>Predict.</strong> Switch the page to <code>volatile int x, y;</code> and press the same four
+buttons. What changes?</p>
+</blockquote>
+<p>The stores never sit in a tray. A volatile write forces the core to drain its
+whole buffer to memory before it is allowed to run another instruction, so steps
+3 and 4 read numbers that are already on the board. The forbidden row stays at
+zero no matter how you click. If you predicted &quot;it becomes rarer&quot;, you have the
+model backwards: this is not a probability being lowered, it is a move being
+removed from the board.</p>
+<p>One more thing to hold on to. Sections 3 and 5 are two <em>different</em> machines
+producing two <em>different</em> symptoms, and people merge them constantly.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Who did it</th>
+  <th>What they did</th>
+  <th>Which experiment showed it</th>
+  <th>What stops it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the JIT compiler</td>
+  <td>kept the flag in a register for the life of the loop</td>
+  <td>Experiment 1, section 3</td>
+  <td><code>volatile</code> forbids caching the field in a register</td>
+</tr>
+<tr>
+  <td>the CPU core</td>
+  <td>let a store sit in its own private buffer</td>
+  <td>Experiment 2, section 5</td>
+  <td>a volatile write drains the buffer before continuing</td>
+</tr>
+</tbody>
+</table></div>
+<p>Neither of those is &quot;the CPU running your lines out of order&quot;, which is the
+phrase everybody reaches for. Out-of-order execution is real and it is a third
+mechanism again. The model does not care which of the three did it. It defines
+what you are allowed to observe, and leaves the implementers to hit that target
+however they like.</p>
+<h2 id="readme-7-so-is-volatile-the-fix-for-everything">7. So is <code>volatile</code> the fix for everything?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> No. It fixes <em>whether you can see a value</em>. It does nothing
+about somebody changing that value between your read and your write.</p>
+</blockquote>
+<p>Back to the original stockroom bug. Eight workers, each adding one to the board
+a million times. The board should end on eight million.</p>
+<p>The experiment is <code>LostUpdate.java</code>, and it has four modes.</p>
+<blockquote>
+<p>🔮 <strong>Predict.</strong> The counter is declared <code>volatile long</code>. Every read and every
+write now goes to real memory. What does the board say at the end?
+<strong>(a)</strong> exactly 8,000,000 · <strong>(b)</strong> a bit under · <strong>(c)</strong> wildly under.</p>
+</blockquote>
+<div class="code"><pre><code>./run.sh LostUpdate plain
+./run.sh LostUpdate volatile
+./run.sh LostUpdate synchronized
+./run.sh LostUpdate atomic
+</code></pre></div>
+<p>The answer is <strong>(c)</strong>. One run of all four modes:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Mode</th>
+  <th style="text-align:right">Final total</th>
+  <th style="text-align:right">Increments lost</th>
+  <th style="text-align:right">Share lost</th>
+  <th style="text-align:right">Elapsed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>plain</td>
+  <td style="text-align:right">1,954,887</td>
+  <td style="text-align:right">6,045,113</td>
+  <td style="text-align:right">75.6%</td>
+  <td style="text-align:right">69 ms</td>
+</tr>
+<tr>
+  <td><code>volatile</code></td>
+  <td style="text-align:right">2,237,736</td>
+  <td style="text-align:right">5,762,264</td>
+  <td style="text-align:right">72.0%</td>
+  <td style="text-align:right">328 ms</td>
+</tr>
+<tr>
+  <td><code>synchronized</code></td>
+  <td style="text-align:right">8,000,000</td>
+  <td style="text-align:right">0</td>
+  <td style="text-align:right">0%</td>
+  <td style="text-align:right">1,254 ms</td>
+</tr>
+<tr>
+  <td>atomic</td>
+  <td style="text-align:right">8,000,000</td>
+  <td style="text-align:right">0</td>
+  <td style="text-align:right">0%</td>
+  <td style="text-align:right">302 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>Look at the volatile row twice. It lost nearly six million increments <strong>and</strong> it
+took nearly five times as long as the plain version. It paid the entire bill and
+bought nothing.</p>
+<p>Why? Because <code>count++</code> is not one action. It is three:</p>
+<ol>
+<li>read the board into a register,</li>
+<li>add one in the register,</li>
+<li>write the register back to the board.</li>
+</ol>
+<p><code>volatile</code> makes step 1 and step 3 hit real memory. It does absolutely nothing
+about the gap between them. Two workers can both read 41, both compute 42, and
+both write 42. Two increments happened and the board moved by one.</p>
+<p>If you predicted <strong>(a)</strong>, you merged two promises that the model deliberately
+keeps apart. <strong>Visibility</strong> is &quot;does my write ever reach you&quot;. <strong>Atomicity</strong> is
+&quot;can anyone observe my job half-done&quot;. <code>volatile</code> sells the first one only.</p>
+<p>Two more things from that table are worth carrying. The atomic version was about
+four times faster than the lock on this run, because a compare-and-set retries in
+user space instead of parking a thread. And <code>synchronized</code>, the slowest of the
+four, was still finishing eight million contended increments in about 1.25
+seconds — &quot;correct&quot; is rarely as expensive as people fear.</p>
+<h2 id="readme-8-what-are-all-these-things-called">8. What are all these things called?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You have now met every moving part in the machine. Here are
+their real names, and where in this lab each of them bit you.</p>
+</blockquote>
+<p>Nothing in these tables is new. Each row points back at the section where you
+watched the thing happen.</p>
+<p><strong>The moving parts.</strong> Who runs, and where a value can be hiding.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>What it is</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Thread</strong></td>
+  <td>one independently running position in your program</td>
+  <td>Ana and Ben, section 1</td>
+</tr>
+<tr>
+  <td><strong>Shared field</strong></td>
+  <td>data on the heap that two threads can both reach</td>
+  <td>the whiteboard, section 1</td>
+</tr>
+<tr>
+  <td><strong>Register</strong></td>
+  <td>a CPU's private scratch slot; nobody else can touch it</td>
+  <td>Ben's notepad, section 3</td>
+</tr>
+<tr>
+  <td><strong>Store buffer</strong></td>
+  <td>a core's private queue of writes not yet in memory</td>
+  <td>Ana's out-tray, section 6</td>
+</tr>
+<tr>
+  <td><strong>Cache coherence</strong></td>
+  <td>the hardware protocol that keeps cores' caches agreeing</td>
+  <td>ruled out as the cause, section 3</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What goes wrong.</strong> The vocabulary for the three experiments so far.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>What it is</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Visibility failure</strong></td>
+  <td>one thread's write is never seen by another thread's read</td>
+  <td>Experiment 1, section 3</td>
+</tr>
+<tr>
+  <td><strong>Hoisting</strong></td>
+  <td>the optimiser lifting a load out of a loop into a register</td>
+  <td>Omar's notepad trick, section 3</td>
+</tr>
+<tr>
+  <td><strong>Reordering</strong></td>
+  <td>writes and reads becoming visible in an order the source does not have</td>
+  <td>Experiment 2, section 5</td>
+</tr>
+<tr>
+  <td><strong>Sequential consistency</strong></td>
+  <td>the model you assumed: one shuffle of everybody's steps</td>
+  <td>the impossible outcome, section 5</td>
+</tr>
+<tr>
+  <td><strong>Lost update</strong></td>
+  <td>a finished write silently overwritten from stale data</td>
+  <td>Experiment 3, section 7</td>
+</tr>
+<tr>
+  <td><strong>Heisenbug</strong></td>
+  <td>a bug that disappears when you try to observe it</td>
+  <td>the debugging print, section 4</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p>✅ <strong>CHECKPOINT — end of the beginner model.</strong>
+You can now say what a store buffer is, why a hoisted load is worse than a
+stale one, and why 0-and-0 happens. You can also say why the counts you saw
+are not facts about Java. <strong>Next:</strong> the actual contract — the rule that tells
+you, for a specific piece of code, whether a write is guaranteed to arrive.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>volatile</em>, <em>visibility</em> or <em>store
+buffer</em>, tell a friend why a thread can spin for ever on a flag that another
+thread already set to true.</p>
+<details><summary>A good answer sounds like</summary>
+"The thing checking the flag never actually looks at it. Someone decided that
+since the loop never changes the flag, there was no point re-reading it, so it
+copied the value once at the start and has been checking that copy ever since.
+The real flag did change. Nothing is ever going to go and look."
+</details>
+
+</blockquote>
+<h1 id="readme-intermediate-model--sections-9-to-12">INTERMEDIATE MODEL — sections 9 to 12</h1>
+<h2 id="readme-9-what-promise-does-the-model-actually-make">9. What promise does the model actually make?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The model never promises that threads see each other's
+writes. It promises something narrower and far more useful: make one specific
+kind of handshake, and everything you did before it is visible after it.</p>
+</blockquote>
+<p>Here is the rule of the building, written on the stockroom door.</p>
+<blockquote>
+<p>When you take the key from someone, you must first go and read the board.
+Before they hand it over, they must first empty their out-tray.</p>
+</blockquote>
+<p>That is the whole idea. The handshake is what drags the memory along with it.
+Without a handshake, Ana's work and Ben's work are simply two unrelated piles of
+events, and nothing connects them.</p>
+<p>Engineers call the relation <strong>happens-before</strong>, and it is the single most
+important term in this lab. Said in words first:</p>
+<blockquote>
+<p>If Ana's action <em>happens-before</em> Ben's action, then every write Ana made
+before that point is guaranteed visible to Ben after it. And no optimiser is
+allowed to move Ben's action in front of Ana's.</p>
+</blockquote>
+<p>Only now the shape of it. It is written <code>A → B</code>, read aloud as &quot;A happens-before
+B&quot;. Three properties, and each of them is doing work.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Property</th>
+  <th>In words</th>
+  <th>In the stockroom</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>program order</td>
+  <td>your own steps are ordered with each other</td>
+  <td>Ana's second step is after her first</td>
+</tr>
+<tr>
+  <td>transitivity</td>
+  <td>if A is before B and B is before C, then A is before C</td>
+  <td>Ana hands to Ben, Ben hands to Dev, Dev sees Ana's work</td>
+</tr>
+<tr>
+  <td>partial order</td>
+  <td>most pairs of actions are ordered by nothing at all</td>
+  <td>Ana and Ben on separate jobs are simply unrelated</td>
+</tr>
+</tbody>
+</table></div>
+<p>That third row is the one people never believe, so say it plainly. <strong>Most pairs
+of actions in a running program have no order between them, and that is legal.</strong>
+The model is not a timeline with some gaps. It is a sparse graph of edges you
+deliberately created, floating in an enormous cloud of events that are related to
+nothing.</p>
+<blockquote>
+<p>🔮 <strong>Predict.</strong> Ana writes to a plain field at 10:00:00 exactly, by the clock
+on the wall. Ben reads that field at 10:00:05, five seconds later. Is Ben
+guaranteed to see Ana's value?</p>
+</blockquote>
+<p>No. Five seconds of wall clock creates no edge whatsoever. Ben has an excellent
+chance in practice, which is precisely what makes this so dangerous — it will
+work in every test you write.</p>
+<p>If you said yes, you used a clock. <strong>There is no clock in the model.</strong> Time is
+not one of the things happens-before is made of. This is the exact point that
+<code>causal-consistency</code> picks up and carries across a network, where wall clocks
+stop being merely irrelevant and become actively harmful.</p>
+<h2 id="readme-10-which-handshakes-create-the-promise-and-which-only-look-like-they-do">10. Which handshakes create the promise, and which only look like they do?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> There is a short list of things that create an edge.
+Everything on the list works. Everything not on the list is a coincidence that
+your tests will reward you for believing.</p>
+</blockquote>
+<p>Read this table as: <em>if the left column happened, the right column is
+guaranteed.</em> These are the edges you will actually use.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The handshake</th>
+  <th>In the stockroom</th>
+  <th>What it guarantees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>release a monitor, then acquire the <strong>same</strong> monitor</td>
+  <td>Ana hangs the key back, Ben takes it</td>
+  <td>everything Ana did before letting go is visible to Ben after he takes it</td>
+</tr>
+<tr>
+  <td>write a <code>volatile</code> field, then read that same field</td>
+  <td>Ana writes in permanent ink, Ben reads that spot</td>
+  <td>everything Ana did before the write is visible to Ben once he sees the new value</td>
+</tr>
+<tr>
+  <td><code>Thread.start()</code></td>
+  <td>Ana hires Ben</td>
+  <td>everything Ana did before starting him is visible to Ben from his first instruction</td>
+</tr>
+<tr>
+  <td><code>Thread.join()</code> returning</td>
+  <td>Ana waits for Ben to clock off</td>
+  <td>everything Ben did is visible to Ana once the wait returns</td>
+</tr>
+<tr>
+  <td>the end of a constructor, for <code>final</code> fields</td>
+  <td>Ana pins a finished card to the board</td>
+  <td>section 14</td>
+</tr>
+<tr>
+  <td>interrupting a thread</td>
+  <td>Ana taps Ben on the shoulder</td>
+  <td>the interrupt is visible to whatever detects it</td>
+</tr>
+</tbody>
+</table></div>
+<p>Now the look-alikes. Every row here is something engineers say out loud in code
+review, and every one of them is wrong.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What people believe</th>
+  <th>Why they believe it</th>
+  <th>What is actually true</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>&quot;a <code>Thread.sleep</code> gives the write time to land&quot;</td>
+  <td>it nearly always does</td>
+  <td>sleeping creates no edge at all; it changes odds, not rules</td>
+</tr>
+<tr>
+  <td>&quot;the value printed, so it arrived&quot;</td>
+  <td>it did print</td>
+  <td>the print synchronizes on the stream and hides the bug (section 4)</td>
+</tr>
+<tr>
+  <td>&quot;they both take a lock, so they are ordered&quot;</td>
+  <td>both are locks</td>
+  <td>an edge exists only between threads using <strong>the same</strong> monitor</td>
+</tr>
+<tr>
+  <td>&quot;later on the wall clock means visible&quot;</td>
+  <td>it looks sequential</td>
+  <td>there is no clock (section 9)</td>
+</tr>
+<tr>
+  <td>&quot;reading a volatile orders everything for me&quot;</td>
+  <td>it orders a lot</td>
+  <td>only what the writing thread did before <em>that</em> write</td>
+</tr>
+</tbody>
+</table></div>
+<p>The transitivity row deserves a worked example, because it is where the rule
+earns its keep. Bring in <strong>Dev</strong>, a third worker on a later shift.</p>
+<ol>
+<li>Ana writes three numbers on scrap paper, then writes <strong>ready</strong> in permanent
+ink. Her three plain writes are before her ink write, by program order.</li>
+<li>Ben reads the ink, sees <strong>ready</strong>, and therefore sees all three numbers. That
+is the volatile edge.</li>
+<li>Ben then takes the stockroom key, does some work, and hangs it back.</li>
+<li>Dev takes the same key later. That is the monitor edge, so Dev sees Ben's
+work — and by transitivity, Ana's three numbers too.</li>
+</ol>
+<p>Dev and Ana never interacted. Ana may have clocked off before Dev arrived. The
+guarantee still holds, because there is an unbroken chain of edges between them.
+That chain is the only reason it holds, and if you break any link in it the
+guarantee evaporates silently.</p>
+<h2 id="readme-11-what-does-one-volatile-field-actually-buy">11. What does one <code>volatile</code> field actually buy?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four separate things. People buy one of them and assume they
+got all four, which is why the word has such a bad reputation.</p>
+</blockquote>
+<p>Ana's permanent ink does four jobs at once. Here they are one at a time.</p>
+<p><strong>One: every read and write really touches memory.</strong> No register copy, no
+hoisting out of a loop. That is Experiment 1 in section 3, and it is the job
+most people know about.</p>
+<p><strong>Two: the read and the write are indivisible, even for 64-bit values.</strong> A plain
+<code>long</code> or <code>double</code> is allowed to be written in two halves, so another thread can
+legally read a value made of the top half of one write and the bottom half of
+another. Declaring it <code>volatile</code> forbids that. This is a real rule of the
+specification, not a hardware detail, and it is the one part of <code>volatile</code> that
+has nothing to do with ordering.</p>
+<p><strong>Three: release on write, acquire on read.</strong> No write you made <em>before</em> the
+volatile write can be moved after it. No read you make <em>after</em> the volatile read
+can be moved before it. Those two halves are what make the handshake in section
+10 work at all.</p>
+<p><strong>Four: the piggyback.</strong> This is the one worth paying attention to. Plain writes
+made before a volatile write ride along with it. Any thread that reads that
+volatile field and sees the new value sees those plain writes too.</p>
+<p>Rule four has a test of its own. In <code>Tests.java</code>, a writer sets three plain
+integers and then sets one <code>volatile boolean</code> gate. A reader spins on the gate
+and, the moment it sees the gate open, checks whether all three integers are the
+ones it expected.</p>
+<blockquote>
+<p>🔮 <strong>Predict.</strong> Two hundred thousand rounds of that. How many times does the
+reader see the gate open but a stale number behind it?</p>
+</blockquote>
+<p>Zero. Not &quot;almost never&quot; — the model forbids it, and the test is written as an
+assertion for exactly that reason. If you guessed &quot;rarely&quot;, you treated the model
+as a probability distribution. It is a list of prohibitions.</p>
+<p><code>Reordering.java</code> is quietly the same trick, used for real. Its two threads
+coordinate through a pair of <code>volatile</code> ticket counters. One thread writes its
+result into a <em>plain</em> field and then bumps its volatile ticket; the other reads
+the volatile ticket and then reads the plain field. That is rule four doing the
+work, and it is why the harness can count outcomes correctly while measuring a
+race. <strong>The tool that catches the bug is built out of the fix.</strong></p>
+<p>And here is what <code>volatile</code> does <strong>not</strong> buy, stated as flatly as possible.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>It does not give you</th>
+  <th>Because</th>
+  <th>Reach for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>atomic read-modify-write</td>
+  <td><code>count++</code> is three steps and the gap is unguarded</td>
+  <td><code>AtomicLong</code>, or a lock</td>
+</tr>
+<tr>
+  <td>mutual exclusion</td>
+  <td>it never blocks anybody</td>
+  <td><code>synchronized</code>, or <code>ReentrantLock</code></td>
+</tr>
+<tr>
+  <td>an invariant across two fields</td>
+  <td>each field is ordered on its own</td>
+  <td>a lock around both</td>
+</tr>
+</tbody>
+</table></div>
+<p>Finally, the bill. A volatile write costs a fence, and a fence is not free. Both
+figures below come from the same experiments you already ran, comparing the same
+work with only the declaration changed.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Same work, two declarations</th>
+  <th style="text-align:right">plain</th>
+  <th style="text-align:right">volatile</th>
+  <th>Where the gap comes from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>8 threads × 1M increments, section 7</td>
+  <td style="text-align:right">69 ms</td>
+  <td style="text-align:right">328 ms</td>
+  <td>every read and write forced to real memory</td>
+</tr>
+<tr>
+  <td>1,000,000 Dekker trials, section 5</td>
+  <td style="text-align:right">256 ms</td>
+  <td style="text-align:right">413 ms</td>
+  <td>a fence after each of the two writes</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read those as whole-program times for a specific shape of contended loop, not as
+the price of one instruction. The honest summary is: a fence costs something you
+can see in a hot loop, and nothing you can see anywhere else.</p>
+<h2 id="readme-12-what-is-a-data-race-and-why-is-undefined-the-honest-word">12. What is a data race, and why is &quot;undefined&quot; the honest word?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two threads touch the same field, at least one of them
+writes, and no handshake orders them. At that point the language stops telling
+you what your program does.</p>
+</blockquote>
+<p>Three conditions, all of which must hold:</p>
+<ol>
+<li>two threads access the same memory location,</li>
+<li>at least one of those accesses is a write,</li>
+<li>the accesses are not ordered by happens-before.</li>
+</ol>
+<p>That is a <strong>data race</strong>. Notice what is <em>not</em> in the definition. Nothing about
+frequency. Nothing about timing. Nothing about how many cores you have. It is a
+property of the program text plus the edges in it, and you can decide whether
+you have one by reading.</p>
+<p>Now, what does &quot;undefined&quot; mean here? Java is not C++, and the difference
+matters enough to be precise about.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What you are protected from, always</th>
+  <th>What you lose when you race</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>values that were never written by anybody</td>
+  <td>any guarantee about <em>which</em> written value you get</td>
+</tr>
+<tr>
+  <td>memory corruption, wild pointers, a crashed VM</td>
+  <td>any guarantee about the <em>order</em> you see writes in</td>
+</tr>
+<tr>
+  <td>the type system being violated</td>
+  <td>any guarantee that you ever see a write at all</td>
+</tr>
+</tbody>
+</table></div>
+<p>So the honest phrasing is not &quot;your program becomes random&quot;. It is this:</p>
+<blockquote>
+<p>A data race does not make your program slow, or unlikely to work. It makes the
+set of answers the language permits <strong>larger than the set you reasoned about</strong>.</p>
+</blockquote>
+<p>You reasoned about the three rows in section 5's shuffle table. The language
+permits a fourth. Your program is not wrong on 6% of runs; your <em>model</em> is wrong
+on 100% of them, and 94% of the time that does not show.</p>
+<p>And now the deal the model offers you in exchange, which is the single most
+useful sentence in the whole specification:</p>
+<blockquote>
+<p><strong>If your program contains no data races, it behaves exactly as if it were
+sequentially consistent.</strong></p>
+</blockquote>
+<p>Engineers write that as <strong>SC-DRF</strong>: sequential consistency for data-race-free
+programs. In plain words: <em>put the handshakes in, and your naive interleaving
+intuition becomes correct again.</em> You do not have to think about store buffers
+and hoisting in day-to-day code. You have to think about them exactly long
+enough to make sure every shared field is reached through an edge — and then you
+get your simple mental model back, with a guarantee behind it.</p>
+<p>That is the bargain. The whole of the Java Memory Model exists to make that one
+sentence true.</p>
+<p>One more distinction, because these two terms are constantly swapped.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>What it is</th>
+  <th>Can you have one without the other?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>data race</strong></td>
+  <td>unordered concurrent access, at least one a write</td>
+  <td>yes — a correctly locked program can still be logically wrong</td>
+</tr>
+<tr>
+  <td><strong>race condition</strong></td>
+  <td>the result depends on timing nobody controls</td>
+  <td>yes — check-then-act on a <code>ConcurrentHashMap</code> has no data race and is still broken</td>
+</tr>
+</tbody>
+</table></div>
+<p>A data race is a mechanical property you can check. A race condition is a bug in
+your reasoning about your own invariants. Fixing the first does not fix the
+second.</p>
+<blockquote>
+<p>✅ <strong>CHECKPOINT — end of the intermediate model.</strong>
+You can now name the six handshakes, list the four things <code>volatile</code> buys, and
+say what SC-DRF gives you back. <strong>Next:</strong> how to hand a whole object to another
+thread, and the most famous memory-model bug in Java's history.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>happens-before</em> or <em>data race</em>,
+explain to a colleague why &quot;I put a <code>Thread.sleep(100)</code> in and it fixed it&quot; is
+not a fix.</p>
+<details><summary>A good answer sounds like</summary>
+"Waiting does not make anyone go and look at the board. It just makes it more
+likely that they happen to look after you wrote. The rules of the language say
+nothing about how long anything takes, so you have not changed what is allowed
+to happen — you have only changed how often the bad thing shows up. It will
+still show up, on a busier machine, on a different chip, at 3am."
+</details>
+
+</blockquote>
+<h1 id="readme-engineering-model--sections-13-to-17">ENGINEERING MODEL — sections 13 to 17</h1>
+<h2 id="readme-13-how-do-you-hand-a-finished-object-to-somebody-else">13. How do you hand a finished object to somebody else?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Building an object is several writes. Publishing it is one
+more. Nothing about a plain field forces the building to land before the
+publishing.</p>
+</blockquote>
+<p>Ana fills in a stock card. Three boxes on it, all of them getting the same
+number today. Then she pins the card to the board where Ben can reach it.</p>
+<p>From Ben's side that is one action: <em>there is a card, take it</em>. From the
+machine's side it is four:</p>
+<ol>
+<li>get a blank card,</li>
+<li>write the first box,</li>
+<li>write the second box,</li>
+<li>pin the card to the board.</li>
+</ol>
+<p>Step 4 is a plain write of a reference. Steps 2 and 3 are plain writes of
+fields. Nothing orders them. Ben is allowed to see a card on the board whose
+boxes are still blank. The object is published, and it is half-built.</p>
+<p>The experiment is <code>Publication.java</code>, and it comes with an unusually honest
+warning in its own header, which is worth reading before you run it.</p>
+<div class="code"><pre><code>./run.sh Publication unsafe          # plain fields, plain reference
+./run.sh Publication finalfields     # final fields, plain reference
+./run.sh Publication volatileref     # plain fields, volatile reference
+</code></pre></div>
+<blockquote>
+<p>🔮 <strong>Predict.</strong> Two hundred thousand rounds of <code>unsafe</code> on an ordinary Intel
+laptop. How many half-built cards does the reader catch?</p>
+</blockquote>
+<p><strong>Zero.</strong> And that is not a pass — it is the entire reason the experiment is in
+the lab. Here is what all three modes printed on one run.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Mode</th>
+  <th>Reference field</th>
+  <th>Object fields</th>
+  <th style="text-align:right">Half-built cards seen</th>
+  <th style="text-align:right">Rounds the card was never seen at all</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>unsafe</code></td>
+  <td>plain</td>
+  <td>plain</td>
+  <td style="text-align:right">0</td>
+  <td style="text-align:right">18,048</td>
+</tr>
+<tr>
+  <td><code>finalfields</code></td>
+  <td>plain</td>
+  <td><code>final</code></td>
+  <td style="text-align:right">0</td>
+  <td style="text-align:right">70,589</td>
+</tr>
+<tr>
+  <td><code>volatileref</code></td>
+  <td><code>volatile</code></td>
+  <td>plain</td>
+  <td style="text-align:right">0</td>
+  <td style="text-align:right">4</td>
+</tr>
+</tbody>
+</table></div>
+<p>If you predicted &quot;a few thousand&quot;, you assumed the experiment is a detector. It
+is not. It is a demonstration that a clean run is not evidence.</p>
+<p><strong>Why did nothing break?</strong> Because of the chip, not the code. An x86 core never
+lets one store overtake another store in hardware. So on this laptop the only
+thing that could have broken the <code>unsafe</code> run was the JIT compiler choosing to
+reorder the writes, and it chose not to. An ARM core reorders stores freely, so
+the same bytecode really does break there. That means Apple Silicon, AWS
+Graviton, and essentially every phone. Section 18 is what that costs in
+practice.</p>
+<p>Now look at the right-hand column, because it is telling you something else
+entirely. &quot;Never seen at all&quot; is a <em>different</em> symptom from a half-built card,
+and the experiment counts it separately on purpose. It means the reader spun
+5,000 times and never saw a non-null reference in that round — the plain write
+never became visible in time, or the plain read got hoisted. That is section 3's
+bug, showing up inside section 13's experiment.</p>
+<p>With a plain reference the reader missed 18,048 rounds out of 200,000. With a
+<code>volatile</code> reference it missed <strong>four</strong>. The tearing never showed on this
+hardware, but the visibility difference is enormous and it showed immediately.</p>
+<p>One caveat on that column, stated plainly because the honest answer is &quot;I do not
+know&quot;: the <code>finalfields</code> mode missed the most rounds of all, 70,589, and it also
+ran three times longer than <code>unsafe</code>. I did not establish why, and the experiment
+is not designed to answer it. The column the experiment is actually about is the
+half-built one, and it read zero everywhere.</p>
+<p>So how <em>do</em> you publish an object safely? Four ways, and they are the whole list.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The safe way</th>
+  <th>What creates the edge</th>
+  <th>When to use it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a <code>static</code> initialiser</td>
+  <td>the JVM's own class-initialisation lock</td>
+  <td>constants and singletons</td>
+</tr>
+<tr>
+  <td>a <code>volatile</code> field or an <code>AtomicReference</code></td>
+  <td>the volatile write, and its piggyback (section 11)</td>
+  <td>a reference that changes over time</td>
+</tr>
+<tr>
+  <td>all fields <code>final</code>, and <code>this</code> never escapes</td>
+  <td>the constructor freeze (section 14)</td>
+  <td>immutable value objects</td>
+</tr>
+<tr>
+  <td>written and read under the same lock</td>
+  <td>the monitor edge (section 10)</td>
+  <td>anything already guarded</td>
+</tr>
+</tbody>
+</table></div>
+<p>Anything else is unsafe publication, whatever your laptop says. That includes a
+plain field, a plain array slot, and a plain map entry.</p>
+<h2 id="readme-14-why-do-final-fields-get-a-promise-of-their-own">14. Why do <code>final</code> fields get a promise of their own?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A <code>final</code> field written in a constructor is frozen the
+moment the constructor ends. Anyone who ever sees the reference at all sees
+those fields already set.</p>
+</blockquote>
+<p>This is the only place in the model where you get a guarantee <strong>without a
+handshake</strong>. Ben does not have to read a volatile, take a lock, or do anything at
+all. If he can see the card, he can read its final boxes.</p>
+<p>The specification calls the moment the constructor ends a <strong>freeze action</strong>. It
+is the reason <code>String</code> is safe to pass between threads with no synchronisation
+whatsoever. It is the reason records and value objects are the easiest
+concurrency strategy there is. And it is why <code>java-multithreading</code> listed
+immutability as one of its three ways to be thread-safe.</p>
+<p>There is exactly one way to lose it, and it is worth knowing by name.</p>
+<blockquote>
+<p>If <code>this</code> escapes during construction, the promise is void.</p>
+</blockquote>
+<p>In the story: Ana must not let Ben peek at the card while she is still filling it
+in. If she hands it over halfway, or pins it to the board and then keeps writing,
+Ben is looking at an object whose freeze has not happened yet. In code, <code>this</code>
+escapes when a constructor registers a listener, starts a thread, passes itself
+to a collection, or calls an overridable method that a subclass has overridden.</p>
+<p><code>Publication.java</code> builds this into the experiment: its <code>FinalConfig</code> class has
+three <code>final</code> fields set in the constructor, and its <code>PlainConfig</code> has the same
+three left plain. Same shape, one keyword apart.</p>
+<p>The practical shape to remember: <strong>make the fields <code>final</code>, set them all in the
+constructor, and let nothing out of the constructor except the finished object.</strong>
+Then you can share it with anybody, for ever, with no volatile and no lock.</p>
+<h2 id="readme-15-why-did-double-checked-locking-ship-broken-for-a-decade">15. Why did double-checked locking ship broken for a decade?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The fast path deliberately skips the lock. A lock only
+orders two threads that both take it. So the fast path is ordered with nothing
+at all.</p>
+</blockquote>
+<p>This is the most famous memory-model bug in Java's history. It was published as
+a recommended idiom, it appeared in books and in production code everywhere, and
+it was quietly broken for years. Nobody's tests caught it.</p>
+<p>The goal is reasonable: build a singleton lazily, but do not pay for a lock on
+every call after the first. So you check, take the lock, and check again.</p>
+<div class="code"><pre><code class="language-java">static class BrokenDcl {
+    private static Service instance;          // NOT volatile — this is the bug
+
+    static Service get() {
+        if (instance == null) {               // fast path, no lock
+            synchronized (BrokenDcl.class) {
+                if (instance == null) {
+                    instance = new Service(&quot;broken&quot;, 1);
+                }
+            }
+        }
+        return instance;
+    }
+}
+</code></pre></div>
+<p>That last assignment is four steps, exactly like Ana's card in section 13:
+allocate the memory, write the name, write the id, publish the reference. Now
+suppose the publish lands before the two field writes. A second thread running
+the <strong>first</strong> check is outside the lock, so it is ordered with nothing. It sees
+a non-null reference and returns it. It gets a <code>Service</code> whose name is <code>null</code>
+and whose id is <code>0</code>.</p>
+<p>The lock does not save you, and that is the part worth sitting with. The whole
+point of the fast path is that it skips the lock, and a monitor creates an edge
+only between threads that <strong>both</strong> acquire it.</p>
+<blockquote>
+<p>🔮 <strong>Predict.</strong> Sixteen threads hammer each of four versions, 200,000 calls
+each. How many half-built objects does the broken version report?</p>
+</blockquote>
+<p>Zero. So do all the others.</p>
+<div class="code"><pre><code>./run.sh DoubleCheckedLocking
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Version</th>
+  <th>How it gets its instance</th>
+  <th>Correct by the rules?</th>
+  <th style="text-align:right">Half-built objects seen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>BrokenDcl</code></td>
+  <td>plain field, check-lock-check</td>
+  <td><strong>no</strong></td>
+  <td style="text-align:right">0</td>
+</tr>
+<tr>
+  <td><code>VolatileDcl</code></td>
+  <td><code>volatile</code> field, check-lock-check</td>
+  <td>yes</td>
+  <td style="text-align:right">0</td>
+</tr>
+<tr>
+  <td><code>HolderIdiom</code></td>
+  <td>a lazily-initialised nested class</td>
+  <td>yes</td>
+  <td style="text-align:right">0</td>
+</tr>
+<tr>
+  <td><code>Eager</code></td>
+  <td><code>static final</code>, built at class initialisation</td>
+  <td>yes</td>
+  <td style="text-align:right">0</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three of those are correct by the rules of the model. One is correct by accident
+of running on x86 today. <strong>Nothing you can run on this machine tells the two
+apart.</strong> That is the point of the experiment, and it is the point of the lab.</p>
+<p>What fixes it, and what to write instead:</p>
+<ul>
+<li><strong><code>volatile</code> fixes it</strong>, and has done since Java 5. The volatile write at the
+end of construction releases everything before it; the volatile read on the
+fast path acquires it. Before Java 5 and JSR-133, <code>volatile</code> did not carry the
+piggyback rule, and double-checked locking genuinely could not be fixed at all.</li>
+<li><strong>The local variable in <code>VolatileDcl</code> is not cosmetic.</strong> Reading the volatile
+field once into a local turns two volatile reads on the hot path into one. That
+used to matter a great deal and still matters a little.</li>
+<li><strong>Use the holder idiom instead.</strong> The JVM already initialises a class exactly
+once, under a lock it manages itself, with correct publication. The nested
+class is not loaded until <code>get()</code> is first called, so it is genuinely lazy.
+After that first call the field access is a plain static read with no
+synchronisation cost at all. No volatile, no lock, no double check.</li>
+</ul>
+<p>If you take one practical thing from this section: stop writing double-checked
+locking. The idiom exists to save a lock you no longer need to take.</p>
+<h2 id="readme-16-what-can-a-test-prove-here-and-what-can-it-never-prove">16. What can a test prove here, and what can it never prove?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You can test that a guarantee holds. You can never test that
+a race is absent.</p>
+</blockquote>
+<p><code>Tests.java</code> is built around that split, and it labels every check with which
+kind it is.</p>
+<ul>
+<li><strong><code>[ASSERT]</code></strong> — a safety property. The model <em>forbids</em> the bad outcome, so
+seeing it even once is a genuine failure. These are real tests.</li>
+<li><strong><code>[OBSERVE]</code></strong> — a permitted-but-not-required outcome. The model <em>allows</em> the
+bad thing but does not demand it, so a quiet run proves nothing. Asserting on
+these would be a lie, so the file reports what happened instead.</li>
+</ul>
+<div class="code"><pre><code>./run.sh Tests
+</code></pre></div>
+<p>The five assertions. Every one of these would be a real bug in the JVM if it
+ever failed.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What is asserted</th>
+  <th>What this run printed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a volatile write always reaches a spinning reader</td>
+  <td>pass — the reader exited its loop</td>
+</tr>
+<tr>
+  <td>volatile ints forbid the 0-and-0 outcome</td>
+  <td>pass — 0 occurrences in 500,000 trials</td>
+</tr>
+<tr>
+  <td><code>synchronized</code> increment loses nothing</td>
+  <td>pass — 4,000,000 of 4,000,000</td>
+</tr>
+<tr>
+  <td>atomic increment loses nothing</td>
+  <td>pass — 4,000,000 of 4,000,000</td>
+</tr>
+<tr>
+  <td>a volatile write publishes the plain writes before it</td>
+  <td>pass — 0 torn reads in 200,000 rounds</td>
+</tr>
+</tbody>
+</table></div>
+<p>The four observations. A green line here means nothing at all.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What is observed</th>
+  <th>What this run printed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a plain flag may never become visible</td>
+  <td>never saw the write; still spinning after 2.5 s</td>
+</tr>
+<tr>
+  <td>plain ints permit the 0-and-0 outcome</td>
+  <td>122,096 times in 500,000 trials</td>
+</tr>
+<tr>
+  <td>unsynchronized increment loses updates</td>
+  <td>586,843 of 4,000,000 — 3,413,157 vanished, 85.3%</td>
+</tr>
+<tr>
+  <td>volatile increment still loses updates</td>
+  <td>858,580 of 4,000,000</td>
+</tr>
+</tbody>
+</table></div>
+<p>The suite finished with <strong>5 assertions passed, 0 failed, 4 observations
+recorded</strong>.</p>
+<p>There is a detail in that file worth knowing, because it is a genuine
+consequence of the subject. The plain-flag observation starts a daemon thread
+that may never stop. When it does not, that thread spins for the rest of the
+suite, competing for a core with every test after it. There is no safe way to
+kill it — <code>Thread.stop</code> was removed in Java 20. So the timings of later checks in
+the suite are not clean, and the file says so rather than pretending otherwise.</p>
+<p>So what do professionals actually do?</p>
+<ul>
+<li><strong>Read the code.</strong> Memory-model bugs are found by checking that every shared
+field is reached through one of section 10's edges. That is a review activity,
+not a test activity.</li>
+<li><strong>Run on weak hardware.</strong> An ARM core reorders stores; an x86 core does not.
+Running your concurrency tests on Apple Silicon or Graviton is the single
+cheapest way to turn a hidden bug into a visible one.</li>
+<li><strong>Use jcstress.</strong> The OpenJDK Java Concurrency Stress harness enumerates
+outcomes of tiny programs across millions of runs and classifies each as
+expected, acceptable-but-interesting, or forbidden. It is the right tool for
+exactly the questions this lab asks. It was not run here; that claim is about
+the tool, not something this lab demonstrates.</li>
+</ul>
+<h2 id="readme-17-which-mental-models-should-you-carry-and-where-do-they-lie-to-you">17. Which mental models should you carry, and where do they lie to you?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three pictures, each useful for a different job, and none of
+them is the machine.</p>
+</blockquote>
+<p><strong>The stockroom with an out-tray.</strong> Ana, Ben, Omar, the whiteboard, the notepad
+and the tray. Good for: explaining a delayed write, a stale read, and why a
+hoisted load is the worst of the three. This is the picture to use when talking
+to somebody who does not write concurrent code.</p>
+<p><strong>Sequential consistency with a shuffle.</strong> All the threads' steps dealt together
+into one order. Good for: nothing here — this is the model that fails, and
+section 5 is the demonstration. But keep it, because SC-DRF (section 12) hands it
+straight back to you the moment your program is race-free. It is the model you
+are <em>allowed</em> to use once you have done the work.</p>
+<p><strong>A graph of edges.</strong> Actions as nodes, happens-before as arrows, most pairs
+connected by nothing. Good for: deciding whether one specific piece of code is
+correct. This is the model to use in a code review, and it is the one the
+specification is actually written in.</p>
+<h3 id="readme-where-does-the-story-lie-to-you">Where does the story lie to you?</h3>
+<p>Every analogy in this lab is load-bearing, so here is the bill for each one.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The story says</th>
+  <th>The engineering truth</th>
+  <th>Where it came up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a runner carries slips from the out-tray to the board</td>
+  <td>caches are coherent and fast; the delay is the buffer, not slow memory</td>
+  <td>section 6</td>
+</tr>
+<tr>
+  <td><code>volatile</code> means &quot;empty your out-tray now&quot;</td>
+  <td>on x86 it compiles to a locked instruction that fences both ways; ARM uses a different pair entirely</td>
+  <td>section 11</td>
+</tr>
+<tr>
+  <td>Omar is one person</td>
+  <td>there are at least three optimisers — <code>javac</code>, the JIT, and the CPU's out-of-order engine</td>
+  <td>section 1</td>
+</tr>
+<tr>
+  <td>the model describes hardware</td>
+  <td>it is a language specification; it constrains all three optimisers at once and deliberately promises less than any single one delivers</td>
+  <td>section 12</td>
+</tr>
+<tr>
+  <td>the visualization's volatile mode drains the buffer</td>
+  <td>that is a teaching simplification of a memory fence, chosen because it is drawable</td>
+  <td>section 6</td>
+</tr>
+</tbody>
+</table></div>
+<p>The last row generalises. The reason the model promises <em>less</em> than your hardware
+actually does is that the promise has to hold on every machine Java runs on,
+including ones nobody has built yet. Your x86 laptop is far stronger than the
+model. Writing code to what the laptop does, rather than to what the model
+promises, is precisely the mistake in sections 13 and 15.</p>
+<blockquote>
+<p>✅ <strong>CHECKPOINT — end of the engineering model.</strong>
+You can now list the four safe ways to publish an object. You can explain why
+double-checked locking without <code>volatile</code> is broken even when it works. And
+you can say which of a suite's results are evidence and which are decoration.
+<strong>Next:</strong> what all of this looks like when it wakes you up.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>reorder</em>, <em>publish</em> or <em>volatile</em>,
+explain to a teammate why &quot;we ran it ten million times on CI and it never
+failed&quot; is not an argument that their singleton is correct.</p>
+<details><summary>A good answer sounds like</summary>
+"CI runs on one kind of chip, and that chip happens to be strict about the
+order it makes your writes visible in. The rules of the language are much
+looser than that chip. So the test tells you the code works on that chip, on
+that day, with that compiler's choices — not that it is allowed to work
+anywhere else. The first time we deploy to a different processor, nothing about
+the code has changed and the answer can."
+</details>
+
+</blockquote>
+<h1 id="readme-production-model--section-18">PRODUCTION MODEL — section 18</h1>
+<h2 id="readme-18-what-does-this-look-like-from-an-on-call-rotation">18. What does this look like from an on-call rotation?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> None of these bugs throws. They arrive as a thread that
+stops making progress, a number that is quietly wrong, or a failure that only
+exists on one instance type.</p>
+</blockquote>
+<p>Ana and Ben are now a request handler and a background worker in a real service.
+Omar is a JIT compiler that has been running for four minutes, and has finally
+decided your hot loop is worth optimising. That last detail is why these
+incidents so often start twenty minutes after a deploy rather than at startup.</p>
+<p>Read the next table from the left column, which is what the graph or the ticket
+actually says.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What you see</th>
+  <th>What it probably is</th>
+  <th>What confirms it</th>
+  <th>First move</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>one thread pinned at 100% CPU doing nothing, for ever</td>
+  <td>a hoisted plain flag, section 3</td>
+  <td>thread dump shows it RUNNABLE in the same tiny frame every time</td>
+  <td>make the flag <code>volatile</code></td>
+</tr>
+<tr>
+  <td>a counter drifting low under load</td>
+  <td>lost updates, section 7</td>
+  <td>the drift tracks concurrency, never elapsed time</td>
+  <td><code>AtomicLong</code> or a lock</td>
+</tr>
+<tr>
+  <td>a null field that the constructor always sets</td>
+  <td>unsafe publication, section 13</td>
+  <td>only on ARM instances, only under load</td>
+  <td>publish via <code>volatile</code>, <code>final</code>, or a lock</td>
+</tr>
+<tr>
+  <td>&quot;works in staging, fails in prod&quot; after an instance-type change</td>
+  <td>a race x86 was hiding, sections 13 and 15</td>
+  <td>it happens again on a Graviton or Apple Silicon box</td>
+  <td>read the code; do not add sleeps</td>
+</tr>
+<tr>
+  <td>the bug vanishes as soon as you add logging</td>
+  <td>a heisenbug, section 4</td>
+  <td>taking the log back out brings it back</td>
+  <td>never ship the log as the fix</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two of those rows deserve a sentence more.</p>
+<p><strong>The 100% CPU row is the signature failure of this lab.</strong> A deadlock shows up as
+threads doing nothing. This shows up as a thread doing everything, at full speed,
+for ever. It looks like a busy healthy server right up until you notice one core
+has been saturated since Tuesday.</p>
+<p><strong>The instance-type row is the expensive one.</strong> A team moves from Intel to
+Graviton for the cost saving, and a class of bug that has been dormant since the
+code was written wakes up all at once. No code changed. Nothing in the diff
+explains it. This is the concrete reason section 15 tells you to stop writing
+double-checked locking rather than telling you it is probably fine.</p>
+<h3 id="readme-what-should-you-actually-reach-for">What should you actually reach for?</h3>
+<p>The decision is almost always determined by the shape of the data, not by taste.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Situation</th>
+  <th>Reach for</th>
+  <th>Why not the others</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>one thread writes a flag, others only read it</td>
+  <td><code>volatile</code></td>
+  <td>a lock is more than you need; an atomic buys nothing extra</td>
+</tr>
+<tr>
+  <td>read-modify-write on a single number</td>
+  <td><code>AtomicLong</code>, or <code>LongAdder</code> when contended</td>
+  <td><code>volatile</code> does not turn three steps into one</td>
+</tr>
+<tr>
+  <td>two or more fields must change together</td>
+  <td>a lock</td>
+  <td>no single-field tool can cover an invariant across fields</td>
+</tr>
+<tr>
+  <td>build it once, then share it for ever</td>
+  <td><code>final</code> fields, or a static holder</td>
+  <td>lazy plain publication is the trap in section 15</td>
+</tr>
+<tr>
+  <td>a shared map or queue</td>
+  <td><code>ConcurrentHashMap</code>, <code>BlockingQueue</code></td>
+  <td>safety per call is not safety per business operation</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-does-the-hardware-underneath-actually-do">What does the hardware underneath actually do?</h3>
+<p>Worth knowing, because it explains why your laptop is a bad witness. This is a
+statement about published hardware memory models, not something this lab runs.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Architecture</th>
+  <th>What it reorders</th>
+  <th>What that means for you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>x86-64</td>
+  <td>store→load only, via the store buffer</td>
+  <td>section 5 breaks; sections 13 and 15 hide</td>
+</tr>
+<tr>
+  <td>ARM / AArch64</td>
+  <td>stores past stores, loads past loads, and more</td>
+  <td>sections 13 and 15 break too</td>
+</tr>
+<tr>
+  <td>POWER</td>
+  <td>weaker again</td>
+  <td>everything in this lab is live</td>
+</tr>
+</tbody>
+</table></div>
+<p>And one non-fix, because somebody always suggests it. <code>-Xint</code> made section 3's
+program correct. It is not a production option. Interpreting every bytecode
+costs roughly two orders of magnitude in throughput. And turning the optimiser
+off to hide a race leaves the race in the code for the next person.</p>
+<blockquote>
+<p>✅ <strong>CHECKPOINT — end of the production model.</strong>
+You can now read a symptom back to a mechanism, pick a tool from the shape of
+the data, and say why moving to a new instance type is a memory-model event.
+<strong>Next:</strong> the exercises, the map of neighbouring labs, and the glossary.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> A dashboard shows one thread at 100% CPU for six hours,
+throughput unchanged, no errors in the log. Without using the words <em>hoist</em>,
+<em>register</em> or <em>cache</em>, say what is probably happening.</p>
+<details><summary>A good answer sounds like</summary>
+"Something is in a loop waiting for a signal that already arrived. It is
+checking a copy of the signal that it took once at the start, so the copy will
+never change, and it will keep checking it as fast as the machine allows. It is
+not stuck waiting for anything, which is why nothing looks blocked — it is
+extremely busy being wrong."
+</details>
+
+</blockquote>
+<h2 id="readme-19-where-are-the-exercises">19. Where are the exercises?</h2>
+<p>They are in <code>EXERCISES.md</code>: eight rungs climbing from &quot;explain it back&quot; to
+&quot;design the review rule that would have caught it&quot;. Everything is
+pencil-and-paper, plus the two tabs of the visualization and the commands in this
+document. Worked answers are in <code>SOLUTIONS.md</code>.</p>
+<p>Rung 1 asks you to explain Ben's endless loop to a non-programmer. Rung 8 asks
+you to design the concurrency review checklist for a service moving from Intel to
+ARM. Attempt each rung before opening the answers.</p>
+<h2 id="readme-20-what-does-this-connect-to-and-what-should-you-learn-next">20. What does this connect to, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab is the floor under four Java labs and the same idea
+one scale down from four distributed ones. The map shows which is which, and
+the sentences after it separate the ideas people keep merging.</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+  JMM[&quot;&lt;b&gt;java memory model&lt;/b&gt;&lt;br&gt;happens-before, volatile,&lt;br&gt;store buffer, reordering&quot;]
+
+  MT[&quot;java-multithreading&lt;br&gt;races, locks, pools&quot;] --&gt; JMM
+  JMM --&gt; VT[&quot;java-virtual-threads&lt;br&gt;same model, cheaper threads&quot;]
+  JMM --&gt; SC[&quot;structured-concurrency&lt;br&gt;lifetimes as a tree&quot;]
+  JMM --&gt; JVF[&quot;java-version-features&lt;br&gt;VarHandle access modes&quot;]
+  JMM --&gt; GC[&quot;jvm-garbage-collectors&lt;br&gt;the other kind of barrier&quot;]
+
+  JMM --&gt; CC[&quot;causal-consistency&lt;br&gt;happens-before across machines&quot;]
+  JMM --&gt; LIN[&quot;linearizability&lt;br&gt;atomics as linearizable objects&quot;]
+  JMM --&gt; RDS[&quot;redis / acid&lt;br&gt;the other two &#x27;atomic&#x27;s&quot;]
+  JMM --&gt; UBR[&quot;uber-system-design&lt;br&gt;compare-and-set across machines&quot;]
+</pre>
+<h3 id="readme-which-pairs-of-ideas-keep-getting-merged">Which pairs of ideas keep getting merged?</h3>
+<p>Six pairs, one sentence each, and every one of them has cost somebody a week.</p>
+<ul>
+<li><strong>happens-before versus happened earlier.</strong> The first is an edge you created on
+purpose. The second is a wall clock, and the model does not have one. This is
+the exact distinction <code>causal-consistency</code> carries across a network.</li>
+<li><strong>Visibility versus atomicity.</strong> Visibility is whether your write ever reaches
+me. Atomicity is whether I can catch your job half-done. <code>volatile</code> sells the
+first only, which is section 7 in one line.</li>
+<li><strong>A memory barrier versus a GC write barrier.</strong> The first is a CPU instruction
+that constrains reordering. The second is bookkeeping code the JIT injects so
+the collector learns about a pointer. Same word, no shared mechanism, and
+<code>jvm-garbage-collectors</code> calls this the most confused pair in its own subject.</li>
+<li><strong>Java's <code>volatile</code> versus C's <code>volatile</code>.</strong> In C it means &quot;this address may
+change outside the program, do not optimise the access&quot; and it carries no
+thread guarantees at all. In Java it is a full ordering contract. Code
+translated between the two languages on the strength of the keyword is broken.</li>
+<li><strong>Compiler reordering versus CPU reordering.</strong> Section 3 was the compiler,
+section 5 was the chip, and they need different explanations but have the same
+fix. The model deliberately does not distinguish them, which is why one rule
+covers both.</li>
+<li><strong>A data race versus a race condition.</strong> Section 12 has the full version. The
+short one: the first is mechanical and checkable, the second is a bug in your
+own reasoning, and fixing either leaves the other untouched.</li>
+</ul>
+<h3 id="readme-where-does-this-show-up-in-real-systems">Where does this show up in real systems?</h3>
+<p><code>AtomicInteger</code> and <code>ConcurrentHashMap</code> in essentially every Java service.
+<code>CompletableFuture</code>'s completion, which publishes a result across threads.
+Netty's event-loop confinement rules, which exist so that most of its state needs
+no synchronisation at all. Kafka's consumer, which is single-threaded by contract
+and throws if you break it. Every <code>Executor</code> submission and every <code>Future.get</code>,
+each of which is a happens-before edge you are using without naming.</p>
+<h3 id="readme-what-should-you-learn-next">What should you learn next?</h3>
+<p>Five suggestions, ordered so each makes the next one easier.</p>
+<ul>
+<li><code>/learn java-concurrent-collections</code> — how <code>ConcurrentHashMap</code> gets away with
+so little locking, and what its per-call guarantee does not cover.</li>
+<li><code>/learn jcstress</code> — the harness section 16 names, and how to write a test that
+can actually catch a reordering.</li>
+<li><code>/learn cpu-caches-and-false-sharing</code> — the layer below the store buffer, and
+why two unrelated fields can contend.</li>
+<li><code>/learn jit-and-escape-analysis</code> — what else Omar is allowed to do, including
+deleting allocations outright.</li>
+<li><code>/learn varhandles-and-atomics</code> — <code>VarHandle</code> access modes are this lab's
+happens-before rules exposed at a finer grain than <code>volatile</code> offers.</li>
+</ul>
+<h2 id="readme-21-glossary--what-does-each-word-mean-again">21. Glossary — what does each word mean again?</h2>
+<p>Grouped by the part of the story where each one was earned, so you can find a
+term by remembering where you were when it bit you.</p>
+<p><strong>The machinery.</strong> Where a value can be hiding at any moment.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Register</strong></td>
+  <td>a CPU's private scratch slot; invisible to every other thread</td>
+  <td>Ben's notepad, section 3</td>
+</tr>
+<tr>
+  <td><strong>Store buffer</strong></td>
+  <td>a core's private queue of writes that have not reached memory</td>
+  <td>Ana's out-tray, section 6</td>
+</tr>
+<tr>
+  <td><strong>Store-to-load forwarding</strong></td>
+  <td>a core reading its own pending write out of its own buffer</td>
+  <td>section 6</td>
+</tr>
+<tr>
+  <td><strong>Cache coherence</strong></td>
+  <td>the hardware protocol that keeps cores' caches in agreement</td>
+  <td>ruled out as the cause, section 3</td>
+</tr>
+<tr>
+  <td><strong>Memory fence / barrier</strong></td>
+  <td>a CPU instruction that forbids certain reorderings around it</td>
+  <td>what <code>volatile</code> compiles to, section 11</td>
+</tr>
+<tr>
+  <td><strong>As-if-serial semantics</strong></td>
+  <td>the optimiser may do anything a single thread cannot detect</td>
+  <td>Omar's one rule, section 1</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What goes wrong.</strong> The names for the four experiments' symptoms.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Visibility failure</strong></td>
+  <td>one thread's write never reaches another thread's read</td>
+  <td>Experiment 1, section 3</td>
+</tr>
+<tr>
+  <td><strong>Hoisting</strong></td>
+  <td>lifting a load out of a loop into a register, once</td>
+  <td>Omar's notepad trick, section 3</td>
+</tr>
+<tr>
+  <td><strong>Reordering</strong></td>
+  <td>writes becoming visible in an order the source does not contain</td>
+  <td>Experiment 2, section 5</td>
+</tr>
+<tr>
+  <td><strong>Word tearing</strong></td>
+  <td>reading half of one 64-bit write and half of another</td>
+  <td>rule two of <code>volatile</code>, section 11</td>
+</tr>
+<tr>
+  <td><strong>Unsafe publication</strong></td>
+  <td>a reference visible before the object's own fields are</td>
+  <td>Experiment 4, section 13</td>
+</tr>
+<tr>
+  <td><strong>Heisenbug</strong></td>
+  <td>a bug that disappears when you try to observe it</td>
+  <td>the debugging print, section 4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The contract.</strong> The four terms the specification is built from.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>happens-before</strong></td>
+  <td>the ordering relation; if A is before B, A's writes are visible to B</td>
+  <td>section 9</td>
+</tr>
+<tr>
+  <td><strong>Data race</strong></td>
+  <td>unordered concurrent access to one field, at least one a write</td>
+  <td>section 12</td>
+</tr>
+<tr>
+  <td><strong>Sequential consistency</strong></td>
+  <td>the naive model: one interleaving of everybody's steps</td>
+  <td>the impossible outcome, section 5</td>
+</tr>
+<tr>
+  <td><strong>SC-DRF</strong></td>
+  <td>race-free programs behave sequentially consistent; the whole bargain</td>
+  <td>section 12</td>
+</tr>
+<tr>
+  <td><strong>Release / acquire</strong></td>
+  <td>a write nothing earlier may pass; a read nothing later may precede</td>
+  <td>rule three of <code>volatile</code>, section 11</td>
+</tr>
+<tr>
+  <td><strong>Freeze action</strong></td>
+  <td>the end of a constructor, which locks in the <code>final</code> fields</td>
+  <td>section 14</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The tools.</strong> What you write, and what each one is actually for.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>volatile</code></strong></td>
+  <td>four promises: memory access, 64-bit atomicity, ordering, and the piggyback</td>
+  <td>section 11</td>
+</tr>
+<tr>
+  <td><strong><code>final</code> field</strong></td>
+  <td>frozen at construction, safe to share with no handshake at all</td>
+  <td>section 14</td>
+</tr>
+<tr>
+  <td><strong>Monitor edge</strong></td>
+  <td>releasing a lock is before acquiring that same lock</td>
+  <td>section 10</td>
+</tr>
+<tr>
+  <td><strong>Compare-and-set</strong></td>
+  <td>one indivisible operation: write only if the value still matches</td>
+  <td>the atomic mode, section 7</td>
+</tr>
+<tr>
+  <td><strong>Safe publication</strong></td>
+  <td>making an object's fields visible along with its reference</td>
+  <td>section 13</td>
+</tr>
+<tr>
+  <td><strong>Holder idiom</strong></td>
+  <td>lazy initialisation via a nested class, using the JVM's own lock</td>
+  <td>section 15</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The practice.</strong> How anybody finds these in real life.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Double-checked locking</strong></td>
+  <td>check, lock, check again; broken without <code>volatile</code></td>
+  <td>section 15</td>
+</tr>
+<tr>
+  <td><strong><code>this</code> escaping</strong></td>
+  <td>the reference leaving the constructor before it finishes</td>
+  <td>section 14</td>
+</tr>
+<tr>
+  <td><strong>jcstress</strong></td>
+  <td>the OpenJDK harness for enumerating concurrency outcomes</td>
+  <td>section 16</td>
+</tr>
+<tr>
+  <td><strong><code>-Xint</code></strong></td>
+  <td>interpret-only mode; correct, roughly a hundred times slower</td>
+  <td>section 4</td>
+</tr>
+<tr>
+  <td><strong>Total store order (TSO)</strong></td>
+  <td>x86's model: store→load reordering only</td>
+  <td>section 18</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-22-about-this-lab--where-do-the-numbers-come-from">22. About this lab — where do the numbers come from?</h2>
+<p><strong>Lab contents.</strong> Everything in the folder, and what each piece is for.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document — 21 sections, four depth layers, plus this appendix</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td><strong>Store Buffer Theatre</strong> — two tabs, every button a legal next move</td>
+</tr>
+<tr>
+  <td><code>src/*.java</code></td>
+  <td>six files: five experiments and a test suite, described below</td>
+</tr>
+<tr>
+  <td><code>run.sh</code></td>
+  <td>compiles <code>src/*.java</code> into <code>out/</code> and runs one experiment</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code></td>
+  <td>eight rungs, pencil-and-paper plus the visualization</td>
+</tr>
+<tr>
+  <td><code>SOLUTIONS.md</code></td>
+  <td>worked answers</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The experiments, and which section uses each.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it demonstrates</th>
+  <th>Sections</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Visibility.java</code></td>
+  <td>a plain write that is never seen; <code>-Xint</code> makes it correct</td>
+  <td>3, 4</td>
+</tr>
+<tr>
+  <td><code>Reordering.java</code></td>
+  <td>the 0-and-0 outcome no interleaving can produce</td>
+  <td>5, 6, 11</td>
+</tr>
+<tr>
+  <td><code>LostUpdate.java</code></td>
+  <td><code>volatile</code> fixes visibility and not atomicity</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td><code>Publication.java</code></td>
+  <td>half-built objects, and why x86 hides them</td>
+  <td>13, 14</td>
+</tr>
+<tr>
+  <td><code>DoubleCheckedLocking.java</code></td>
+  <td>four singletons, one broken, all four quiet</td>
+  <td>15</td>
+</tr>
+<tr>
+  <td><code>Tests.java</code></td>
+  <td>nine checks split into assertions and observations</td>
+  <td>16</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>How to run them.</strong> <code>run.sh</code> is a POSIX shell script; on Windows it runs under
+Git Bash. It compiles first, then passes everything through to <code>java</code>, so JVM
+flags work in front of the experiment name.</p>
+<div class="code"><pre><code>./run.sh Visibility volatile
+./run.sh -Xint Visibility plain
+./run.sh -Dtrials=5000000 Reordering plain
+</code></pre></div>
+<p><strong>Where every number in this document came from.</strong> One machine, one afternoon,
+one run per command. The JDK on the PATH was Temurin 21; these runs were done
+with Temurin 25 instead, from
+<code>C:\Program Files\Eclipse Adoptium\jdk-25.0.4.101-hotspot</code>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Setting</th>
+  <th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>JVM</td>
+  <td>OpenJDK 25.0.4.1, Temurin, mixed mode, sharing</td>
+</tr>
+<tr>
+  <td>CPU</td>
+  <td>amd64, 16 logical cores</td>
+</tr>
+<tr>
+  <td>OS</td>
+  <td>Windows 11</td>
+</tr>
+<tr>
+  <td>Runs per figure</td>
+  <td>exactly one</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What was observed, and what was not.</strong> Every figure in sections 3, 5, 7, 13, 15
+and 16 was printed by the command named beside it. Three of those results are
+zeros, and the zeros are the interesting part:</p>
+<ul>
+<li><strong><code>Publication unsafe</code> reported 0 half-built objects.</strong> That is not evidence
+the code is safe. It is evidence that an x86 core does not reorder one store
+past another, and that the JIT chose not to either.</li>
+<li><strong><code>DoubleCheckedLocking</code> reported 0 for all four versions</strong>, including the
+broken one. Section 15 exists because that is the expected outcome here.</li>
+<li><strong>The 0-and-0 rate is not stable.</strong> Three counts of the same phenomenon on this
+machine came out at 1 in 4, 1 in 16 and 1 in 42. Treat the verdict as the
+finding and the rate as noise.</li>
+</ul>
+<p><strong>What is claimed here but was not run here.</strong> Three things, all flagged where
+they appear: the behaviour of ARM and POWER cores (sections 13, 15, 18), what
+jcstress does (section 16), and the roughly hundredfold cost of <code>-Xint</code> (section
+18). Those come from published hardware models and tool documentation, not from
+this folder.</p>
+<p><strong>The figures printed on the visualization page</strong> were produced earlier, on an
+Intel Core i9-9880H with OpenJDK 25.0.4. They disagree with the runs above by a
+factor of two to three on every count. Section 5 uses that disagreement
+deliberately, as the clearest available evidence that these rates are not
+properties of Java.</p>
+<p><strong>What the visualization is and is not.</strong> It is a hand-driven model of a store
+buffer with two cores, written to be steppable. Its volatile mode drains the
+whole buffer at the write, which is a drawable stand-in for a memory fence rather
+than what any real chip does. Section 17 lists that among the places the story
+lies to you.</p>
+<p><strong>The cast.</strong> Ana and Ben are the two threads, carried over from
+<code>java-multithreading</code>, where they are the two stockroom workers who lose a box of
+paper between them. Omar is the optimiser — really <code>javac</code>, the JIT and the CPU's
+out-of-order engine wearing one hat. Dev appears once, in section 10, as the
+third link in a transitivity chain.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--the-java-memory-model">Exercises — the Java Memory Model</h1>
+<p>Everything here is pencil-and-paper, work in <strong>Store Buffer Theatre</strong>
+(<code>visualization.html</code>), or a command from the README that you already have.
+Nothing new to install. Attempt each rung before opening <code>SOLUTIONS.md</code>.</p>
+<p>The rungs climb: explain → identify → predict → modify → trace → spot the flaw →
+handle failure → design.</p>
+<p>The five experiments and the test suite are the ones in <code>src/</code>:</p>
+<div class="code"><pre><code>./run.sh Visibility plain | volatile          (and -Xint in front)
+./run.sh Reordering plain | volatile          (and -Dtrials=N)
+./run.sh LostUpdate plain | volatile | synchronized | atomic
+./run.sh Publication unsafe | finalfields | volatileref
+./run.sh DoubleCheckedLocking
+./run.sh Tests
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> In your own words, with no Java terms at all, explain to a non-programmer
+why a worker can keep checking a signal for ever when the signal was switched on
+several seconds ago. Then say what <code>-Xint</code> changed about that program, and — this
+is the harder half — say exactly what it did <em>not</em> change.</p>
+<p><strong>1.2</strong> A colleague says: <em>&quot;I made the counter <code>volatile</code>, so it's thread-safe
+now.&quot;</em> Write the two-sentence reply that says precisely what they fixed and
+precisely what they did not. Then name the one situation where their instinct
+would have been exactly right, and say why that situation is different.</p>
+<p><strong>1.3</strong> Define <strong>visibility</strong>, <strong>atomicity</strong> and <strong>ordering</strong> in one sentence
+each, with no overlap between the three. Then classify each of these as a failure
+of one of them: a spinning worker that never stops; a counter that ends on
+1,954,887 instead of 8,000,000; the 0-and-0 outcome; a reference that is non-null
+while its fields are still zero.</p>
+<p><strong>1.4</strong> Section 12 says a data race makes the set of permitted answers <em>larger</em>,
+rather than making the program random. Explain the difference to someone who
+thinks those are the same statement, using the outcome table in section 5.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Open the visualization, tab <strong>The impossible outcome</strong>. Press <em>Core 0: run
+next line</em> once, and stop. Without pressing anything else, answer from the screen
+alone: what is the value of <code>x</code> in shared memory, what is the value of <code>x</code> as far
+as Core 0 is concerned, and what is the value of <code>x</code> as far as Core 1 is
+concerned? Name the three places a single value can be living at that moment.</p>
+<p><strong>2.2</strong> <code>./run.sh Publication unsafe</code> prints two counters: <em>partially-visible
+objects observed</em> and <em>publication never seen at all</em>. Which of the two is the
+experiment actually about? Say what the other one is measuring, and which earlier
+section of the README that second symptom belongs to.</p>
+<p><strong>2.3</strong> Run <code>./run.sh Tests</code>. Every line is tagged <code>[ASSERT]</code> or <code>[OBSERVE]</code>. From
+the output alone, without reading the source, explain the rule that decides which
+tag a check gets. Then name the one line in the output that would be a genuine JVM
+bug if it ever flipped.</p>
+<p><strong>2.4</strong> <code>Reordering.java</code> measures a race using plain fields <code>r1</code> and <code>r2</code>, but
+its two coordination fields <code>ticketA</code> and <code>ticketB</code> are <code>volatile</code>. Identify which
+of the four things <code>volatile</code> buys (section 11) is the one making the harness
+correct, and say what would go wrong if the tickets were plain.</p>
+<p><strong>2.5</strong> In the README's section 6 table, two different pieces of the system each
+produced a bug. Say which experiment exposed each one, and give the one-sentence
+test that tells you which of the two you are looking at in a real incident.</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> You take this folder to an Apple Silicon Mac and run
+<code>./run.sh Publication unsafe</code>. Predict the <em>partially-visible objects</em> count.
+Then state clearly how confident you are and why your confidence here is lower
+than for any other prediction in this rung.</p>
+<p><strong>3.2</strong> Section 5 saw 61,354 occurrences of 0-and-0 in 1,000,000 trials. Predict
+the count for <code>-Dtrials=20000000</code>. Then give the reason your prediction could be
+wrong by a factor of five without anything being broken, and name the two other
+counts in the README that make that point.</p>
+<p><strong>3.3</strong> <code>LostUpdate</code> runs 8 threads. Predict what happens to the <em>percentage</em>
+lost if you drop it to 2 threads, and what happens if you raise it to 64. Predict
+directions and a reason, not numbers.</p>
+<p><strong>3.4</strong> Predict which of the four <code>DoubleCheckedLocking</code> versions is slowest on
+the hot path after the first call, and which is fastest. Then say which of those
+two facts actually matters for the decision in section 15, and why.</p>
+<p><strong>3.5</strong> A class has <code>private static final Service INSTANCE = new Service(...)</code>.
+Two hundred threads call <code>get()</code> concurrently with no synchronization anywhere.
+Predict how many of them can see a half-built <code>Service</code>, and name the exact rule
+that makes your answer a guarantee rather than a probability.</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Make <code>Visibility</code> in <code>plain</code> mode terminate reliably, three different
+ways, without changing the flag's declaration and without adding <code>volatile</code>,
+<code>synchronized</code> or an atomic anywhere. For each of the three, say what it actually
+changed: the rule, or only the odds. (Do this on paper — the source in <code>src/</code> is
+not to be edited.)</p>
+<p><strong>4.2</strong> In the visualization, produce the 0-and-0 outcome. Reset, and now produce
+1-and-1 using the same two <em>run next line</em> buttons in the same order. Describe the
+extra button you had to press, what it models in real hardware, and why nothing in
+Java says when it happens.</p>
+<p><strong>4.3</strong> Take <code>BrokenDcl</code> from section 15 and fix it in three different ways, each
+of which is correct by the rules. Rank them by how much you would like to see them
+in a code review, and justify the ranking with something other than taste.</p>
+<p><strong>4.4</strong> <code>LostUpdate atomic</code> uses <code>AtomicLong</code>. Predict what changes if it used
+<code>LongAdder</code> instead, in both the final total and the elapsed time, and explain the
+mechanism. Then name the one thing <code>LongAdder</code> gives up that <code>AtomicLong</code> has.</p>
+<p><strong>4.5</strong> In the visualization, switch tab 2 to <code>volatile boolean stop;</code> and drive
+it. Describe what changed in the <em>What the JIT runs</em> panel, and translate that
+change into one sentence about registers.</p>
+<hr />
+<h2 id="exercises-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1</strong> By hand, complete this table for the two threads of section 5 running the
+sequence that produces 0-and-0. Fill in every column after every step, then state
+the final outcome and the exact step at which it became unavoidable.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>Who does what</th>
+  <th><code>x</code> and <code>y</code> in memory</th>
+  <th>What is in the two out-trays</th>
+  <th>What each has read so far</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Ana runs <code>x = 1</code></td>
+  <td></td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>…</td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>5.2</strong> Trace the transitivity chain in section 10 step by step: Ana's three
+plain writes, her volatile write, Ben's volatile read, Ben's lock release, Dev's
+lock acquire. At each step, write down what Dev is now guaranteed to see. Then
+break exactly one link — Ben takes a <em>different</em> lock from Dev — and say precisely
+which of Dev's guarantees survive and which vanish.</p>
+<p><strong>5.3</strong> Trace <code>instance = new Service(&quot;broken&quot;, 1)</code> on a machine that is allowed
+to reorder one store past another. Write the four machine steps in the order that
+breaks it, and then write down, step by step, what a second thread on the fast
+path sees at each of those moments.</p>
+<p><strong>5.4</strong> Trace the <code>-Xint</code> version of <code>Visibility</code> against the JIT version, side by
+side, for the first three passes of the worker's loop. Show where the two traces
+diverge and name the single instruction that is present in one and absent in the
+other.</p>
+<hr />
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p>Each of these is a described design, not code you can run. For each: construct a
+concrete sequence in which it produces a wrong answer or hangs, and name the
+guarantee that is being assumed but not bought.</p>
+<p><strong>6.1</strong> <em>&quot;The config object is behind a <code>volatile</code> reference, so it's safe to
+share. Threads also update a counter inside it as they go.&quot;</em> What is safe, what is
+not, and why does the <code>volatile</code> reference not help the second half at all?</p>
+<p><strong>6.2</strong> <em>&quot;Double-checked locking without <code>volatile</code> is fine — we ran it in CI ten
+million times on every build for two years and it has never once failed.&quot;</em> Name
+what is wrong with the reasoning, what a reader can legally observe that it must
+not, and why that test evidence is worth nothing. Which section of this README
+produced exactly that evidence on purpose?</p>
+<p><strong>6.3</strong> <em>&quot;We synchronize the write, so the object is definitely fully built before
+anyone can see the reference.&quot;</em> Show why writing under a lock does not help a
+reader who never takes that lock, using the four steps from section 15.</p>
+<p><strong>6.4</strong> <em>&quot;The constructor finishes by setting <code>volatile boolean ready = true</code>, so
+by the time anyone sees <code>ready</code> the object is complete.&quot;</em> Construct the case where
+a second thread sees a fully-<code>ready</code> object that is nonetheless not safely
+published, and name the rule from section 14 that was broken.</p>
+<p><strong>6.5</strong> <em>&quot;We call <code>worker.start()</code> and then <code>Thread.sleep(50)</code> before writing the
+config, so the worker is definitely up and will see it.&quot;</em> Name every wrong
+assumption in that sentence. One of them is about ordering, one is about timing,
+and one is a genuine happens-before edge being used backwards.</p>
+<p><strong>6.6</strong> <em>&quot;We fixed the drifting counter by making the field <code>volatile</code> and it went
+from losing 6 million to losing 5.7 million, so we're on the right track — we just
+need to also make the loop tighter.&quot;</em> Say what the data in section 7 actually
+shows, and what the next step should have been.</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> At 02:40 a dashboard shows one thread pinned at 100% CPU with throughput
+flat, no errors, and no change in latency. It has been like that for six hours.
+Describe what you would look at first, what a thread dump would show, how you
+would tell this apart from an infinite retry loop, and what the fix is. Then say
+what you would put in the postmortem about why nobody's tests caught it.</p>
+<p><strong>7.2</strong> A service is moving from Intel instances to Graviton next sprint. Write
+the review pass you would run over the codebase beforehand: what you grep for,
+what you read by hand, what you ask the authors, and what you would put in front
+of the load test. Be specific about which of this lab's five experiments each item
+corresponds to.</p>
+<p><strong>7.3</strong> A payment counter is drifting about 0.3% low under peak load and is exact
+at low load. Design the observations that would distinguish three candidate
+causes: lost updates, a visibility failure, and a genuine logic bug in the
+business rule. For each cause, name the single observation that would eliminate
+it.</p>
+<p><strong>7.4</strong> <code>Tests.java</code> starts a daemon thread in its plain-flag observation that may
+never stop, and it cannot be killed because <code>Thread.stop</code> was removed in Java 20.
+Describe what that does to every check that runs after it, say which figures in
+section 16 you would therefore not quote, and design a harness change that removes
+the problem without removing the observation.</p>
+<p><strong>7.5</strong> A team proposes running production with <code>-Xint</code> for a week &quot;to rule out a
+JIT bug&quot; after seeing the hang in section 3. Write the reply. It must say what
+that experiment would genuinely tell them, what it would cost, and what to do
+instead that answers the same question in an hour.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — The ARM migration checklist.</strong> Design the concurrency review that a
+service must pass before moving from x86 to ARM. State: which code shapes you
+search for and with what; how you decide whether a given shared field is safely
+reached; what you do about third-party libraries you cannot review; what you run
+before the migration and on what hardware; and the one thing on the list that
+would have caught the bug in section 15. Then say which items on your list are
+<em>evidence</em> and which are only <em>reassurance</em>, and be honest about the ratio.</p>
+<p><strong>8.2 — Hot-reloadable configuration.</strong> Design a configuration object that is
+built at startup, read on every request by hundreds of threads, and replaced
+wholesale a few times a day when an operator pushes a change. State: how the
+object is built, how it is published, how readers get it, what happens to a
+request that is halfway through reading the old one, and which of section 13's
+four safe-publication routes you chose and why. Then say what you would have to
+change if a <em>single field</em> inside it needed to be updated independently, and why
+that is a much harder problem.</p>
+<p><strong>8.3 — The same idea at three scales.</strong> <em>happens-before</em> appears in this lab
+between two CPU cores, in <code>causal-consistency</code> between two machines, and in
+<code>redis</code> and <code>acid</code> as one of three different meanings of the word &quot;atomic&quot;. Write
+the one-paragraph account of what is identical at all three scales and what is
+genuinely different. Then explain why the in-JVM version can be enforced by a
+single instruction while the cross-machine version cannot, and what the
+distributed version has to carry instead.</p>
+<p><strong>8.4 — The test you would actually write.</strong> You have been asked to add a
+regression test for a race that was fixed last month. Design what you would
+deliver. State what the test can prove, what it cannot, what you would name it so
+that a future reader does not over-trust it, and what you would put in the code
+review checklist instead of the test. Use section 16's split between assertions
+and observations as your structure.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--the-java-memory-model">Solutions — the Java Memory Model</h1>
+<p>Worked answers. Rungs 7 and 8 are design discussions, not single correct outputs
+— compare the shape and the reasoning, not the wording.</p>
+<p>Every figure quoted here comes from the runs recorded in README section 22: one
+machine, one run per command, OpenJDK 25.0.4.1 on amd64. Where an exercise asks
+you to predict something that was never run, the answer says so instead of giving
+you a number.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> The worker is not looking at the signal. Somebody decided that since the
+worker's own loop never changes the signal, there was no point walking over to
+check it every time, so the value was copied once at the start and the worker has
+been checking that copy ever since. The real signal did change. Nothing is ever
+going to go and look again.</p>
+<p><code>-Xint</code> switched off the part of the system that made that decision. Every pass
+of the loop now genuinely goes and reads the signal, so the change is picked up
+immediately. On one run it exited after 147,698,840 passes.</p>
+<p>What it did <strong>not</strong> change is the program's correctness. The code is still
+broken; it is just being run by something too simple to exploit the breakage.
+Move it back to a normal JVM, or to a different chip, or to next year's compiler,
+and it is a hang again. <code>-Xint</code> removed one optimiser's permission to use a right
+the language had already granted.</p>
+<p><strong>1.2</strong> <em>&quot;You fixed whether other threads can ever see the value, which was a real
+problem. You did not fix that <code>count++</code> is a read, an add and a write with a gap
+in between — two threads can both read 41, both compute 42, and both write 42,
+and <code>volatile</code> allows exactly that.&quot;</em></p>
+<p>Their instinct is right for a <strong>flag that one thread writes and others only
+read</strong>. That is section 3's experiment, and <code>volatile</code> is the correct and
+complete fix there. The difference is that a flag has no read-modify-write: there
+is no gap to protect, because nothing is computed from the old value.</p>
+<p>Worth adding, because it lands harder than the argument: on one run the volatile
+counter still lost 5,762,264 increments <em>and</em> took 328 ms against the plain
+version's 69 ms. It paid the whole bill and bought nothing.</p>
+<p><strong>1.3</strong></p>
+<ul>
+<li><strong>Visibility</strong> — whether one thread's write is ever seen by another thread's
+read at all.</li>
+<li><strong>Atomicity</strong> — whether another thread can observe an operation half-done.</li>
+<li><strong>Ordering</strong> — whether two writes become visible in the order they were
+written.</li>
+</ul>
+<p>The classification:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Symptom</th>
+  <th>Which one failed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>spinning worker that never stops</td>
+  <td>visibility</td>
+</tr>
+<tr>
+  <td>counter ending on 1,954,887 of 8,000,000</td>
+  <td>atomicity</td>
+</tr>
+<tr>
+  <td>the 0-and-0 outcome</td>
+  <td>ordering</td>
+</tr>
+<tr>
+  <td>non-null reference with zero fields</td>
+  <td>ordering, which is what makes publication unsafe</td>
+</tr>
+</tbody>
+</table></div>
+<p>The fourth is the interesting one. It is not an atomicity failure: nobody caught
+the constructor mid-write. The four writes each completed. They just became
+<em>visible</em> in the wrong order.</p>
+<p><strong>1.4</strong> &quot;Random&quot; would mean the answer is drawn from a distribution each time you
+run. That is not what happens. What happens is that section 5's shuffle table has
+three rows in your head and four rows in the specification.</p>
+<p>Your program is not wrong 6% of the time. Your <em>reasoning</em> is wrong 100% of the
+time, and 94% of the time that does not show. That is why the fix is never &quot;make
+it happen less often&quot; and always &quot;delete the extra row&quot;.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> After one press of <em>Core 0: run next line</em>:</p>
+<ul>
+<li><strong>shared memory</strong> says <code>x = 0</code>,</li>
+<li><strong>Core 0</strong> believes <code>x = 1</code>, because it can read its own store buffer,</li>
+<li><strong>Core 1</strong> believes <code>x = 0</code>, because the buffer is private.</li>
+</ul>
+<p>The three places one value can live at that instant are: shared memory, a core's
+private store buffer, and a core's register. Only the first is shared. That is
+the entire lab in one sentence.</p>
+<p><strong>2.2</strong> The experiment is about <strong>partially-visible objects observed</strong>. That is
+the count of times the reader held a reference to an object whose fields were not
+the ones the writer had just put in it. On this hardware it read 0 in all three
+modes.</p>
+<p><strong>Publication never seen at all</strong> is a different symptom: the reader spun 5,000
+times and never saw a non-null reference in that round. The write never became
+visible in time, or the read was hoisted. That belongs to README section 3, not
+section 13.</p>
+<p>The contrast is worth quoting anyway. Plain reference: 18,048 rounds missed out of
+200,000. Volatile reference: <strong>4</strong>. The tearing never appeared, and the visibility
+difference appeared immediately.</p>
+<p><strong>2.3</strong> The rule is: <strong><code>[ASSERT]</code> for things the model forbids, <code>[OBSERVE]</code> for
+things the model permits but does not require.</strong></p>
+<p>You can see it from the output because the observations report a <em>number</em> and no
+verdict, while the assertions report pass or fail. A quiet run of an observation
+proves nothing, so asserting on it would be a lie, and the file refuses to tell
+that lie.</p>
+<p>The line that would be a genuine JVM bug if it flipped is any of the five
+assertions. The sharpest is
+<code>volatile_write_publishes_the_plain_writes_before_it</code>: it reported 0 torn reads in
+200,000 rounds, and the model allows exactly 0. A single torn read there would be
+a specification violation, not bad luck.</p>
+<p><strong>2.4</strong> It is <strong>rule four, the piggyback</strong>. Thread B writes its result into the
+plain field <code>r2</code> and then writes its <code>volatile</code> ticket. Thread A reads the
+volatile ticket and then reads <code>r2</code>. Because A saw the new ticket value,
+everything B did before writing it — including the plain write — is guaranteed
+visible.</p>
+<p>If the tickets were plain, the harness would have no edges at all. The two
+threads would not reliably start each trial together, and thread A would be
+counting outcomes out of a field it has no guarantee of seeing. The measuring
+instrument would have the same bug it is measuring. <strong>The tool that catches the
+bug is built out of the fix.</strong></p>
+<p><strong>2.5</strong> The JIT compiler kept a flag in a register, which Experiment 1 (section 3)
+exposed. The CPU core let a store sit in its private buffer, which Experiment 2
+(section 5) exposed.</p>
+<p>The one-sentence field test: <strong>does the thread ever see the new value, at any
+point, ever?</strong> A hoisted load never does — it will spin for the rest of the
+process's life. A store-buffer delay always resolves; the buffer drains in
+nanoseconds. So &quot;stuck for ever&quot; is the compiler, and &quot;briefly saw the old value
+and then caught up&quot; is the hardware.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> Predict <strong>greater than zero</strong>, and expect it to be small and erratic.</p>
+<p>The confidence caveat is the point of the question, and there are two halves to
+it. First, this run was never done, so nothing here is evidence — README section
+22 lists ARM behaviour among the things this lab claims but does not demonstrate.
+Second, and more importantly, even a real ARM run showing zero would not tell you
+the code is safe. That is the same trap as the x86 run in section 13, one chip
+further along. The prediction is about hardware; the conclusion has to come from
+the rules.</p>
+<p><strong>3.2</strong> Proportional scaling gives roughly 1.2 million, and you should write that
+down and then immediately distrust it.</p>
+<p>The reason it can be off by five is that the rate is not a property of the
+program. README section 5 has three counts of the same phenomenon on the same
+machine: 1 in 4 from the <code>Tests</code> suite, 1 in 16 from <code>Reordering plain</code>, and 1 in
+42 from the figure on the visualization page. Anything that changes how tightly
+the two threads are coupled — core scheduling, JIT warm-up, another process on
+the box — moves the rate by more than the trial count does.</p>
+<p><strong>3.3</strong> With <strong>2 threads</strong> the percentage lost falls sharply. Fewer workers means
+fewer chances that another one lands in the gap between your read and your write.</p>
+<p>With <strong>64 threads</strong> on a 16-core box the percentage rises further, and the reason
+is worth stating carefully: it is not that more threads run at once — only 16 can
+— but that each thread is descheduled far more often, and every deschedule
+lengthens the window between its read and its write.</p>
+<p>Neither variant was run. The direction is safe to assert; a number is not.</p>
+<p><strong>3.4</strong> After the first call, <code>Eager</code> and <code>HolderIdiom</code> are fastest: both reduce
+to a plain read of a <code>static final</code> field, which the JIT can constant-fold
+outright. <code>VolatileDcl</code> is slowest, because the fast path still performs one
+volatile read on every call.</p>
+<p>And now the important half: <strong>that fact does not matter.</strong> The performance gap
+between a volatile read and a plain read is nanoseconds on a path that is called
+after a lock-free check. Section 15 recommends the holder idiom because it is
+<em>simpler and impossible to get wrong</em>, not because it is faster. If the ranking
+changed your answer, you have optimised the wrong axis.</p>
+<p><strong>3.5</strong> <strong>Zero.</strong> None of the 200 threads can see a half-built <code>Service</code>.</p>
+<p>The rule is class initialisation. The JVM initialises a class exactly once, under
+a lock it manages itself, and every thread that touches the class either performs
+that initialisation or waits for it. That gives a happens-before edge from the
+static initialiser to every subsequent read of the field. It is a guarantee in
+the specification, not a probability, and it is the reason the holder idiom in
+section 15 works.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Three that work, and they are not equally honest:</p>
+<ol>
+<li><strong>Run with <code>-Xint</code>.</strong> Changes the rule for that process: no compiler, no
+hoisting. Correct, and roughly a hundred times slower.</li>
+<li><strong>Put a <code>System.out.println</code> in the loop.</strong> Changes the rule <em>by accident</em> —
+the stream is synchronized, so the print is a real happens-before edge. It
+also stops the loop being simple enough to optimise. Correct for reasons you
+did not intend, and it will stop being correct the moment somebody removes the
+log line.</li>
+<li><strong>Call <code>Thread.sleep(1)</code> in the loop.</strong> Changes only the odds. <code>sleep</code> creates
+no edge whatsoever. In practice the loop is no longer hot enough to be
+compiled the same way, so it usually works, and it is the worst of the three
+because it looks deliberate.</li>
+</ol>
+<p>The grading is the answer: one changes the rule on purpose, one changes it by
+side effect, and one changes nothing but the probability. Only the first is a
+fix, and it is not one you can ship.</p>
+<p><strong>4.2</strong> To get 1-and-1 you must press <em>flush</em> on both cores after the two writes
+and before the two reads. The full sequence is: Core 0 run, Core 1 run, Core 0
+flush, Core 1 flush, Core 0 run, Core 1 run.</p>
+<p>The flush models a store buffer draining to the shared cache line. In real
+hardware nothing in your program triggers it. It happens when the buffer fills,
+when a fence forces it, or whenever the core gets round to it. <strong>Java says
+nothing at all about when it happens</strong>, which is exactly why the page makes it a
+button you press rather than a timer.</p>
+<p><strong>4.3</strong> Three correct fixes, ranked:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Rank</th>
+  <th>Fix</th>
+  <th>Why it ranks there</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>the holder idiom</td>
+  <td>lazy, free after the first call, and there is nothing to get wrong</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>static final</code>, eager</td>
+  <td>bulletproof and simplest, but you pay the cost even if it is never used</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>volatile</code> on the field</td>
+  <td>correct since Java 5, and still four lines a reviewer must read carefully</td>
+</tr>
+</tbody>
+</table></div>
+<p>The justification that is not taste: rank by <strong>how many ways a future edit can
+break it</strong>. Someone deleting the <code>volatile</code> keyword from option 3 breaks it
+silently, and no test on x86 will notice. There is no keyword to delete in
+options 1 and 2.</p>
+<p><strong>4.4</strong> <code>LongAdder</code> keeps a per-thread cell and sums them only when you ask for
+the total. Under heavy contention that removes the compare-and-set retry storm,
+so it should be substantially faster than <code>AtomicLong</code> and the final total should
+still be exact.</p>
+<p>Not run, so no number is given here. The <code>LostUpdate atomic</code> figure that <em>was</em>
+run is 8,000,000 exact in 302 ms, against <code>synchronized</code> at 1,254 ms.</p>
+<p>What <code>LongAdder</code> gives up: a meaningful instantaneous read. <code>AtomicLong.get()</code>
+returns one value at one moment; <code>LongAdder.sum()</code> walks the cells while they are
+still being written, so it is not a snapshot of any instant. It also has no
+compare-and-set, so you cannot build a conditional update on it.</p>
+<p><strong>4.5</strong> In volatile mode the <em>What the JIT runs</em> panel stops showing a single
+load before the loop and starts showing a real load from memory inside the loop,
+on every pass.</p>
+<p>In one sentence about registers: <strong>the optimiser is no longer allowed to keep the
+field in a register across loop iterations</strong>, so the value the loop tests is
+always the value in memory rather than a copy taken once.</p>
+<hr />
+<h2 id="solutions-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1</strong> The sequence that produces 0-and-0, with the trays shown:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>Who does what</th>
+  <th><code>x</code> and <code>y</code> in memory</th>
+  <th>What is in the two out-trays</th>
+  <th>What each has read so far</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Ana runs <code>x = 1</code></td>
+  <td>0, 0</td>
+  <td>Ana <code>x←1</code> · Ben empty</td>
+  <td>nothing yet</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Ben runs <code>y = 1</code></td>
+  <td>0, 0</td>
+  <td>Ana <code>x←1</code> · Ben <code>y←1</code></td>
+  <td>nothing yet</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Ana reads <code>y</code></td>
+  <td>0, 0</td>
+  <td>Ana <code>x←1</code> · Ben <code>y←1</code></td>
+  <td>Ana got <strong>0</strong></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Ben reads <code>x</code></td>
+  <td>0, 0</td>
+  <td>Ana <code>x←1</code> · Ben <code>y←1</code></td>
+  <td>Ana <strong>0</strong>, Ben <strong>0</strong></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Ana's tray drains</td>
+  <td>1, 0</td>
+  <td>Ana empty · Ben <code>y←1</code></td>
+  <td>Ana 0, Ben 0</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Ben's tray drains</td>
+  <td>1, 1</td>
+  <td>both empty</td>
+  <td>Ana 0, Ben 0</td>
+</tr>
+</tbody>
+</table></div>
+<p>The outcome is 0-and-0, and it became unavoidable at <strong>step 2</strong>. Once both writes
+are sitting in private buffers and neither has drained, both of the reads that
+follow are going to find zeros in memory. Steps 5 and 6 are too late to matter;
+the registers already hold their answers.</p>
+<p>Note what steps 1 to 4 look like in a debugger: each thread executed its write
+before its read, in source order, exactly as written. Nothing was reordered in any
+sense you could observe by stepping. The write had simply not arrived where the
+other thread was looking.</p>
+<p><strong>5.2</strong> The chain, with what Dev is guaranteed at each point:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>What happens</th>
+  <th>What Dev is guaranteed once this link exists</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Ana writes three plain numbers</td>
+  <td>nothing yet</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Ana writes the volatile flag</td>
+  <td>nothing yet — the edge needs a reader</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Ben reads the flag and sees it set</td>
+  <td>Ben is guaranteed Ana's three numbers</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Ben works, then releases the lock</td>
+  <td>nothing yet — the edge needs an acquirer</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Dev acquires the <strong>same</strong> lock</td>
+  <td>Dev sees Ben's work, and by transitivity Ana's three numbers</td>
+</tr>
+</tbody>
+</table></div>
+<p>Break link 5 by giving Dev a <em>different</em> lock and the chain snaps there.
+Everything up to step 4 still holds: Ben still sees Ana's numbers, because that
+edge is independent. What vanishes is every guarantee Dev had. Dev sees neither
+Ben's work nor Ana's, and no amount of Ben having been careful helps, because a
+monitor edge exists only between threads acquiring <strong>the same</strong> monitor.</p>
+<p>This is the failure people find hardest to believe, because on the screen both
+threads visibly took a lock.</p>
+<p><strong>5.3</strong> The order that breaks it, and what the second thread sees:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>The writing thread does</th>
+  <th>What a fast-path reader sees at this moment</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>allocate raw memory for a <code>Service</code></td>
+  <td><code>instance</code> is still null; the reader takes the slow path</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>publish: <code>instance</code> = that address</td>
+  <td><code>instance</code> is non-null — the reader returns it immediately</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>write <code>name = &quot;broken&quot;</code></td>
+  <td>too late; the reader already has the object</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>write <code>id = 1</code></td>
+  <td>too late</td>
+</tr>
+</tbody>
+</table></div>
+<p>Between steps 2 and 3 the reader holds a fully-typed, non-null <code>Service</code> whose
+<code>name</code> is <code>null</code> and whose <code>id</code> is <code>0</code>. It never took the lock, so it
+synchronised with nothing, so there is no rule saying it must wait for steps 3
+and 4.</p>
+<p>The reader does not crash. It gets a valid object with default field values and
+carries on. That is why this bug reaches production as a <code>NullPointerException</code>
+somewhere else entirely, hours later.</p>
+<p><strong>5.4</strong> Side by side, the worker's first three passes:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Pass</th>
+  <th>With the JIT</th>
+  <th>With <code>-Xint</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>—</td>
+  <td>one load of the flag into a register, before the loop</td>
+  <td>no such load</td>
+</tr>
+<tr>
+  <td>1</td>
+  <td>test the register</td>
+  <td>load the flag from memory, then test it</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>test the register</td>
+  <td>load the flag from memory, then test it</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>test the register</td>
+  <td>load the flag from memory, then test it</td>
+</tr>
+</tbody>
+</table></div>
+<p>They diverge before pass 1 and never converge. The instruction present in one and
+absent in the other is <strong>the load inside the loop body</strong>. That is the whole
+difference between a program that exits after 147,698,840 passes and one that
+spins for ever.</p>
+<hr />
+<h2 id="solutions-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p><strong>6.1</strong> What is safe: seeing the reference, and seeing the object's state as it
+was when it was published. The volatile write publishes everything the builder
+did before it (section 11, rule four).</p>
+<p>What is not safe: the counter. Once the object is shared, a plain field inside it
+that several threads increment is section 7's bug, and the volatile reference is
+in completely the wrong place to help. The reference orders <em>how you got to the
+object</em>. It says nothing about what happens to the object's insides afterwards.</p>
+<p>The sequence: two threads both read the counter as 41, both compute 42, both
+write 42. One increment is gone. The reference was volatile throughout.</p>
+<p><strong>6.2</strong> The reasoning is wrong in one specific way: it treats absence of evidence
+as evidence of absence, on a machine that is structurally incapable of producing
+the evidence.</p>
+<p>A reader can legally observe a non-null <code>instance</code> whose <code>name</code> is <code>null</code> and
+whose <code>id</code> is <code>0</code>. On x86 it will essentially never happen, because the hardware
+does not reorder one store past another and the JIT chose not to either.</p>
+<p>The test evidence is worth nothing because CI runs on x86. Ten million passes on
+a machine that cannot produce the failure is ten million passes of a test that
+was never able to fail.</p>
+<p>README <strong>section 15</strong> produced exactly that evidence on purpose: all four
+versions, including the broken one, reported <strong>0</strong> half-built objects across 16
+threads and 200,000 calls each.</p>
+<p><strong>6.3</strong> The four steps are: allocate, write <code>name</code>, write <code>id</code>, publish the
+reference. Doing all four while holding a lock genuinely orders them <em>with
+respect to other threads that take the same lock</em>.</p>
+<p>The reader on the fast path does not take the lock. That is the entire purpose of
+the fast path. So the writer's diligence buys an edge to a thread that never
+turns up to collect it.</p>
+<p>Put the two facts next to each other and the flaw is obvious: a lock creates an
+edge between two threads that <strong>both</strong> acquire it, and the design is built around
+one of them not acquiring it.</p>
+<p><strong>6.4</strong> The rule broken is <strong><code>this</code> escaping during construction</strong> (section 14).</p>
+<p>The case: the constructor registers the object somewhere — a listener list, a
+static registry, a thread it starts — <em>before</em> it reaches the final line. Another
+thread pulls it out of that registry, and now it is holding a reference that never
+passed through the <code>ready</code> flag at all. The <code>volatile</code> write at the end of the
+constructor is a fine edge for anybody who reads <code>ready</code>. It is no edge at all for
+somebody who got the reference by another route.</p>
+<p>The general shape: a safe-publication scheme protects the <em>route</em>, and it protects
+only the route it was built for. Any second route around it is unprotected.</p>
+<p><strong>6.5</strong> Three wrong assumptions:</p>
+<ul>
+<li><strong>About ordering:</strong> <code>sleep</code> creates no happens-before edge. Nothing about
+sleeping makes a write visible.</li>
+<li><strong>About timing:</strong> &quot;definitely up&quot; is not something 50 milliseconds buys. Under
+load, thread start can take longer than that.</li>
+<li><strong>The edge used backwards:</strong> <code>Thread.start()</code> <em>is</em> a real edge, and it is the
+one they should have used — but it orders writes made <strong>before</strong> <code>start()</code>, not
+after. Writing the config after starting the worker points the guarantee the
+wrong way round.</li>
+</ul>
+<p>The fix is one line: write the config <em>before</em> <code>worker.start()</code>. Then the edge
+they already had does the job, and the sleep can go.</p>
+<p><strong>6.6</strong> The data shows the opposite of progress. Section 7's run:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Mode</th>
+  <th style="text-align:right">Lost</th>
+  <th style="text-align:right">Elapsed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>plain</td>
+  <td style="text-align:right">6,045,113</td>
+  <td style="text-align:right">69 ms</td>
+</tr>
+<tr>
+  <td><code>volatile</code></td>
+  <td style="text-align:right">5,762,264</td>
+  <td style="text-align:right">328 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>The drop from 6.05 million to 5.76 million is noise on a non-deterministic race,
+not a trend. The elapsed time nearly five-doubled. They bought a fence and got
+nothing for it, and a tighter loop would make it worse rather than better, because
+a tighter loop means more contention per second.</p>
+<p>The next step was to stop tuning and change the operation: <code>AtomicLong</code> gave
+8,000,000 exact in 302 ms on the same run. The bug is atomicity, and no amount of
+visibility fixes it.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> First look: which thread, and is it making progress. A thread dump taken
+twice, thirty seconds apart, is the whole diagnosis. A hoisted-flag spin shows the
+thread <code>RUNNABLE</code>, in the same tiny frame, both times.</p>
+<p>Telling it apart from an infinite retry loop: a retry loop moves. It allocates, it
+logs, it makes syscalls, and successive dumps show different frames. A spin on a
+stale register does none of that — no allocation, no I/O, no GC pressure, one
+frame, for ever.</p>
+<p>The fix is to make the flag <code>volatile</code>. If the flag is also being tested and set,
+it needs an atomic instead.</p>
+<p>For the postmortem: the tests could not have caught it. The bug requires the JIT
+to have compiled the loop, which needs the loop to have run hot for seconds, and
+it needs no synchronization to have crept in anywhere in the loop body. A unit
+test satisfies none of those. Say that plainly rather than adding a test that
+would not have caught it either.</p>
+<p><strong>7.2</strong> The review pass, mapped to the experiments:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What you do</th>
+  <th>Which experiment it corresponds to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>grep for <code>while (!</code> and <code>while (</code> on plain boolean fields</td>
+  <td>Experiment 1 — hoisted flags</td>
+</tr>
+<tr>
+  <td>grep for <code>++</code> and <code>+=</code> on shared non-atomic fields</td>
+  <td>Experiment 3 — lost updates</td>
+</tr>
+<tr>
+  <td>grep for <code>static</code> fields assigned outside a static initialiser</td>
+  <td>Experiment 4 — unsafe publication</td>
+</tr>
+<tr>
+  <td>grep for <code>synchronized</code> blocks containing a null check on a static</td>
+  <td>Experiment 5 — double-checked locking</td>
+</tr>
+<tr>
+  <td>read by hand every field shared between threads and name its edge</td>
+  <td>the whole of section 10</td>
+</tr>
+</tbody>
+</table></div>
+<p>What you ask the authors: for each shared field, which of section 10's six
+handshakes orders it. If they cannot name one, it is unsafe, regardless of what
+the tests say.</p>
+<p>Third-party libraries: you cannot review them, so you check versions and release
+notes for known ARM issues and you rely on the fact that widely-used concurrency
+libraries have been run on ARM by other people for years. This is the weakest item
+on the list and you should label it as such.</p>
+<p>Before migrating, run the full test suite on an ARM box. That is the highest-value
+single action, and it is also the one most likely to give you a false green.</p>
+<p><strong>7.3</strong> The three candidates and the observation that kills each:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Candidate</th>
+  <th>Eliminate it by observing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>lost updates</td>
+  <td>the drift scales with <strong>concurrency</strong> and not with elapsed time; hold load flat and double the thread count, and the drift should roughly track it</td>
+</tr>
+<tr>
+  <td>visibility failure</td>
+  <td>the count would be wrong in a <em>sticky</em> way — a reader stuck on a stale value stops moving entirely rather than drifting by a fraction</td>
+</tr>
+<tr>
+  <td>logic bug in the business rule</td>
+  <td>the drift appears at low load too, once you look at enough volume; it does not care about concurrency at all</td>
+</tr>
+</tbody>
+</table></div>
+<p>The discriminator that does the most work is <strong>low load</strong>. A concurrency bug that
+is exact at low load and 0.3% off at peak is a concurrency bug. A logic bug is
+0.3% off at every load, and you only noticed it at peak because that is where the
+volume is.</p>
+<p><strong>7.4</strong> What it does to the rest of the suite: the stuck daemon thread spins at
+full speed on one core for every check that follows. On a 16-core box that is one
+core gone, plus cache and scheduler pressure. Every subsequent timing is affected,
+and the contended increment tests are affected most because they are exactly the
+ones sensitive to how often a thread is descheduled.</p>
+<p>Which figures not to quote: the elapsed times of anything after the plain-flag
+observation, and — more carefully — the <em>rates</em> in the later observations. The
+counts of lost updates are still valid as demonstrations that updates are lost.
+They are not valid as measurements of how many.</p>
+<p>A harness change that keeps the observation: give the flag a second, <code>volatile</code>
+kill switch that the spinning loop also tests. Set it after the observation is
+recorded. The loop then exits on the volatile flag whether or not it ever saw the
+plain one, the observation is unchanged, and no thread is left running. This costs
+you nothing, because the thing under observation is the <em>plain</em> flag, and adding a
+separate volatile exit does not give the plain one any new visibility.</p>
+<p><strong>7.5</strong> The reply, in three parts.</p>
+<p><em>What it would tell you:</em> if the hang disappears under <code>-Xint</code>, you have confirmed
+that the optimiser is exploiting a right the language gave it. That is real
+information. But it is not a JIT bug; it is your code being incorrect in a way the
+JIT is entitled to exploit.</p>
+<p><em>What it would cost:</em> interpreting every bytecode costs roughly two orders of
+magnitude in throughput. You would need a hundred times the fleet, and the
+experiment would be running in front of customers.</p>
+<p><em>What to do instead, in an hour:</em> take a thread dump twice, thirty seconds apart.
+If the thread is <code>RUNNABLE</code> in the same frame both times, with no allocation and
+no I/O, you have your answer without touching production. Then read the loop and
+find the plain field. The whole diagnosis is in the code, and it is faster to read
+it than to run the experiment.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — The ARM migration checklist.</strong></p>
+<p>The search phase, and what each item is for:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Search</th>
+  <th>What you are looking for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>plain <code>boolean</code> / <code>volatile</code>-less fields tested in a loop</td>
+  <td>a hoisted flag that will spin for ever</td>
+</tr>
+<tr>
+  <td><code>++</code>, <code>+=</code>, <code>--</code> on shared fields</td>
+  <td>lost updates</td>
+</tr>
+<tr>
+  <td>assignment of a shared reference outside a constructor or static block</td>
+  <td>unsafe publication</td>
+</tr>
+<tr>
+  <td><code>synchronized</code> around a null check on a static field</td>
+  <td>double-checked locking</td>
+</tr>
+<tr>
+  <td>any <code>Thread.sleep</code> used as coordination</td>
+  <td>a race being hidden by timing</td>
+</tr>
+</tbody>
+</table></div>
+<p>The read-by-hand phase: for every shared field, name the happens-before edge that
+orders it. Section 10 has six. If a field cannot be assigned to one of them, it is
+unsafe. This is the only item on the list that is a proof rather than a heuristic.</p>
+<p>The question you ask authors: &quot;which edge orders this field?&quot; not &quot;is this
+thread-safe?&quot;. The second question invites reassurance; the first has a checkable
+answer.</p>
+<p>Third-party code you cannot review: check versions, check release notes for ARM
+issues, and rely on the fact that the widely-used libraries have run on ARM in
+other people's production for years. Label this as the weakest item and do not
+count it as coverage.</p>
+<p>Before the migration: run the full suite on an ARM box, and run any concurrency
+stress you have for far longer than usual.</p>
+<p>The item that would have caught section 15's bug: <strong>the double-checked-locking
+grep</strong>, followed by reading it. Not the ARM test run — a broken singleton can
+easily pass on ARM too, because the reorder has to actually happen at the moment
+a second thread is on the fast path.</p>
+<p>Evidence versus reassurance, honestly: the by-hand edge review is evidence. The
+greps are triage that tells you where to look. Everything else — the ARM test run,
+the library versions, the stress duration — is reassurance. The ratio is roughly
+one item of evidence to five of reassurance, and pretending otherwise is how teams
+migrate confidently into an outage.</p>
+<p><strong>8.2 — Hot-reloadable configuration.</strong></p>
+<p>Build it as a fully immutable object: every field <code>final</code>, every collection copied
+and wrapped, nothing mutable reachable from it, and <code>this</code> never escaping the
+constructor. That is section 14's freeze, and it means the object needs no
+synchronization of any kind once it exists.</p>
+<p>Publish it through a single <code>volatile</code> reference, or an <code>AtomicReference</code> if you
+ever need compare-and-set on a swap. That is route two of section 13's four.</p>
+<p>Readers do one thing: read the reference into a local variable, once, at the top
+of the request, and use that local for the whole request.</p>
+<p>That local is the answer to &quot;what happens to a request halfway through&quot;. It keeps
+the old object. The old object is immutable, so it stays internally consistent for
+as long as anyone holds it, and it becomes garbage when the last request holding it
+finishes. There is no tearing, no lock, and no window.</p>
+<p>Why this route and not the others: a static initialiser cannot be reloaded; final
+fields alone give you no way to swap the object; a lock would serialise every
+request against a change that happens twice a day. The volatile reference is the
+only one of the four that supports replacement.</p>
+<p>If a <em>single field</em> inside it needed independent update, the design breaks, and it
+is worth being clear about why. You would lose immutability, so every reader would
+need an edge to that field specifically, and you would immediately have a
+consistency question the current design does not have: can a request see the new
+value of field A and the old value of field B? With whole-object replacement the
+answer is structurally no. With per-field updates you have to define an answer and
+enforce it, which usually means a lock or a version number, and you are back to
+paying on every request.</p>
+<p><strong>8.3 — The same idea at three scales.</strong></p>
+<p>What is identical: all three are answers to &quot;which writes must a reader see?&quot;, and
+all three answer it by naming an ordering relation rather than by appealing to
+time. In the JVM it is <em>happens-before</em> between two cores. In
+<code>causal-consistency</code> it is <em>happens-before</em> between two machines, carried by
+version vectors. In <code>redis</code> and <code>acid</code>, &quot;atomic&quot; is the related question of what a
+reader may observe half-done. In every case the naive model — one global order,
+wall-clock time — is the thing that fails.</p>
+<p>What is genuinely different: the JVM knows when a thread has died and can enforce
+an edge with a single instruction, because everything is inside one failure
+domain. Across machines there is no shared clock, no reliable failure detection,
+and no instruction that reaches both ends. So the distributed version has to carry
+its ordering <strong>in the data</strong>: version vectors, dependency metadata, causal
+delivery buffers. What costs one fence inside a JVM costs a metadata field on
+every write and a delivery check on every read.</p>
+<p>Why a single instruction is enough here: the fence is executed by hardware that
+both parties are physically part of, and cache coherence guarantees the result
+propagates. There is no equivalent across a network, which is why
+<code>causal-consistency</code> spends its whole length on machinery this lab gets for one
+keyword.</p>
+<p><strong>8.4 — The test you would actually write.</strong></p>
+<p>What you deliver is two things, and the second is the important one.</p>
+<p><em>The test:</em> a stress loop that exercises the fixed path from many threads and
+asserts the invariant that was violated. Structure it like section 16's split.
+Anything the model <strong>forbids</strong> becomes an assertion — those are real tests, and a
+failure is a real bug. Anything the model merely <strong>permits</strong> becomes an
+observation that reports a count and never fails the build.</p>
+<p>What it can prove: that the invariant held under the schedules this machine
+happened to produce. If you also assert something the model forbids, it can prove
+a genuine violation the day one appears.</p>
+<p>What it cannot prove: that the race is gone. A race that does not appear has not
+been shown to be absent — README section 13's zero-anomaly run is exactly that
+result, obtained deliberately.</p>
+<p>What you name it: something that tells the truth to a future reader, such as
+<code>observes_no_torn_config_under_load</code>, not <code>configIsThreadSafe</code>. The name is the
+main defence against over-trust, because the name is what somebody reads at 3am
+when it goes green.</p>
+<p>What goes in the review checklist instead: the field-by-field edge review from
+8.1. &quot;Every shared field names its happens-before edge&quot; is a check that can
+actually fail for the right reason, and it is the only one on this page that
+scales to code nobody has run yet.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../16-java-multithreading/notes.html"><small>← Lab 16</small>java-multithreading</a><a href="../18-java-virtual-threads/notes.html" style="text-align:right"><small>Lab 18 →</small>java-virtual-threads</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-isnt-the-same-variable-in-the-same-program-enough">1. Why isn&#x27;t &quot;the same variable in the same program&quot; enough?</a><a href="#readme-2-what-did-ana-and-ben-leave-unfinished-in-the-last-lab">2. What did Ana and Ben leave unfinished in the last lab?</a><a href="#readme-3-can-ana-write-on-the-board-and-ben-never-see-it">3. Can Ana write on the board and Ben never see it?</a><a href="#readme-4-why-did-switching-the-optimiser-off-fix-the-program">4. Why did switching the optimiser off fix the program?</a><a href="#readme-5-can-both-of-them-read-the-old-number-when-both-wrote-first">5. Can both of them read the old number, when both wrote first?</a><a href="#readme-6-where-does-the-impossible-answer-actually-come-from">6. Where does the impossible answer actually come from?</a><a href="#readme-7-so-is-volatile-the-fix-for-everything">7. So is volatile the fix for everything?</a><a href="#readme-8-what-are-all-these-things-called">8. What are all these things called?</a><a href="#readme-9-what-promise-does-the-model-actually-make">9. What promise does the model actually make?</a><a href="#readme-10-which-handshakes-create-the-promise-and-which-only-look-like-they-do">10. Which handshakes create the promise, and which only look like they do?</a><a href="#readme-11-what-does-one-volatile-field-actually-buy">11. What does one volatile field actually buy?</a><a href="#readme-12-what-is-a-data-race-and-why-is-undefined-the-honest-word">12. What is a data race, and why is &quot;undefined&quot; the honest word?</a><a href="#readme-13-how-do-you-hand-a-finished-object-to-somebody-else">13. How do you hand a finished object to somebody else?</a><a href="#readme-14-why-do-final-fields-get-a-promise-of-their-own">14. Why do final fields get a promise of their own?</a><a href="#readme-15-why-did-double-checked-locking-ship-broken-for-a-decade">15. Why did double-checked locking ship broken for a decade?</a><a href="#readme-16-what-can-a-test-prove-here-and-what-can-it-never-prove">16. What can a test prove here, and what can it never prove?</a><a href="#readme-17-which-mental-models-should-you-carry-and-where-do-they-lie-to-you">17. Which mental models should you carry, and where do they lie to you?</a><a href="#readme-18-what-does-this-look-like-from-an-on-call-rotation">18. What does this look like from an on-call rotation?</a><a href="#readme-19-where-are-the-exercises">19. Where are the exercises?</a><a href="#readme-20-what-does-this-connect-to-and-what-should-you-learn-next">20. What does this connect to, and what should you learn next?</a><a href="#readme-21-glossary--what-does-each-word-mean-again">21. Glossary — what does each word mean again?</a><a href="#readme-22-about-this-lab--where-do-the-numbers-come-from">22. About this lab — where do the numbers come from?</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

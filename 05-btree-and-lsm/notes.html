@@ -1,0 +1,1481 @@
+<!doctype html>
+<html lang="en" data-hub-lab="05-btree-and-lsm">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>5. btree-and-lsm</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 5 of 71 · Stage 1</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 5 · The Ground Floor</p><article id="readme"><h1 id="readme-b-trees-and-lsm-trees--the-two-machines-under-every-database">B-trees and LSM-trees — the two machines under every database</h1>
+<blockquote>
+<p><strong>Lab type:</strong> full learning lab — the concept is an algorithm with state, so
+you get to run it, break it, and watch it move.</p>
+<p><strong>What's in this lab</strong> (plain language here; the vocabulary is earned in §7):</p>
+<ul>
+<li><code>README.md</code> — this document: one dilemma, two inventions, and everything
+that follows from each</li>
+<li><code>src/BTree.java</code> — the first engine, ~320 readable lines, with counters for
+every unit of disk work it does</li>
+<li><code>src/Lsm.java</code> — the second engine, ~520 lines, writing <strong>real files</strong> to a
+directory you can <code>ls</code> while it runs</li>
+<li><code>tests/</code> — scenario-named tests that double as documentation (12 pass as
+shipped; 8 more stay red until you do the exercises)</li>
+<li><code>experiments/</code> — measure both engines' costs yourself, on your machine</li>
+<li><code>src/Exercises.java</code> + <code>src/BrokenLsm.java</code> — the red-first stubs and the
+planted bug the exercises hunt</li>
+<li><code>visualization.html</code> — build both engines by hand and watch them work
+(artifact link in the lab notes)</li>
+<li><code>EXERCISES.md</code> / <code>SOLUTIONS.md</code></li>
+</ul>
+<p><strong>Builds on:</strong> <a href="../04-database-landscape/notes.html#readme">database-landscape</a> — you already
+know <em>that</em> B-trees are read-optimized and LSM write-optimized (tricks 2–3),
+what compaction, tombstones, and pages are at one-line depth, and you
+measured the consequences in that lab's Machine B and experiments. This lab
+answers the question that one deliberately left open: <strong>how do the two trees
+actually work, and where do their costs come from?</strong></p>
+</blockquote>
+<hr />
+<h2 id="readme-layer-map">Layer map</h2>
+<blockquote>
+<p><strong>BEGINNER MODEL</strong> (§1–§9) → <strong>INTERMEDIATE MODEL</strong> (§10) →
+<strong>ENGINEERING MODEL</strong> (§11–§14) → <strong>PRODUCTION MODEL</strong> (§15)</p>
+</blockquote>
+<hr />
+<h2 id="readme-1-why--one-level-down-is-where-the-answers-live">1. WHY — one level down is where the answers live</h2>
+<p>Every store you cataloged in the last lab keeps its data in one of two
+structures: PostgreSQL, MySQL, SQLite, Oracle, and nearly every secondary
+index anywhere sit on <strong>B-trees</strong>; Cassandra, RocksDB, LevelDB, HBase,
+ScyllaDB — and, as embedded engines, half the &quot;new&quot; databases of the last
+decade — sit on <strong>LSM-trees</strong>. That means the mysterious production symptoms
+of both worlds — &quot;why did our p99 spike after we switched to UUID keys?&quot;,
+&quot;what is this compaction backlog alert?&quot;, &quot;why do deletes make Cassandra
+<em>slower</em>?&quot;, &quot;why does Postgres need VACUUM?&quot; — are not database trivia. They
+are the mechanics of these two structures leaking upward. Understand the two
+machines and those symptoms become predictable; tune a database and you are,
+almost always, turning knobs on one of these two trees.</p>
+<hr />
+<h2 id="readme-2-problem--kabir-and-the-invoices">2. PROBLEM — Kabir and the invoices</h2>
+<p>Meera's bookshop (from the last lab) has grown enough to hire Kabir, who runs
+the back office. His job, reduced to its essence, is two operations on paper
+invoices, all day:</p>
+<ol>
+<li><strong>File</strong> each invoice as it arrives — dozens per hour, in <em>no particular
+order</em> (invoice #4831, then #212, then #9905...).</li>
+<li><strong>Find</strong> any invoice the moment someone asks — &quot;pull up #3117&quot; — and
+sometimes a <em>range</em>: &quot;all invoices from #3000 to #3200.&quot;</li>
+</ol>
+<p>Two innocent-looking requirements. Everything in this lab — both trees, every
+knob, every production incident — falls out of the tension between them.</p>
+<hr />
+<h2 id="readme-3-naive-solution--the-pile-then-the-sorted-notebook">3. NAIVE SOLUTION — the pile, then the sorted notebook</h2>
+<p><strong>Try 1: the pile.</strong> Kabir drops each invoice on top of a pile. Filing is
+instant — the fastest possible write. But &quot;find #3117&quot; means digging through
+the whole pile, every time. With 10,000 invoices, every question is a
+10,000-paper excavation. (You know this structure: it's the append-only log
+from the last lab — trick 7. Perfect for &quot;what happened, in order&quot;; hopeless
+for &quot;find one thing.&quot;)</p>
+<p><strong>Try 2: keep everything sorted.</strong> Kabir binds the invoices into one giant
+sorted binder. Now &quot;find #3117&quot; is delightful: open the middle, too high or
+too low, halve again — binary search, ~14 peeks for 10,000 invoices instead
+of 10,000. Ranges are even better: find #3000, then read forward until #3200.
+Sorted order is <em>the</em> superpower for finding things.</p>
+<hr />
+<h2 id="readme-4-failure--sorted-order-and-arriving-order-are-enemies">4. FAILURE — sorted order and arriving order are enemies</h2>
+<p>Now invoice <strong>#4832 arrives</strong>, and it belongs in the <em>middle</em> of the binder.
+To insert one page in its sorted place, Kabir must shift every page after it
+— thousands of pages moved to file one invoice. The binder made finds cheap
+by making files ruinous.</p>
+<p>Look at the shape of the dilemma, because it is the entire subject:</p>
+<ul>
+<li>Writes arrive in <strong>random order</strong> and want to be cheap.</li>
+<li>Reads want the data in <strong>sorted order</strong>.</li>
+<li>Keeping data sorted <em>at all times</em> means paying a re-sorting cost on
+<strong>every single write</strong>.</li>
+</ul>
+<p>And one more constraint, from the machine itself (you met it in the last
+lab): storage devices don't read and write single bytes — they move
+<strong>fixed-size chunks</strong> (pages, ~4–16 KB), and they are dramatically faster at
+<em>sequential</em> chunks than at scattered ones (your Machine B: seeks vs
+sequential blocks). Any real solution must respect chunk-sized, preferably
+sequential, I/O.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> you're Kabir. You refuse to shift thousands of pages per
+invoice, and you refuse to dig through an unsorted pile. What furniture do
+you buy? (There are two famous answers. Think of at least one before
+revealing.)</p>
+<details><summary>Reveal</summary>
+Answer one: <b>a filing cabinet</b> — chop the sorted sequence into many
+small folders, each with slack space, so an insert only ever rearranges ONE
+folder. Answer two: <b>an inbox tray</b> — let invoices pile up unsorted but
+SMALL, sort the small pile at day's end into a neat stack, and merge stacks
+occasionally. The first is the B-tree. The second is the LSM-tree. Both are
+ways to keep things "sorted enough" without re-sorting the world per write —
+and the entire rest of this document is just these two ideas growing up.
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-5-the-real-requirement">5. THE REAL REQUIREMENT</h2>
+<p>In plain words, a storage engine must give Kabir:</p>
+<blockquote>
+<p><strong>Reads that behave as if the data were fully sorted, writes that cost a
+small bounded amount of work each, and I/O that arrives in page-sized —
+ideally sequential — chunks.</strong> (Plus, after a crash, nothing acknowledged is
+lost.)</p>
+</blockquote>
+<p>No structure gets all of it for free. The B-tree and the LSM-tree are the two
+canonical ways to <em>distribute the cost of sortedness</em>: the B-tree pays a
+little on <strong>every write, at write time, in place</strong>; the LSM pays <strong>later, in
+bulk, in the background</strong>. Hold that sentence — it generates everything else.</p>
+<hr />
+<h2 id="readme-6-key-idea">6. KEY IDEA</h2>
+<p>Two inventions, one dilemma:</p>
+<blockquote>
+<p><strong>B-tree:</strong> cut the sorted data into thousands of small <strong>pages, each with
+slack space</strong>, and build a tree of signposts above them. An insert
+rearranges exactly one page — and when a page overflows, it <strong>splits in
+two</strong>, pushing one signpost up. Sortedness is repaired <em>locally, immediately</em>.</p>
+</blockquote>
+<blockquote>
+<p><strong>LSM-tree:</strong> stop repairing the sorted files altogether — they are
+<strong>immutable</strong>. Collect incoming writes in a small sorted buffer in memory;
+when it fills, write it out as a brand-new sorted file <em>sequentially</em>; and
+occasionally <strong>merge</strong> files in the background. Sortedness is repaired
+<em>globally, later, in bulk</em>.</p>
+</blockquote>
+<hr />
+<h2 id="readme-7-terminology--names-for-what-kabir-just-invented">7. TERMINOLOGY — names for what Kabir just invented</h2>
+<p>The load-bearing vocabulary. (From the last lab you already carry: <em>page</em>,
+<em>compaction</em>, <em>tombstone</em>, <em>write-ahead log</em>, <em>B-tree/LSM</em> as one-liners —
+those get upgraded here, not re-introduced.)</p>
+<p><strong>Node / page (upgraded).</strong>
+<em>Plain:</em> one folder in the cabinet. <em>Precise:</em> the fixed-size unit (say 8 KB)
+a B-tree reads or writes at once; holds sorted keys plus either pointers to
+child pages (an <strong>internal node</strong>) or the actual data (a <strong>leaf</strong>). <em>Why the
+term:</em> it aligns the tree's shape with the device's native chunk — one node =
+one disk fetch. <em>Example:</em> an 8 KB page holding ~200 keys of ~40 bytes each.</p>
+<p><strong>Fanout (a.k.a. branching factor / order).</strong>
+<em>Plain:</em> how many folders a signpost page can point at. <em>Precise:</em> children
+per internal node — hundreds in practice, because a node is a whole page full
+of routing values (each one a <strong>separator key</strong>: &quot;below this value, go left&quot;). <em>Why it exists:</em> fanout is what makes B-trees <strong>shallow</strong>:
+fanout 200 reaches 200³ = 8 million keys in 3 levels, ~1.6 billion in 4. A
+find costs one page read <em>per level</em> — so &quot;3–4 page reads for a billion keys&quot;
+is fanout doing its job. <em>Connects to:</em> exp1 of the last lab (the 5,344×
+lookup was a 3-level walk).</p>
+<p><strong>Split.</strong>
+<em>Plain:</em> a folder overflows, so you split its contents into two folders and
+add one line to the signpost above. <em>Precise:</em> when an insert lands in a full
+page, the page divides at its median; the median (or a separator) is
+<strong>promoted</strong> into the parent — which may itself overflow and split, possibly
+all the way up. When the <em>root</em> splits, the tree gains a level: <strong>B-trees grow
+from the top</strong>, which is why they stay balanced with no rebalancing pass.
+<em>Example:</em> in §10.</p>
+<p><strong>Memtable.</strong>
+<em>Plain:</em> the inbox tray — plus a clever detail: Kabir keeps the tray itself
+sorted as papers land (it's small; that's cheap). <em>Precise:</em> an in-memory
+sorted structure (skiplist/red-black tree) absorbing all writes; reads check
+it first; at a size threshold (say 64 MB) it becomes immutable and is written
+out. <em>Why:</em> it converts random-order writes into a batch that can be emitted
+<em>sequentially</em> — the whole LSM trick in one object.</p>
+<p><strong>SSTable (sorted string table) / sorted run.</strong>
+<em>Plain:</em> one day's sorted stack, stapled — never edited again. <em>Precise:</em> an
+immutable file of sorted key-value pairs, written once sequentially, read
+many times; a &quot;newer&quot; table's value for a key <strong>shadows</strong> any older table's.
+<em>Why immutability matters:</em> immutable files need no locks to read, can be
+scanned sequentially, and make crash recovery trivial (a half-written new
+file is just discarded).</p>
+<p><strong>Flush.</strong>
+<em>Plain:</em> day's end — sort the tray, staple it, shelve it. <em>Precise:</em> writing
+the frozen memtable to disk as a new SSTable, sequentially. This is the ONLY
+way user data reaches disk in an LSM (aside from the log below).</p>
+<p><strong>Compaction (upgraded).</strong>
+<em>Plain:</em> merging several stapled stacks into one, discarding superseded
+invoices. <em>Precise:</em> a background k-way merge of SSTables into fewer, larger
+ones, dropping shadowed values and (eventually) tombstones. It is <em>deferred
+sorting</em> — the work the B-tree does per-write, done here in bulk. The
+<strong>policy</strong> deciding what to merge when (size-tiered vs leveled, §10.6) is the
+LSM's most consequential knob.</p>
+<p><strong>Write-ahead log — WAL (upgraded).</strong>
+<em>Plain:</em> Kabir's carbon-copy book: scribble every invoice into it the moment
+it arrives, <em>before</em> filing — if fire takes the tray, the book replays it.
+<em>Precise:</em> an append-only file each write goes to (sequentially, cheaply)
+before the engine acknowledges; on restart, unflushed writes are replayed
+from it. Both engines carry one; the LSM's protects the memtable (RAM would
+otherwise lose acknowledged writes on crash), the B-tree's protects
+half-updated pages.</p>
+<p><strong>Amplification (read / write / space).</strong>
+<em>Plain:</em> how much <em>extra</em> work or room the engine spends per unit of useful
+work. <em>Precise:</em> <strong>write amp</strong> = bytes actually written to disk ÷ bytes of
+user data (a B-tree rewrites an 8 KB page for a 100-byte row: amp ≈ 80; an
+LSM rewrites data at every compaction: amp 5–30); <strong>read amp</strong> = places
+checked per lookup (B-tree: height, ~3–4; LSM: memtable + up to N tables);
+<strong>space amp</strong> = disk used ÷ live data (old versions not yet compacted; pages
+deliberately left with slack). <em>Why the triad exists:</em> it's the scorecard the
+two engines trade on — <strong>you never reduce all three; you choose which one
+bleeds.</strong> This lab's experiments measure all three on your machine.</p>
+<p>Minor terms, one line each: <strong>B+ tree</strong> — the ubiquitous B-tree variant where
+<em>all</em> data lives in leaves and leaves are chained left-to-right (what
+databases actually use; what we build); <strong>separator key</strong> — the signpost
+value an internal node uses to route (&quot;&lt; 40 go left, ≥ 40 go right&quot;);
+<strong>bloom filter</strong> and <strong>sparse index</strong> — two small LSM read accelerators,
+earned properly in §10.5; <strong>fill factor</strong> — how full pages are kept on
+purpose; <strong>write stall</strong> — an LSM refusing writes because compaction fell
+behind (§11).</p>
+<blockquote>
+<p><strong>Checkpoint — BEGINNER → INTERMEDIATE.</strong> You can explain the dilemma
+(sorted reads vs random writes vs chunked I/O) and both answers in
+furniture terms, and you know the cost scorecard's names. Next: the actual
+machinery, key by key — where splits cascade and why deletes are writes.</p>
+</blockquote>
+<hr />
+<h2 id="readme-8-mental-models">8. MENTAL MODELS</h2>
+<p><strong>Simple model — Kabir's two offices.</strong>
+<em>Office A (B-tree):</em> a filing cabinet of small folders, each deliberately
+left one-third empty; a signpost card on each drawer; a master signpost on
+the wall. Every invoice goes straight into its one true folder; a full folder
+is split into two and the drawer card gains a line. Everything is always in
+its place; nothing is ever done &quot;later.&quot;
+<em>Office B (LSM):</em> a sorted inbox tray on the desk, a carbon-copy book beside
+it, and shelves of stapled sorted stacks, newest on top. Nothing on the
+shelves is ever edited; finding means tray first, then stacks newest-first;
+night shifts merge stacks. Everything is done &quot;later,&quot; in bulk.</p>
+<p><strong>Engineering model — two ways to spend the sorting budget:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>B-tree</th>
+  <th>LSM-tree</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Disk layout</td>
+  <td>mutable pages, updated in place</td>
+  <td>immutable sorted files, append-only</td>
+</tr>
+<tr>
+  <td>Write path</td>
+  <td>walk to leaf, edit 1 page (maybe split)</td>
+  <td>append WAL + insert memtable; flush later</td>
+</tr>
+<tr>
+  <td>Read path</td>
+  <td>root → internal → leaf (height page reads)</td>
+  <td>memtable, then SSTables newest→oldest</td>
+</tr>
+<tr>
+  <td>Sortedness repaired</td>
+  <td>locally, at write time</td>
+  <td>globally, at compaction time</td>
+</tr>
+<tr>
+  <td>I/O personality</td>
+  <td>small random reads/writes</td>
+  <td>big sequential writes, scattered reads</td>
+</tr>
+<tr>
+  <td>Delete</td>
+  <td>remove from page (space reclaimed later)</td>
+  <td>write a tombstone (§10.4)</td>
+</tr>
+<tr>
+  <td>Crash safety</td>
+  <td>WAL for page updates</td>
+  <td>WAL for the memtable</td>
+</tr>
+<tr>
+  <td>Bleeds on the scorecard</td>
+  <td>write amp (page-per-row), space slack</td>
+  <td>read amp (many files), compaction I/O</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The mapping:</strong> folder = page · drawer/wall signposts = internal nodes/root ·
+folder split = page split · inbox tray = memtable · carbon-copy book = WAL ·
+stapled stack = SSTable · night merge = compaction · &quot;one-third empty
+folders&quot; = fill factor · &quot;invoice marked CANCELLED on a new sheet&quot; = tombstone.</p>
+<p><strong>Where the analogy breaks.</strong> (1) Kabir splits a folder in seconds; a
+database splits a page while <em>hundreds of threads</em> are reading it — real
+engines need latches/lock-free schemes we deliberately omit (§15). (2) The
+night-shift merge sounds free; on a machine, compaction competes with live
+traffic for the same disk — it is the LSM's defining operational burden, not
+a janitorial detail (§11). (3) Paper folders hold ~20 invoices; real pages
+hold hundreds of keys, which is why real trees are 3–4 levels, not 6–10 —
+intuition from small drawings <em>understates</em> fanout's power. (4) No filing
+cabinet grows a new <em>top</em>; B-trees do — the root split is where the analogy
+simply stops. Watch it happen in the visualization instead.</p>
+<hr />
+<h2 id="readme-9-visualization">9. VISUALIZATION</h2>
+<p>The lab's interactive page (<code>visualization.html</code>, artifact link in the lab
+notes) has two machines matching the two offices, plus the read-path race:</p>
+<ul>
+<li><strong>Machine 1 — the B-tree floor:</strong> insert keys (your choice: sequential,
+random, or type your own) and watch the descent, the leaf insert, and the
+split cascade — including the root split that grows the tree a level. The
+counters tally page reads, page writes, and splits: the write-amp story,
+live.</li>
+<li><strong>Machine 2 — the LSM floor:</strong> writes land in the memtable; flushes emit
+SSTables; deletes write tombstones; a &quot;read key&quot; control races the read
+path (memtable → bloom-filter skips → newest-first file checks); a
+compaction button merges the shelf, visibly dropping shadowed values and
+tombstones.</li>
+</ul>
+<p>Both machines are deterministic and support step-back; each scripted
+scenario asks for your prediction first. Use it after §10; the mermaid
+sketches below are enough to read on.</p>
+<p>The two shapes, side by side — the cabinet's tree of signposts vs the shelf
+of immutable stacks:</p>
+<pre class="mermaid">flowchart TD
+    subgraph BTREE [&quot;B-tree: mutable pages, tree of signposts&quot;]
+        R[&quot;root: ⟨40⟩&quot;] --&gt; I1[&quot;internal: ⟨15 · 28⟩&quot;]
+        R --&gt; I2[&quot;internal: ⟨61 · 80⟩&quot;]
+        I1 --&gt; L1[&quot;leaf: 3,9,12&quot;]
+        I1 --&gt; L2[&quot;leaf: 15,20,25&quot;]
+        I1 --&gt; L3[&quot;leaf: 28,31,37&quot;]
+        I2 --&gt; L4[&quot;leaf: 44,52&quot;]
+        I2 --&gt; L5[&quot;leaf: 61,70&quot;]
+        I2 --&gt; L6[&quot;leaf: 80,91,95&quot;]
+        L1 -.-&gt; L2 -.-&gt; L3 -.-&gt; L4 -.-&gt; L5 -.-&gt; L6
+    end
+</pre>
+<pre class="mermaid">flowchart TD
+    subgraph LSM [&quot;LSM: one mutable buffer, immutable sorted files&quot;]
+        W[&quot;writes&quot;] --&gt; WAL[&quot;WAL (append)&quot;]
+        W --&gt; MT[&quot;memtable (RAM, sorted)&lt;br/&gt;k=77→&#x27;v9&#x27;, k=12→⊗tombstone&quot;]
+        MT -- &quot;flush when full&quot; --&gt; S3[&quot;SSTable 3 (newest)&quot;]
+        S3 --&gt; S2[&quot;SSTable 2&quot;]
+        S2 --&gt; S1[&quot;SSTable 1 (oldest)&quot;]
+        S3 &amp; S2 &amp; S1 -- &quot;background merge&quot; --&gt; C[&quot;compacted SSTable&lt;br/&gt;(shadowed values &amp; old tombstones dropped)&quot;]
+    end
+</pre>
+<hr />
+<h2 id="readme-10-actual-mechanism">10. ACTUAL MECHANISM</h2>
+<p>We build each machine the way a smart engineer would: the obvious version
+first, then watch it break, then the refinement. Every &quot;weird&quot; detail of the
+finished engines is the scar of one of these breaks. Tiny pages (max 4 keys)
+throughout, so the examples fit on screen — real pages hold hundreds; the
+<em>logic</em> is identical (that, and everything else we simplify, is listed
+honestly in §15).</p>
+<h3 id="readme-101-b-tree-v1--sorted-pages-and-a-signpost-page">10.1 B-tree v1 — sorted pages and a signpost page</h3>
+<p>Chop Kabir's sorted binder into pages of ≤ 4 keys, and keep one <strong>signpost
+page</strong> listing each page's first key:</p>
+<div class="code"><pre><code class="language-text">signpost: [3→P1, 15→P2, 28→P3, 44→P4, 61→P5, 80→P6]
+P1:[3,9,12] P2:[15,20,25] P3:[28,31,37] P4:[44,52] P5:[61,70] P6:[80,91,95]
+</code></pre></div>
+<p><strong>Search 31:</strong> read the signpost (1 page read) — 31 ≥ 28 and &lt; 44, so P3;
+read P3 (1 page read); binary-search inside; found. Two page reads, any key.
+<strong>Insert 33:</strong> route to P3, slide it in: <code>[28,31,33,37]</code> — one page touched,
+because pages carry <em>slack space</em>. The binder's shift-everything disaster is
+gone.</p>
+<p>But two seeds of trouble: P3 is now <strong>full</strong>, and with a million pages the
+signpost page <em>itself</em> is a million entries — it no longer fits in one page.
+The second problem answers itself with a beautiful move: <strong>a signpost page is
+just a sorted page of keys — so give the signposts their own signposts.</strong>
+Pages of signposts, recursively, until one page rules them all: the <strong>root</strong>.
+Internal nodes and leaves, exactly the mermaid shape above. Search = one page
+read per level, and fanout keeps levels tiny (fanout 200 → 4 levels covers
+~1.6 B keys).</p>
+<h3 id="readme-102-the-split--how-a-b-tree-absorbs-overflow-and-stays-balanced">10.2 The split — how a B-tree absorbs overflow and stays balanced</h3>
+<p>Now the first seed. <strong>Insert 35</strong> into full <code>P3:[28,31,33,37]</code>:</p>
+<ol>
+<li>P3 splits at its median into <code>P3a:[28,31]</code> and <code>P3b:[33,35,37]</code>.</li>
+<li>The separator key <strong>33</strong> is <em>promoted</em> into the parent: it now routes
+&quot;&lt; 33 → P3a, ≥ 33 → P3b&quot;. One page became two; the parent grew by one key.</li>
+<li>If the parent was itself full, <em>it</em> splits the same way, promoting a
+separator further up — a <strong>split cascade</strong>.</li>
+<li>If the cascade reaches a full <strong>root</strong>, the root splits and a <em>new root</em>
+is created above it with a single separator. <strong>The tree grows from the
+top</strong> — this is why every leaf is always at exactly the same depth, i.e.
+why B-trees are perfectly balanced without any rebalancing procedure.
+(Watch this in Machine 1; it is genuinely satisfying.)</li>
+</ol>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Kabir inserts keys in strictly increasing order — 1, 2, 3,
+4, ... 1000 (an auto-increment primary key). Which page does every insert
+hit, and are splits more or less frequent than with random keys?</p>
+<details><summary>Reveal</summary>
+Every insert lands in the <b>rightmost leaf</b> — the only page that ever
+splits. Same number of splits overall (the data must still fit), but every
+touched page is the same hot page (cached, no random I/O), and real engines
+special-case rightmost splits to leave the left page ~100% full instead of
+half — so sequential inserts also pack pages tighter. Random keys (UUIDv4)
+hit a <em>different random leaf each time</em>: cold pages, scattered
+writes, half-full pages everywhere. You measured the seek half of this in
+the last lab's Machine B; <code>experiments/Exp2KeyOrder.java</code>
+measures the splits-and-fill half in this one.
+</details>
+
+</blockquote>
+<p>Two finishing touches turn this into the <strong>B+ tree</strong> every database actually
+ships: keep <em>all</em> values in the leaves (internal nodes hold only separator
+keys — so they pack enormous fanout), and <strong>chain the leaves left-to-right</strong>.
+The chain makes range scans trivial: walk down to the first leaf of the range
+(3–4 page reads), then follow sibling links sequentially — no tree
+re-walking. &quot;Orders #3000–#3200&quot; is one descent plus a linked-list stroll.</p>
+<p><strong>The B-tree's bill.</strong> Every write rewrites its whole page (a 100-byte row in
+an 8 KB page = write amp ~80). Every page keeps slack (engines aim for
+~70% full — that's <em>fill factor</em>; the slack <strong>is</strong> the product: it's what
+makes the next insert cheap) = space amp ~1.4. In exchange: reads are a fixed,
+tiny <code>height</code> page reads — the read-optimized half of the fork you already
+knew. Now the write-optimized half.</p>
+<h3 id="readme-103-lsm-v1--memtable--flush-and-the-read-bill-arrives">10.3 LSM v1 — memtable + flush... and the read bill arrives</h3>
+<p>Office B. Writes append one line to the <strong>WAL</strong> (sequential, cheap, crash
+insurance) and land in the <strong>memtable</strong>, kept sorted in RAM. At the threshold
+— ours flushes at 6 entries, RocksDB at ~64 MB — the memtable is written out,
+already sorted, as an immutable <strong>SSTable</strong>, in one sequential pass. Writes
+are gorgeous: append + RAM insert, deferred bulk flush. Machine B of the last
+lab, now with named parts.</p>
+<p><strong>Read <code>get(52)</code></strong> must respect one law — <strong>newest wins</strong>: check the memtable
+first, then SSTables <em>newest → oldest</em>, stop at the first hit. And here is
+v1's bill: after a week, 400 SSTables. A read checks the memtable, then
+potentially <em>all 400 files</em>. Read amplification isn't a footnote — untreated,
+it's fatal. Three refinements (10.4–10.6) are all treatments.</p>
+<h3 id="readme-104-deletes--why-removing-data-means-writing-data">10.4 Deletes — why removing data means writing data</h3>
+<p><strong>Delete invoice 20.</strong> In the B-tree: walk to the leaf, remove it (the page
+just gets emptier — real engines reclaim/merge underfull pages lazily; so
+does ours; §15). But in the LSM, key 20 might live in SSTable 3 — which is
+<strong>immutable</strong>. You cannot remove what you cannot touch. The only thing an LSM
+can ever do is <em>write something newer</em>: so it writes a <strong>tombstone</strong> — a
+special &quot;20 is deleted&quot; record — to the memtable. Newest-wins does the rest:
+any read finds the tombstone before the old value and reports &quot;not found.&quot;
+The old value physically dies later, when compaction merges the two files.
+This is the last lab's one-line &quot;deletes write tombstones&quot;, now with its why:
+<strong>tombstones are the price of immutability</strong> — and their production sting
+(§11) is that a delete-heavy workload makes files <em>bigger</em> and reads <em>slower</em>
+until compaction catches up.</p>
+<h3 id="readme-105-two-read-accelerators--paying-tiny-ram-for-huge-io">10.5 Two read accelerators — paying tiny RAM for huge I/O</h3>
+<p><em>Problem 1: absent keys.</em> <code>get(99999)</code> — never written. No file contains it,
+so no file check can stop early: the read probes <strong>every</strong> SSTable. Absent-key
+reads are the worst reads — and common (caches asking &quot;is X here?&quot;). Fix: a
+<strong>bloom filter</strong> — a small bitmap per SSTable, built at flush from the
+table's keys, answering &quot;possibly here&quot; or <strong>&quot;definitely not here&quot;</strong> with a
+tunable false-positive rate (~1% at ~10 bits/key). &quot;Definitely not&quot; skips the
+file without touching disk: absent-key reads collapse from N file probes to
+~zero (experiment 3 measures it). One-way certainty is the whole trick — it
+can never wrongly skip, only occasionally probe in vain.</p>
+<p><em>Problem 2: finding a key inside one big file.</em> A 2 GB SSTable is sorted, but
+binary-searching raw disk is many scattered reads. Fix: a <strong>sparse index</strong> —
+at flush, remember every ~64th key's file offset in RAM; a lookup finds the
+surrounding pair, seeks once, reads one block. Sorted files + tiny in-RAM
+maps = one seek per file probed.</p>
+<h3 id="readme-106-compaction-policy--the-lsms-steering-wheel">10.6 Compaction policy — the LSM's steering wheel</h3>
+<p>Refinement three attacks the file <em>count</em> itself. Merging is easy (all files
+are sorted: k-way merge, drop shadowed values and expired tombstones — our
+<code>src/Lsm.java</code> does exactly this). The consequential question is <strong>which files,
+when</strong> — the policy:</p>
+<ul>
+<li><strong>Size-tiered (STCS)</strong> — merge ~4 similar-sized tables into one bigger one,
+tier by tier (our toy; Cassandra's default). Write-cheap: each key is
+rewritten only ~log(N) times as it graduates through tiers. But reads may
+still probe a table per tier, and space spikes: shadowed copies survive
+across tiers, and a big merge needs room for input <em>and</em> output (the &quot;needs
+2× disk&quot; alert of §11).</li>
+<li><strong>Leveled (LCS)</strong> — organize tables into levels L1, L2, L3... where each
+level is ~10× bigger and holds <strong>non-overlapping key ranges</strong>; new data
+trickles down level by level, merging into the ranges it overlaps
+(RocksDB's default). Reads touch ≤ 1 table <em>per level</em> (~3–4 total, almost
+B-tree-like!) and space amp stays ~1.1 — but each key is rewritten at
+<em>every</em> level: write amp ~10× the tier policy.</li>
+</ul>
+<p>Read the pair against the scorecard: <strong>STCS bleeds reads and space; LCS
+bleeds writes. Choosing a compaction policy is choosing which amplification
+bleeds</strong> — the fork inside the fork. (Time-series stores add a third policy —
+time-windowed — merging only same-time-window files, because time-keyed data
+never shadows across windows; your last lab's ⑧ in new clothes.)</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> an LSM ingests at full speed all day. Compaction is
+throttled to be &quot;nice&quot; to foreground traffic and quietly falls behind —
+file count climbs. What breaks first: correctness, reads, or writes?</p>
+<details><summary>Reveal</summary>
+Reads first — every extra file is another probe on every get; p99 read
+latency climbs smoothly. Correctness never breaks (newest-wins holds
+regardless of file count). Writes break <em>last but hardest</em>: at a
+file-count threshold the engine <b>stalls writes on purpose</b> (RocksDB
+write stalls, Cassandra backpressure) because accepting more ingest would
+dig the hole deeper. "My writes suddenly hang" on an LSM almost always
+decodes to "compaction lost the race hours ago" — §11's F-L1.
+</details>
+
+</blockquote>
+<h3 id="readme-107-crash-safety--the-wal-closes-both-loops">10.7 Crash safety — the WAL closes both loops</h3>
+<p>The B-tree edits pages in place — a crash mid-split could leave the tree
+inconsistent; the WAL (plus recovery replay) makes page updates redoable.
+The LSM holds acknowledged writes in RAM — a crash would eat them; the WAL
+replays them into a fresh memtable at startup (our <code>crash_recovery_replays_wal</code>
+test does exactly this: build, &quot;crash&quot;, recover, verify). Once a memtable is
+safely flushed as an SSTable, its WAL segment is deleted — the log stays
+short. Immutable SSTables themselves need no recovery: a half-written one is
+simply discarded.</p>
+<blockquote>
+<p><strong>Checkpoint — INTERMEDIATE → ENGINEERING.</strong> You can walk both write paths
+and both read paths with real keys, explain splits, tombstones, bloom
+filters, sparse indexes, and the two compaction policies — each as the fix
+to a failure you watched. Next: how these mechanics fail in production, and
+what is actually guaranteed.</p>
+</blockquote>
+<hr />
+<h2 id="readme-11-failure-scenarios--the-mechanics-leaking-into-production">11. FAILURE SCENARIOS — the mechanics leaking into production</h2>
+<p>Four per engine. Each: how to create it → where to watch it → what happens
+and why → what production does about it. Every one is a §10 mechanism wearing
+a pager.</p>
+<p><strong>F-B1 — the random-key insert storm (the UUID incident).</strong>
+<em>Create:</em> switch a table's primary key from auto-increment to random UUIDv4
+under heavy insert load. <em>Watch:</em> <code>experiments/Exp2KeyOrder.java</code>, or Machine
+1 with &quot;random&quot; order. <em>What/why:</em> every insert now lands in a different leaf
+— cold pages dragged into cache, scattered page writes, splits sprayed across
+the whole tree leaving every page ~half-full (the tree is <em>bigger</em> and its
+cache hit rate worse for the same data). Sequential keys hit one hot
+rightmost leaf. <em>Production:</em> the classic &quot;we switched to UUIDs and p99
+doubled&quot;; fixes are time-ordered keys (UUIDv7/ULID) or accepting the bill.
+<em>Guarantee intact:</em> correctness, balance. <em>Lost:</em> the write-cost assumption
+your capacity plan was built on.</p>
+<p><strong>F-B2 — bloat: the tree that grows while the data doesn't.</strong>
+<em>Create:</em> heavy updates/deletes on a B-tree table for weeks (bonus in
+Postgres: MVCC keeps old row versions until VACUUM). <em>Watch:</em> run
+<code>Exp2KeyOrder.java</code> and compare live keys vs pages held. <em>What/why:</em> deletes
+empty pages but pages are rarely merged back; splits never un-split; slack
+plus dead entries accumulate — space amp climbs and scans read mostly air.
+<em>Production:</em> Postgres autovacuum (tuned, monitored — &quot;dead tuples&quot; and bloat
+queries), <code>REINDEX</code>/<code>pg_repack</code> as the deep clean; InnoDB purge threads.
+<em>The mirror image:</em> this is the B-tree's version of the LSM's shadowed data —
+both engines carry garbage; they differ in <em>who</em> collects it and <em>when</em>.</p>
+<p><strong>F-B3 — the crash mid-split (torn write).</strong>
+<em>Create:</em> kill the process between &quot;leaf split&quot; and &quot;parent updated.&quot;
+<em>Watch:</em> conceptually in Machine 1 (a split is visibly multi-page); in code,
+<code>crash_recovery_replays_wal</code> shows the WAL discipline. <em>What/why:</em> a
+multi-page change half-applied = a tree pointing at pages that aren't what
+the parent believes — without protection, corruption. <em>Production:</em> WAL +
+replay makes the split redoable; Postgres additionally writes full page
+images after each checkpoint (torn-page defense). The rule the WAL enforces
+everywhere: <strong>acknowledge nothing the log can't replay.</strong></p>
+<p><strong>F-L1 — compaction falls behind (the write stall).</strong>
+<em>Create:</em> sustained ingest above compaction throughput (throttle compaction,
+as §10.6's prediction did). <em>Watch:</em> <code>Exp1Amplification.java</code> prints the
+file count growing; Machine 2's shelf visibly deepens if you never compact.
+<em>What/why:</em> reads slow first (a probe per extra file), then the engine stalls
+writes at a threshold to protect itself. <em>Production:</em> RocksDB
+<code>pending_compaction_bytes</code> / stall counters, Cassandra <code>sstables per read</code>
+p99 — the on-call graphs for this failure; remedies are rate-limiting
+ingest, more compaction parallelism, or faster disks. The deep lesson: <strong>an
+LSM's write speed is a loan from the future; compaction is the repayment
+schedule.</strong></p>
+<p><strong>F-L2 — the tombstone storm (the queue anti-pattern, decoded).</strong>
+<em>Create:</em> use an LSM table as a queue — insert, read, delete, thousands/sec,
+then range-scan for the next work item. <em>Watch:</em> <code>tombstones_slow_range_reads</code>
+(tests double as this experiment). <em>What/why:</em> every consumed item leaves a
+tombstone; a range scan must read <em>through</em> the tombstones to find live
+entries — soon each poll wades through millions of dead records; and
+tombstones can't be dropped at the first compaction (an older copy of the key
+might still exist in a not-yet-merged file — drop the tombstone early and the
+old value <em>resurrects</em>; this is why Cassandra keeps them for <code>gc_grace_seconds</code>,
+default 10 days). <em>Production:</em> Cassandra logs tombstone warnings and aborts
+pathological reads; the real fix is the last lab's rule — queues are jobs,
+not facts; use a queue.</p>
+<p><strong>F-L3 — the 2 a.m. disk-full during compaction.</strong>
+<em>Create:</em> run size-tiered compaction with the disk at 60% full and a big tier
+merge due. <em>Watch:</em> <code>Exp1Amplification.java</code> prints space amp before/after
+compaction. <em>What/why:</em> a merge writes its output <em>before</em> deleting its
+inputs (crash safety demands it), so peak usage ≈ inputs + output — a large
+STCS merge can transiently need ~2× the data size. <em>Production:</em> capacity
+rule of thumb — keep STCS disks ≤ 50–60% full; or run leveled compaction and
+pay in write amp instead. The scorecard again: you chose where to bleed.</p>
+<p><strong>F-L4 — reads for keys that don't exist.</strong>
+<em>Create:</em> point a cache-miss-heavy workload (&quot;is X here?&quot; mostly answering
+no) at an LSM with bloom filters disabled or under-sized. <em>Watch:</em>
+<code>Exp3Bloom.java</code> — the same 2,000 absent-key reads with blooms on and off.
+<em>What/why:</em> absence can't stop early; without blooms every file is probed.
+<em>Production:</em> bloom bits-per-key is a first-class tuning knob (RocksDB ~10
+bits/key ≈ 1% false positives); monitoring watches &quot;bloom useful&quot; ratios.</p>
+<hr />
+<h2 id="readme-12-correctness--invariants-guarantees-and-the-bill">12. CORRECTNESS — invariants, guarantees, and the bill</h2>
+<p><strong>B-tree invariants</strong> (all enforced in <code>src/BTree.java</code>, named in comments):</p>
+<ol>
+<li><strong>Sortedness</strong> — keys sorted within every page; separators route
+correctly (everything in child <em>i</em> is &lt; separator <em>i</em>).</li>
+<li><strong>Uniform depth</strong> — every leaf at the same depth, forever, because the
+tree only grows by root split. Balance is not maintained; it is
+<em>structural</em>.</li>
+<li><strong>Bounded occupancy</strong> — pages hold ≤ max keys (and, in real engines,
+≥ ~half after merges); hence height ≤ log_fanout(N) and every operation
+is O(height) page I/Os.</li>
+</ol>
+<p><strong>LSM invariants</strong> (enforced in <code>src/Lsm.java</code>):</p>
+<ol>
+<li><strong>Newest wins</strong> — the read path's order (memtable, then tables
+newest→oldest, first hit wins) <em>defines</em> the current value; tombstones
+are just values that mean &quot;gone.&quot;</li>
+<li><strong>Immutability</strong> — flushed files never change; all mutation is new files.</li>
+<li><strong>WAL-before-ack</strong> — no write is acknowledged before it is in the log;
+recovery = replay.</li>
+<li><strong>Compaction is logically invisible</strong> — merging preserves exactly the
+newest-wins answer for every key (it only makes the physical set smaller).
+A compaction that changes any read's answer is a bug, full stop.</li>
+</ol>
+<p><strong>What is guaranteed, what is not, what it costs:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>Guarantees</th>
+  <th>Does NOT guarantee</th>
+  <th>The bill</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>B-tree</td>
+  <td>O(height) point &amp; range reads, always; predictable latency; data always in sorted place</td>
+  <td>cheap random-key writes; full pages</td>
+  <td>write amp (page per row), space slack, random write I/O</td>
+</tr>
+<tr>
+  <td>LSM</td>
+  <td>cheap durable writes at any rate (until the loan is called); sequential disk usage; immutable files</td>
+  <td>flat read cost (grows with file count); prompt space reclaim; cheap deletes</td>
+  <td>read amp, compaction I/O forever, tombstone debt, space spikes</td>
+</tr>
+</tbody>
+</table></div>
+<p>And the honest summary of the whole fork: <strong>neither tree is faster — they
+move the same sorting work to different moments.</strong> The B-tree sorts at write
+time so reads are flat; the LSM sorts at compaction time so writes are flat.
+Pick per workload — which you already knew from the landscape lab; now you
+know the machinery that makes it true.</p>
+<blockquote>
+<p><strong>Checkpoint — ENGINEERING model complete.</strong> Invariants, failure modes,
+and the cost model are yours. What remains: touch the machines (§13–14)
+and map the toys to InnoDB/RocksDB/Cassandra knobs (§15).</p>
+</blockquote>
+<hr />
+<h2 id="readme-13-code--two-engines-you-can-read-in-one-sitting">13. CODE — two engines you can read in one sitting</h2>
+<p>Both in <code>src/</code>, JDK only — no build tool, no test framework — written to be
+read top-to-bottom. The
+load-bearing lines carry comments naming their invariant.</p>
+<p><strong><code>src/BTree.java</code> (~320 lines)</strong> — a B+ tree with max 4 keys/page:
+<code>insert</code> descends to the leaf and inserts locally (§10.1's promise);
+<code>splitLeaf</code> is the heart — median promoted, two half-pages, and the root
+split growing the tree from the top (§10.2). <code>search</code> counts page reads so
+experiments can <em>measure</em> height. <code>rangeScan</code> walks down once, then follows
+<code>page.next</code> — the leaf chain, executable. Counters: <code>pageReads</code>,
+<code>pageWrites</code>, <code>splits</code>.</p>
+<p><strong><code>src/Lsm.java</code> (~520 lines)</strong> — an LSM engine using <strong>real files</strong> in a
+directory you can <code>ls</code>: <code>put</code> appends to <code>wal.log</code> then the memtable
+(WAL-before-ack, invariant 3); <code>flush</code> writes <code>sstable_N.txt</code> sorted, builds
+its bloom filter + sparse index, truncates the WAL; <code>get</code> walks
+memtable → tables newest-first with bloom skips (newest-wins, invariant 1);
+<code>delete</code> writes <code>TOMBSTONE</code> (§10.4); <code>compact</code> k-way-merges all tables,
+dropping shadowed values and tombstones (invariant 4); the constructor replays
+the WAL after a &quot;crash.&quot; Counters: <code>bytesWritten</code> (write amp),
+<code>fileProbes</code>/<code>bloomSkips</code> (read amp), <code>diskBytes()</code> vs live data (space
+amp).</p>
+<p><strong><code>tests/</code></strong> — scenario-named. Compile the whole lab once, then run each
+suite as a plain <code>main</code> (details in §14):
+splits growing the tree from the top, range scans following the chain,
+newest-wins after flush, deletes needing tombstones, tombstones slowing range
+reads, crash recovery via WAL replay, compaction reclaiming space <em>without
+changing any answer</em> (invariant 4, as a test). All 12 pass as shipped.</p>
+<p><strong><code>src/Exercises.java</code> and <code>src/BrokenLsm.java</code></strong> — the exercise scaffolding:
+two stubs whose 8 tests fail until you implement them (so rung 5 is
+red-first), and a copy of the engine with <strong>one expression changed</strong> in
+<code>compact()</code> for you to hunt (rung 6). Watch what that one expression does:
+<code>java -cp out ExpDebugBroken</code> shows deleted keys resurrecting and
+recent updates silently reverting — invariant 4, violated.</p>
+<hr />
+<h2 id="readme-14-experiments--measure-the-scorecard-yourself">14. EXPERIMENTS — measure the scorecard yourself</h2>
+<p>Run from the lab root; JDK only, no build tool, seconds each. Compile the
+whole lab once — engines, tests and experiments together — then run any class
+by name:</p>
+<div class="code"><pre><code>javac -d out src/*.java tests/*.java experiments/*.java
+java -cp out BTreeTest        # 6 passed, 0 failed
+java -cp out LsmTest          # 6 passed, 0 failed
+java -cp out ExercisesTest    # 0 passed, 8 failed  ← red until rung 5
+</code></pre></div>
+<p>(Re-run the <code>javac</code> line after any edit. <code>out/</code> is throwaway build output.)</p>
+<p><strong>Experiment 1 — the amplification scorecard.</strong>
+<em>Predict:</em> 3,000 random puts into both engines. Which has higher <strong>write</strong>
+amp? Higher <strong>read</strong> amp? What happens to LSM space amp when compaction runs?
+Run: <code>java -cp out Exp1Amplification</code>
+<em>Observe &amp; why:</em> B-tree write amp is brutal (whole page per row) but read amp
+is flat (= height). LSM write amp stays low-ish (WAL + flush + compaction
+rewrites) but read amp is a <em>distribution</em> — recent keys cheap, old keys
+probe several files — and compaction visibly collapses both file count and
+space amp. The §12 table, printed from your own machine.</p>
+<p><strong>Experiment 2 — key order: the UUID incident, measured.</strong>
+<em>Predict:</em> same 2,000 keys inserted sequentially vs shuffled into the B-tree.
+Same final tree? Same page writes? Same <em>distinct pages touched</em>?
+Run: <code>java -cp out Exp2KeyOrder</code>
+<em>Observe &amp; why:</em> same keys, same height — but random order touches nearly
+every page of the tree while sequential order hammers one hot edge (cheap,
+cacheable). F-B1 in numbers; the LSM columns show it genuinely doesn't care.</p>
+<p><strong>Experiment 3 — what bloom filters are worth.</strong>
+<em>Predict:</em> 2,000 gets for keys that were never written, across 8 SSTables.
+File probes with blooms off? With blooms on (~10 bits/key)?
+Run: <code>java -cp out Exp3Bloom</code>
+<em>Observe &amp; why:</em> off ≈ every-file-probed per read; on ≈ almost all probes
+skipped, at a few KB of RAM per table. The cheapest performance win in the
+whole storage world, and why every real LSM has them on by default.</p>
+<p><strong>Experiment 4 — the planted bug (rung 6 of the exercises).</strong>
+<em>Predict:</em> one expression in <code>src/BrokenLsm.java</code>'s <code>compact()</code> is wrong.
+Compaction still merges, files still shrink, no error is raised. What could a
+user possibly notice?
+Run: <code>java -cp out ExpDebugBroken</code>
+<em>Observe &amp; why:</em> every deleted key comes back and every overwritten key
+reverts to its <strong>original</strong> value — the merge picks the oldest version
+instead of the newest. Silent, retroactive data corruption from a single
+expression: the strongest argument in this lab for why invariant 4 is written
+down and tested.</p>
+<p><em>(Numbers from this machine are recorded in <code>experiments/RESULTS.md</code>.)</em></p>
+<hr />
+<h2 id="readme-15-production--from-these-toys-to-the-engines-you-run">15. PRODUCTION — from these toys to the engines you run</h2>
+<p><strong>Where you meet each machine:</strong>
+B-tree: PostgreSQL (heap tables + B-tree indexes — note the distinction:
+Postgres stores rows in a heap and indexes point into it; MySQL/InnoDB
+<em>clusters</em> rows inside the primary-key B-tree itself, which is why long
+random primary keys hurt InnoDB doubly), SQLite, SQL Server, Oracle, and
+almost every secondary index — including the ones inside document stores.
+LSM: RocksDB (the embedded engine inside CockroachDB, TiKV, Kafka Streams
+state stores, MyRocks...), LevelDB, Cassandra/ScyllaDB, HBase, InfluxDB —
+your landscape-lab categories ④⑧ largely stand on this machine.</p>
+<p><strong>The knobs, mapped to what you now know:</strong> page size &amp; fill factor
+(B-tree: slack vs density — §10.2); memtable size (LSM: flush frequency vs
+RAM and recovery time); compaction policy STCS/LCS/TWCS and its
+throughput/rate limits (§10.6 — <em>the</em> LSM decision); bloom bits per key
+(§10.5); WAL fsync policy (per-commit vs batched — durability vs latency,
+both engines).</p>
+<p><strong>What the on-call engineer watches:</strong> Postgres — cache hit ratio, dead
+tuples/bloat, autovacuum progress, checkpoint write bursts. RocksDB —
+<code>pending_compaction_bytes</code>, write-stall counters, sstables-per-read, bloom
+useful ratio. Cassandra — sstables-per-read p99, tombstones-scanned warnings,
+compaction backlog, disk headroom (F-L3's 50–60% rule). Every one of these
+graphs is a §11 failure with a dashboard.</p>
+<p><strong>What our toys deliberately omit</strong> (so the bridge is honest): concurrency —
+real engines let hundreds of threads read <em>during</em> splits and compactions
+(latch crabbing, lock-free skiplists, MVCC snapshots); block caches and
+prefix compression; checksums and torn-page defenses; group commit batching
+WAL fsyncs; underfull-page merging on the B-tree side; partitioned/parallel
+compaction, per-level rate limiting, and merge iterators streaming rather
+than materializing on the LSM side; and transactions entirely — those live a
+layer above, using these structures as their substrate.</p>
+<blockquote>
+<p><strong>Checkpoint — PRODUCTION model reached.</strong> You can read a RocksDB tuning
+guide or a Postgres bloat postmortem and recognize every noun, and you know
+which graph betrays which failing mechanism.</p>
+</blockquote>
+<hr />
+<h2 id="readme-16-exercises">16. EXERCISES</h2>
+<p>The eight-rung ladder is in <a href="notes.html#exercises"><code>EXERCISES.md</code></a> — explain,
+identify (in the visualization), predict (against the experiments), modify
+the engines, implement a missing piece against a failing test, find a planted
+bug, survive a crash, and two design prompts. Answers in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<hr />
+<h2 id="readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">flowchart TD
+    DL[&quot;database-landscape ✅&lt;br/&gt;(the fork, from above)&quot;] --&gt; THIS[&quot;THIS LAB:&lt;br/&gt;btree-and-lsm&quot;]
+    CAP[&quot;cap-theorem ✅&quot;] -.-&gt; DL
+    THIS --&gt; IDX[&quot;database-indexing?&lt;br/&gt;covering, composite, partial indexes&quot;]
+    THIS --&gt; MVCC[&quot;mvcc-and-vacuum?&lt;br/&gt;row versions above the tree&quot;]
+    THIS --&gt; KAFKA[&quot;kafka?&lt;br/&gt;the log grown into a system&quot;]
+    THIS --&gt; CH[&quot;consistent-hashing?&lt;br/&gt;placing keys across nodes&quot;]
+    ESRC[&quot;event-sourcing ✅&quot;] -.-&gt;|append-only kinship| KAFKA
+</pre>
+<p><strong>Commonly confused, one sentence each:</strong>
+<em>B-tree vs B+ tree</em> — in the B+ variant (what databases ship) internal nodes
+hold only separators and all data sits in chained leaves; &quot;B-tree&quot; in
+conversation almost always means B+ tree.
+<em>LSM vs append-only log</em> — the log stores <em>history in arrival order</em>; the LSM
+uses append-only <em>files</em> as a technique to store <em>current state</em> in sorted
+order.
+<em>Compaction vs VACUUM</em> — the same garbage-collection job on opposite trees:
+compaction merges immutable files dropping shadowed data; VACUUM reclaims
+dead row versions inside mutable pages.
+<em>Memtable flush vs checkpoint</em> — a flush writes new data to its permanent
+sorted home (LSM); a checkpoint writes already-applied dirty pages back so
+the WAL can be trimmed (B-tree world).
+<em>Bloom filter vs index</em> — an index says where a key IS; a bloom filter can
+only swear where it ISN'T.</p>
+<p><strong>Ready to type:</strong> <code>/learn database-indexing</code> (what you can build ON a
+B-tree — recommended next), <code>/learn mvcc-and-vacuum</code>, <code>/learn kafka</code>,
+<code>/learn consistent-hashing</code>.</p>
+<hr />
+<h2 id="readme-18-glossary-in-order-of-appearance">18. GLOSSARY (in order of appearance)</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>node / page (upgraded)</td>
+  <td>the fixed-size unit a B-tree reads/writes at once; internal = signposts, leaf = data</td>
+</tr>
+<tr>
+  <td>internal node / leaf</td>
+  <td>signpost page routing by key range / bottom page holding the actual values</td>
+</tr>
+<tr>
+  <td>root</td>
+  <td>the single top page every search starts from</td>
+</tr>
+<tr>
+  <td>fanout (order)</td>
+  <td>children per internal node — hundreds; why trees are 3–4 levels deep</td>
+</tr>
+<tr>
+  <td>split</td>
+  <td>a full page divides in two and promotes a separator to its parent</td>
+</tr>
+<tr>
+  <td>promote</td>
+  <td>move a separator key up into the parent during a split</td>
+</tr>
+<tr>
+  <td>split cascade</td>
+  <td>splits propagating upward when parents are also full</td>
+</tr>
+<tr>
+  <td>root split</td>
+  <td>the root itself splits and a new root appears — the only way the tree gets taller</td>
+</tr>
+<tr>
+  <td>memtable</td>
+  <td>the in-RAM sorted buffer absorbing all LSM writes</td>
+</tr>
+<tr>
+  <td>SSTable / sorted run</td>
+  <td>an immutable sorted file, written once sequentially</td>
+</tr>
+<tr>
+  <td>shadow</td>
+  <td>a newer file's value for a key hiding any older file's value</td>
+</tr>
+<tr>
+  <td>flush</td>
+  <td>writing the frozen memtable to disk as a new SSTable</td>
+</tr>
+<tr>
+  <td>compaction (upgraded)</td>
+  <td>background k-way merge of SSTables, dropping shadowed values and old tombstones</td>
+</tr>
+<tr>
+  <td>write-ahead log (upgraded)</td>
+  <td>append-only file capturing every write before acknowledgment; replayed on restart</td>
+</tr>
+<tr>
+  <td>write / read / space amplification</td>
+  <td>extra bytes written ÷ user bytes; places checked per lookup; disk used ÷ live data</td>
+</tr>
+<tr>
+  <td>B+ tree</td>
+  <td>the shipped variant: data only in leaves, leaves chained for range scans</td>
+</tr>
+<tr>
+  <td>separator key</td>
+  <td>the value an internal node routes by</td>
+</tr>
+<tr>
+  <td>fill factor</td>
+  <td>how full pages are kept on purpose — slack is what makes inserts cheap</td>
+</tr>
+<tr>
+  <td>tombstone (upgraded)</td>
+  <td>a &quot;deleted&quot; record written because immutable files can't be edited</td>
+</tr>
+<tr>
+  <td>newest wins</td>
+  <td>the LSM read order (memtable → newest → oldest) that defines the current value</td>
+</tr>
+<tr>
+  <td>bloom filter</td>
+  <td>tiny per-file bitmap answering &quot;definitely not here&quot; / &quot;maybe here&quot;</td>
+</tr>
+<tr>
+  <td>false-positive rate</td>
+  <td>how often a bloom filter says &quot;maybe&quot; for an absent key (~1% at 10 bits/key)</td>
+</tr>
+<tr>
+  <td>sparse index</td>
+  <td>every ~Nth key + file offset kept in RAM, giving one-seek lookups inside an SSTable</td>
+</tr>
+<tr>
+  <td>size-tiered / leveled compaction</td>
+  <td>merge similar-sized files (write-cheap) vs maintain 10×-growing non-overlapping levels (read-cheap)</td>
+</tr>
+<tr>
+  <td>write stall</td>
+  <td>an LSM deliberately pausing writes because compaction fell behind</td>
+</tr>
+<tr>
+  <td>bloat</td>
+  <td>B-tree dead space from deletes/updates that VACUUM/REINDEX reclaims</td>
+</tr>
+<tr>
+  <td>torn write</td>
+  <td>a crash landing mid-way through a multi-page change; defeated by WAL replay</td>
+</tr>
+<tr>
+  <td>gc_grace</td>
+  <td>how long tombstones must survive before compaction may drop them (resurrection defense)</td>
+</tr>
+<tr>
+  <td>clustered index</td>
+  <td>rows stored inside the primary-key B-tree itself (InnoDB), vs Postgres's heap + pointing index</td>
+</tr>
+<tr>
+  <td>checkpoint</td>
+  <td>writing applied dirty pages to disk so the WAL can be trimmed</td>
+</tr>
+</tbody>
+</table></div>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--the-eight-rung-ladder">Exercises — the eight-rung ladder</h1>
+<p>Work top to bottom. Attempt before opening <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.
+Rungs 3–7 are runnable: the machine, not the answer key, tells you if you're
+right.</p>
+<p>Run everything from the lab root (<code>~/Documents/Learning/05-btree-and-lsm</code>).
+Compile once, then run each suite by class name:</p>
+<div class="code"><pre><code>javac -d out src/*.java tests/*.java experiments/*.java
+java -cp out BTreeTest        # 6 passed, 0 failed
+java -cp out LsmTest          # 6 passed, 0 failed
+java -cp out ExercisesTest    # 0 passed, 8 failed
+</code></pre></div>
+<p>(12 engine tests pass today; 8 exercise tests are RED until rung 5.)</p>
+<hr />
+<h2 id="exercises-rung-1--explain-no-notation-no-diagrams">Rung 1 — Explain (no notation, no diagrams)</h2>
+<p><strong>1.1</strong> Explain to a teammate, in five sentences, why databases needed to
+invent <em>anything</em> here — what exactly goes wrong if you just keep your data
+in one big sorted file?</p>
+<p><strong>1.2</strong> Explain the B-tree and the LSM-tree as two answers to the <em>same</em>
+question. Your answer must contain the phrase &quot;at write time&quot; and the phrase
+&quot;later, in bulk.&quot;</p>
+<p><strong>1.3</strong> A colleague says &quot;LSM-trees are faster than B-trees, that's why all
+the modern databases use them.&quot; What's the honest correction? (Name the
+currency each engine pays in.)</p>
+<p><strong>1.4</strong> Why can't an LSM-tree delete a row? Explain without using the word
+&quot;tombstone&quot;, then say the word and define it.</p>
+<h2 id="exercises-rung-2--identify-in-the-visualization">Rung 2 — Identify (in the visualization)</h2>
+<p>Open <code>visualization.html</code> (or the published artifact).</p>
+<p><strong>2.1</strong> Machine 1: insert 12 sequential keys. Which box is the root, which
+are signposts, which hold the data? What do the numbers <em>inside</em> a signpost
+page mean — are they data or directions?</p>
+<p><strong>2.2</strong> Machine 1: press <strong>Find a key</strong> for a key that isn't there. How many
+pages does it read, and how does that compare to a key that <em>is</em> there? Why
+are they the same?</p>
+<p><strong>2.3</strong> Machine 2: write until the first flush. What is now in the memtable,
+what is in the WAL counter, and why did the WAL counter change the way it
+did?</p>
+<p><strong>2.4</strong> Machine 2: after &quot;Overwrite k07&quot; and one more flush, find both copies
+of <code>k07</code> on the shelf. Which one wins a read, and what tells you so from the
+screen alone?</p>
+<h2 id="exercises-rung-3--predict-commit-then-run">Rung 3 — Predict (commit, then run)</h2>
+<p><strong>3.1</strong> Machine 1, empty tree, 4-key pages. At which insert number does the
+tree first reach height 2? Height 3? Predict both, then insert and count.</p>
+<p><strong>3.2</strong> Before running: <code>java -cp out Exp1Amplification</code> — order
+these four numbers from smallest to largest without peeking: B-tree write
+amp, B-tree read amp, LSM write amp, LSM read amp. Then run it.</p>
+<p><strong>3.3</strong> Before running <code>java -cp out Exp2KeyOrder</code>: two trees get
+1,000 inserts each, one sequential and one scattered. Predict the ratio of
+<strong>cold pages</strong> between them (2×? 10×? 100×?). Then run it.</p>
+<p><strong>3.4</strong> Before running <code>java -cp out Exp3Bloom</code>: 8 SSTables, 2,000
+gets for keys that were never written. Predict disk probes per get with
+blooms off and with blooms on. Then run it.</p>
+<p><strong>3.5</strong> Machine 2: press <strong>Compact the shelf</strong> immediately after a delete of
+<code>k07</code> has flushed. Predict what happens to (a) the disk-bytes counter,
+(b) the number of files, (c) the answer to &quot;Read k07&quot;. Then do it.</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Change the B-tree's <code>maxKeys</code> from 4 to 32 in
+<code>experiments/Exp1Amplification.java</code> — the argument of <code>new BTree(4)</code>.
+Predict, then measure: what happens to height, page count, splits, and write
+amp? Which single real-world knob did you just turn?</p>
+<p><strong>4.2</strong> In <code>experiments/Exp1Amplification.java</code>, change the LSM's memtable
+limit from 200 to 20 — the first argument of <code>new Lsm(d, 200, 6)</code>. Predict,
+then measure: flushes, file count, read amp, write amp. Which production
+symptom (§11) did you just simulate?</p>
+<p><strong>4.3</strong> Set the compaction threshold to 999 (never compact) in exp1 — the
+second argument of <code>new Lsm(d, 200, 6)</code> — and re-run. Which amplification gets
+worse, and which stays flat? Then switch the engine to the five-argument
+constructor with <code>useBloom = false</code> as well. Which failure from §11 have you
+now built on purpose?</p>
+<p><strong>4.4</strong> Give the <em>reading</em> engines in <code>Exp3Bloom.java</code> 2 bits per key instead
+of 10: <code>new Lsm(d, useBloom)</code> → <code>new Lsm(d, 6, 4, useBloom, 2)</code>. (A bloom
+filter is rebuilt from the file whenever a table is loaded, so it is the
+reader's setting that decides — changing only the writer's measures nothing.)
+Predict the false-positive rate, then measure. What did you buy, and what did
+you pay?</p>
+<h2 id="exercises-rung-5--implement-red--green">Rung 5 — Implement (red → green)</h2>
+<p>Two stubs in <code>src/Exercises.java</code> throw <code>UnsupportedOperationException</code>; the
+8 tests in <code>tests/ExercisesTest.java</code> fail until you fill them in.</p>
+<p><strong>5.1</strong> <code>predictedHeight(nKeys, maxKeys)</code> — the smallest height a B+ tree
+of <code>nKeys</code> keys could have if every page were perfectly full. This is the
+floor on read cost; the test checks it against real trees.</p>
+<p><strong>5.2</strong> <code>newestWinsMerge(tables)</code> — the core of compaction: merge sorted
+tables, newest value per key wins, tombstoned keys vanish. Watch the trap:
+the tables arrive in arbitrary order, and <code>seq</code> (not list position) says
+which is newer.</p>
+<p>Green when <code>java -cp out ExercisesTest</code> reports 8 passed — 20 across all
+three suites.</p>
+<h2 id="exercises-rung-6--debug-a-planted-bug">Rung 6 — Debug (a planted bug)</h2>
+<p><code>src/BrokenLsm.java</code> is the real engine with <strong>one expression changed</strong> in
+<code>compact()</code>. Run:</p>
+<div class="code"><pre><code>java -cp out ExpDebugBroken
+</code></pre></div>
+<p><strong>6.1</strong> Which expression is wrong, and what is it doing instead of what it
+should?
+<strong>6.2</strong> Which test in <code>tests/LsmTest.java</code> catches it? (Predict first, then
+verify by pointing that test at <code>BrokenLsm</code> — one line in <code>fresh()</code>.)
+<strong>6.3</strong> Which README invariant does it violate?
+<strong>6.4</strong> A user of a real database running this code writes a row, deletes it,
+and compaction runs overnight. What do they see the next morning — and why is
+this class of bug considered among the worst a storage engine can have?</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1 (runnable)</strong> Our LSM truncates the WAL at flush. Suppose flushing the
+SSTable <em>succeeded</em> but the process died before the WAL was truncated. What
+happens on restart — data loss, duplication, or neither? Prove your answer:
+write a small Java program that builds an LSM, flushes, replays the old WAL
+by hand, and checks the resulting reads. What property of the replayed
+operations makes the outcome safe? (You have met this property in the
+<code>transactional-outbox</code> lab.)</p>
+<p><strong>7.2</strong> Our B-tree never merges underfull pages, so <code>Exp2KeyOrder</code> shows
+zero pages reclaimed after deleting half the keys. Design (in prose, or in
+code) the smallest correct fix: when should two sibling leaves merge, what
+must happen to the separator in the parent, and what new failure mode does
+merging introduce that splitting never had?</p>
+<p><strong>7.3</strong> Compaction is falling behind on a production LSM: file count is
+climbing, p99 reads are up 3×, disk is 71% full. You have three levers —
+throttle ingest, raise compaction concurrency, switch STCS → leveled. For
+each: what does it fix, what does it cost, and what could it break <em>tonight</em>?</p>
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1</strong> Design the storage engine for a <strong>message history</strong> service: 500k
+writes/sec of <code>(channel_id, timestamp) → message</code>, messages never updated,
+occasionally deleted for compliance, queried as &quot;last 50 messages in channel
+X&quot; and &quot;messages in channel X between two timestamps&quot;. Choose the tree, the
+key design, the compaction policy, the bloom configuration, and the retention
+strategy — and justify each against this lab's scorecard. Where does your
+design deliberately accept a bad number?</p>
+<p><strong>8.2</strong> You run a 4 TB PostgreSQL database whose primary keys are random
+UUIDv4. Write volume has tripled; p99 insert latency has quadrupled; the
+cache hit ratio has fallen. Write the incident analysis: the mechanism (in
+B-tree terms), the evidence you'd gather to confirm it, three candidate
+fixes with their migration costs, and what you'd measure to prove the fix
+worked. Would switching to an LSM engine (MyRocks) fix it — and what would
+that break?</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<p>Attempt first — rungs 3–7 are checkable by running something. Every number
+below was measured on this lab's machine (Apple Silicon, JDK 25); yours
+will differ in magnitude, not in shape.</p>
+<hr />
+<h2 id="solutions-rung-1">Rung 1</h2>
+<p><strong>1.1</strong> One big sorted file makes <em>finding</em> wonderful (binary search, and
+ranges are just &quot;read forward&quot;) but <em>inserting</em> ruinous: a new key belongs in
+the middle, so everything after it must shift — thousands of pages moved to
+file one invoice. Writes arrive in random order; reads want sorted order;
+keeping data sorted at all times means paying a re-sort on every write. And
+disks move fixed-size chunks, fastest when they're sequential, so the fix has
+to respect chunks too.</p>
+<p><strong>1.2</strong> Both answer &quot;how do we stay sorted enough without re-sorting the
+world on every write?&quot; The B-tree repairs sortedness <strong>at write time</strong>,
+locally: data lives in small pages with slack, so one insert rearranges one
+page, and a full page splits in two. The LSM refuses to repair anything at
+write time — it buffers writes in memory, dumps them as immutable sorted
+files, and merges those files <strong>later, in bulk</strong>, in the background.</p>
+<p><strong>1.3</strong> The correction: neither is faster; they <em>move the same sorting work
+to different moments</em>, and each pays in a different currency. The B-tree pays
+<strong>write amplification</strong> (a whole page rewritten per row — 119.2× in exp1) to
+buy flat, predictable reads (exactly <code>height</code> page reads, always). The LSM
+pays <strong>read amplification</strong> and perpetual background <strong>compaction I/O</strong> to
+buy cheap sequential writes. &quot;Modern databases use LSM&quot; is also just false:
+Postgres, MySQL, SQLite, Oracle and nearly every secondary index on earth are
+B-trees.</p>
+<p><strong>1.4</strong> Once a file has been written out, it is never changed again — so
+there is physically nothing to erase; the only move available is to <em>write
+something newer</em> that hides the old value, and reads honor &quot;newest first.&quot;
+That newer record is a <strong>tombstone</strong>: a marker meaning &quot;this key is deleted.&quot;
+The old value dies later, when a merge rewrites both records into one file.</p>
+<h2 id="solutions-rung-2">Rung 2</h2>
+<p><strong>2.1</strong> The single top box is the root; middle rows are signpost pages;
+the bottom row holds the data. Numbers inside a signpost are <strong>directions,
+not data</strong> — separator keys saying &quot;keys below this value go left.&quot; The same
+value may appear both as a separator above and as real data in a leaf.</p>
+<p><strong>2.2</strong> Identical cost: a miss walks the same root→leaf path and reads the
+same number of pages as a hit. The tree can only conclude &quot;absent&quot; by
+reaching the one leaf where the key <em>would</em> live. (Contrast the LSM, where
+absence is the <em>worst</em> case — nothing can stop early, which is why bloom
+filters exist.)</p>
+<p><strong>2.3</strong> The memtable is empty and the WAL counter is back to 0: the flush
+made that data durable in an immutable SSTable, so the log entries protecting
+it are no longer needed and were truncated. The WAL only ever holds writes
+that exist <em>nowhere but RAM</em>.</p>
+<p><strong>2.4</strong> Both copies are visible on the shelf — the newer one in the file
+nearer the top. The read wins for the topmost, because the shelf is ordered
+newest-first and the read stops at the <strong>first</strong> hit; the &quot;last read checked&quot;
+counter confirms how few places it needed.</p>
+<h2 id="solutions-rung-3">Rung 3</h2>
+<p><strong>3.1</strong> Measured: height 2 first at <strong>insert 5</strong> (the root leaf overflows and
+splits), height 3 at <strong>insert 13</strong>, height 4 at <strong>insert 37</strong>. Note the
+growth: each level takes ~3× more keys than the last — that's fanout, and
+it's why real trees with fanout ~200 are 3–4 levels for billions of rows.</p>
+<p><strong>3.2</strong> Measured order (smallest → largest): LSM read amp <strong>2.0</strong>, B-tree
+read amp <strong>6.0</strong>, LSM write amp <strong>2.5</strong>, B-tree write amp <strong>119.2</strong>. The
+headline: the two engines' <em>write</em> costs differ by ~48×, their <em>read</em> costs
+by ~3× — and the LSM's read number is only that good because bloom filters
+turn most &quot;places considered&quot; into zero-I/O skips (0.9 real probes/get).</p>
+<p><strong>3.3</strong> Measured: <strong>8 cold pages vs 914</strong> — roughly 100×. Sequential appends
+re-touch one hot right edge; scattered inserts drag a different cold page
+into cache almost every write. The LSM columns are ~equal (22,000 vs 24,000
+bytes): key order is a B-tree parameter and <em>no parameter at all</em> for an LSM.</p>
+<p><strong>3.4</strong> Measured: blooms off <strong>8.0 probes/get</strong> (every table, every time);
+blooms on <strong>0.14</strong> — 98.3% of the disk I/O eliminated by a few KB of RAM per
+table, at a 1.69% false-positive rate.</p>
+<p><strong>3.5</strong> (a) disk bytes <strong>drop</strong>, (b) files collapse to <strong>1</strong>, (c) &quot;Read k07&quot;
+still answers <strong>not found</strong> — identically to before. That last one is the
+whole point: compaction is <em>logically invisible</em>, changing only the physical
+representation. Both the old value and its tombstone died in the merge.</p>
+<h2 id="solutions-rung-4">Rung 4</h2>
+<p><strong>4.1</strong> Measured, 4 → 32 keys per page: height <strong>6 → 3</strong>, pages <strong>461 → 46</strong>,
+splits <strong>455 → 43</strong>, read amp <strong>6.0 → 3.0</strong>, write amp <strong>119.2 → 85.4</strong>, fill
+~unchanged (71% → 69%). You turned the <strong>page size</strong> knob. Note the real
+tradeoff the toy under-shows: bigger pages mean fewer, shallower reads but
+<em>more bytes rewritten per row change</em> — real engines settle at 8–16 KB
+because that's where the device's chunk size, cache efficiency, and rewrite
+cost balance.</p>
+<p><strong>4.2</strong> Measured, memtable 200 → 20: flushes <strong>13 → 148</strong>, compactions
+<strong>2 → 29</strong>, write amp <strong>2.5 → 8.9</strong>, places considered per get <strong>2.0 → 2.8</strong>.
+You simulated <strong>an undersized memtable</strong>: more small files, far more merging,
+write amp up 3.6× for the same user data. This is the mechanism behind
+&quot;compaction can't keep up&quot; (<strong>F-L1</strong>) — and why real engines use ~64 MB
+memtables, not 64 KB.</p>
+<p><strong>4.3</strong> Never compacting: files pile to <strong>13</strong>, places considered per get
+rises (2.0 → 3.2) while write amp <em>falls</em> (2.5 → <strong>1.9</strong>) — you stopped
+paying the rewrite cost and started paying it in reads and space instead;
+shadowed values and tombstones now live forever. Adding <code>useBloom = false</code>:
+real disk probes jump <strong>0.9 → 3.2 per get</strong> — every file probed on every
+miss. You have deliberately built <strong>F-L1 plus F-L4</strong>: the read-amplification
+disaster, which in production ends with the engine stalling writes to protect
+itself.</p>
+<p><strong>4.4</strong> Measured, 10 → 2 bits per key: false-positive rate <strong>1.69% → 47.1%</strong>,
+probes per get <strong>0.14 → 3.76</strong>. You bought ~80% less filter RAM and paid with
+~27× more disk reads — a bloom filter that says &quot;maybe&quot; half the time is
+barely a filter. This is exactly why ~10 bits/key is the near-universal
+default.</p>
+<h2 id="solutions-rung-5">Rung 5</h2>
+<p><strong>5.1</strong></p>
+<div class="code"><pre><code class="language-java">public static int predictedHeight(int nKeys, int maxKeys) {
+    int fanout = maxKeys + 1;       // a page holding maxKeys keys has maxKeys+1 children
+    int height = 1;                 // height 1 = a single leaf page
+    long capacity = maxKeys;
+    while (capacity &lt; nKeys) {
+        height++;
+        capacity *= fanout;         // each new level multiplies the leaf count
+    }
+    return height;
+}
+</code></pre></div>
+<p>The insight is the loop's <code>*=</code>: capacity grows <strong>multiplicatively</strong> per
+level, so height grows logarithmically — <code>predictedHeight(1_000_000, 100)</code>
+is 3. That is the entire reason a billion-row index is 4 page reads deep.</p>
+<p><strong>5.2</strong></p>
+<div class="code"><pre><code class="language-java">public static List&lt;Entry&gt; newestWinsMerge(List&lt;Table&gt; tables) {
+    // TreeMap keeps the output sorted by key for free
+    TreeMap&lt;String, Integer&gt; winningSeq = new TreeMap&lt;&gt;();
+    TreeMap&lt;String, String&gt; winningValue = new TreeMap&lt;&gt;();
+    for (Table table : tables) {
+        for (Entry e : table.entries()) {
+            // the SEQ decides which table is newer — never the list position
+            Integer best = winningSeq.get(e.key());
+            if (best == null || table.seq() &gt; best) {
+                winningSeq.put(e.key(), table.seq());
+                winningValue.put(e.key(), e.value());
+            }
+        }
+    }
+    List&lt;Entry&gt; out = new ArrayList&lt;&gt;();
+    for (var e : winningValue.entrySet()) {
+        if (!Lsm.TOMBSTONE.equals(e.getValue())) out.add(new Entry(e.getKey(), e.getValue()));
+    }
+    return out;
+}
+</code></pre></div>
+<p>The trap the tests set: an implementation that just iterates the list and
+lets later entries overwrite earlier ones passes four tests and fails
+<code>newest_table_wins_regardless_of_list_position</code>. (That trap is not
+hypothetical — it caught the first draft of this very solution.)</p>
+<h2 id="solutions-rung-6">Rung 6</h2>
+<p><strong>6.1</strong> The expression is the loop that keeps the entry with the <strong>largest
+<code>negPrio()</code></strong>:</p>
+<div class="code"><pre><code class="language-java">for (int x = i + 1; x &lt; j; x++) {
+    if (merged.get(x).negPrio() &gt; winner.negPrio()) winner = merged.get(x);
+}
+</code></pre></div>
+<p>Entries are tagged <code>Tagged(key, -seq, value)</code>, so <code>negPrio()</code> is the <em>negated</em>
+sequence number: taking the <strong>largest</strong> <code>-seq</code> selects the <strong>smallest</strong> seq —
+the <strong>oldest</strong> table. The correct code just takes the first element of the
+group (<code>merged.get(i)</code>), because the k-way merge already ordered same-key
+entries newest-first.</p>
+<p><strong>6.2</strong> <code>compaction_preserves_every_answer_and_reclaims_space</code> in
+<code>tests/LsmTest.java</code> — the test that asserts every <code>get()</code> answers identically
+before and after compaction. Point <code>fresh()</code> at <code>BrokenLsm</code> and the suite
+reports <strong>5 passed, 1 failed</strong>, that one. Nothing else notices: writes, reads, flushes, file counts, and
+disk shrinkage all look perfectly healthy.</p>
+<p><strong>6.3</strong> LSM invariant 4, <strong>compaction is logically invisible</strong> (§12) — and,
+through it, invariant 1 (newest wins), since the merge output no longer
+reflects the newest write.</p>
+<p><strong>6.4</strong> Measured output of <code>ExpDebugBroken</code>: every deleted key comes
+back (<code>k00: null -&gt; v0</code>) and every overwritten key reverts to its <em>original</em>
+value (<code>k01: v31 -&gt; v1</code>) — all 10 answers change. The user sees <strong>deleted data resurrect and
+recent updates silently roll back</strong> — overnight, with no error anywhere. It's
+among the worst possible bugs because (a) it's silent — no crash, no log
+line, no failing health check; (b) it destroys data that was correctly
+written and acknowledged; (c) it's <em>retroactive</em>, so backups taken after the
+compaction contain the corruption; and (d) for a deletion-for-compliance
+workflow, resurrecting the record is a legal problem, not just a technical
+one.</p>
+<h2 id="solutions-rung-7">Rung 7</h2>
+<p><strong>7.1</strong> <strong>Neither loss nor corruption.</strong> Verified by experiment: after
+flushing 4 keys and then replaying the stale WAL, all four keys read back
+correctly and the fifth (post-flush) write survives too. The replayed
+operations simply re-insert values that already exist in the SSTable; because
+the memtable is newer, its identical value wins, and the next flush writes a
+duplicate that compaction later collapses. The property that makes this safe
+is <strong>idempotence</strong>: <code>put(k, v)</code> applied twice equals <code>put(k, v)</code> applied
+once — the same property that makes at-least-once delivery survivable in the
+<code>transactional-outbox</code> lab. This is why WAL recovery is allowed to be sloppy
+about replaying too much, but never too little. (Deletes are idempotent for
+the same reason: a tombstone written twice is one tombstone.)</p>
+<p><strong>7.2</strong> Merge two sibling leaves when their combined key count fits in one
+page (real engines use a threshold like &quot;below half full&quot;) — but <em>only</em>
+siblings sharing a parent, since merging non-siblings would break the
+separator structure. The parent must then drop the separator that used to
+route between them, which can leave the parent underfull, cascading upward;
+if the root ends up with one child, the root is removed and the tree
+<em>shrinks</em> a level (the exact mirror of the root split). The new failure mode:
+splitting only ever <em>adds</em> structure, so a reader walking down always finds a
+valid page; merging <strong>deletes</strong> pages while readers may still be descending
+toward them, so merge requires coordination (latching, deferred freeing, or
+epoch-based reclamation) that splitting doesn't. That difficulty is precisely
+why real engines defer or skip merging and let VACUUM-style processes clean
+up instead — the bloat in <code>Exp2KeyOrder</code> is a <em>deliberate</em> tradeoff, not an
+oversight.</p>
+<p><strong>7.3</strong></p>
+<ul>
+<li><em>Throttle ingest</em> — fixes the root cause immediately (compaction wins the
+race), costs producer latency or backpressure upstream, and could break
+tonight by pushing the queue backup into an upstream system that has no
+backpressure handling (a Kafka consumer lag alert, a full outbox table).</li>
+<li><em>Raise compaction concurrency</em> — fixes the backlog fastest, costs disk
+bandwidth and CPU shared with foreground reads, and could break tonight by
+making p99 reads <em>worse</em> before better, or by exhausting the disk headroom
+you're already short of (71% full, and STCS merges need room for input +
+output — <strong>F-L3</strong>).</li>
+<li><em>Switch STCS → leveled</em> — fixes read amp and space amp durably, costs a
+large one-time rewrite of the entire dataset (the most dangerous option
+tonight: it multiplies write amp exactly when the system is already behind)
+and roughly 10× ongoing write amp.
+The order a careful on-call engineer picks: <strong>throttle first</strong> (stop digging),
+<strong>then concurrency</strong> (dig out), <strong>schedule the policy change</strong> for a calm
+window with disk headroom secured. Never the policy switch first.</li>
+</ul>
+<h2 id="solutions-rung-8">Rung 8</h2>
+<p><strong>8.1</strong> One strong answer (grade on reasoning, not agreement):</p>
+<ul>
+<li><strong>Engine: LSM.</strong> 500k writes/sec of never-updated data is the write-firehose
+workload; a B-tree's per-write page rewrite is exactly wrong here.</li>
+<li><strong>Key design:</strong> partition/primary key <code>(channel_id, timestamp)</code> — channel
+as the prefix so one channel's messages are contiguous, timestamp
+descending as the clustering order so &quot;last 50 in channel X&quot; is a single
+short sequential read from the start of the range, and the time range query
+is one contiguous scan. Time-bucket the key (<code>channel_id, day</code>) if channels
+can grow unbounded, or a hot channel becomes an unbounded partition.</li>
+<li><strong>Compaction: time-windowed (TWCS).</strong> Messages are immutable and time-keyed,
+so files from different windows never shadow each other — merging them
+would be pure wasted I/O. TWCS also makes retention nearly free: an expired
+window is a whole file to drop, not millions of tombstones.</li>
+<li><strong>Bloom filters:</strong> ~10 bits/key, but note they matter <em>less</em> here than
+usual — queries are ranges within a known channel, not point lookups of
+possibly-absent keys. Don't over-provision RAM for them.</li>
+<li><strong>Retention/deletes:</strong> compliance deletes are rare and individual — those
+get tombstones. Bulk expiry must NOT be done with deletes (that's the
+tombstone storm, F-L2); use TTL/window dropping.</li>
+<li><strong>Deliberately accepted bad number:</strong> space amplification (immutable files
+keep superseded data until a merge) and read amp for <em>old</em> messages, which
+may sit in several time windows. Both are cheap in exchange for the ingest
+rate, and neither hurts the dominant query, which reads the newest window.</li>
+</ul>
+<p><strong>8.2</strong> <strong>Mechanism:</strong> UUIDv4 primary keys are uniformly random, so every
+insert targets a random leaf. In InnoDB the primary key is a <strong>clustered
+index</strong> — the row itself lives inside that B-tree — so each insert dirties a
+random 16 KB page rather than appending to a hot right edge. The working set
+of recently-written pages explodes (exp2: 8 cold pages vs 914), so the buffer
+pool thrashes, page writes scatter, and splits leave pages ~half full,
+inflating the tree and worsening cache hit ratio further — a feedback loop
+that matches all three symptoms (write latency, cache hit ratio, and the fact
+that <em>tripling</em> volume quadrupled latency: superlinear).
+<strong>Evidence to gather:</strong> buffer pool hit ratio over time; pages dirtied per
+insert; index size vs data size (bloat); average leaf fill factor; whether
+p99 correlates with checkpoint flushes; and the decisive one — compare insert
+latency for a table with sequential keys under the same load.
+<strong>Three fixes:</strong> (1) <em>UUIDv7/ULID</em> (time-ordered) primary keys — restores the
+hot right edge, cheap for new tables, but requires a migration for the
+existing 4 TB and any external references to old ids; (2) <em>auto-increment PK
+with the UUID as a secondary unique index</em> — best write locality, but the
+secondary index still takes random inserts (smaller, so cheaper) and
+application lookups change; (3) <em>buy your way out</em> — more RAM so the working
+set fits — real, immediate, and merely postpones the problem as data grows.
+<strong>Proof the fix worked:</strong> p99 insert latency and pages-dirtied-per-insert at
+matched write volume, plus buffer pool hit ratio recovering.
+<strong>Would MyRocks (LSM) fix it?</strong> Yes for <em>this</em> symptom — an LSM is indifferent
+to key order (exp2's LSM columns), so random UUIDs stop hurting writes. But
+it would break other things: range scans and point reads get more expensive
+(read amp), you inherit compaction as a permanent operational burden (F-L1,
+F-L3) including the disk-headroom rule, secondary-index and transaction
+behavior differ, and you'd be migrating 4 TB onto a less familiar engine to
+solve a problem that a key-format change also solves. Correct answer: fix the
+keys; consider the engine only if the workload is <em>genuinely</em> write-dominated
+beyond what a B-tree can serve.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../04-database-landscape/notes.html"><small>← Lab 4</small>database-landscape</a><a href="../06-software-architecture-patterns/notes.html" style="text-align:right"><small>Lab 6 →</small>software-architecture-patterns</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-layer-map">Layer map</a><a href="#readme-1-why--one-level-down-is-where-the-answers-live">1. WHY — one level down is where the answers live</a><a href="#readme-2-problem--kabir-and-the-invoices">2. PROBLEM — Kabir and the invoices</a><a href="#readme-3-naive-solution--the-pile-then-the-sorted-notebook">3. NAIVE SOLUTION — the pile, then the sorted notebook</a><a href="#readme-4-failure--sorted-order-and-arriving-order-are-enemies">4. FAILURE — sorted order and arriving order are enemies</a><a href="#readme-5-the-real-requirement">5. THE REAL REQUIREMENT</a><a href="#readme-6-key-idea">6. KEY IDEA</a><a href="#readme-7-terminology--names-for-what-kabir-just-invented">7. TERMINOLOGY — names for what Kabir just invented</a><a href="#readme-8-mental-models">8. MENTAL MODELS</a><a href="#readme-9-visualization">9. VISUALIZATION</a><a href="#readme-10-actual-mechanism">10. ACTUAL MECHANISM</a><a href="#readme-11-failure-scenarios--the-mechanics-leaking-into-production">11. FAILURE SCENARIOS — the mechanics leaking into production</a><a href="#readme-12-correctness--invariants-guarantees-and-the-bill">12. CORRECTNESS — invariants, guarantees, and the bill</a><a href="#readme-13-code--two-engines-you-can-read-in-one-sitting">13. CODE — two engines you can read in one sitting</a><a href="#readme-14-experiments--measure-the-scorecard-yourself">14. EXPERIMENTS — measure the scorecard yourself</a><a href="#readme-15-production--from-these-toys-to-the-engines-you-run">15. PRODUCTION — from these toys to the engines you run</a><a href="#readme-16-exercises">16. EXERCISES</a><a href="#readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-18-glossary-in-order-of-appearance">18. GLOSSARY (in order of appearance)</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a><h2>More in this lab</h2><a href="experiments/RESULTS.html">experiments\RESULTS</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1232 @@
+<!doctype html>
+<html lang="en" data-hub-lab="43-distributed-locking">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>43. distributed-locking</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 43 of 71 · Stage 5</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 43 · Copies and Agreement</p><article id="readme"><h1 id="readme-distributed-locking">Distributed Locking</h1>
+<p><em>A learning lab. Every number in this document was produced by running the
+code in <code>src/</code> (plain Java, no dependencies, fully deterministic — same
+setup, same story, every run). Commands included.</em></p>
+<p><strong>You have met every ingredient of this lab before — but never the subject
+itself.</strong> The <a href="../13-redis/notes.html#readme">redis lab</a> <em>measured</em> the headline failure (a GC
+pause outliving <code>SET NX PX</code>'s TTL put two holders in the critical section)
+and named the fix &quot;a fencing token checked by the resource&quot; without opening
+it. The <a href="../70-uber-system-design/notes.html#readme">uber lab</a> gave you leases with deadlines.
+The <a href="../37-gossip-protocols/notes.html#readme">gossip lab</a> proved that judging aliveness from
+silence is fragile, and gave you incarnation numbers. The
+<a href="../10-optimistic-vs-pessimistic-locking/notes.html#readme">optimistic-vs-pessimistic-locking lab</a>
+— this morning — gave you the conditional write. This lab assembles those
+parts in the order reality forces them, and ends somewhere mildly scandalous:
+<strong>a correct &quot;distributed lock&quot; system turns out to be optimistic concurrency
+at the resource, wearing a lock as a performance optimization.</strong></p>
+<blockquote>
+<p>Layer map: <strong>BEGINNER</strong> (§1–9) → <strong>INTERMEDIATE</strong> (§10) →
+<strong>ENGINEERING</strong> (§11–14) → <strong>PRODUCTION</strong> (§15). Checkpoints at borders.</p>
+</blockquote>
+<hr />
+<h2 id="readme-1-why--one-job-two-machines-no-shared-anything">1. WHY — one job, two machines, no shared anything</h2>
+<p>Your Spring Boot app runs the invoice job every night at 02:00. Then the
+platform team scales the service to two instances. Both fire at 02:00. Every
+customer gets two invoices, and some get charged twice.</p>
+<p>Inside one JVM this is <code>synchronized</code>. Inside one database it is yesterday's
+<code>SELECT … FOR UPDATE</code>. But this critical section calls a payment API, writes
+files to S3, sends emails — it lives <em>outside</em> any database — and the two
+competitors are separate processes on separate machines with <strong>no shared
+memory, no shared kernel, and a network between them</strong>. Mutual exclusion has
+to be manufactured out of messages. Every mechanism in this lab exists
+because some part of that manufacturing failed in a way someone did not
+foresee — and the failures are not exotic: crashed holders, garbage-collection
+pauses, delayed packets, and clocks that jump.</p>
+<h2 id="readme-2-problem--the-darkroom-key">2. PROBLEM — the darkroom key</h2>
+<p>A photography club has one darkroom with one enlarger. Two members can ruin
+each other's prints by being inside at once, so the club has a rule: the
+darkroom <strong>key</strong> hangs on a hook at the front desk. Take the key, work,
+return the key. No key on the hook — you wait.</p>
+<p>Pia takes the key at 14:00. Quinn arrives at 14:05 and waits. The system
+works — <em>while everyone is healthy and honest about time</em>. This whole lab is
+the story of what the front desk must invent as members start crashing,
+napping, and mailing in their work.</p>
+<p>In code, the front desk is one small server and the key is one variable:</p>
+<div class="code"><pre><code>acquire(client) -&gt; yes (you hold it) | no (someone else does)
+release(client) -&gt; the key returns to the hook
+</code></pre></div>
+<h2 id="readme-3-naive-solution--the-lock-server">3. NAIVE SOLUTION — the lock server</h2>
+<p>That two-operation server is the naive solution, and it is genuinely good:
+one place decides, so there is never confusion about who holds the key.
+Run the happy path — 2 clients, 3 critical sections each, interleaved:</p>
+<div class="code"><pre><code class="language-bash">cd 43-distributed-locking
+java src/Tests.java     # first check: lock_admits_one_holder_at_a_time
+</code></pre></div>
+<p>6 sections completed, resource correct, <strong>zero ticks with two holders</strong>.
+Mutual exclusion, manufactured. Ship it?</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Pia's process crashes — kernel panic, OOM-kill — while she
+holds the lock. What happens to Quinn: an error, a delay, or something
+worse?</p>
+<details><summary>Reveal</summary>
+Something worse than either: **nothing, forever.** The key is in a dead
+process's pocket. The lock server is healthy, the network is healthy,
+Quinn retries politely — and is denied at tick 200, tick 2,000, tick
+2,000,000. Measured (`java src/Experiments.java crash`): with no expiry,
+Quinn completes **NEVER**. Nothing is corrupted — this is a pure
+*liveness* failure, and it is the two-phase-commit blocking lesson
+wearing a padlock: any exclusive claim that only its holder can undo is
+a promise that the holder will live, and nobody can keep that promise.
+</details>
+
+</blockquote>
+<h2 id="readme-4-failure--and-the-fix-that-creates-the-real-problem">4. FAILURE — and the fix that creates the real problem</h2>
+<p>The front desk adopts the obvious rule: <strong>if a keyholder is silent for 10
+minutes, assume they're gone and hang up a spare key.</strong> In code: every grant
+gets a deadline; a grant past its deadline is treated as free. You already
+know this object from the uber lab — a <strong>lease</strong>: permission with an expiry,
+so that recovery needs no human. Measured recovery
+(<code>Experiments.java crash</code>): the next client finishes about one TTL after the
+crash, for every TTL — the TTL <em>is</em> the price of crash recovery:</p>
+<div class="code"><pre><code class="language-text">   TTL | other client finishes at
+  none | NEVER (still stuck at t1000)
+     5 | t13
+    10 | t17
+   100 | t107
+</code></pre></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Pia didn't crash. She fell asleep in the darkroom armchair
+(in process terms: a 20-tick GC pause against a 10-tick TTL). The spare
+key is out; Quinn is inside working. Then Pia wakes. What does she do?</p>
+<details><summary>Reveal</summary>
+She *continues developing her print*. She has no idea anything happened —
+**a paused process does not experience its pause**, it experiences an
+instantaneous world that changed nothing visible. Her lease expired, the
+lock server granted Quinn the lock, and there are now two people in the
+darkroom, each certain they are alone. Measured (`java src/World.java`,
+Act 3): 6 ticks with two believed holders, and the resource ends at value
+1 after 2 completed sections — **a lost update**, the anomaly you've now
+met in four labs, manufactured this time by a lock working exactly as
+designed. This is what the redis lab measured with real Redis and a real
+GC pause; now you can watch the anatomy in slow motion.
+</details>
+
+</blockquote>
+<p>Three follow-up hopes die by measurement (<code>Experiments.java pause</code>, <code>dilemma</code>,
+<code>check</code>):</p>
+<ul>
+<li><strong>&quot;Tune the TTL.&quot;</strong> Sweep it: short TTLs recover fast and corrupt under
+pauses; long TTLs are pause-safe and recover slowly. Every row of the
+<code>dilemma</code> table is a compromise, and the row you need — &quot;longer than my
+longest pause&quot; — requires a number nobody has. GC, swap, a stopped VM, a
+live-migration: unbounded. The gossip lab said it structurally: silence
+is the only evidence, and a bad day supplies unlimited silence.</li>
+<li><strong>&quot;Heartbeat — renew the lease while working.&quot;</strong> Renewal (measured) lets
+an <em>alive</em> holder work past the TTL safely: the TTL bounds silence, not
+total hold time. But a paused holder cannot heartbeat — <strong>the heartbeat's
+absence is precisely why the lease expired</strong> — so the corruption cliff
+does not move by one tick.</li>
+<li><strong>&quot;Check before writing.&quot;</strong> Ask the server &quot;am I still the holder?&quot; right
+before the write. Measured: saves the case where the pause ends <em>before</em>
+the check (0 lost, one honest redo) — and is worthless when the pause
+lands <em>between the check and the write</em> (1 lost). Check-then-act has a
+gap, and a pause can land in any gap. Any liveness answer is stale the
+moment it arrives.</li>
+</ul>
+<h2 id="readme-5-the-real-requirement">5. THE REAL REQUIREMENT</h2>
+<blockquote>
+<p>The safety of the system must not depend on any process being fast, any
+message being prompt, or any clock being right. Timing may decide <em>how
+quickly</em> things happen — it must never decide <em>whether the data is
+correct</em>. Which means: the last line of defense cannot live in the lock
+server or the client, because both judge by time. <strong>The resource itself
+must be able to tell old authority from new.</strong></p>
+</blockquote>
+<h2 id="readme-6-key-idea--number-the-keys-and-teach-the-enlarger-to-count">6. KEY IDEA — number the keys, and teach the enlarger to count</h2>
+<p>Every key the front desk hands out — original or spare — gets a <strong>number,
+one higher than the last</strong>. And the enlarger gets a counter dial: every
+request made of it carries the requester's key number; the enlarger refuses
+any number <em>lower</em> than the highest it has ever seen, and remembers the
+highest.</p>
+<p>Now the sleeper's late work refuses itself: Pia holds key #33, Quinn's spare
+is #34; the moment Quinn's first request touches the enlarger the dial reads
+34, and Pia's request — whenever it straggles in, however long she slept,
+however delayed the mail — presents #33 and bounces. No timing assumption
+anywhere in that sentence. The lock still <em>schedules</em> (it keeps collisions
+rare); the dial <em>guarantees</em> (it makes the surviving collisions harmless).
+The whatsapp lab's phrasing transfers exactly: the queue was the guarantee
+and the push a latency optimization — here <strong>the token check is the
+guarantee, and the lock is a duplicate-work optimization.</strong></p>
+<h2 id="readme-7-terminology">7. TERMINOLOGY</h2>
+<p><strong>Distributed lock</strong> — a mutual-exclusion claim between processes that share
+no memory, built from messages to a lock service. <em>Why the term</em>: to
+distinguish it from in-process locks, whose failure modes (a crashed holder
+releases automatically — the OS cleans up) it conspicuously lacks.</p>
+<p><strong>Lock service</strong> — the process(es) holding the authoritative &quot;who holds
+what&quot; state. The front desk. Sometimes a database table, sometimes Redis,
+sometimes a consensus cluster (§10.6).</p>
+<p><strong>Critical section</strong> — the work done while believing you hold the lock. The
+word &quot;believing&quot; is doing heavy lifting; most of this lab lives in it.</p>
+<p><strong>Lease</strong> <em>(refresher — uber lab)</em> — permission with an expiry. Every sane
+distributed lock is a lease; an expiry-free lock is a suicide pact with
+your least reliable process. <strong>TTL</strong> — the lease length: the maximum time
+the system stays stuck after a crash, and simultaneously the minimum pause
+that turns a live holder into a stale one. One number, two jobs, opposed.</p>
+<p><strong>Renewal / heartbeat</strong> — extending a live lease from within, conditionally
+(&quot;compare-and-extend&quot;: only for the current holder). Lets honest long work
+exceed the TTL, so the TTL can be short. Bounds silence, not hold time.</p>
+<p><strong>Stale holder</strong> — a client acting on a lease that has expired without its
+knowledge. Not a rogue, not a bug — a <em>victim of timing</em> running correct
+code. The pause, the swap-storm, the delayed packet all manufacture one.</p>
+<p><strong>Fencing token</strong> — the load-bearing term of this lab, finally getting its
+full treatment after cameos in five labs. <em>Plain meaning</em>: the key's serial
+number. <em>Technical meaning</em>: a <strong>strictly monotonically increasing</strong> number
+issued with every grant of the lease, presented on every operation against
+the protected resource, where any operation carrying a lower number than
+the highest seen is rejected. <em>Why it exists</em>: it converts &quot;who holds the
+lock?&quot; (a timing question, unanswerable safely) into &quot;which authority is
+newer?&quot; (an arithmetic question, answerable atomically at the resource).
+<em>Example</em>: Pia's #33 write bounces off a dial reading 34. <em>Connections</em>:
+it is gossip's <strong>incarnation number</strong> (only newer speaks), event-sourcing's
+<strong>expected-version</strong> (refuse the stale write), uber's <strong>offer id</strong>, and —
+the unification §10.5 makes precise — the previous lab's <strong>conditional
+write</strong>. Google's Chubby paper calls it a <strong>sequencer</strong>; that was its first
+production name.</p>
+<p><strong>Split-brain</strong> <em>(refresher — raft)</em> — two parties simultaneously believing
+they hold an exclusive role. The lab measures it directly as <code>overlapTicks</code>
+(ticks with ≥2 believed holders). Fencing does not prevent it; fencing
+makes it <em>harmless</em> — hold that thought for §12.</p>
+<p><strong>Check-then-act gap</strong> — the interval between learning a fact and acting on
+it, in which the fact can die. §4's defensive check; also every &quot;if lease
+still valid then write&quot; you will ever be tempted to write.</p>
+<p><strong>Herd effect</strong> — N waiters all waking (or all polling) for one freed lock.
+<strong>Watch</strong> — the fix: the service notifies exactly the next waiter. Numbers
+in §14.</p>
+<p><strong>Efficiency lock vs correctness lock</strong> <em>(Kleppmann's distinction)</em> — is the
+lock there to <em>avoid wasted duplicate work</em> (efficiency: a TTL expiry costs
+a shrug) or to <em>protect an invariant</em> (correctness: a TTL expiry costs
+money)? The first question to ask of any lock in any design review, because
+it decides whether the TTL cliff is acceptable or fatal. §14's <code>efficiency</code>
+experiment runs the same faults under both readings.</p>
+<p>Minor terms defined at first use; all terms land in the glossary (§18).</p>
+<h2 id="readme-8-mental-models">8. MENTAL MODELS</h2>
+<p><strong>Simple model — the darkroom.</strong> The key on the hook (the lock), the
+10-minutes-of-silence spare-key rule (the lease), the sleeping member (the
+pause), the numbered keys and the enlarger's refuse-lower-numbers dial (the
+fencing token). Carry this picture; it survives contact with the real
+systems.</p>
+<p><strong>Engineering model.</strong> Three state machines and a wire. Lock server:
+<code>{holder, token, expiresAt}</code> with grant-if-free-or-expired, token++ on
+<em>every</em> grant. Client: acquire → read → work → write → release, pausable at
+any point, always acting on possibly-stale beliefs. Resource:
+<code>{value, maxToken}</code>, refusing any operation with <code>token &lt; maxToken</code>.
+Messages between them take time and can arrive after the world that sent
+them has ended. Invariant that holds: writes accepted by the resource are
+totally ordered by token, and no accepted write is based on authority older
+than an already-exercised newer authority. Invariant that does NOT hold:
+one believed holder at a time.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>darkroom</th>
+  <th>engineering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>key on the hook</td>
+  <td><code>holder == null</code></td>
+</tr>
+<tr>
+  <td>taking the key</td>
+  <td><code>acquire()</code> → grant, token++</td>
+</tr>
+<tr>
+  <td>10 minutes of silence → spare key</td>
+  <td><code>now &gt;= expiresAt</code> → re-grant</td>
+</tr>
+<tr>
+  <td>the sleeping member</td>
+  <td>a paused process (it never experiences the pause)</td>
+</tr>
+<tr>
+  <td>key serial number</td>
+  <td>fencing token</td>
+</tr>
+<tr>
+  <td>enlarger's counter dial</td>
+  <td><code>resource.maxToken</code></td>
+</tr>
+<tr>
+  <td>dial refuses lower numbers</td>
+  <td>reject <code>token &lt; maxToken</code>, atomically</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the analogy breaks.</strong> (1) The enlarger check is atomic because it's
+a machine; the <em>front desk's</em> spare-key decision is not knowledge but a
+guess — silence from a sleeper and silence from a corpse are the same
+silence, and no rule at the desk can tell them apart (the gossip lab
+measured a whole cluster burying itself over exactly this). (2) A physical
+key can't arrive twice — a <em>message</em> can: a write mailed before the sleep
+can arrive after the spare key has been used, which is why the dial must be
+consulted on <strong>every</strong> operation, not just guarded at the door. (3) Humans
+would notice another person in the darkroom; processes have no peripheral
+vision — mutual exclusion that depends on noticing is already dead.</p>
+<h2 id="readme-9-visualization--watch-the-spare-key-ruin-a-print">9. VISUALIZATION — watch the spare key ruin a print</h2>
+<p>Open <strong><a href="visualization.html">visualization.html</a></strong> (published copy:
+<a href="https://claude.ai/code/artifact/8e3561c0-8249-45dd-9b04-52ab6e0f5faa" target="_blank" rel="noopener">https://claude.ai/code/artifact/8e3561c0-8249-45dd-9b04-52ab6e0f5faa</a>). It
+plays clients against one lock service and one resource, with every rule a
+control: TTL length, fencing on/off (and the write-only variant), renewal,
+watch-vs-poll, per-client work time — plus a <strong>&quot;pause this client&quot;</strong> button
+(the star of the page) and a crash button. The lock's lease bar counts
+down on screen; every client card shows what that client <em>believes</em>; the
+resource shows its value, its token dial, and every accept/reject with the
+reason in a full sentence. Six predict-then-run scenarios mirror this
+document, including the in-flight-write race (§10.4) and the herd. Step
+◀ ▶ replays any moment.</p>
+<h2 id="readme-10-actual-mechanism--five-versions-four-scars">10. ACTUAL MECHANISM — five versions, four scars</h2>
+<blockquote>
+<p><strong>CHECKPOINT — beginner → intermediate.</strong> You can explain why a naked
+lock blocks forever, why a lease corrupts under pauses, and what the
+token is for. Next: the exact rules, traced tick by tick, and the two
+refinements people miss — one of which this lab itself missed at first.</p>
+</blockquote>
+<p>Run the whole arc narrated: <code>java src/World.java</code> (four acts, every line a
+full sentence with tick numbers).</p>
+<h3 id="readme-101-v1--grant-and-release-worldjava69-85">10.1 v1 — grant and release (<span class="missing" title="Not in the hub: src/World.java#L69-L85 is in the lab folder on your laptop">World.java:69-85</span>)</h3>
+<p>Grant if free. Release only by the holder. Act 1's trace shows the scar
+being earned: <code>Pia CRASHES holding the lock</code> … 40 ticks of silence …
+<code>Quinn completed 0 of 1</code>. Forever is spelled: nothing left to happen.</p>
+<h3 id="readme-102-v2--the-lease-worldjava62-free">10.2 v2 — the lease (<span class="missing" title="Not in the hub: src/World.java#L62 is in the lab folder on your laptop">World.java:62</span>: <code>free()</code>)</h3>
+<p>One added clause: a grant past <code>expiresAt</code> counts as free. Act 2:
+<code>t011 S1: lease of C1 (token 1) has EXPIRED — granting to C2</code>. Recovery
+without humans. Act 3 shows the price: the same line printed <em>while Pia is
+alive and paused</em>, then <code>t027 RESOURCE: accepted write value=1 from Pia</code> —
+value 1 after two completed sections. The server's grant was <em>correct by
+its rules</em>; the rules judge by time, and time lied.</p>
+<p>Two rules in v2 that look pedantic and are load-bearing:</p>
+<ul>
+<li><strong><code>token++</code> on every grant, including expiry-takeovers</strong> — planted bug
+<code>token-reused-on-expiry</code> grants the spare key with the <em>old</em> number
+(&quot;same lease, new tenant&quot;), and fencing silently dies: both holders carry
+the same token, the dial can't order them, corruption returns <em>with
+fencing on</em> (<code>Tests.java broken</code>: 1/2 survive).</li>
+<li><strong>Renewal is compare-and-extend, never a plain overwrite</strong> — <code>renew()</code>
+checks holder <em>and</em> token <em>and</em> non-expiry. The Redis anti-pattern
+(renewing with a bare <code>SET k me PX ttl</code>) is a lock theft primitive.</li>
+</ul>
+<h3 id="readme-103-v3--fencing-at-the-resource-worldjava142-166">10.3 v3 — fencing at the resource (<span class="missing" title="Not in the hub: src/World.java#L142-L166 is in the lab folder on your laptop">World.java:142-166</span>)</h3>
+<p>The resource keeps <code>maxToken</code>; a write with <code>token &lt; maxToken</code> is refused.
+Act 4's trace, the moment the whole lab has been building to:</p>
+<div class="code"><pre><code class="language-text">t027  RESOURCE: REJECTED write value=1 from Pia (token 1 is older than 2 already seen)
+t027  Pia learns its write was rejected — its lease was stale. It must re-acquire and redo the work.
+t033  RESOURCE: accepted write value=2 from Pia (token 3)
+</code></pre></div>
+<p>Nothing lost; the late writer paid with a redo. Note what the rejection also
+buys that <em>no</em> liveness check could: <code>delayed_write_from_a_dead_holder_is_fenced_off</code>
+sends a write, kills the sender, and delivers the packet 40 ticks later into
+the next holder's world — refused by arithmetic. Without fencing, the same
+ghost packet lands <em>last</em> and quietly rolls the value backwards.</p>
+<h3 id="readme-104-v35--fence-the-reads-too-the-bug-this-lab-found-in-itself">10.4 v3.5 — fence the reads too (the bug this lab found in itself)</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> TTL 30. Pia's pause is only 25 ticks — <em>shorter than the
+TTL</em>. Fencing is on (writes checked). Safe?</p>
+<details><summary>Reveal</summary>
+No — and this row of the `pause` sweep is the finest print in the lab.
+Pia's *hold* is not her pause: acquire + work + pause + remaining work +
+**the write's travel time** crossed the 30-tick expiry by one tick. Her
+write was already *in flight* when Quinn was granted the lock; Quinn
+**read** the value before the old write landed; then both writes arrived
+carrying valid, *increasing* tokens — and were both accepted, in perfect
+token order, having together lost an update. Write-only fencing ordered
+the writes; nothing ordered Quinn's read against Pia's write. The fix:
+**every operation carries the token, reads included** — a fenced read
+raises the dial, so the older in-flight write bounces. Chubby's
+sequencers work exactly this way (checked on every request), and this is
+planted bug #4 (`write-only fencing`): pause < TTL, fencing "on", 1/2
+survive, zero rejections — the most invisible failure in the lab.
+</details>
+
+</blockquote>
+<h3 id="readme-105-the-unification--you-built-this-yesterday">10.5 The unification — you built this yesterday</h3>
+<p>Look at the resource's rule with yesterday's eyes: <em>an operation carries
+evidence of what authority it was issued under, and the resource applies it
+only if no newer authority has been exercised</em> — <em>check and act in one
+atomic step at the data</em>. That is a <strong>conditional write</strong>. The fencing
+token is optimistic locking's version column, issued by a lock service
+instead of read from a row; <code>WHERE token &gt;= ?</code> instead of
+<code>WHERE version = ?</code>. Same primitive, fifth costume (expected-version,
+<code>WATCH</code>, <code>If-Match</code>, <code>@Version</code>, and now this). Which triggers the awkward
+question: <strong>if the resource can check conditions, why lock at all?</strong> Run
+<code>Experiments.java efficiency</code> for the honest answer: under identical
+faults, the lock's overlaps are <em>corruption</em> if they touch an invariant and
+a <em>shrug</em> if the work is idempotent — so the guarantee must live at the
+resource either way, and what the lock buys is <strong>not doing the work twice</strong>.
+A correctness lock is optimistic concurrency plus a pessimistic hint;
+an efficiency lock is just the hint. (This is Kleppmann's conclusion in
+<em>How to do distributed locking</em>, reached here by measurement.)</p>
+<h3 id="readme-106-v4--who-locks-the-lock-server">10.6 v4 — who locks the lock server?</h3>
+<p>One front desk is a single point of failure (its crash = everyone blocked
+until restart; its <em>restart</em> is planted bug #2: an in-memory token counter
+reborn at 0 fences off every legitimate new writer until it climbs back —
+safety intact, availability gone, which is why <strong>the token counter must be
+durable and monotonic across restarts</strong>). Two ways out:</p>
+<ul>
+<li><strong>N independent servers, majority acquisition</strong> — the <strong>Redlock</strong> shape,
+measured in <code>Experiments.java redlock</code>. The availability works (2 of 5
+unreachable, still locks). But a client pause corrupts exactly as before
+— five servers agreed, the pause didn't ask them — and Redlock's leases
+carry no token the resource could check. Worse: one server's <em>clock jump</em>
+(NTP step, VM migration) expires a lease early, and two clients assemble
+overlapping majorities — <code>Pia holds {S1,S2,S3}, Quinn assembles {S1,S4,S5}</code>, 6 overlap ticks, 1 lost update. Safety was resting on a
+wall clock. This measured pair <em>is</em> the Kleppmann–antirez debate: the
+defense (&quot;pauses are rare, bound your clocks&quot;) is an <em>engineering bet</em>;
+the critique (&quot;safety must not rest on timing, and there's no fencing&quot;)
+is §5 verbatim. You now hold both positions with numbers.</li>
+<li><strong>One <em>logical</em> front desk, replicated by consensus</strong> — a raft/paxos
+cluster (your raft lab: elections, majorities, terms) storing the lock
+state. The service survives minority failure, and — decisive — its log
+index / revision is a ready-made, durable, monotonic <strong>fencing token</strong>:
+ZooKeeper's zxid, etcd's revision, Chubby's sequencer. This is why the
+standard answer to &quot;correctness lock&quot; is ZooKeeper/etcd, never plain
+Redis: not because consensus makes clients pause-proof (nothing does),
+but because it makes the <em>service</em> honest and the <em>token</em> trustworthy.</li>
+</ul>
+<h2 id="readme-11-failure-scenarios">11. FAILURE SCENARIOS</h2>
+<blockquote>
+<p><strong>CHECKPOINT — intermediate → engineering.</strong> You know the mechanism and
+its two non-obvious refinements. Now: every failure, created, watched,
+and tied to the guarantee it bends.</p>
+</blockquote>
+<p><strong>a. Holder crash.</strong> <em>Create</em>: <code>a.crashed = true</code>. <em>Watch</em>:
+<code>Experiments.java crash</code>. No TTL: liveness lost permanently, safety
+trivially intact. TTL: liveness restored in ~TTL; safety untouched <em>by the
+crash</em> (a dead client sends no stale writes — except the ghost packet, see
+d). <em>Production</em>: this is why every real lock is a lease; the TTL is your
+declared crash-recovery SLO.</p>
+<p><strong>b. GC pause / stall.</strong> <em>Create</em>: <code>pauses.add(...)</code>. <em>Watch</em>: <code>pause</code>,
+<code>World.java</code> Act 3. Pause &gt; TTL: split-brain (overlapTicks &gt; 0), lost
+update without fencing, clean rejection + redo with it. <em>Guarantee lost
+without fencing</em>: the invariant. <em>With fencing</em>: only the stale holder's
+time. <em>Production</em>: this is the redis lab's measured Redis failure; JVM
+users hit it with old collectors, hostile heaps, or swap; the modern
+low-pause collectors shrink it and cannot bound it.</p>
+<p><strong>c. The check-then-act gap.</strong> <em>Create</em>: pause phase <code>after-check</code>.
+<em>Watch</em>: <code>check</code>. A truthful server answer, dead on arrival. <em>Lesson</em>:
+liveness checks are UX (fail fast, redo early — the mid-work variant saved
+a redo), never safety.</p>
+<p><strong>d. The ghost packet.</strong> <em>Create</em>: <code>writeDelay = 40</code>, kill the sender.
+<em>Watch</em>: test <code>delayed_write_from_a_dead_holder_is_fenced_off</code>. Without
+fencing the last arrival wins and it is a message from the past. The
+network is a time machine; only the resource's dial is not fooled.</p>
+<p><strong>e. Lock-service restart with amnesia.</strong> <em>Create</em>: <code>bugTokenRestart</code>.
+<em>Watch</em>: <code>Tests.java broken</code>. Counter reborn at 0 → every legitimate new
+writer rejected until it catches up. Safety kept, availability lost — the
+mirror image of every other failure here, and the reason etcd/ZooKeeper
+tokens are positions in a <em>durable replicated log</em>.</p>
+<p><strong>f. Clock jump at the service.</strong> <em>Create</em>: <code>clockOffset = 100</code> on one of
+five Redlock servers. <em>Watch</em>: <code>redlock</code>. Overlapping majorities.
+<em>Production</em>: NTP steps and VM migrations are routine; any lease math done
+on wall clocks inherits them (raft's lease-read caveat, same root).</p>
+<p><strong>g. The herd.</strong> <em>Create</em>: 20 waiters polling every tick. <em>Watch</em>: <code>herd</code> —
+2,740 messages where a watch queue spends 99, same completion time, plus
+FIFO handover. <em>Production</em>: ZooKeeper's sequential-ephemeral recipe exists
+precisely to wake only the next waiter; a naive poll loop is a self-inflicted
+DDoS on your own lock service at the worst moment (right after something
+broke).</p>
+<p><strong>h. The read race.</strong> §10.4. The one that gets code-reviewed in, because
+&quot;we fence our writes&quot; sounds complete. Pause &lt; TTL, zero rejections, data
+gone.</p>
+<h2 id="readme-12-correctness--what-is-actually-guaranteed">12. CORRECTNESS — what is actually guaranteed</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>design</th>
+  <th>after a crash</th>
+  <th>under any pause/delay</th>
+  <th>split-brain possible?</th>
+  <th>corruption possible?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>lock, no TTL</td>
+  <td>blocked forever</td>
+  <td>safe (nothing expires)</td>
+  <td>no</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>lease (TTL)</td>
+  <td>recovers in ~TTL</td>
+  <td><strong>corrupts</strong> past the cliff</td>
+  <td>yes</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>+ renewal</td>
+  <td>recovers in ~TTL</td>
+  <td>cliff unmoved (can't renew while paused)</td>
+  <td>yes</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>+ defensive check</td>
+  <td>recovers</td>
+  <td>gap remains</td>
+  <td>yes</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>+ fencing, writes only</td>
+  <td>recovers</td>
+  <td>read race remains (§10.4)</td>
+  <td>yes</td>
+  <td>yes (silently)</td>
+</tr>
+<tr>
+  <td>+ fencing, all operations</td>
+  <td>recovers in ~TTL</td>
+  <td><strong>safe</strong> — stale effects refused</td>
+  <td><strong>yes</strong></td>
+  <td><strong>no</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Read the last row carefully, because it says the honest thing most
+descriptions blur: <strong>fencing does not restore mutual exclusion.</strong> Two
+believed holders still happen (split-brain, measured every time). What
+fencing guarantees is <em>at-most-one-effect lineage</em>: the resource applies
+operations in token order and refuses everything from superseded authority
+— overlap becomes harmless instead of impossible. Safety now rests on one
+atomic comparison at the data and on token monotonicity (durable counter,
+bumped every grant) — <strong>zero timing assumptions</strong>. Liveness still rests
+entirely on timing (the TTL) — and must, because distinguishing slow from
+dead by silence is impossible in principle; you can only choose how long to
+wait. Safety by arithmetic, liveness by timeout, never the reverse: that
+division is the whole design.</p>
+<p>Still not guaranteed, same as yesterday: nothing binds a writer that talks
+to the resource <em>outside</em> the token protocol; fairness (a poller can starve
+— the watch queue is FIFO, polling is not); and the lock protects only
+resources that <em>can</em> check. §15 faces that last one squarely.</p>
+<h2 id="readme-13-code--the-toy-and-what-your-stack-calls-each-piece">13. CODE — the toy, and what your stack calls each piece</h2>
+<p><span class="missing" title="Not in the hub: src/World.java is in the lab folder on your laptop">World.java</span> is ~330 lines; the load-bearing ones:
+<code>token++</code> on every grant (<span class="missing" title="Not in the hub: src/World.java#L69 is in the lab folder on your laptop">acquire</span>), compare-and-extend
+<span class="missing" title="Not in the hub: src/World.java#L87 is in the lab folder on your laptop">renew</span>, the read fence <span class="missing" title="Not in the hub: src/World.java#L138 is in the lab folder on your laptop">observeRead</span>,
+and the one comparison that is the entire guarantee
+(<span class="missing" title="Not in the hub: src/World.java#L142 is in the lab folder on your laptop">write</span>). Everything else is plumbing for breaking them.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>this lab</th>
+  <th>production spelling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>lock service, single server</td>
+  <td>Redis <code>SET key holder NX PX ttl</code> (release/renew via Lua compare — never plain SET/DEL)</td>
+</tr>
+<tr>
+  <td>lock service, consensus-backed</td>
+  <td>ZooKeeper ephemeral znode (Curator <code>InterProcessMutex</code>) · etcd lease + key · Chubby</td>
+</tr>
+<tr>
+  <td>lease + TTL</td>
+  <td>Redis PX · etcd <code>LeaseGrant(ttl)</code> · ZK session timeout · K8s <code>Lease</code> object</td>
+</tr>
+<tr>
+  <td>renewal heartbeat</td>
+  <td>etcd <code>KeepAlive</code> · Redisson watchdog · ZK session pings · K8s <code>renewTime</code></td>
+</tr>
+<tr>
+  <td>fencing token</td>
+  <td>ZK zxid/czxid · etcd <code>mod_revision</code> · Chubby <em>sequencer</em> · DynamoDB lock-client RVN</td>
+</tr>
+<tr>
+  <td>resource checks the token</td>
+  <td>etcd <code>Txn(Compare(mod_revision), Then(put))</code> · your DB: <code>WHERE token &gt;= ?</code> — yesterday's conditional write</td>
+</tr>
+<tr>
+  <td>watch queue (no herd)</td>
+  <td>ZK sequential ephemerals, watch the <em>previous</em> node · etcd watch on prev revision</td>
+</tr>
+<tr>
+  <td>leader election</td>
+  <td>the same lock held long: K8s <code>leaderelection</code> pkg, ZK recipe, etcd <code>Campaign</code> — plus fencing on every side-effect, because a deposed leader is just a stale holder with a bigger job</td>
+</tr>
+<tr>
+  <td><code>Experiments.java efficiency</code></td>
+  <td><strong>ShedLock</strong> (<code>@SchedulerLock</code> on <code>@Scheduled</code>) — explicitly an efficiency lock: its own docs disclaim correctness. Perfect for &quot;don't send the newsletter twice&quot;; wrong, alone, for &quot;don't pay the invoice twice&quot;</td>
+</tr>
+<tr>
+  <td>Postgres as lock service</td>
+  <td><code>pg_advisory_xact_lock</code> — and note the special case: if the protected work is <em>in the same transaction</em>, the lock's release and the work's commit are atomic, which quietly deletes the stale-holder problem. Work outside the DB reopens it</td>
+</tr>
+</tbody>
+</table></div>
+<p>Spring-shaped warnings, mirror-images of the planted bugs: Redisson's
+<code>RLock</code> gives you TTL + watchdog renewal but <strong>no fencing token</strong> — using it
+as a correctness lock is §4 with better marketing; ShedLock's <code>lockAtMostFor</code>
+too short is the pause cliff configured on purpose; and any hand-rolled
+&quot;extend my Redis lock&quot; that isn't a compare-and-extend Lua script is the
+renewal theft from §10.2.</p>
+<h2 id="readme-14-experiments">14. EXPERIMENTS</h2>
+<div class="code"><pre><code class="language-bash">java src/World.java                # the four-act narrated story
+java src/Tests.java                # 14 scenario checks
+java src/Tests.java broken         # 4 planted bugs, each caught
+java src/Experiments.java          # all 7 measurements (~1s)
+java src/Experiments.java pause    # or any one by name
+</code></pre></div>
+<p>Predict before each; headline numbers from this machine: <code>crash</code> — no TTL
+never recovers, TTL recovers in ~TTL, every value. <code>pause</code> — TTL 30: 0 lost
+below the cliff, 1 at P=25 (<strong>below</strong> the TTL — the in-flight write), 8 at
+P=90; renewal identical; fencing 0 everywhere with 1 rejection. <code>dilemma</code> —
+every TTL row a compromise. <code>check</code> — saved / worthless, by pause phase.
+<code>herd</code> — 20 waiters: 2,740 poll messages vs 99 watch messages. <code>redlock</code> —
+availability yes; pause: 1 lost; clock jump: overlapping majorities, 1
+lost. <code>efficiency</code> — 2 overlaps: corruption in job A, shrug in job B.</p>
+<h2 id="readme-15-production">15. PRODUCTION</h2>
+<blockquote>
+<p><strong>CHECKPOINT — engineering → production.</strong> You can build, break, and fix
+the mechanism. Left: choosing, operating, and the uncomfortable cases.</p>
+</blockquote>
+<p><strong>The decision procedure:</strong></p>
+<pre class="mermaid">flowchart TD
+    A[you think you need a distributed lock] --&gt; B{efficiency or correctness?}
+    B --&gt;|duplicate work is just cost| E[efficiency lock: ShedLock, SET NX PX&lt;br&gt;TTL sized generously; expiry = shrug&lt;br&gt;work must be idempotent anyway]
+    B --&gt;|an invariant is at stake| C{can the resource check a condition?}
+    C --&gt;|it&#x27;s a database| D[conditional write / constraint IS the guard&lt;br&gt;- yesterday&#x27;s lab; lock optional, for cost]
+    C --&gt;|API with If-Match, etcd Txn, versioned store| F[fencing: consensus-backed lock,&lt;br&gt;token checked on EVERY operation]
+    C --&gt;|it cannot check - legacy FS, dumb API, email| G[the honest corner: no lock makes this safe.&lt;br&gt;make the operation idempotent, or route it&lt;br&gt;through one owner process - consensus-elected,&lt;br&gt;fenced at ITS inputs - or accept measured risk:&lt;br&gt;short TTLs, pause monitoring, reconciliation]
+    E --&gt; H[monitor: duplicate-work rate]
+    F --&gt; I[monitor: token rejections, session expiries,&lt;br&gt;hold time p99 vs TTL, queue depth]
+</pre>
+<p>The box people avoid is G. An email cannot be un-sent and cannot check a
+token; no lock — Redis, ZooKeeper, or carved in stone — makes &quot;send exactly
+one email&quot; true on an asynchronous network. Real systems shrink the blast
+radius (idempotency keys at the provider, an outbox with a single fenced
+drainer, reconciliation jobs) and then <em>measure</em> the residual. Saying &quot;the
+lock guarantees it&quot; in that design review is how double payouts happen.</p>
+<p><strong>Operations.</strong> What the on-call sees, by failure: lock service down =
+everything queues (availability, loud). Sessions expiring in bursts = GC or
+network trouble at <em>clients</em> — and every expiry is a potential stale holder:
+alert on <code>hold time p99</code> approaching TTL long before corruption. Token
+rejections &gt; 0 = fencing is <em>working</em>; investigate the pauses it caught.
+Herd symptoms = connection spikes at the service on every release. ZK/etcd
+specifics: watch <code>session_expired</code> vs <code>connection_loss</code> (Curator treats them
+differently for good reason — a connection loss might still be the holder;
+an expiry definitely is not), and never do lock bookkeeping on wall clocks.</p>
+<p><strong>What this toy omits, and who handles it.</strong> Real partitions (client↔lock
+vs client↔resource can fail <em>independently</em> — the toy's wire only delays
+writes; real systems face a client that can reach the resource but not
+renew, exactly when fencing earns its keep). Consensus internals (raft lab
+has them; etcd/ZK are that plus a lock API). Durable storage at the
+resource. Sessions multiplexing many locks (ZK/Chubby: one heartbeat, many
+claims — cheaper, and one session expiry drops them all, a coarser blast
+radius chosen deliberately; Chubby further adds a <em>lock-delay</em> — a grace
+period before a broken session's locks free — as a belt against
+non-fencing-capable clients). Reentrancy, read-write locks, fairness
+policies, security. And scale: a lock service is a <em>coarse-grained,
+low-throughput</em> tool (Chubby's stated design point); locking per-row at
+high rate is yesterday's lab's job, inside the database.</p>
+<h2 id="readme-16-exercises">16. EXERCISES</h2>
+<p><a href="notes.html#exercises">EXERCISES.md</a> — eight rungs. Rung 5 is
+<span class="missing" title="Not in the hub: src/YourLock.java is in the lab folder on your laptop">src/YourLock.java</span> (implement the grant rule and the
+fencing rule; starts 2/6, self-checking). Rung 6 debugs the four planted
+bugs. Answers in <a href="notes.html#solutions">SOLUTIONS.md</a> — attempt first.</p>
+<h2 id="readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">flowchart LR
+    subgraph known[&quot;you knew&quot;]
+        OPT[optimistic-vs-pessimistic:&lt;br&gt;conditional write, escalation]
+        RED[redis: SET NX PX,&lt;br&gt;the measured GC-pause failure]
+        RAFT[raft: consensus,&lt;br&gt;leases as clock bets]
+        GOS[gossip: silence lies,&lt;br&gt;incarnation numbers]
+        TPC[two-phase-commit:&lt;br&gt;blocking on a death]
+    end
+    THIS[THIS LAB:&lt;br&gt;locks from messages;&lt;br&gt;lease + fencing;&lt;br&gt;efficiency vs correctness]
+    OPT --&gt; THIS
+    RED --&gt; THIS
+    RAFT --&gt; THIS
+    GOS --&gt; THIS
+    TPC --&gt; THIS
+    THIS --&gt; N1[&quot;/learn idempotency-keys&lt;br&gt;the other half of box G&quot;]
+    THIS --&gt; N2[&quot;/learn zookeeper&lt;br&gt;sessions, znodes, recipes for real&quot;]
+    THIS --&gt; N3[&quot;/learn clock-synchronization&lt;br&gt;NTP, TrueTime, bounded error&quot;]
+    THIS --&gt; N4[&quot;/learn leader-election-patterns&lt;br&gt;the long-lease lock at work&quot;]
+</pre>
+<p><strong>Commonly confused, one sentence each.</strong> <em>A distributed lock vs a database
+row lock</em>: the row lock's holder is a transaction the database itself kills
+on disconnect — holder death is solved by construction, which is exactly
+the property a network lock loses. <em>Fencing vs preventing split-brain</em>:
+fencing permits two believers and disarms the stale one; consensus
+leadership (raft) prevents two <em>commits</em>, not two believers either — the
+same shape one level down. <em>Redlock vs consensus</em>: majority <em>acquisition</em>
+is not majority <em>agreement</em> — Redlock's servers never talk to each other,
+so nothing reconciles their divergent clocks; raft's do, about every entry.
+<em>Lease vs lock</em>: every distributed &quot;lock&quot; you will ever use is a lease;
+the word &quot;lock&quot; is nostalgia for the single-machine case.</p>
+<h2 id="readme-18-glossary-in-order-of-appearance">18. GLOSSARY (in order of appearance)</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>distributed lock</td>
+  <td>mutual exclusion between processes that share nothing, built from messages</td>
+</tr>
+<tr>
+  <td>lock service</td>
+  <td>the authority that says who holds what</td>
+</tr>
+<tr>
+  <td>critical section</td>
+  <td>work done while <em>believing</em> you hold the lock</td>
+</tr>
+<tr>
+  <td>lease</td>
+  <td>permission with an expiry — the only sane form of a distributed lock</td>
+</tr>
+<tr>
+  <td>TTL</td>
+  <td>lease length: crash-recovery time and pause-tolerance limit, one number, opposed jobs</td>
+</tr>
+<tr>
+  <td>renewal / heartbeat</td>
+  <td>compare-and-extend by the live holder; bounds silence, not hold time</td>
+</tr>
+<tr>
+  <td>stale holder</td>
+  <td>a correct process acting on an expired lease it cannot know about</td>
+</tr>
+<tr>
+  <td>split-brain</td>
+  <td>≥2 simultaneous believed holders (measured here as overlapTicks)</td>
+</tr>
+<tr>
+  <td>lost update</td>
+  <td>the corruption a stale holder's write inflicts (fourth lab running)</td>
+</tr>
+<tr>
+  <td>fencing token</td>
+  <td>monotonically increasing grant number, checked on EVERY resource operation, lower-than-seen refused</td>
+</tr>
+<tr>
+  <td>sequencer</td>
+  <td>Chubby's original name for the fencing token</td>
+</tr>
+<tr>
+  <td>check-then-act gap</td>
+  <td>the interval between learning a fact and acting, where the fact dies</td>
+</tr>
+<tr>
+  <td>ghost packet</td>
+  <td>a write in flight from an already-ended authority</td>
+</tr>
+<tr>
+  <td>read fence</td>
+  <td>a read that raises the resource's token floor — the fix for the in-flight-write race</td>
+</tr>
+<tr>
+  <td>herd effect</td>
+  <td>all waiters waking/polling for one freed lock</td>
+</tr>
+<tr>
+  <td>watch</td>
+  <td>the service notifies exactly the next waiter (FIFO, one message)</td>
+</tr>
+<tr>
+  <td>Redlock</td>
+  <td>majority acquisition over independent servers; no fencing, safety rests on timing</td>
+</tr>
+<tr>
+  <td>clock jump</td>
+  <td>wall-clock discontinuity (NTP step, VM migration) that ends leases early</td>
+</tr>
+<tr>
+  <td>efficiency lock</td>
+  <td>prevents duplicate <em>cost</em>; expiry is a shrug (ShedLock)</td>
+</tr>
+<tr>
+  <td>correctness lock</td>
+  <td>protects an invariant; needs fencing at the resource or it is a bet</td>
+</tr>
+<tr>
+  <td>ephemeral node / session</td>
+  <td>ZK's lease: one heartbeat carrying many claims, dying together</td>
+</tr>
+<tr>
+  <td>lock-delay</td>
+  <td>Chubby's grace period before a broken session's locks free</td>
+</tr>
+<tr>
+  <td>advisory lock</td>
+  <td>a lock only cooperating code observes (Postgres <code>pg_advisory_*</code>)</td>
+</tr>
+<tr>
+  <td>leader election</td>
+  <td>the same lock held long, plus fencing on every side-effect</td>
+</tr>
+</tbody>
+</table></div>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--distributed-locking">Exercises — distributed locking</h1>
+<p>Climb in order. Answers in <a href="notes.html#solutions">SOLUTIONS.md</a> — commit to yours
+first, in writing.</p>
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p>1.1 Without the words &quot;lease&quot;, &quot;TTL&quot; or &quot;fencing&quot;: why is a lock between
+two machines fundamentally harder than a lock between two threads? Name the
+two facts about the world that do the damage.</p>
+<p>1.2 The TTL is one number with two opposed jobs. State both jobs, and
+explain why &quot;set it long enough to be safe&quot; is not a sentence an engineer
+can finish.</p>
+<p>1.3 A teammate says: &quot;our lock is on ZooKeeper, which is consensus-backed,
+so a GC pause can't hurt us.&quot; What did consensus actually buy, and what did
+it not?</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>2.1 In <span class="missing" title="Not in the hub: src/World.java is in the lab folder on your laptop">World.java</span>, point at: (a) the line that makes a
+crash recoverable, (b) the line that makes fencing's arithmetic sound
+across every grant, (c) the single comparison that carries the entire
+safety guarantee, (d) the line added because of the bug this lab found in
+itself.</p>
+<p>2.2 In the visualization, run scenario 3 (the pause). At the moment the
+lock server re-grants: what does Pia's card believe, what does the lease
+bar show, and which on-screen number is the split-brain?</p>
+<p>2.3 In the <code>herd</code> experiment's output, the poll and watch columns finish at
+the same tick. So what exactly did the 2,641 extra messages buy? (Nothing
+is the wrong answer — they bought something <em>negative</em>.)</p>
+<h2 id="exercises-rung-3--predict-then-run">Rung 3 — Predict (then run)</h2>
+<p>3.1 TTL 30, fencing fully on. Pia's pause is 300 ticks — ten times the
+TTL. How many updates are lost, and what does Pia experience when she
+wakes? Run <code>java src/Experiments.java pause</code> (the P=90 column generalizes)
+and reason from the token arithmetic.</p>
+<p>3.2 In the Redlock clock-jump test, suppose the jump happens on S4 (a
+server Pia never reached) instead of S1. Does the double-majority still
+form? Work it out from the reachability masks in
+<code>majority_alone_is_not_exclusive_after_a_clock_jump</code>, then edit the index
+and run <code>java src/Tests.java</code> to check your reasoning against the failure.</p>
+<p>3.3 A client acquires (token 7), writes successfully, releases. Its
+<em>retry</em> logic then accidentally re-sends the same write (token 7) after
+the next holder (token 8) has already written. Fencing checks
+<code>token &lt; maxToken</code>. Is the duplicate accepted or rejected — and is that
+the right outcome? What single change would make duplicates of <em>accepted</em>
+writes idempotent instead?</p>
+<p>3.4 Two <em>different</em> resources are both protected by the same lock (a file
+and a search index). Fencing is implemented on the file only. Which of
+§11's failures now applies to the index, and why does &quot;but they're updated
+together&quot; not help?</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>4.1 In <code>pauseRun</code>, set <code>msgDelay = 0</code> and re-run <code>pause</code>. Predict which
+single row changes and why — then explain what that row was teaching (it
+is the lab's own discovered bug).</p>
+<p>4.2 Make renewal <em>unconditional</em> in <code>World.renew</code> (drop the holder/token
+check) and write a two-client scenario where that &quot;optimization&quot; steals a
+live lock. Which existing test fails first?</p>
+<p>4.3 Change the watch queue to notify ALL waiters instead of the first.
+Everything still completes and no test asserts message counts except one —
+which check catches it, and what production symptom did you just recreate?</p>
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><code>java src/YourLock.java</code> starts at 2/6. Implement the grant rule and the
+fencing rule per the TODOs (6/6). Then answer in one sentence each: why
+must the token bump on expiry-takeovers specifically, and why does check 6
+pass a <em>read</em> into the fence?</p>
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p>Run <code>java src/Tests.java broken</code>. For each of the four planted bugs:
+(a) the innocent code-review diff that introduces it, (b) whether it breaks
+safety or availability, (c) the production symptom you'd see first. Then
+rank them by time-to-detection in production and defend the ranking. (One
+of them announces itself loudly; one is nearly perfectly silent.)</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>The lab's resource conveniently understands tokens. Yours doesn't: the
+critical section sends an email through a third-party API (box G of §15's
+flowchart). Design the safest achievable &quot;send the daily digest exactly
+once across 3 instances&quot; and implement its core as a small Java sketch:
+what does the lock become, where does an idempotency key live, who is
+allowed to call the API, and — the hard part — write down the residual
+failure that your design does NOT close, and the monitor that would catch
+it.</p>
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p>Payments platform, 3 services, and three locking questions to settle:
+(1) 20 payout workers must each drain distinct merchant queues (a worker
+per merchant, no merchant drained twice); (2) a nightly interest batch must
+run exactly once across 4 instances and writes only to Postgres; (3) a
+&quot;close the ledger month&quot; operation must be exclusive across the company for
+minutes at a time, and parts of it call external tax APIs.
+For each: efficiency or correctness? which mechanism (yesterday's lab, this
+lab's, or box G)? what is the fencing token and who checks it? what do you
+monitor? Then the cross-question: the platform team proposes &quot;one Redisson
+RLock wrapper library for all three, for consistency.&quot; Write the two-
+paragraph review comment.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<p>Attempt each rung first — <a href="notes.html#exercises">EXERCISES.md</a>.</p>
+<h2 id="solutions-rung-1">Rung 1</h2>
+<p><strong>1.1</strong> Two facts do all the damage. First, <strong>a process cannot observe its
+own delays</strong>: between any two of its instructions the world may have moved
+arbitrarily far (GC, swap, migration), so &quot;I hold the lock&quot; is always a
+belief about the past. Between threads, a stalled thread's lock stays
+<em>correct</em> — the OS keeps it held; nothing else can enter. Second, <strong>death
+and slowness are indistinguishable from outside</strong>: the only evidence anyone
+has about a remote process is silence, and silence has two meanings with
+opposite correct responses (wait forever vs take the lock away). A machine
+lock never faces this — the kernel <em>knows</em> when a process dies and cleans
+up. Distributed locking is the art of living without those two certainties.</p>
+<p><strong>1.2</strong> Job one: the TTL is the <strong>recovery deadline</strong> — after a holder
+crashes, the system is stuck for at most one TTL (measured: recovery ≈ TTL
+for every value). Job two: it is the <strong>pause tolerance</strong> — any stall longer
+than the TTL turns a live holder into a stale one. Short helps job one and
+sabotages job two; long, the reverse. &quot;Long enough to be safe&quot; cannot be
+finished because it means &quot;longer than my longest future pause&quot;, and the
+longest future pause (GC, swap, VM migration, human with a debugger) has no
+upper bound you can know. The <code>dilemma</code> experiment prints the compromise
+row by row.</p>
+<p><strong>1.3</strong> Consensus bought an honest, highly available <em>lock service</em>: the
+service itself survives minority failure, never disagrees with itself about
+who holds the lock, and can mint a durable, monotonic fencing token
+(ZooKeeper's zxid, etcd's revision). It bought nothing about <em>the client</em>:
+a GC-paused holder still doesn't know it lost the session, still wakes,
+still writes. ZooKeeper prevents the <em>service</em> from being wrong; only a
+fencing check at the resource prevents the <em>stale client</em> from doing
+damage. (Measured equivalently in the lab: the pause corrupts under any
+lock service; only the resource's check ends it.)</p>
+<h2 id="solutions-rung-2">Rung 2</h2>
+<p><strong>2.1</strong> (a) The expiry clause in <code>LockSrv.free()</code> —
+<code>ttlEnabled &amp;&amp; now &gt;= expiresAt</code> (<span class="missing" title="Not in the hub: src/World.java#L76 is in the lab folder on your laptop">World.java:76</span>).
+(b) <code>token++</code> on <strong>every</strong> grant in <code>acquire</code>, including expiry-takeovers
+(bug #1 is its absence on that path). (c) The single comparison in
+<code>Res.write</code>: <code>tok &lt; maxToken → reject</code>. (d) <code>resource.observeRead(this, tok)</code>
+in <code>startWork</code> — the read fence, added after the P=25 row of the pause
+sweep lost an update with fencing &quot;on&quot; (§10.4).</p>
+<p><strong>2.2</strong> Pia's card still believes she holds token <em>n</em> and is mid-work — her
+belief is frozen, which is the point. The lease bar shows expired/re-granted
+to Quinn. The split-brain is the <strong>&quot;believed holders: 2&quot;</strong> counter (the
+Java's <code>overlapTicks</code> is its time integral).</p>
+<p><strong>2.3</strong> The 2,641 extra messages bought <em>load on the lock service at its
+busiest moments</em> — every release triggers a stampede of retries — plus
+unfairness (whoever polls at the lucky tick wins; the watch queue is FIFO).
+Same completion time here only because the service is a free in-process
+object; a real lock service melting under poll storms is §11g and the
+reason ZooKeeper's recipe watches the <em>previous</em> holder only.</p>
+<h2 id="solutions-rung-3">Rung 3</h2>
+<p><strong>3.1</strong> <strong>Zero</strong> updates lost, at 300 ticks or 3 million. The arithmetic
+doesn't care about duration: Quinn's grant carries a higher token; her
+first fenced operation raises the resource's floor; Pia's eventual write
+presents the smaller number and bounces. Pia experiences: wake, write,
+rejection, re-acquire (fresh token, fresh read), redo, success. One redone
+section, no corruption — the redo cost scales with the pause count, never
+the pause length.</p>
+<p><strong>3.2</strong> No double-majority. Work the masks: Pia holds {S1,S2,S3}. A jump on
+S4 expires nothing of Pia's (S4 never granted her anything). Quinn can
+reach {S1,S4,S5}: S4 and S5 grant (free), but S1 still holds Pia's
+unexpired lease and refuses — Quinn has 2 of 5, no majority, and polls
+until Pia's leases genuinely lapse. The failure needs the jump on a server
+<strong>inside the holder's majority</strong> (any of S1–S3), because two 3-of-5
+majorities must share at least one server — the quorum-overlap rule from
+the quorums lab, now working <em>against</em> safety: the shared server is exactly
+where a single clock error breaks the intersection argument. Edit the test
+to <code>servers[3].clockOffset = 100</code> and the assertion fails (no overlap).</p>
+<p><strong>3.3</strong> Accepted: the check is <code>token &lt; maxToken</code>, and 7 &lt; 7 is false —
+equal tokens pass. For the <em>value write</em> in this lab that re-apply is
+harmless-looking but wrong in general: &quot;same token&quot; means &quot;same lease&quot;,
+not &quot;same request&quot;. The right outcome needs a <strong>per-request idempotency
+key</strong> (dedup within a lease) <em>alongside</em> the token ordering (fencing
+across leases) — the two checks answer different questions, which is
+exactly planted bug #3's lesson run in reverse: dedup is not ordering, and
+ordering is not dedup; real systems need both.</p>
+<p><strong>3.4</strong> The ghost packet / stale holder failures (§11b, §11d) now apply to
+the index unfenced: a paused holder's index update lands after the next
+holder's, and the index diverges from the file <em>silently</em>. &quot;Updated
+together&quot; doesn't help because together-ness was a property of the
+<em>holder's intent</em>, not of the messages — they travel separately and the
+pause splits them. Every protected resource needs its own fence (or a
+single fenced front door both writes go through).</p>
+<h2 id="solutions-rung-4">Rung 4</h2>
+<p><strong>4.1</strong> With <code>msgDelay = 0</code> the write lands the instant it is sent, so a
+send that happens while the lease is still (barely) alive can no longer
+cross the expiry in flight — the <strong>P=25 row</strong> goes to 0 lost in the plain
+column. That row was teaching the lab's own discovered bug: <em>hold time
+includes the write's travel time</em>, so an in-flight write can be stale on
+arrival even though the pause was shorter than the TTL — and only a fenced
+read catches it.</p>
+<p><strong>4.2</strong> Unconditional renew = <code>expiresAt = now + ttl</code> regardless of caller.
+Scenario: Pia holds and pauses; her lease expires; Quinn is granted; Pia's
+client-side heartbeat timer (which survived the pause) fires and <em>extends
+Quinn's lease window under Pia's belief</em> — or, in the nastier variant where
+renew also sets <code>holder</code>, steals the lock outright. First failing test:
+<code>renewal_extends_a_lease_while_the_holder_is_alive</code> still passes (happy
+path!), but <code>pause_longer_than_ttl_makes_two_believed_holders</code> and its
+siblings change shape — the honest catch is a new test asserting a
+non-holder's renew returns false. (That the happy-path test stays green is
+the lesson: theft bugs live outside the happy path.)</p>
+<p><strong>4.3</strong> <code>watch_mode_beats_polling_and_keeps_fifo_order</code> — notify-all
+multiplies messages per release by the queue length, so the
+<code>watchMsgs * 2 &lt; pollMsgs</code> margin collapses as N grows. The recreated
+production symptom is the <strong>thundering herd</strong>: every release wakes every
+waiter, N-1 of which immediately fail and re-sleep — ZooKeeper's
+&quot;watch the previous node, not the lock&quot; recipe exists to prevent precisely
+this.</p>
+<h2 id="solutions-rung-5">Rung 5</h2>
+<p>Working bodies (verified 6/6 in this lab):</p>
+<div class="code"><pre><code class="language-java">static long yourAcquire(Srv s, int now, int cliId) {
+    if (s.holder == null || now &gt;= s.expiresAt) {
+        s.holder = cliId;
+        s.token++;                     // strictly larger on EVERY grant
+        s.expiresAt = now + s.ttl;
+        return s.token;
+    }
+    return -1;
+}
+
+static boolean yourFenceCheck(ResState r, long token, boolean isWrite) {
+    if (token &lt; r.maxToken) return false;
+    r.maxToken = token;                // reads raise the floor too
+    return true;
+}
+</code></pre></div>
+<p>Why the bump on expiry-takeovers specifically: an expiry-grant is the ONLY
+kind where the previous holder may still be alive and about to act — a
+released lock's ex-holder is done by definition. Reusing the token there
+hands both actors the same credential at the exact moment they must be
+distinguishable (planted bug #1). Why check 6 feeds a read into the fence:
+a new holder's read must <em>raise the floor</em> so that older writes still in
+flight are refused on arrival — otherwise the read races the ghost packet
+and write-only fencing accepts both writes in perfectly increasing order
+(§10.4).</p>
+<h2 id="solutions-rung-6">Rung 6</h2>
+<ul>
+<li><strong>token-reused-on-expiry</strong> — diff: &quot;cleanup: only bump the version on a
+real ownership change&quot;. Breaks <strong>safety</strong>, silently: fencing reports
+nothing wrong because both holders are equally credentialed. Symptom:
+rare corruption that looks like an application bug, near GC events.</li>
+<li><strong>token-counter-in-memory</strong> — diff: &quot;the counter doesn't need to be in
+the DB, it's just a number&quot;. Breaks <strong>availability</strong>: after a service
+restart every legitimate writer is rejected until the counter climbs
+back. Loud — error rates spike immediately after the restart.</li>
+<li><strong>dedup-instead-of-ordering</strong> — diff: a &quot;replay protection&quot; feature that
+keeps a seen-set instead of a floor. Breaks <strong>safety</strong>: a stale holder's
+<em>first</em> write always carries an unseen token. Symptom: same as bug #1 —
+quiet, pause-correlated corruption.</li>
+<li><strong>write-only fencing</strong> — diff: none; it's the <em>absence</em> of a line nobody
+knew to write. Breaks <strong>safety</strong> in the narrowest window (in-flight write
+vs new read), zero rejections logged, pause can be <em>shorter than the
+TTL</em>. The nearly perfectly silent one.</li>
+</ul>
+<p>Time-to-detection ranking (defensible): <strong>token-counter-in-memory</strong> first
+(minutes — it fails loudly and reliably on the next restart), then
+<strong>token-reused-on-expiry</strong> and <strong>dedup-instead-of-ordering</strong> (weeks —
+need a pause coinciding with contention, and the corruption is deniable),
+with <strong>write-only fencing</strong> last (months-to-never — needs pause + in-flight
+write + immediate re-grant, and even then the logs show two <em>accepted</em>
+writes and nothing else). Any order is fine if argued from trigger
+frequency × symptom visibility.</p>
+<h2 id="solutions-rung-7-worked-design">Rung 7 (worked design)</h2>
+<p>The email API accepts no tokens, so the guarantee cannot live at the
+resource — push it as close as possible and name the residue.</p>
+<p>Design: (1) The digest job is gated by an <strong>efficiency lock</strong> (ShedLock on
+Postgres is fine — the DB is already there). (2) The lock does not guard
+the <em>send</em>; it guards the <em>claim</em>: a <code>digest_runs(date PRIMARY KEY, owner, token)</code> row created with an <strong>idempotent conditional insert</strong> — yesterday's
+lab's mechanism, <code>INSERT ... ON CONFLICT DO NOTHING</code>, count 1 = mine. The
+date is the natural idempotency key; the DB is the fenceable front door.
+(3) Only the claimant calls the API, and it records <code>sent_at</code> in the same
+row <em>before</em> acknowledging completion, passing the provider an
+<strong>idempotency key</strong> (<code>digest-2026-08-29</code>) if the API supports one (many
+mail providers do — that moves the dedup into the resource after all).
+(4) A reaper re-opens claims with no <code>sent_at</code> after a deadline.</p>
+<p>The residual failure, written down: the claimant can crash (or pause)
+<strong>after the API accepted the send and before <code>sent_at</code> committed</strong> — the
+reaper then re-claims and the digest goes out twice. Without provider-side
+idempotency this window cannot be closed, only shrunk (claim → send →
+record, with the record immediately after the send). Monitor: provider-side
+send count per digest date (reconciliation query against their API/logs),
+alerting on <code>count &gt; 1</code> — you detect the double-send you cannot prevent.</p>
+<h2 id="solutions-rung-8-worked-discussion">Rung 8 (worked discussion)</h2>
+<ul>
+<li><strong>(1) Payout workers / merchant queues</strong> — this is not one lock, it's
+<em>assignment</em>: a claim per merchant. Correctness (a merchant drained twice
+= double payouts). Mechanism: the claim IS a conditional write on a
+<code>merchant_claims</code> row (owner, lease expiry, <strong>generation</strong> — the previous
+lab's rung 7 verbatim), and every payout the worker writes carries the
+generation, checked by the payments DB. The lock-service version (etcd
+lease per merchant, <code>mod_revision</code> as token) is equivalent; pick whichever
+store you already operate. Monitor: claims with expired leases still
+receiving writes (= fencing rejections), payouts per merchant per window.</li>
+<li><strong>(2) Nightly interest batch, writes only to Postgres</strong> — the easy one,
+and the trap is over-engineering it: the work lives <em>inside</em> the
+fenceable resource. <code>pg_advisory_xact_lock</code> (or ShedLock) to avoid
+duplicate cost, and the batch's writes made idempotent/conditional
+(<code>WHERE last_interest_date &lt; :today</code>) so a duplicate run is a no-op.
+Efficiency lock + conditional writes; no external lock service earns its
+keep. Monitor: rows updated per run (a duplicate run updating 0 is
+healthy; updating &gt;0 twice is the alarm).</li>
+<li><strong>(3) Month-close, minutes long, external tax APIs</strong> — correctness, long
+hold, and a box-G component. Consensus-backed lock (etcd/ZK) with session<ul>
+<li>renewal for the long hold; every <em>internal</em> write fenced with the
+lock's revision; the <em>external</em> calls get idempotency keys
+(<code>close-2026-08</code>) and a reconciliation step, because no token protects
+an API that doesn't check one. Also add the previous lab's shared-version
+bump on the ledger-month row so even a bypassing writer collides.
+Monitor: session expirations during a close (a paused closer mid-month-
+close is the nightmare scenario — page on it), reconciliation diffs.</li>
+</ul>
+</li>
+<li><strong>The Redisson-wrapper review comment</strong>, two paragraphs: <em>&quot;RLock gives us
+a lease with watchdog renewal and no fencing token — as a duplicate-work
+suppressor it's fine, so (2) can use it. But (1) and (3) protect
+invariants: RLock has no token the database or the ledger could check, so
+a GC pause longer than the watchdog interval silently gives us two
+holders (we measured this shape in the locking lab — and Redis's own docs
+route correctness cases to fencing). Standardizing it 'for consistency'
+standardizes our failure mode.</em>
+<em>Counter-proposal: one internal library with two entry points —
+<code>efficiencyLock()</code> (Redisson/ShedLock, documented as best-effort) and
+<code>fencedClaim()</code> (etcd lease + revision, or the DB-row claim with a
+generation column, returning a token the caller MUST write with). The
+consistency worth having is that every correctness path returns a token
+and every store we own checks it.&quot;</em></li>
+</ul>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../42-split-brain/notes.html"><small>← Lab 42</small>split-brain</a><a href="../44-jepsen/notes.html" style="text-align:right"><small>Lab 44 →</small>jepsen</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why--one-job-two-machines-no-shared-anything">1. WHY — one job, two machines, no shared anything</a><a href="#readme-2-problem--the-darkroom-key">2. PROBLEM — the darkroom key</a><a href="#readme-3-naive-solution--the-lock-server">3. NAIVE SOLUTION — the lock server</a><a href="#readme-4-failure--and-the-fix-that-creates-the-real-problem">4. FAILURE — and the fix that creates the real problem</a><a href="#readme-5-the-real-requirement">5. THE REAL REQUIREMENT</a><a href="#readme-6-key-idea--number-the-keys-and-teach-the-enlarger-to-count">6. KEY IDEA — number the keys, and teach the enlarger to count</a><a href="#readme-7-terminology">7. TERMINOLOGY</a><a href="#readme-8-mental-models">8. MENTAL MODELS</a><a href="#readme-9-visualization--watch-the-spare-key-ruin-a-print">9. VISUALIZATION — watch the spare key ruin a print</a><a href="#readme-10-actual-mechanism--five-versions-four-scars">10. ACTUAL MECHANISM — five versions, four scars</a><a href="#readme-11-failure-scenarios">11. FAILURE SCENARIOS</a><a href="#readme-12-correctness--what-is-actually-guaranteed">12. CORRECTNESS — what is actually guaranteed</a><a href="#readme-13-code--the-toy-and-what-your-stack-calls-each-piece">13. CODE — the toy, and what your stack calls each piece</a><a href="#readme-14-experiments">14. EXPERIMENTS</a><a href="#readme-15-production">15. PRODUCTION</a><a href="#readme-16-exercises">16. EXERCISES</a><a href="#readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-18-glossary-in-order-of-appearance">18. GLOSSARY (in order of appearance)</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2759 @@
+<!doctype html>
+<html lang="en" data-hub-lab="70-uber-system-design">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>70. uber-system-design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 70 of 71 · Stage 8</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 70 · Whole Systems</p><article id="readme"><h1 id="readme-uber--how-a-moving-city-full-of-cars-meets-a-moving-city-full-of-people">Uber — how a moving city full of cars meets a moving city full of people</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Meera is standing outside a metro station at nine at
+night. Dev is sitting in an empty car eight hundred metres away. Neither of
+them can find the other, and that is the whole business. Two ideas solve it.
+File every car by which square of the map it is standing in, so &quot;who is near
+me?&quot; becomes a lookup instead of a search. Then treat a match not as an
+answer you looked up but as a car you <em>grab</em>. Only one person can win that
+grab, and a timer takes the car back if nobody confirms. Payments, ratings
+and receipts are ordinary backend work you already know. The one thing you
+may never do is promise the same car to two people.</p>
+</blockquote>
+<p><strong>Go and break it yourself:</strong> <a href="visualization.html"><code>visualization.html</code></a> is the
+Dispatch Console, also published at
+<a href="https://claude.ai/code/artifact/7c601922-ea5c-4d46-946a-79bf6a489ff0" target="_blank" rel="noopener">https://claude.ai/code/artifact/7c601922-ea5c-4d46-946a-79bf6a489ff0</a>.</p>
+<hr />
+<h2 id="readme-1-why-is-finding-each-other-the-whole-business">1. Why is <em>finding each other</em> the whole business?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A car with nobody in it is parked near a person with
+nowhere to sit. Neither of them can see the other. Every hard thing in this
+lab is that one sentence.</p>
+</blockquote>
+<p>Meera comes out of the metro station at 9 p.m. Somewhere within two kilometres
+of her there is a car with nobody in it. Dev is behind the wheel. He would very
+much like to earn her fare.</p>
+<p>Neither of them can find the other.</p>
+<p>That is the entire business. Not the app. Not the map. Not the payment. The
+<strong>finding</strong>.</p>
+<p>Before anyone solved it, Meera phoned a taxi office. A person with a paper map
+guessed who was closest. That person radioed a driver. Meera waited twenty
+minutes to discover the guess was wrong. Meanwhile Dev spent something like a
+third to a half of his working hours driving around empty, looking for her.</p>
+<p>If nobody solves this, three things go wrong at once. Riders wait too long.
+Drivers earn too little for each hour on the road. And the number of cars a
+city needs, to move the same number of people, goes up.</p>
+<p>Those three are not three problems. They are one problem wearing three faces.</p>
+<h2 id="readme-2-what-comes-apart-in-ranis-evening">2. What comes apart in Rani's evening?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One clever person with a paper map is better than any app
+when there are five cars. At five hundred cars she breaks, and she breaks in
+four separate ways that never go away.</p>
+</blockquote>
+<p>Meet <strong>Rani</strong>. She works at a taxi office. On the wall is a paper map of the
+city, and beside it a box of coloured pins. Every driver radios in when they
+move, and Rani moves their pin. When the phone rings, she looks at the map,
+finds the pin nearest the caller, and radios that driver.</p>
+<p>With five cars this works beautifully. Rani is faster and kinder than any app.</p>
+<p>Then the company grows to five hundred cars. Rani's evening comes apart in four
+separate ways, all in the same hour.</p>
+<p><strong>One: she cannot look at five hundred pins.</strong> Finding the nearest pin to a
+caller means her eyes crossing the whole map, on every call, while the pins
+keep moving.</p>
+<p><strong>Two: Meera and Priya ring at the same moment.</strong> Rani is halfway through
+promising car 47 to Meera when Priya's call comes in. She promises car 47 to
+Priya as well. Both women are told a car is coming. One of them is wrong, and
+neither of them knows which one.</p>
+<p><strong>Three: a pin lies.</strong> Omar drove home an hour ago and forgot to radio in. His
+pin is still on the map. It is still the nearest pin to somebody. It is still
+being sent to people who then wait for a car that is not coming.</p>
+<p><strong>Four: car 47 never answers the radio.</strong> Ben is driving it, and his radio is
+off. Rani has mentally set his car aside for Meera, so nobody else may have it.
+It stays set aside until Rani remembers, which she does not, because the phone
+is ringing again.</p>
+<p>Hold on to all four. Every serious idea in this lab is one of Rani's four
+problems, solved once, at a size where you cannot solve it by paying attention.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Asha, an engineer, buys Rani a computer and types every
+driver's position into a table. Which of the four problems does that fix?</em></p>
+<details><summary>Reveal</summary>
+**The first one only, and only for a while.** A computer scans five hundred
+rows far faster than Rani's eyes cross a map.
+
+<p>It fixes nothing else. It still has to be told what to do when Meera and
+Priya arrive in the same millisecond (problem two). It still has no idea that
+Omar's row is a lie (problem three). And it will happily leave Ben's car set
+aside forever (problem four).</p>
+<p>If you guessed &quot;all four, that is what computers are for&quot;, you have made the
+most common mistake in this subject. The scan is the problem people expect.
+The other three are the problems that actually bite. They get <em>worse</em>, not
+better, when the system gets faster and more concurrent.</p>
+</details>
+
+</blockquote>
+<p><strong>Where this lab takes you.</strong> Stop at any checkpoint and you still have
+something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–9</td>
+  <td>say in plain words why dispatch is hard, and name the two core ideas</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>10</td>
+  <td>walk the matching mechanism step by step, and justify every odd detail</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>11–15</td>
+  <td>draw the whole system, reason about its failures, defend its invariants</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>16</td>
+  <td>say what the real thing does differently, and what belongs on a dashboard</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-what-is-the-naive-program-and-is-it-actually-wrong">3. What is the naive program, and is it actually wrong?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Asha computerises Rani exactly as Rani works. Fifteen
+lines. It is the right thing to write first, and it is broken in three places.</p>
+</blockquote>
+<p>Here is what any competent engineer writes first, Asha included. Writing it is
+not a mistake. Not measuring it is.</p>
+<div class="code"><pre><code>one table:  driver_id | latitude | longitude | is_free
+
+when a ride is requested:
+    best = null
+    for every row in the table:                 # look at all of them
+        if row.is_free and distance(row, rider) &lt; distance(best, rider):
+            best = row
+    mark best.is_free = false                   # take it
+    tell the rider about best
+</code></pre></div>
+<p>Read that as English. Look at every car. Keep the nearest free one. Mark it
+taken. Tell the rider.</p>
+<p>On a whiteboard it is correct. Every rider gets the nearest free car. It is
+about fifteen lines. Ship it.</p>
+<h2 id="readme-4-where-do-the-three-cracks-show-up-when-you-measure-ashas-program">4. Where do the three cracks show up when you measure Asha's program?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The loop is too slow, the pins lie, and &quot;check it is free,
+then take it&quot; hands the same car to two people. The third crack is the one
+that has no error message.</p>
+</blockquote>
+<p>Asha runs her program against a city, three times, changing one thing each
+time. Three cracks open. They are Rani's problems one, three and two, in that
+order.</p>
+<h3 id="readme-the-first-crack-what-does-looking-at-every-car-actually-cost">The first crack: what does looking at every car actually cost?</h3>
+<p><code>java src/Experiments.java 1</code> builds a city with <strong>100,000 drivers</strong> and asks it
+1,000 ride-request questions.</p>
+<div class="code"><pre><code>                        total     per request    drivers measured
+  full scan        :   3370 ms       3.37 ms           100,000
+</code></pre></div>
+<p>Read the middle column. 3.37 ms of pure arithmetic for one request. That is one
+process, with all the data already in memory, and no network anywhere in the
+picture. It is the <em>floor</em>. A real request has to fetch those rows first.</p>
+<p>(That command prints two more rows, which are the two fixes. They use ideas
+nobody has introduced yet, so section 10 holds them back.)</p>
+<p>But the reading is not the expensive half. <strong>The writing is.</strong> Dev's app reports
+his position every four seconds. A city with 1,000,000 drivers online at peak is
+<strong>250,000 position updates per second</strong>, forever, whether or not a single person
+is asking for a ride. Every one of those updates makes some row in Asha's table
+stale the moment it lands.</p>
+<h3 id="readme-the-second-crack-what-does-it-cost-when-a-pin-lies">The second crack: what does it cost when a pin lies?</h3>
+<p><code>java src/Experiments.java 4</code> takes 300 drivers and lets 100 of them go dark for
+two minutes. Omar is one of the hundred. Then it sends 200 ride requests.</p>
+<div class="code"><pre><code>  NO freshness rule:           offers sent to a dark driver : 65
+  30 s freshness rule:         offers sent to a dark driver : 0   (3 requests found nobody)
+</code></pre></div>
+<p>Sixty-five riders out of two hundred were sent a car that is not where the
+system says it is. Now notice the <em>shape</em> of this failure. <strong>No error is raised
+anywhere.</strong></p>
+<p>Arjun is one of the sixty-five. He watches a car icon that never moves. He waits
+out the timeout, cancels, and requests again. On Asha's dashboards that arrives
+as wait time and cancellations. It looks like a demand problem. It never looks
+like an error rate.</p>
+<h3 id="readme-the-third-crack-how-do-two-riders-end-up-with-the-same-car">The third crack: how do two riders end up with the same car?</h3>
+<p><code>java src/Experiments.java 3</code> puts 200 riders on one corner and races 8 threads
+for 200 cars. Think of a taxi rank, a stadium gate, an airport queue.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Two hundred riders, two hundred free cars, and a matcher that
+checks <code>is_free</code> and then writes. How many riders are promised a car that
+somebody else also got? Guess a number, not a range.</em></p>
+<details><summary>Reveal</summary>
+About a hundred. Half.
+
+<p>If you guessed &quot;one or two, it is a rare race&quot;, that is the intuition this
+experiment exists to destroy. The gap between the check and the write is not
+a narrow window that a request occasionally slips through. Under contention
+it is where <em>most</em> requests live.</p>
+<p>If you guessed zero because there are exactly as many cars as riders, you
+have assumed the riders take turns. Nothing in the code makes them.</p>
+</details>
+
+</blockquote>
+<div class="code"><pre><code>  READ-THEN-WRITE:   riders told &quot;your car is on the way&quot; : 200
+                     cars actually reserved               : 102
+                     riders promised a car someone else has:  98
+</code></pre></div>
+<div class="code"><pre><code>  COMPARE-AND-SET:   riders told &quot;your car is on the way&quot; : 200
+                     cars actually reserved               : 200
+                     riders promised a car someone else has:   0
+</code></pre></div>
+<p><strong>Roughly half of the riders were promised a car that belonged to somebody
+else.</strong> 98 in the run above, 100 in the next run. The exact count depends on
+thread scheduling. It is never small.</p>
+<p>Now look at Asha's code again. The bug is not <em>in</em> a line. It checks <code>is_free</code>,
+and then it writes. Those two lines are simply not one action. Another request
+fits perfectly in the gap between them.</p>
+<p>Three different things volunteer to create that gap: a thread switch, a garbage
+collection pause, or a network round trip to the database.</p>
+<p>This is Rani promising car 47 to Meera and to Priya, mechanised, and running a
+thousand times a second.</p>
+<h2 id="readme-5-what-has-to-be-true-whatever-technology-you-pick">5. What has to be true, whatever technology you pick?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Strip away every product name and five sentences are left.
+The second one is the sentence that makes this lab different from every
+&quot;find nearby things&quot; tutorial you have read.</p>
+</blockquote>
+<p>Asha closes her laptop and writes on paper. No databases, no frameworks. Just
+what must be true for Meera to get a car and for Dev to get paid.</p>
+<ol>
+<li><strong>&quot;Who is near here?&quot; must be answerable in single-digit milliseconds</strong>,
+while positions change hundreds of thousands of times per second.</li>
+<li><strong>Each car is handed to at most one rider at a time.</strong> This must hold even
+when Meera's tap and Priya's tap land in the same millisecond, on two
+different machines.</li>
+<li><strong>No car is ever stuck reserved.</strong> The reservation must release itself,
+whatever it is waiting on: Ben's thumb, Ben's phone, or the server that
+asked him.</li>
+<li><strong>A position is trusted only as long as it is fresh.</strong> Omar's car stopped
+reporting, and a car that stopped reporting is not a car you can send.</li>
+<li><strong>All of that keeps holding while pieces fail</strong>, because at this size
+something is always failing.</li>
+</ol>
+<p>Requirement 2 is the one that separates this from every &quot;find nearby things&quot;
+tutorial. Everything after this point is the pursuit of these five sentences.</p>
+<p>Here is how the five requirements line up with Rani's evening, so you can see
+that nothing new has been invented, only made precise.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Requirement</th>
+  <th>Rani's problem it answers</th>
+  <th>The crack in section 4 it closes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1. answer &quot;who is near?&quot; fast</td>
+  <td>her eyes crossing five hundred pins</td>
+  <td>the first crack: 3.37 ms per scan</td>
+</tr>
+<tr>
+  <td>2. one car, one rider</td>
+  <td>car 47 promised to Meera and Priya</td>
+  <td>the third crack: 98 of 200 riders</td>
+</tr>
+<tr>
+  <td>3. nothing held forever</td>
+  <td>Ben's radio never answering</td>
+  <td>not yet visible; section 10 finds it</td>
+</tr>
+<tr>
+  <td>4. only fresh positions count</td>
+  <td>Omar's pin, an hour out of date</td>
+  <td>the second crack: 65 ghost offers</td>
+</tr>
+<tr>
+  <td>5. it all survives failure</td>
+  <td>Rani going home ill</td>
+  <td>the whole of section 12</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-6-what-are-the-two-ideas-everything-else-follows-from">6. What are the two ideas everything else follows from?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Stop searching for nearness and file by it instead. And
+stop treating a match as something you compute, because a match is something
+you <em>take</em>.</p>
+</blockquote>
+<p>Two sentences. The whole rest of the lab is their consequences.</p>
+<blockquote>
+<p><strong>Idea one: stop searching for nearness, index by it.</strong> Chop the map into
+fixed squares. Keep a set of cars per square. &quot;Who is near me?&quot; stops being a
+scan over the city and becomes a lookup of a handful of keys.</p>
+<p><strong>Idea two: a match is not a query result, it is a claim.</strong> &quot;The nearest free
+car&quot; is a fact that stops being true the instant somebody else acts on it. So
+the match is not computed and then applied. It is <strong>taken</strong>, in one
+indivisible step that exactly one request can win, and it is taken <strong>on a
+deadline</strong> so nothing can hold it forever.</p>
+</blockquote>
+<p>Idea one answers the first crack. Idea two answers the third crack, and its
+deadline answers Rani's fourth problem, the one where Ben's car sits set aside
+all evening.</p>
+<p>Freshness answers the second crack. A position becomes a fact with an expiry
+date. That falls out of idea two the moment you stop seeing supply as something
+<em>stored</em> and start seeing it as something <em>leased</em>.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>index</em>, <em>atomic</em> or <em>lease</em>, tell a
+friend why &quot;find the nearest free car and mark it busy&quot; is two mistakes, not
+one.</p>
+<details><summary>A good answer sounds like</summary>
+"The first mistake is looking at every car in the city to find the near ones.
+That is like reading every name in the phone book to find your neighbour.
+Instead, file the cars by which part of town they are in.
+
+<p>The second mistake is looking and then grabbing. In between the looking and
+the grabbing, somebody else grabbed. So you have to grab in a way that either
+succeeds or tells you plainly that you lost. And you have to let go by
+yourself, on a timer, in case you forget.&quot;</p>
+</details>
+
+</blockquote>
+<h2 id="readme-7-which-words-do-you-need-now-and-what-did-each-one-cost-to-earn">7. Which words do you need now, and what did each one cost to earn?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten words. You have already watched every one of them
+matter, which is the only reason they are worth learning.</p>
+</blockquote>
+<p>Terminology dumped in a block is a wall. So these come in three groups, in the
+order the story needed them. First, the words for the two sides of the market.
+Then the words for the filing cabinet. Last, the words for taking a car without
+lying to anybody.</p>
+<h3 id="readme-group-one-what-do-you-call-the-two-sides">Group one: what do you call the two sides?</h3>
+<p>Rani does not own the cars. That sounds obvious and it changes everything.</p>
+<p>Dev can decline a trip. He can go offline in the middle of a thought. He can
+accept a rival company's fare while Rani's radio call is still in the air. The
+cars are <strong>supply</strong>, the waiting riders are <strong>demand</strong>, and a system in which
+neither side is under your control is a <strong>marketplace</strong>.</p>
+<p>The word exists to stop you modelling Dev as a row in a table. A row does what
+you write to it. Supply does not.</p>
+<p>You can watch the difference in the concert scene of <code>Sim.java</code>. Nine people
+request a ride. Zero cars are claimable. No amount of correct code creates a
+tenth car.</p>
+<p>The act of choosing which car goes to which rider is <strong>dispatch</strong>, also called
+<strong>matching</strong>. Uber's own system for it is called DISCO. Dispatch is a
+<em>decision</em>, and it is deliberately kept separate from the <em>state</em> of where the
+cars are. The index knows where Dev is. Dispatch decides what to do about it.
+Those two things fail differently and scale differently, so they get different
+names and, in section 11, different services.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The word</th>
+  <th>In Rani's office it is</th>
+  <th>Stated precisely</th>
+  <th>Where you first felt it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>supply / demand</td>
+  <td>the cars, and the people ringing</td>
+  <td>two populations, neither owned by the system</td>
+  <td>section 2, when Omar drove home</td>
+</tr>
+<tr>
+  <td>marketplace</td>
+  <td>drivers who can say no</td>
+  <td>inventory with a veto and its own incentives</td>
+  <td>the concert scene in <code>Sim.java</code></td>
+</tr>
+<tr>
+  <td>dispatch / matching</td>
+  <td>Rani choosing a pin and radioing it</td>
+  <td>the decision service: search, rank, offer, bookkeep</td>
+  <td>section 3, the naive loop</td>
+</tr>
+<tr>
+  <td>DISCO</td>
+  <td>—</td>
+  <td>Uber's published name for its dispatch system</td>
+  <td>section 16, the production chain</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-group-two-what-do-you-call-the-filing-cabinet">Group two: what do you call the filing cabinet?</h3>
+<p>A <strong>geospatial index</strong> is a filing system where things are filed by <em>where they
+are</em>. Said precisely, it maps a region of space to the set of entities inside
+it, with cheap updates and proximity queries whose cost is bounded.</p>
+<p>Why does this need its own word? Because an ordinary database index answers
+&quot;which rows have this value?&quot; Nearness is not a value. Meera and Dev can be
+close without sharing a single column.</p>
+<p>One square of the map is a <strong>cell</strong>. Its id is the key a driver is filed under,
+and a driver is in exactly one cell at a time. This is the whole trick, and it
+is worth saying slowly: a cell turns a <em>continuous</em> question (&quot;who is within
+500 metres?&quot;) into a <em>discrete</em> one (&quot;who is in these nine keys?&quot;).</p>
+<p>Looking in your own square, then the ring of squares around it, then the next
+ring out, is <strong>ring search</strong>, or neighbour search. It exists because searching
+only the rider's own cell is a bug that looks reassuring. Section 10 puts a
+number on it: 44.9% of requests find nobody at all while a car sits just across
+the line.</p>
+<p>Last in this group is the one that catches people out. <strong>ETA</strong> is the estimated
+time of arrival: how many minutes until the car is actually at the kerb. It is
+the ranking key, and it comes from a road graph and live traffic, not from
+straight-line distance.</p>
+<p>Time is what Meera experiences. Distance is what the geometry gives you free. A
+car 200 m away across a river is not 200 m away.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The word</th>
+  <th>Picture it as</th>
+  <th>Stated precisely</th>
+  <th>Where it earns its keep</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>geospatial index</td>
+  <td>a filing cabinet with a drawer per neighbourhood</td>
+  <td>space → the set of things in it, cheap to update</td>
+  <td><code>CellIndex</code>, a 500 m grid over Bengaluru</td>
+</tr>
+<tr>
+  <td>cell</td>
+  <td>one square drawn on the map</td>
+  <td>the key a driver is filed under, exactly one at a time</td>
+  <td>cell <code>(25,155)</code> holds <code>{D1, D7, D9}</code></td>
+</tr>
+<tr>
+  <td>ring search</td>
+  <td>your square, then the ring around it</td>
+  <td>widen outward until the radius is covered or enough found</td>
+  <td>experiment 2, and section 10's v2 and v3</td>
+</tr>
+<tr>
+  <td>ETA</td>
+  <td>minutes, not metres</td>
+  <td>ranking key from roads and traffic, not geometry</td>
+  <td><code>Sim.java</code>: D2 is 292 m and 122 s; D4 is 430 m and 57 s</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read that last row again. Rank by distance and Meera gets D2, the nearest car
+and the slowest one. Ben is driving it, and the flyover between him and the
+metro station costs him a minute.</p>
+<h3 id="readme-group-three-what-do-you-call-taking-a-car-without-lying-to-anybody">Group three: what do you call taking a car without lying to anybody?</h3>
+<p>An <strong>offer</strong> is &quot;this car is being held for you, briefly&quot;. Precisely: a lease
+over one driver, with an expiry, carrying an id that later actions must present.</p>
+<p>The word earns itself against its rival. An <em>assignment</em> is permanent. An offer
+is not, because Ben has not agreed yet and might never agree. A plain <code>is_free</code>
+boolean cannot represent &quot;held, pending a human&quot;, and that missing state is
+exactly why Rani lost car 47 for a whole evening.</p>
+<p>A <strong>claim</strong> is taking something in a way that fails loudly if somebody else took
+it first. Precisely: an atomic conditional state change from <code>AVAILABLE</code> to
+<code>OFFERED</code>, applied only if the current state is still <code>AVAILABLE</code>, with the
+caller told whether it won. Engineers call the primitive <strong>compare-and-set</strong>.</p>
+<p>The word names the difference between <em>reading a fact</em> and <em>acting on it</em>.
+Read-then-write has a gap. A claim has none. In <code>Dispatch.java</code> it is one line,
+<code>d.state.compareAndSet(AVAILABLE, OFFERED)</code>, and that line is the whole
+distance between 98 double-bookings and 0.</p>
+<p>A <strong>heartbeat</strong> is Dev's car saying &quot;still here&quot; every few seconds. <strong>Freshness</strong>,
+or TTL, is the age past which the system stops believing the last thing it
+heard. Supply is a lease that a location ping renews, and a record older than
+the TTL is simply not offered to anybody.</p>
+<p>Why bother? Because &quot;is this driver online?&quot; is a question no distributed
+system can answer. &quot;Did this driver report in the last 30 seconds?&quot; is a
+question every node can answer on its own, from data it already holds. Swapping
+the first question for the second is the entire move.</p>
+<p>Finally, <strong>surge</strong>. Prices go up where too many people want cars at once. It is
+a per-area multiplier from local demand over local supply, applied to the fare.</p>
+<p>It is easiest to understand as a control signal that happens to be delivered as
+a price. With a fixed price, an under-supplied area has exactly one behaviour
+available to it: an unbounded queue. A queue does not create cars.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The word</th>
+  <th>The everyday version</th>
+  <th>Stated precisely</th>
+  <th>The moment it mattered</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>offer</td>
+  <td>a shop holding an item under the counter for you</td>
+  <td>a lease over one driver, with an id and an expiry</td>
+  <td><code>Offer[O4, trip=T1, driver=D3, expires=t+15s]</code>, meaning offer O4 holds driver D3 for trip T1 until fifteen seconds from now</td>
+</tr>
+<tr>
+  <td>claim</td>
+  <td>grabbing the last umbrella from the stand</td>
+  <td><code>compareAndSet(AVAILABLE, OFFERED)</code>: one winner, loser told</td>
+  <td>section 4's third crack: 98 versus 0</td>
+</tr>
+<tr>
+  <td>heartbeat / freshness</td>
+  <td>a night watchman ringing a bell each round</td>
+  <td>supply as a lease renewed by pings; stale records excluded</td>
+  <td>Omar's pin, and the 30 s rule in experiment 4</td>
+</tr>
+<tr>
+  <td>surge</td>
+  <td>a market stall raising prices when the crowd arrives</td>
+  <td>demand ÷ supply per area, applied to the fare</td>
+  <td><code>surgeAt()</code>, and the concert scene in <code>Sim.java</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-of-these-words-have-you-already-met-under-another-name">Which of these words have you already met under another name?</h3>
+<p>Several of these are old friends in new clothes. Naming the resemblance is
+worth more than memorising the definitions.</p>
+<p>The <strong>geospatial index</strong> does the same job as the structures in
+<a href="../05-btree-and-lsm/notes.html#readme"><code>btree-and-lsm</code></a>: stop the scan. It answers a different
+question. A B-tree orders one dimension and answers ranges over it. Nearness is
+two-dimensional, and no ordering of a single column captures it.</p>
+<p>The <strong>cell</strong> is the hash slot from <a href="../13-redis/notes.html#readme"><code>redis</code></a> Cluster and the ring
+position from <a href="../35-consistent-hashing/notes.html#readme"><code>consistent-hashing</code></a>, in a different
+space. A key's slot is fixed by hashing. Dev's cell is fixed by geography. Both
+exist so a lookup costs one hop.</p>
+<p>One difference between them matters enormously. Hash space is deliberately
+<em>uniform</em>. Geography is emphatically not. That is why the hot cell in section
+12 has no equivalent of virtual nodes to save it.</p>
+<p>The <strong>offer</strong> is the lease and the fencing token from <a href="../13-redis/notes.html#readme"><code>redis</code></a>
+§4, living in their natural habitat. An offer id fences a stale accept exactly
+the way a fencing token fences a stale lock holder.</p>
+<p>The <strong>claim</strong> is the compare-and-set of
+<a href="../17-java-memory-model/notes.html#readme"><code>java-memory-model</code></a>, except across machines rather
+than across threads in one JVM. It is also Redis's single-threaded <code>INCR</code>: the
+same indivisibility, bought a different way. And it is the cheap cousin of
+<code>two-phase-commit</code>. There is one resource here, so there is no coordinator to
+run.</p>
+<p><strong>Freshness</strong> is the TTL from <a href="../11-caching/notes.html#readme"><code>caching</code></a>, and it is the central
+point of <a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a> restated for cars. You cannot tell
+&quot;gone&quot; from &quot;slow&quot;, so you decide by the clock and accept that the clock is
+sometimes wrong.</p>
+<p><strong>Supply that can refuse you</strong> is the over-admission problem from
+<a href="../60-distributed-rate-limiting/notes.html#readme"><code>distributed-rate-limiting</code></a>. Both are about a
+scarce resource that several requesters reach for at the same instant.</p>
+<p><strong>Ring search</strong> is the one genuinely new thing here. Nothing you have learned
+so far has it.</p>
+<h2 id="readme-8-what-two-pictures-should-you-keep-in-your-head">8. What two pictures should you keep in your head?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A wooden pegboard with a hook for every square of the map,
+and a state machine with four states. They are the same machine. One of them
+you can hold; the other one is true.</p>
+</blockquote>
+<h3 id="readme-the-simple-picture-what-did-rani-leave-behind">The simple picture: what did Rani leave behind?</h3>
+<p>Rani retires. In the back room she leaves a <strong>pegboard</strong>.</p>
+<p>The city map is drawn on it, divided into 500-metre squares, and every square
+has a hook. Each car has a wooden token. A car's token hangs on the hook for
+the square that car is standing in. When Dev drives into a new square, his
+token moves from one hook to the next.</p>
+<p>Now watch four things become physical.</p>
+<p>Asha asks &quot;who is near Meera?&quot; She looks at Meera's hook, then the eight hooks
+around it, then outward, until she has enough tokens. She never looks at the
+whole board.</p>
+<p>Asha makes a match. She physically <em>takes the token off the hook</em>. You cannot
+take a token that is not there. Two clerks reaching for Dev's token is settled
+by whose hand arrives first, and the loser plainly sees an empty hook.</p>
+<p>Asha makes an offer. The taken token goes into a small tray with a 15-second
+sand timer. If the timer runs out and nobody has confirmed, the token goes back
+on its hook. That happens whether or not anyone is watching the tray.</p>
+<p>Asha deals with Omar's dark car. Every token must be re-stamped every 30
+seconds. Unstamped tokens are ignored, even though they are still hanging
+there in plain sight.</p>
+<h3 id="readme-the-engineering-picture-what-are-the-four-states">The engineering picture: what are the four states?</h3>
+<p>Same machine, said precisely. A driver is always in exactly one of four states,
+and the arrows are the only legal ways to move between them.</p>
+<pre class="mermaid">stateDiagram-v2
+    [*] --&gt; OFFLINE
+    OFFLINE --&gt; AVAILABLE : driver goes online (enters the index)
+    AVAILABLE --&gt; OFFERED : compareAndSet by ONE matcher — the claim
+    OFFERED --&gt; AVAILABLE : declined, or the lease expires
+    OFFERED --&gt; ON_TRIP : driver accepts, presenting a valid offer id
+    ON_TRIP --&gt; AVAILABLE : trip completed (re-indexed at the drop-off)
+    AVAILABLE --&gt; OFFLINE : goes offline (leaves the index)
+    note right of OFFERED
+      Exactly one trip may hold a driver here.
+      The lease is what makes that safe to promise.
+    end note
+</pre>
+<p>The whole system is three pieces of state, six kinds of message, and four
+rules that must never be broken.</p>
+<ul>
+<li><strong>State:</strong> <code>cellId → Set&lt;driverId&gt;</code>, <code>driverId → (position, lastPing, state, offer)</code>, <code>tripId → (rider, pickup, state, driver)</code>. In words: which cars are
+in each square, everything known about one car, and everything known about
+one trip.</li>
+<li><strong>Messages:</strong> location ping, ride request, offer, accept or decline, expiry
+tick, trip events.</li>
+<li><strong>Invariants:</strong> four rules that may never break.<ul>
+<li>(i) A driver is in at most one cell.</li>
+<li>(ii) A driver is in <code>OFFERED</code> for at most one trip.</li>
+<li>(iii) Every <code>OFFERED</code> has an expiry in the future, or is reclaimed.</li>
+<li>(iv) A trip has at most one driver.</li>
+</ul>
+</li>
+</ul>
+<h3 id="readme-how-does-the-pegboard-map-onto-the-code">How does the pegboard map onto the code?</h3>
+<p>Two tables, because the pegboard does two different jobs. The first is about
+finding.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>On the pegboard</th>
+  <th>In the code</th>
+  <th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>A hook per square</td>
+  <td><code>cellId → Set&lt;driverId&gt;</code></td>
+  <td>Makes &quot;near&quot; a key, not a scan</td>
+</tr>
+<tr>
+  <td>Moving a token between hooks</td>
+  <td><code>index.update()</code> — leave one cell, join another</td>
+  <td>The hot write path; most pings move nothing</td>
+</tr>
+<tr>
+  <td>Re-stamping tokens</td>
+  <td>heartbeat / ping TTL</td>
+  <td>A position is a fact with an expiry</td>
+</tr>
+</tbody>
+</table></div>
+<p>The second is about taking, and about letting go again.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>On the pegboard</th>
+  <th>In the code</th>
+  <th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Taking the token off the hook</td>
+  <td><code>compareAndSet(AVAILABLE, OFFERED)</code></td>
+  <td>Exactly one taker; the loser is told</td>
+</tr>
+<tr>
+  <td>Empty hook</td>
+  <td>claim returns <code>false</code></td>
+  <td>Losing is normal, not an error</td>
+</tr>
+<tr>
+  <td>Sand timer on the tray</td>
+  <td>offer TTL + <code>expireOffers()</code></td>
+  <td>Nothing is held forever</td>
+</tr>
+<tr>
+  <td>Token back on its hook</td>
+  <td><code>OFFERED → AVAILABLE</code></td>
+  <td>Supply recovers without a human</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-the-pegboard-lie-to-you">Where does the pegboard lie to you?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>You have the pegboard in your head. Name the single thing
+about it that is most dangerously untrue of a real system.</em></p>
+<details><summary>Reveal</summary>
+**It is in one room, with one pair of hands.** Everything comfortable about
+the pegboard comes from that.
+
+<p>If you said &quot;the squares are too regular&quot;, you are right and it is the second
+answer below. It costs you performance. The one-room assumption costs you
+correctness, which is worse.</p>
+</details>
+
+</blockquote>
+<p>Read these four before you trust the pegboard anywhere important.</p>
+<p>The board is not in one room. A real index is spread across many machines, and
+taking a token is a network round trip. So the indivisibility has to live
+<em>where the state lives</em>, in the store or in a single owner process per driver.
+A <code>compareAndSet</code> on your service's local copy of a remote driver proves
+nothing at all.</p>
+<p>Tokens never lie; pins do. A token on a hook is unarguably there. Dev's last
+position is a claim made by a phone, on a mobile network, seconds ago, possibly
+out of order. Freshness rules exist because of that gap, and the pegboard
+cannot show it to you.</p>
+<p>One clerk becomes hundreds. The pegboard's safety comes from physics and from
+Asha having only two hands. The real thing has hundreds of matchers running at
+once, which is why every safe step has to be <em>made</em> indivisible on purpose.</p>
+<p>Squares are not neighbourhoods. A hook holds a fixed square. Real cities are
+wildly uneven. Experiment 5 puts 6,399 cars in one 500-metre square at an
+airport and zero in the square next to it. The pegboard quietly suggests a
+uniformity that does not exist.</p>
+<h2 id="readme-9-can-you-go-and-break-it-with-your-own-hands">9. Can you go and break it with your own hands?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Twelve cars, one city, and every rule the matcher follows
+turned into a switch. Each switch breaks something specific, and you should
+break all of them.</p>
+</blockquote>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a>, which is also published at
+<a href="https://claude.ai/code/artifact/7c601922-ea5c-4d46-946a-79bf6a489ff0" target="_blank" rel="noopener">https://claude.ai/code/artifact/7c601922-ea5c-4d46-946a-79bf6a489ff0</a>.</p>
+<p>Do these five things in this order. Each one takes about a minute.</p>
+<ol>
+<li>Press <strong>Request a ride</strong> and read the verdict panel. Note <em>which</em> car was
+reserved, and why the log says it beat a closer one.</li>
+<li>Switch ranking to <strong>Shortest straight line</strong> and request again. A different
+car is chosen: the one that arrives later.</li>
+<li>Switch searching to <strong>Rider's own square</strong>. Click the map to stand just past
+a boundary, and request. Watch the system confidently find nobody.</li>
+<li>Run situation <strong>3</strong> with the reserving rule set to <em>&quot;Check it's free, then
+take it&quot;</em>. Two riders, one car, and no error anywhere.</li>
+<li>Click a car and press <strong>loses signal</strong>. Turn the freshness rule off and
+request next to it. You have just dispatched a car that is not there.</li>
+</ol>
+<p>Step 3 is Meera standing forty metres from a boundary. Step 4 is Meera and
+Priya at the same corner. Step 5 is Omar, still pinned to the map, already
+home.</p>
+<p>The <strong>Step back</strong> button undoes one event at a time, so you can replay any
+moment as many times as you like. Each situation asks you to guess before it
+runs, and the guess is what makes the answer stick.</p>
+<blockquote>
+<p><strong>CHECKPOINT — end of the beginner model.</strong> You can now explain what dispatch
+is, why a scan and a read-then-write both fail, and what the two core ideas
+are. What is missing is the <em>mechanism</em>. How does a real matcher go from a tap
+to a reserved car, step by step? And why does it carry several details that
+look strange until you watch them get invented?</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Explain to a non-engineer why finding the nearest available
+car gets hard once there are a hundred thousand cars. You may not use the
+words index, cell, shard or database.</p>
+<details><summary>A good answer sounds like</summary>
+"Imagine a wall map with a hundred thousand pins in it, and every pin moves
+every four seconds. Two things go wrong. Finding the nearest pin means
+looking at all of them, and by the time you have finished looking, they have
+all moved.
+
+<p>And you are not the only person looking. Somebody else is reaching for the
+same pin at the same moment, and unless there is a rule about who gets it,
+you both walk away thinking you have it.&quot;</p>
+</details>
+
+</blockquote>
+<h2 id="readme-10-how-does-meeras-tap-become-a-reserved-car">10. How does Meera's tap become a reserved car?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight versions. Each one is the obvious next thing to
+write, each one breaks in a specific way, and every strange detail in the
+finished design is the scar of one of those breaks.</p>
+</blockquote>
+<p>Asha does not design the matcher. She grows it. Write the obvious version, let
+it break, fix exactly what broke, and look at what you have.</p>
+<p>Throughout this section, Meera is standing at the Indiranagar metro station and
+five cars are online. Here is the board.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>car</th>
+  <th>who is driving</th>
+  <th>straight-line distance</th>
+  <th>roads factor</th>
+  <th>driving time</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>D2</td>
+  <td>Ben</td>
+  <td>292 m</td>
+  <td>3.5× (flyover)</td>
+  <td>122 s</td>
+</tr>
+<tr>
+  <td>D4</td>
+  <td>Dev</td>
+  <td>430 m</td>
+  <td>1.1×</td>
+  <td>57 s</td>
+</tr>
+<tr>
+  <td>D1</td>
+  <td>—</td>
+  <td>632 m</td>
+  <td>1.3×</td>
+  <td>99 s</td>
+</tr>
+<tr>
+  <td>D3</td>
+  <td>—</td>
+  <td>1,140 m</td>
+  <td>1.2×</td>
+  <td>164 s</td>
+</tr>
+<tr>
+  <td>D5</td>
+  <td>—</td>
+  <td>2,997 m</td>
+  <td>1.2×</td>
+  <td>432 s</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read the last two columns together. Ben is closest and slowest. Keep that in
+mind; version four is about him.</p>
+<h3 id="readme-v1--is-the-riders-own-square-good-enough">v1 — is the rider's own square good enough?</h3>
+<p>File cars by square. The index is <code>cell → set of cars</code>. A ping moves a car
+between two sets and touches nothing else. A request reads one key.</p>
+<p>It is fast, it demos beautifully, and it is wrong.</p>
+<p><strong>🔮 Predict:</strong> <em>Meera is 40 m from the edge of her square. The nearest car is
+150 m away, just across that edge. What does v1 return?</em></p>
+<details><summary>Reveal</summary>
+
+<p>Nothing at all. Or, if her square happens to hold some other car, a worse one.</p>
+<p>Over 5,000 random requests against 5,000 drivers (<code>java src/Experiments.java 2</code>):</p>
+<div class="code"><pre><code>  own cell only : 2,246 requests found NO driver at all (44.9%)
+                    665 requests got a worse driver than the true nearest (13.3%)
+                  average extra distance when wrong: 116 m, worst: 445 m
+  ring search   : 0 disagreements with the full-scan oracle out of 1,000
+</code></pre></div>
+<p>Nearly half of all requests find nobody while cars sit one square away.</p>
+<p>The 13.3% is the more dangerous number, and if you predicted &quot;it just misses
+some cars&quot; you missed it. Those requests <strong>succeed</strong>. They return a car, log
+no error, and Meera simply waits longer, forever. Every cell boundary has this
+bug, and every point in a cell is near one.</p>
+</details>
+
+<h3 id="readme-v2--what-if-you-search-the-whole-circle">v2 — what if you search the whole circle?</h3>
+<p>Cover the search circle properly. Walk out <code>ceil(radius / cellSize)</code> rings, then
+filter by real distance, because a cell is a square and the query is a circle.</p>
+<p>Correct. Zero disagreements with a full-scan oracle.</p>
+<p>Now look at the cost in a dense city. Covering 3 km with 500 m cells is
+<strong>169 squares</strong>. In a 100,000-driver city that hands the matcher <strong>1,659
+candidates per request</strong>, when the matcher was only ever going to rank the best
+ten.</p>
+<h3 id="readme-v3--why-not-widen-ring-by-ring-and-stop-early">v3 — why not widen ring by ring and stop early?</h3>
+<p>Start in Meera's own square. Widen one ring at a time. Stop as soon as you hold
+enough candidates.</p>
+<div class="code"><pre><code>  full 3 km cover : 4 drivers found, 169 cells visited
+  ring expansion  : 3 drivers found,   9 cells visited (stopped once it had 3)
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Search rule</th>
+  <th>Cost per request at 100,000 drivers</th>
+  <th>Against the full scan</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>full scan</td>
+  <td>3.37 ms</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>ring expansion, stop early</td>
+  <td>0.01 ms</td>
+  <td>674× faster</td>
+</tr>
+</tbody>
+</table></div>
+<p>The bigger prize is not in that table. It is that the cost now tracks <em>how much
+supply is nearby</em>, not how big the city is. Downtown, the search stops at ring
+zero. On the outskirts it keeps widening.</p>
+<p>The honest trade: stopping early can miss a car one ring further out that would
+have arrived sooner. You are buying a bounded search cost with a small amount of
+match quality.</p>
+<h3 id="readme-v4--should-the-nearest-car-win-or-the-soonest">v4 — should the nearest car win, or the soonest?</h3>
+<p>v3 still sorts candidates by distance. So it sends Meera to Ben: <strong>nearest at
+292 m, and the slowest at 122 s.</strong> Dev is 430 m away and arrives 65 seconds
+earlier.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>You switch the ranking from distance to arrival time. Which
+service does the matcher now depend on that it did not need before, and what
+happens to dispatch when that service is down?</em></p>
+<details><summary>Reveal</summary>
+It now needs a routing engine: a live road graph with traffic on it. Distance
+is free, because geometry is free. Time is not.
+
+<p>When that service is down, the honest answer is to fall back to distance
+ranking and say so, rather than to fail the request. That is failure F9 in
+section 12, and rung 7.3 of <code>EXERCISES.md</code> asks you to design the fallback.</p>
+<p>If you answered &quot;nothing, it is just a different sort key&quot;, you have missed
+that the sort key comes from another machine.</p>
+</details>
+
+</blockquote>
+<p>This lab models the routing engine with a per-driver <code>roadFactor</code>, which is a
+stand-in and nothing more. The test that pins the behaviour down is
+<code>nearest_by_eta_beats_nearest_by_distance</code>.</p>
+<h3 id="readme-v5--why-offer-a-car-instead-of-assigning-it">v5 — why offer a car instead of assigning it?</h3>
+<p>v4 computes the best car and writes &quot;taken&quot;. Two problems arrive together.</p>
+<p>The first is Meera and Priya again. Around 98 of 200 riders were promised
+somebody else's car in experiment 3, and the count varies run to run while the
+half does not. The fix is to make the write <em>be</em> the decision:
+<code>compareAndSet(AVAILABLE → OFFERED)</code>. Exactly one request wins. Losing is
+ordinary, and the loser simply re-ranks and takes the next candidate.</p>
+<p>The second is Ben. He has not agreed to anything yet. He may decline, or leave
+the phone face-down in his pocket. So the taken state is not <code>BUSY</code>. It is
+<code>OFFERED</code>: a reservation belonging to one trip, held on behalf of a human who
+has not answered.</p>
+<h3 id="readme-v6--what-if-the-matcher-dies-holding-the-reservation">v6 — what if the matcher dies holding the reservation?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>A matcher offers Meera's trip to Ben, and one millisecond
+later that matcher process is killed. What happens to Ben's car?</em></p>
+<details><summary>Reveal</summary>
+With v5 exactly as written: it stays `OFFERED` forever. It is invisible to
+every future match, and no code path exists to release it, because the only
+thing that knew about the offer has died.
+
+<p>Do that a few thousand times a day and supply quietly bleeds away. Rani's
+fourth problem, at machine speed.</p>
+<p>The fix is not &quot;make the matcher not crash&quot;. If you answered that, you are
+designing for the failure instead of around it. The fix is to make the
+reservation <strong>expire by itself</strong>: an offer carries <code>expiresAt</code>, and a
+housekeeping tick returns any expired offer to <code>AVAILABLE</code>.</p>
+<p>Now notice what one mechanism bought. The <em>same</em> code path recovers from Ben
+ignoring the popup, from Ben's phone having no signal, from Ben's app
+crashing, and from the matcher dying. Whenever one deadline covers four
+unrelated failures, you have found the right abstraction.</p>
+</details>
+
+</blockquote>
+<p>The offer also carries an <strong>id</strong>, and <code>accept</code> must present it. Without that,
+Ben tapping a stale popup from a previous request starts a trip that no longer
+exists. Stale popups are not exotic; they are what a patchy network produces
+every day.</p>
+<p>The test is <code>an_offer_from_an_old_popup_cannot_start_a_trip</code>. This is the
+fencing token from the <a href="../13-redis/notes.html#readme"><code>redis</code></a> lab, in its natural habitat.</p>
+<h3 id="readme-v7--why-not-show-the-request-to-every-nearby-driver">v7 — why not show the request to every nearby driver?</h3>
+<p>The obvious way to fill a car fast is to buzz every nearby driver and let the
+first tap win.</p>
+<p>It is also how you get every phone in the neighbourhood buzzing for every
+request, nine drivers driving toward a fare that eight of them will lose, and a
+race on every single accept.</p>
+<p>Sequential offers with a short deadline give up a little speed and buy
+predictability. Real systems do sometimes broadcast on purpose, when supply is
+desperate, but as a deliberate degraded mode rather than as the normal path.</p>
+<h3 id="readme-v8--is-serving-each-rider-immediately-actually-optimal">v8 — is serving each rider immediately actually optimal?</h3>
+<p>Everything so far serves each request the instant it arrives. That is <em>locally</em>
+optimal. It also leaves value on the table globally, because Meera takes the
+only good car two seconds before Priya asks for one.</p>
+<p><code>java src/Experiments.java 6</code> runs 300 riders and 300 cars.</p>
+<div class="code"><pre><code>  greedy, in arrival order : mean pickup distance   4,080 m
+  batched, shortest first  : mean pickup distance   3,555 m
+  improvement              : 12.9%
+</code></pre></div>
+<p>Nobody made a mistake in the greedy run. Every rider got the best car available
+<em>at that instant</em>. The loss is structural, not a bug.</p>
+<p>Waiting a few seconds and matching the whole batch buys a choice the system
+cannot otherwise have. It costs every rider those seconds. Both answers are
+honest. They differ in <em>whose</em> wait you are minimising.</p>
+<p>This lab's <code>Dispatch</code> is greedy. The batch version is
+<code>Experiments.greedyVsBatch</code>, and exercise 8 asks you to argue for a window size.</p>
+<h3 id="readme-what-does-the-finished-request-path-look-like">What does the finished request path look like?</h3>
+<p>Five actors, one request. Read it top to bottom; the two branches at the bottom
+are Ben answering and Ben not answering.</p>
+<pre class="mermaid">sequenceDiagram
+    participant R as Rider app
+    participant G as API gateway
+    participant DS as Dispatch
+    participant IX as Geo index
+    participant DR as Driver app
+    R-&gt;&gt;G: request ride (pickup, dropoff, idempotency key)
+    G-&gt;&gt;DS: createTrip
+    Note over DS: same key seen before?&lt;br/&gt;return the same trip, match nothing
+    DS-&gt;&gt;IX: who is near the pickup?
+    IX--&gt;&gt;DS: candidate ids (ring expansion)
+    Note over DS: drop: busy, stale ping, already tried&lt;br/&gt;rank the rest by ETA
+    DS-&gt;&gt;DS: compareAndSet(best: AVAILABLE→OFFERED)
+    DS-&gt;&gt;DR: offer (id, pickup, fare, 15s)
+    alt driver accepts in time
+        DR-&gt;&gt;DS: accept(offer id)
+        DS-&gt;&gt;DS: compareAndSet(OFFERED→ON_TRIP)
+        DS--&gt;&gt;R: your car is D3, arriving in 2 min
+    else declines, or the deadline passes
+        DS-&gt;&gt;DS: OFFERED→AVAILABLE, then re-match
+    end
+</pre>
+<blockquote>
+<p><strong>CHECKPOINT — end of the intermediate model.</strong> You can now walk the mechanism
+and justify every part of it: ring expansion, ETA ranking, the claim, the
+lease, the offer id, sequential offers. Next you zoom out to the same decision
+as a system of services with real numbers attached, and then break it on
+purpose.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> In two sentences, say why &quot;find the nearest free car, then
+mark it busy&quot; is wrong. Your answer may not contain the word &quot;slow&quot;.</p>
+<details><summary>A good answer sounds like</summary>
+"Finding and marking are two separate moments, and another rider fits between
+them. So two people are told they have the same car, and neither is told
+anything is wrong.
+
+<p>The fix is to make taking the car one single action that either succeeds or
+reports plainly that somebody else got there first.&quot;</p>
+</details>
+
+</blockquote>
+<h2 id="readme-11-what-does-the-whole-system-look-like-on-one-page">11. What does the whole system look like on one page?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One number in the next table decides the entire
+architecture. The cars talk 150 times more than the riders do, so the thing
+that listens to cars and the thing that answers riders cannot be the same
+thing.</p>
+</blockquote>
+<p>Everything so far has been one process on Asha's laptop. Here is the
+architecture that the mechanism forces, and the numbers that force it.</p>
+<h3 id="readme-what-do-the-back-of-the-envelope-numbers-say">What do the back-of-the-envelope numbers say?</h3>
+<p>These are round numbers chosen to be <em>plausible</em>. They are not reported
+figures. The point is which number forces which design decision.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Quantity</th>
+  <th>Assumption</th>
+  <th>What it forces</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Drivers online at peak</td>
+  <td>1,000,000</td>
+  <td>index holds ~1 M entries ≈ 100 MB — memory is not the problem</td>
+</tr>
+<tr>
+  <td>Location ping interval</td>
+  <td>4 s</td>
+  <td><strong>250,000 writes/s</strong>, constant, whether or not anyone rides</td>
+</tr>
+<tr>
+  <td>Ping payload</td>
+  <td>~100 B</td>
+  <td>~25 MB/s ingest; ~2 TB/day if kept raw</td>
+</tr>
+<tr>
+  <td>Trips per day</td>
+  <td>25,000,000</td>
+  <td>~290/s average</td>
+</tr>
+<tr>
+  <td>Peak factor</td>
+  <td>~5×</td>
+  <td><strong>~1,500 dispatch decisions/s</strong> at peak</td>
+</tr>
+<tr>
+  <td>Offers per trip</td>
+  <td>~1.5 (declines happen)</td>
+  <td>~2,200 offers/s</td>
+</tr>
+<tr>
+  <td>Index query per dispatch</td>
+  <td>1</td>
+  <td>1,500 reads/s against 250,000 writes/s</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>One row in that table decides more about the architecture
+than all the others together. Which one, and what does it decide?</em></p>
+<details><summary>Reveal</summary>
+The last one. **The location firehose is roughly 150× the dispatch rate.**
+
+<p>That asymmetry decides two things immediately. The hot path must never write
+a ping to durable storage while the request waits. And the durable trip store
+must never sit behind the ping load.</p>
+<p>If you picked &quot;1,000,000 drivers&quot;, that is the row people expect to matter
+and it is the row that matters least. A million entries is 100 MB. Memory
+was never the problem here.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-which-boxes-exist-and-why-exactly-these">Which boxes exist, and why exactly these?</h3>
+<pre class="mermaid">flowchart TB
+    RA[&quot;Rider app&quot;] --&gt;|&quot;HTTPS / WebSocket&quot;| GW[&quot;API gateway&lt;br/&gt;auth, rate limit, routing&quot;]
+    DA[&quot;Driver app&quot;] --&gt;|&quot;position every 4s&quot;| GW
+    GW --&gt; LOC[&quot;Location service&lt;br/&gt;validate, smooth, keep last known&quot;]
+    GW --&gt; DISP[&quot;Dispatch (matching)&lt;br/&gt;search · rank · claim · lease&quot;]
+    GW --&gt; TRIP[&quot;Trip service&lt;br/&gt;state machine, source of truth&quot;]
+    LOC --&gt;|&quot;in-memory write&quot;| IDX[(&quot;Geo index&lt;br/&gt;cell → drivers&lt;br/&gt;sharded by cell&quot;)]
+    LOC --&gt;|&quot;async&quot;| STREAM[[&quot;Event log (Kafka)&lt;br/&gt;raw pings, trip events&quot;]]
+    DISP --&gt;|&quot;who is near?&quot;| IDX
+    DISP --&gt;|&quot;ETA per candidate&quot;| MAP[&quot;Maps / routing&lt;br/&gt;road graph, live traffic&quot;]
+    DISP --&gt;|&quot;price&quot;| PRICE[&quot;Pricing / surge&lt;br/&gt;demand ÷ supply per area&quot;]
+    DISP --&gt; TRIP
+    TRIP --&gt; DB[(&quot;Trip store&lt;br/&gt;durable, sharded by trip id&quot;)]
+    TRIP --&gt;|&quot;outbox&quot;| STREAM
+    STREAM --&gt; PAY[&quot;Payments&quot;]
+    STREAM --&gt; ANA[&quot;Analytics / ML&lt;br/&gt;ETA models, surge, forecasting&quot;]
+    STREAM --&gt; PRICE
+    DISP --&gt;|&quot;push&quot;| DA
+    TRIP --&gt;|&quot;push&quot;| RA
+</pre>
+<p>Do not read that as eleven boxes. Read it as four paths.</p>
+<p>The firehose runs down the left. Dev's phone reaches the gateway, then the
+location service, then the in-memory geo index. A copy goes asynchronously to
+the event log for everything that is not time-critical. Nothing on this path
+waits for a disk.</p>
+<p>The decision runs down the middle. Meera's tap reaches dispatch, which asks the
+index, asks maps, claims a car, and creates a trip. This is the
+millisecond-sensitive path, and it touches as few durable stores as it can get
+away with.</p>
+<p>The record runs down the right. The trip is the thing that must survive
+everything, so it lives in a durable, sharded store. Everything downstream is
+fed from a log of trip events rather than by calling those services inline.
+That is the <a href="../48-transactional-outbox/notes.html#readme"><code>transactional-outbox</code></a> pattern doing
+exactly the job it was invented for: the trip and its &quot;trip completed&quot; event
+commit together or not at all.</p>
+<p>The learning loop sits at the bottom right. Every event feeds models that
+produce the ETAs and the surge multipliers the decision path will consume next
+minute. Yesterday's data is today's ranking.</p>
+<h3 id="readme-why-these-boundaries-and-not-others">Why these boundaries and not others?</h3>
+<p>Location is split from dispatch because their loads differ by 150× and their
+durability needs are opposite. Dev's ping is worthless in ten minutes. Meera's
+trip is worth keeping for seven years.</p>
+<p>The index is sharded by cell, so a query for one area hits one shard and Dev's
+pings hit one shard. That is also its weakness, which failure F4 below is
+about.</p>
+<p>Dispatch owns the claim. If two services could move Dev's state, the invariant
+would need distributed agreement to hold. Instead Dev's state has exactly one
+owner, and &quot;which node owns which driver?&quot; is the ownership question from
+<a href="../35-consistent-hashing/notes.html#readme"><code>consistent-hashing</code></a> applied to driver ids.</p>
+<p>Both answers from that lab are live options here. A <strong>ring with gossip</strong> suits
+a fleet of matcher nodes that changes often with no coordinator to ask; Uber's
+Ringpop is this, packaged. <strong>Fixed slots published by a coordinator</strong> is the
+Redis Cluster shape, and it suits you when you want exact, hand-movable
+placement. The trade is the one that lab put numbers on: coordination bought
+with control.</p>
+<p>Trip state is not in the index. The index is a fast, lossy, rebuildable cache
+of where things are. The trip store is the durable truth. Losing the whole
+index costs you thirty seconds of degraded matching while the pings refill it.
+Losing the trip store loses money.</p>
+<p>That last point deserves the vocabulary of your earlier labs. <strong>The geo index
+is a cache</strong> in the exact sense of <a href="../11-caching/notes.html#readme"><code>caching</code></a>: a derived copy,
+cheap to rebuild, allowed to be stale. <strong>The trip record is the source of
+truth.</strong></p>
+<blockquote>
+<p><strong>CHECKPOINT.</strong> You can now draw the system and defend every boundary in it
+with a number. Next: what happens when each of these boxes fails, because at
+250,000 writes per second, something always is.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Someone asks why the geo index and the trip store are not
+just one database. Answer in two sentences, using the words <em>cache</em> and
+<em>truth</em>.</p>
+<details><summary>A good answer sounds like</summary>
+"The index is a cache of where cars are right now. If we lose it, the phones
+refill it in about thirty seconds, so it is allowed to be fast, in memory,
+and occasionally wrong.
+
+<p>The trip record is the truth about money and a legal document. If we lose it,
+nothing refills it, so it gets durability and sharding and none of the ping
+traffic anywhere near it.&quot;</p>
+</details>
+
+</blockquote>
+<h2 id="readme-12-what-actually-goes-wrong-and-what-survives-each-time">12. What actually goes wrong, and what survives each time?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nine failures. In every single one of them, no car is ever
+promised to two people. In almost every one, somebody waits longer. That
+trade is the design.</p>
+</blockquote>
+<p>Read these as nine short stories. Each one names who it happens to, what the
+system does about it, and how it reaches Asha's screen. The comparison table
+comes after all nine, so you can see the shape they share.</p>
+<h3 id="readme-f1--what-happens-when-omars-phone-goes-dark">F1 — what happens when Omar's phone goes dark?</h3>
+<p>Omar parks, opens a sandwich, and his phone loses signal in the underground car
+park. His last pin stays on the map, and it stays the nearest thing to
+somebody.</p>
+<p>Run <code>java src/Experiments.java 4</code>, or in the console click a car, press <em>loses
+signal</em>, turn the freshness rule off, and request nearby. Sixty-five of two
+hundred requests were dispatched to a dark car.</p>
+<p>The reason is a sentence worth memorising: <strong>absence of a message is not a
+message.</strong> Nothing distinguishes &quot;parked with the app open&quot; from &quot;phone in a
+tunnel&quot; from &quot;went home an hour ago&quot;.</p>
+<p>So supply becomes a lease. A ping renews it, and thirty seconds without one
+takes Omar out of matching entirely. The test is
+<code>a_driver_who_stopped_pinging_is_not_dispatched</code>.</p>
+<p>In production this never appears as an error. It appears as rider wait time, as
+cancellation rate, and as &quot;the driver never moved&quot; complaints. Teams watch the
+<em>stale-pin ratio</em> per area precisely because every other symptom is so
+indirect.</p>
+<h3 id="readme-f2--what-happens-when-the-matcher-dies-holding-bens-car">F2 — what happens when the matcher dies holding Ben's car?</h3>
+<p>Between the moment dispatch offers Ben's car to Meera and the moment Ben
+answers, the matcher process is killed. Conceptually this sits between
+<code>matchOnce</code> and <code>accept</code>; SCENE 5 of <code>Sim.java</code> walks the same code path
+through the deadline.</p>
+<p>Without a deadline, Ben is stuck <code>OFFERED</code> forever and vanishes from supply.
+The only actor that knew about the reservation is gone.</p>
+<p>The lease expires. A housekeeping tick returns Ben to <code>AVAILABLE</code> and re-matches
+Meera's trip. The test is
+<code>expired_offer_returns_the_driver_and_rematches_the_trip</code>.</p>
+<p>Expiry reclaims with the same compare-and-set the claim used, so an expiry
+racing an accept cannot corrupt anything. Ben is never handed to two trips.</p>
+<p>This is <em>why</em> the offer TTL is ten to twenty seconds and not two minutes. The
+TTL is a direct trade between how long a crashed matcher strands a car and how
+long a real driver gets to reach for their phone.</p>
+<h3 id="readme-f3--what-happens-when-priya-double-taps">F3 — what happens when Priya double-taps?</h3>
+<p>Priya's screen freezes, so she taps request again. Or her phone times out and
+the network layer retries on her behalf. She does not know which.</p>
+<p>Without an idempotency key, that is two trips, two matches, two cars and two
+charges. Every mobile network delivers <em>at least once</em>, and a request that timed
+out on the client may well have succeeded on the server.</p>
+<p>So Priya's app generates one key per intent. The server maps key to trip and
+returns the existing trip for a repeat. SCENE 8 of <code>Sim.java</code> shows it, and the
+test is <code>double_tapping_request_creates_one_trip</code>.</p>
+<p>Nothing is lost to this fix. It costs one map lookup, which is exactly why it
+belongs in the first version of the system rather than the fifth.</p>
+<p>In production the same key must cover the whole chain, payments included. This
+is straight out of
+<a href="../02-communication-protocols/notes.html#readme"><code>communication-protocols</code></a> and
+<a href="../48-transactional-outbox/notes.html#readme"><code>transactional-outbox</code></a>: at-least-once delivery,
+plus consumers that do not mind hearing it twice.</p>
+<h3 id="readme-f4--what-happens-when-everybody-is-in-the-same-square">F4 — what happens when everybody is in the same square?</h3>
+<p>It is midnight at the airport. Arjun has just landed. So have four flights, and
+Omar is one of two thousand drivers waiting on the same stretch of kerb.</p>
+<p><strong>🔮 Predict:</strong> <em>The whole fleet parks in one cell. The index is still
+perfectly correct. Within a factor of two, how much slower does a nearby query
+get?</em></p>
+<details><summary>Reveal</summary>
+
+<p>About twenty times slower.</p>
+<div class="code"><pre><code>  fleet spread over the city : 112 us per query,     485 drivers measured per query
+  fleet parked at one airport: 2,442 us per query, 20,000 drivers measured per query
+  slowdown: 22x     drivers in the busiest 500 m cell: 6,399
+</code></pre></div>
+<p>The slowdown lands between 15× and 25× depending on the machine. The driver
+counts are exact.</p>
+<p>If you predicted &quot;no change, the index is correct&quot;, you are right about
+correctness and that is the trap. The grid did not break. It stopped
+<em>narrowing</em>, which is the only thing it was ever for.</p>
+</details>
+
+<p>The index narrows by space, and at an airport everybody is in the same space.
+If the index is sharded by cell, one shard now carries all of the traffic too.</p>
+<p>Four responses, and real systems use all of them. Cap the candidates returned
+per ring. Sub-divide hot cells, which is exactly what H3's multiple resolutions
+are for. Spread a hot cell across replicas. And manage the demand side with
+surge.</p>
+<p>Every answer the system gives is still correct. What bends is latency, at
+exactly the moment and place where demand peaks.</p>
+<p>You have met this shape before. It is the hot-key and hot-partition problem
+from <a href="../13-redis/notes.html#readme"><code>redis</code></a> and
+<a href="../60-distributed-rate-limiting/notes.html#readme"><code>distributed-rate-limiting</code></a>, where the
+average looks healthy and one key carries the world. Airports get dedicated
+handling and virtual queues as much for this reason as for the chaos at the
+kerb.</p>
+<h3 id="readme-f5--what-happens-when-the-firehose-falls-behind">F5 — what happens when the firehose falls behind?</h3>
+<p>This one is not modelled in code, because the lab is a single process with no
+queue. It is stated, not run.</p>
+<p>The index starts lagging reality by seconds, then by minutes. Every pin is
+stale. Here is the nasty part: if the lag is inside the freshness TTL, <em>none</em> of
+the pins is stale enough to be excluded. Matching keeps working and quietly gets
+worse. ETAs are wrong. Drivers are offered fares they have already driven past.</p>
+<p>250,000 writes per second has no slack in it. A garbage collection pause, a
+redeploy, or one slow shard turns into a backlog immediately.</p>
+<p>The response is to refuse to queue pings for durability on the hot path. Drop
+instead of lag, because a lost ping is replaced four seconds later. Shed load by
+lengthening the ping interval under pressure. And watch <em>ingest lag</em>, not ingest
+rate.</p>
+<p>Safety holds throughout. Nobody is double-booked. What degrades is match
+quality, smoothly and invisibly, which is the worst way for anything to degrade.</p>
+<p>Location ingest is deliberately best-effort in production. Note the trap in the
+other direction: the freshness TTL must be comfortably larger than normal ingest
+lag, or a routine blip excludes your entire fleet at once. That is a
+self-inflicted outage, and it is worth designing against explicitly.</p>
+<h3 id="readme-f6--what-happens-when-the-cluster-splits-in-two">F6 — what happens when the cluster splits in two?</h3>
+<p>Also stated rather than run. The network partitions, and two halves of the
+dispatch cluster can each see a subset of drivers.</p>
+<p>If both halves may claim Dev, you have section 4's third crack again, at cluster
+scale: Meera and Priya, one car, two machines, no error. The reason is
+<a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a>, unchanged and unarguable.</p>
+<p>The response is a split decision, and it is the most interesting design choice
+in this lab.</p>
+<p><strong>The claim is CP.</strong> Dev's state has exactly one owning node, chosen by hashing
+his driver id onto the ring from
+<a href="../35-consistent-hashing/notes.html#readme"><code>consistent-hashing</code></a>. If that node is unreachable,
+Dev simply cannot be matched by anyone. Refusing to match is a mild failure.
+Matching twice is a severe one.</p>
+<p><strong>The location index is AP.</strong> A stale or partial view of where cars are yields a
+worse match, not a wrong one, so it stays available.</p>
+<p>Safety holds: one car, one rider. It is bought by giving up availability for
+that one driver. Liveness is genuinely lost for the drivers owned by the
+unreachable node, until ownership moves.</p>
+<p>Ownership rebalancing needs a ring, gossip and a handover protocol. That is why
+it is a first-class part of the design and never an afterthought. That lab put
+a number on the disagreement window too. While membership propagates, different
+nodes hold different views of who owns what, bounded at roughly 1/n of the
+keyspace for a ring. During that window, two nodes must not both believe they own Dev.
+Every ride-hailing dispatch system is, underneath, a membership problem.</p>
+<h3 id="readme-f7--what-happens-when-the-payment-fails-after-the-ride">F7 — what happens when the payment fails after the ride?</h3>
+<p>Meera is standing on the pavement. The trip is finished. The card is declined.</p>
+<p>Stated, not run. The money and the trip live in different systems, and the trip
+cannot be rolled back, because Meera has already been moved across the city.</p>
+<p>So the trip is the <strong>pivot step</strong> of a <a href="../47-saga/notes.html#readme"><code>saga</code></a>. Everything before
+it can be compensated. Once it is complete, the system may only move forward:
+retry the charge, fall back to another payment method, or carry a debt on the
+account.</p>
+<p>Payment is driven off the trip-completed event through the
+<a href="../48-transactional-outbox/notes.html#readme"><code>transactional-outbox</code></a>, so &quot;trip completed&quot; and
+&quot;a payment will be attempted&quot; commit together. Exactly one charge attempt
+lineage exists per trip, because the idempotency key from F3 is still doing its
+work.</p>
+<p>The interesting engineering here is not the retry. It is the policy about what a
+rider with a failed payment is allowed to do next.</p>
+<h3 id="readme-f8--what-happens-when-pings-arrive-in-the-wrong-order">F8 — what happens when pings arrive in the wrong order?</h3>
+<p>Dev's ping from 09:00:04 lands after his ping from 09:00:08. On the map, his car
+jumps backwards.</p>
+<p>Stated, not run. If the index takes last-write-wins by arrival time, Dev can
+appear to teleport into a cell he already left. Mobile networks reorder. Retries
+replay. Phone clocks are not trustworthy.</p>
+<p>The response is to carry a device timestamp <em>and</em> a monotonic sequence number
+per driver, then drop any update older than the one already stored.</p>
+<p>Dispatch still claims correctly, so safety holds. What bends is quality: a stale
+position is briefly authoritative, and somebody gets a slightly worse car.</p>
+<p>This is an out-of-order event stream wearing a map, so it gets the same answer:
+version the writes and make the consumer idempotent. That is the projection rule
+from <a href="../51-cqrs/notes.html#readme"><code>cqrs</code></a>.</p>
+<h3 id="readme-f9--what-happens-when-slowness-feeds-itself">F9 — what happens when slowness feeds itself?</h3>
+<p>It is 2 a.m. and Asha is looking at a graph that will not come down.</p>
+<p>Stated, not run. Dispatch p99 rises. Rider apps time out and retry. The retries
+add load. Dispatch gets slower. The system does not recover when the original
+trigger goes away, because the retry load is now the cause. Engineers call this
+a <strong>metastable failure</strong>.</p>
+<p>The response is the whole toolkit from
+<a href="../06-software-architecture-patterns/notes.html#readme"><code>software-architecture-patterns</code></a> and
+<a href="../60-distributed-rate-limiting/notes.html#readme"><code>distributed-rate-limiting</code></a>. Bound the
+retries, with backoff and jitter. Keep idempotency keys, so retries are
+harmless. Shed load at the gateway. Put circuit breakers around maps and
+pricing. Degrade gracefully: if the ETA service is down, rank by distance and
+say so, rather than failing the request.</p>
+<p>Safety holds. Liveness is deliberately sacrificed for a subset of requests so
+that the rest survive.</p>
+<p>The fallback ladder is written down in advance, per dependency, because nobody
+invents one at 2 a.m.</p>
+<h3 id="readme-the-nine-failures-side-by-side">The nine failures side by side</h3>
+<p>Now read them as one shape. Notice that the third column never changes.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>The failure</th>
+  <th>What still holds</th>
+  <th>What gives way</th>
+  <th>What Asha actually sees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1</td>
+  <td>Omar's phone goes dark</td>
+  <td>no double-booking, nobody charged</td>
+  <td>3 of 200 requests find nobody, honestly</td>
+  <td>wait time and cancellations, never an error</td>
+</tr>
+<tr>
+  <td>F2</td>
+  <td>matcher dies holding an offer</td>
+  <td>the driver is never handed to two trips</td>
+  <td>that rider waits up to the offer TTL longer</td>
+  <td>a small, steady rate of re-matched trips</td>
+</tr>
+<tr>
+  <td>F3</td>
+  <td>Priya double-taps</td>
+  <td>one trip, one car, one fare</td>
+  <td>nothing at all — this fix is free</td>
+  <td>duplicate requests collapsing onto one key</td>
+</tr>
+<tr>
+  <td>F4</td>
+  <td>the airport hot cell</td>
+  <td>every answer is still correct</td>
+  <td>latency, at the worst possible moment</td>
+  <td>p99 spikes in one area while the mean is fine</td>
+</tr>
+<tr>
+  <td>F5</td>
+  <td>the firehose falls behind</td>
+  <td>no double-booking</td>
+  <td>match quality, smoothly and invisibly</td>
+  <td>ingest lag rising while ingest rate looks healthy</td>
+</tr>
+<tr>
+  <td>F6</td>
+  <td>the cluster partitions</td>
+  <td>one car, one rider</td>
+  <td>drivers on the unreachable node are unmatchable</td>
+  <td>match rate falling for one slice of the fleet</td>
+</tr>
+<tr>
+  <td>F7</td>
+  <td>payment fails after the ride</td>
+  <td>exactly one charge attempt per trip</td>
+  <td>the money, until a retry or a fallback works</td>
+  <td>a queue of trips in a payment-pending state</td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>pings arrive out of order</td>
+  <td>dispatch still claims correctly</td>
+  <td>quality; a stale position is briefly believed</td>
+  <td>drivers reporting offers for places they left</td>
+</tr>
+<tr>
+  <td>F9</td>
+  <td>slow dispatch feeds retries</td>
+  <td>safety, throughout</td>
+  <td>liveness, on purpose, for a subset of requests</td>
+  <td>a graph that will not come down on its own</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two of those nine you can trigger with a command. Two more happen inside
+<code>Sim.java</code>. The last five are argued rather than run, and section 19 says
+exactly which is which.</p>
+<h2 id="readme-13-what-is-guaranteed-and-what-was-traded-away-for-it">13. What is guaranteed, and what was traded away for it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Seven promises, each one held up by a named line of code
+and a named test. And a longer list of things this lab deliberately does not
+promise, because pretending otherwise would be the real lie.</p>
+</blockquote>
+<h3 id="readme-which-seven-things-can-never-happen">Which seven things can never happen?</h3>
+<p>Every row below is a sentence that stays true no matter what fails. The second
+column is the code that makes it true. The third is the test that would fail if
+somebody deleted that code.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>The promise</th>
+  <th>Held up by</th>
+  <th>Test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>I1</td>
+  <td>A driver is filed under exactly one cell</td>
+  <td><code>CellIndex.update</code> leaves the old cell before joining the new one</td>
+  <td><code>a_moving_driver_changes_cells_and_stays_findable</code></td>
+</tr>
+<tr>
+  <td>I2</td>
+  <td>A driver is reserved for at most one trip at a time</td>
+  <td><code>state.compareAndSet(AVAILABLE, OFFERED)</code></td>
+  <td><code>a_driver_is_offered_to_at_most_one_trip_under_concurrency</code></td>
+</tr>
+<tr>
+  <td>I3</td>
+  <td>No reservation is held forever</td>
+  <td><code>Offer.expiresAtMs</code> + <code>expireOffers()</code></td>
+  <td><code>expired_offer_returns_the_driver_and_rematches_the_trip</code></td>
+</tr>
+<tr>
+  <td>I4</td>
+  <td>Only a current offer can start a trip</td>
+  <td>offer-id check in <code>accept</code>, a fencing token</td>
+  <td><code>an_offer_from_an_old_popup_cannot_start_a_trip</code></td>
+</tr>
+<tr>
+  <td>I5</td>
+  <td>One rider intent produces at most one trip</td>
+  <td>idempotency key mapped to a trip id</td>
+  <td><code>double_tapping_request_creates_one_trip</code></td>
+</tr>
+<tr>
+  <td>I6</td>
+  <td>A trip is completed and charged once</td>
+  <td><code>completeTrip</code> returns early if already <code>COMPLETED</code></td>
+  <td><code>completing_the_same_trip_twice_charges_once</code></td>
+</tr>
+<tr>
+  <td>I7</td>
+  <td>Only fresh supply is dispatched</td>
+  <td>ping-age check in <code>matchOnce</code></td>
+  <td><code>a_driver_who_stopped_pinging_is_not_dispatched</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>I2 is the one that carries the lab. Everything else is housekeeping around it.</p>
+<h3 id="readme-what-does-this-lab-refuse-to-promise">What does this lab refuse to promise?</h3>
+<p>An honest list of what is missing is worth more than a longer list of what is
+present. Nothing below is an oversight.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Not promised</th>
+  <th>Why not, precisely</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the optimal match</td>
+  <td>greedy, per request, over a candidate set that stops early; experiment 6 measures the gap at ~13%, and even that is against a <em>heuristic</em> batch matcher rather than the true optimum</td>
+</tr>
+<tr>
+  <td>a current position</td>
+  <td>every pin is up to one ping interval old <em>before</em> network delay; the freshness TTL bounds the lie, it does not remove it</td>
+</tr>
+<tr>
+  <td>a real ETA</td>
+  <td><code>distance × roadFactor / speed</code> is a stand-in for a routing engine, honest about the shape and useless as a number</td>
+</tr>
+<tr>
+  <td>durability</td>
+  <td>everything here is in memory; a restart forgets every trip</td>
+</tr>
+<tr>
+  <td>fairness</td>
+  <td>no driver-earnings balancing, no rider queue priority, no anti-starvation for drivers who keep declining</td>
+</tr>
+<tr>
+  <td>scale and safety features</td>
+  <td>not multi-region, not sharded, not secured</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-promises-bend-and-which-never-do">Which promises bend, and which never do?</h3>
+<p>Two words carry this, and they are worth separating carefully.</p>
+<p><strong>Safety</strong> means nothing bad ever happens. Here that is: no car is promised to
+two riders, no double charge, no trip without a driver. Every one of those is
+preserved in <em>every</em> failure in section 12, the partition included.</p>
+<p><strong>Liveness</strong> means something good eventually happens. Here that is: a rider
+eventually gets a car. This is what bends, every time. The stale driver is
+skipped. The partitioned driver is unmatchable. The shed request is rejected.</p>
+<p>That is the deal the whole design makes, and it is the same deal
+<a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a> describes. <strong>When a car cannot be safely
+claimed, refuse to match it rather than risk matching it twice.</strong></p>
+<p>Meera waiting ten more seconds is annoyed. Meera watching her car drive to
+somebody else has been lied to. Those are not the same size of wrong.</p>
+<h3 id="readme-what-does-each-operation-cost">What does each operation cost?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Operation</th>
+  <th>Cost</th>
+  <th>What that means in practice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>location ping</td>
+  <td>O(1)</td>
+  <td>two set operations, usually zero, because most pings do not change cell</td>
+</tr>
+<tr>
+  <td>ring search</td>
+  <td>O(cells visited + drivers in them)</td>
+  <td>independent of city size; degrades with density, which is F4</td>
+</tr>
+<tr>
+  <td>ranking</td>
+  <td>O(k log k)</td>
+  <td>k is the number of candidates kept, deliberately small</td>
+</tr>
+<tr>
+  <td>claim</td>
+  <td>O(1)</td>
+  <td>one compare-and-set; contention is a retry, not a lock</td>
+</tr>
+<tr>
+  <td>expiry sweep</td>
+  <td>O(drivers with live offers)</td>
+  <td>in production a timer wheel or a sorted set, never a scan</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-14-which-four-lines-of-code-carry-the-whole-lab">14. Which four lines of code carry the whole lab?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eleven small files, no build tool, no dependencies. Four
+lines do the real work, and each one is the answer to a section you have
+already read.</p>
+</blockquote>
+<h3 id="readme-which-line-makes-250000-pings-per-second-affordable">Which line makes 250,000 pings per second affordable?</h3>
+<p>From <span class="missing" title="Not in the hub: src/CellIndex.java is in the lab folder on your laptop"><code>src/CellIndex.java</code></span>:</p>
+<div class="code"><pre><code class="language-java">if (oldKey != null &amp;&amp; oldKey == newKey) return;
+</code></pre></div>
+<p>Dev moved twenty metres and stayed inside his square, so nothing changes. Most
+pings take this branch and do no work at all. That is the entire reason the
+firehose is survivable.</p>
+<h3 id="readme-which-line-makes-the-search-cost-track-supply-instead-of-city-size">Which line makes the search cost track supply instead of city size?</h3>
+<p>Also from <span class="missing" title="Not in the hub: src/CellIndex.java is in the lab folder on your laptop"><code>src/CellIndex.java</code></span>:</p>
+<div class="code"><pre><code class="language-java">for (int k = 0; k &lt;= maxRing; k++) {
+    collectRing(centre, k, maxRadiusM, out);
+    if (out.size() &gt;= minCandidates) break;      // enough is enough
+}
+</code></pre></div>
+<p>The <code>break</code> is the whole of v3. Downtown it fires at ring zero. On the
+outskirts the loop keeps widening.</p>
+<h3 id="readme-which-line-stops-meera-and-priya-getting-the-same-car">Which line stops Meera and Priya getting the same car?</h3>
+<p>From <span class="missing" title="Not in the hub: src/Dispatch.java is in the lab folder on your laptop"><code>src/Dispatch.java</code></span>:</p>
+<div class="code"><pre><code class="language-java">return d.state.compareAndSet(DriverState.AVAILABLE, DriverState.OFFERED);
+</code></pre></div>
+<p>This is the load-bearing line of the lab. Two threads that both read
+<code>AVAILABLE</code> cannot both proceed past it.</p>
+<p>Its buggy twin sits directly above it, behind <code>unsafeClaim</code>, so you can measure
+the difference rather than take anyone's word for it.</p>
+<h3 id="readme-which-line-gets-a-car-back-when-everything-else-has-failed">Which line gets a car back when everything else has failed?</h3>
+<p>Also from <span class="missing" title="Not in the hub: src/Dispatch.java is in the lab folder on your laptop"><code>src/Dispatch.java</code></span>:</p>
+<div class="code"><pre><code class="language-java">if (o == null || d.state.get() != OFFERED || now &lt;= o.expiresAtMs) continue;
+if (d.state.compareAndSet(DriverState.OFFERED, DriverState.AVAILABLE)) { ... rematch ... }
+</code></pre></div>
+<p>One loop, four recoveries: Ben ignoring the popup, Ben's phone losing signal,
+Ben's app crashing, and the matcher dying. Note that it reclaims with a
+compare-and-set too, so expiry racing an accept cannot corrupt anything.</p>
+<p>The remaining files are the supporting cast. <code>Loc</code> does distance.
+<code>Driver</code>, <code>Trip</code>, <code>Offer</code>, <code>DriverState</code> and <code>TripState</code> are the nouns.
+<code>Index</code> and <code>NaiveIndex</code> give you an oracle to check against. <code>Sim</code> is the
+narrated evening, <code>Experiments</code> the measurements, and <code>Tests</code> the assertions.</p>
+<h2 id="readme-15-what-do-the-six-experiments-prove">15. What do the six experiments prove?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six commands. Write your guess down before each one,
+because being wrong is what makes the number stick.</p>
+</blockquote>
+<p>Each experiment is one question with one command. The middle column is the part
+that matters: commit to an answer before you press enter.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>The question it answers</th>
+  <th>Guess this first</th>
+  <th>What you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>How much does the index actually buy? <code>java src/Experiments.java 1</code></td>
+  <td>a multiple, against a full scan</td>
+  <td>~5–6× for full-cover search, ~600× for early-stopping search</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Is &quot;search my own square&quot; good enough? <code>java src/Experiments.java 2</code></td>
+  <td>the percentage of requests that find nobody</td>
+  <td>44.9% find nobody; another 13.3% quietly find a worse car</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Does the claim matter, or is the race theoretical? <code>java src/Experiments.java 3</code></td>
+  <td>how many of 200 riders get somebody else's car</td>
+  <td>around 98, about half, varying with thread scheduling</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>What does trusting an old pin cost? <code>java src/Experiments.java 4</code></td>
+  <td>which is worse: 65 ghost dispatches, or 3 honest &quot;no cars found&quot;</td>
+  <td>65 ghosts without the rule, 0 with it</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>What happens at the airport? <code>java src/Experiments.java 5</code></td>
+  <td>the slowdown when the whole fleet parks in one cell</td>
+  <td>15–25×, with 6,399 drivers in the busiest 500 m square</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Is greedy matching leaving money on the table? <code>java src/Experiments.java 6</code></td>
+  <td>the improvement from batching</td>
+  <td>~13% on mean pickup distance</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three of those deserve a sentence more.</p>
+<p>In experiment 1, ask yourself why the second multiple is a hundred times the
+first. Both use the same grid. The difference is that full-cover search still
+<em>returns</em> 1,659 candidates that the matcher will never look at.</p>
+<p>In experiment 2, the lesson is not the size of 44.9%. It is that the other
+13.3% succeed. They return a car, log nothing, and never tell you.</p>
+<p>In experiment 3, run it, then set <code>unsafeClaim = false</code> for the second half of
+the run. Watch 98 become 0, with no lock anywhere in the program. Those 98 are
+Meera and Priya, two hundred times over, each pair told the same car is coming.</p>
+<p>Experiment 6 is the one to argue with. Thirteen per cent is real, and so are the
+seconds every rider spends waiting for the batch. Decide whose seconds you are
+spending before you decide who is right.</p>
+<p>And the whole thing end to end: <code>java src/Sim.java</code> walks one narrated evening.
+A decline, an expiry, a stale accept, a ghost car, a double-tap, a surge, and a
+completion, in order.</p>
+<blockquote>
+<p><strong>CHECKPOINT — end of the engineering model.</strong> You can now defend the design
+under failure and state what it does and does not guarantee. What remains is
+the distance between this lab and the real thing.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Name the one invariant you would defend hardest in a design
+review, and say what you would give up to keep it.</p>
+<details><summary>A good answer sounds like</summary>
+"I2: a driver is reserved for at most one trip at a time. I would give up
+availability for it. If I cannot reach the node that owns a driver, I would
+rather that driver be unmatchable for a few seconds than risk two riders being
+told the same car is coming.
+
+<p>A rider who waits is annoyed. A rider who watches their car drive away to
+somebody else has been lied to, and that is the failure people leave over.&quot;</p>
+</details>
+
+</blockquote>
+<h2 id="readme-16-what-does-the-real-thing-do-that-this-lab-does-not">16. What does the real thing do that this lab does not?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every toy in this lab has a production-grade twin. The
+mechanism does not change. What changes is that each piece now has to survive
+a globe, a million drivers, and a Tuesday.</p>
+</blockquote>
+<h3 id="readme-what-replaces-each-toy">What replaces each toy?</h3>
+<p>Read this table as three columns of the same sentence: here is the toy, here is
+what it becomes, here is what forced the change.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>This lab</th>
+  <th>What a real system uses</th>
+  <th>Why the toy is not enough</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>CellIndex</code>, a flat 500 m grid pinned to one latitude</td>
+  <td><strong>H3</strong> (Uber's hexagonal grid) or <strong>S2</strong> (Google's spherical cells)</td>
+  <td>A flat grid cannot cover a globe; hexagons have uniform neighbour distance (a square's diagonal neighbour is 1.41× further than its edge neighbour); both offer multiple <em>resolutions</em>, so dense areas can be indexed finer than empty ones</td>
+</tr>
+<tr>
+  <td>One <code>ConcurrentHashMap</code></td>
+  <td>A sharded, replicated in-memory service, one owner per key</td>
+  <td>1 M drivers fit in memory on one box; 250 k writes/s with high availability do not fit in one <em>process</em></td>
+</tr>
+<tr>
+  <td>&quot;the matcher&quot;</td>
+  <td>A dispatch service whose nodes own driver ids by <a href="../35-consistent-hashing/notes.html#readme"><strong>consistent hashing</strong></a>, with membership by gossip (Uber's Ringpop / DISCO)</td>
+  <td>The claim needs a single owner per driver; ownership must survive nodes joining and leaving</td>
+</tr>
+<tr>
+  <td><code>roadFactor</code></td>
+  <td>A routing engine over a live road graph, plus learned ETA models</td>
+  <td>Straight-line time is wrong exactly where cities are interesting: rivers, one-ways, flyovers</td>
+</tr>
+<tr>
+  <td><code>AtomicReference</code> CAS</td>
+  <td>A conditional write in the store, or a single-writer actor per driver</td>
+  <td>A CAS on a local copy of remote state proves nothing</td>
+</tr>
+<tr>
+  <td><code>expireOffers()</code> scanning all drivers</td>
+  <td>A timer wheel, or a sorted set keyed by expiry</td>
+  <td>You cannot scan a million drivers every tick</td>
+</tr>
+<tr>
+  <td><code>events</code> list</td>
+  <td>Kafka: raw pings, trip events, everything downstream</td>
+  <td>Analytics, payments, ML and audit all need the same events, replayable</td>
+</tr>
+<tr>
+  <td><code>trips</code> map</td>
+  <td>A durable sharded store (Uber published <strong>Schemaless</strong> over MySQL, later Docstore); Cassandra for high-write timelines</td>
+  <td>A trip is money and a legal record</td>
+</tr>
+<tr>
+  <td><code>surgeAt()</code></td>
+  <td>A streaming pipeline computing supply/demand per hex per minute, smoothed and capped</td>
+  <td>A raw ratio is jumpy, gameable, and occasionally absurd</td>
+</tr>
+<tr>
+  <td><code>idempotency</code> map</td>
+  <td>Idempotency keys carried end-to-end, through payments</td>
+  <td>Retries exist at every layer, not just the first</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-has-this-lab-left-out-on-purpose">What has this lab left out on purpose?</h3>
+<p>A long list, and every item on it is a real system in its own right.</p>
+<p>Persistence and recovery. Replication and leader election. Geo-sharding and
+request routing across cities and regions. Driver-to-rider messaging and push
+delivery. ETA and route computation. Pooled rides, where several riders share
+one car, which is a genuinely harder optimisation than anything here. Driver
+incentives and earnings. Ratings, safety and fraud. Payments, wallets and
+refunds. Privacy of location data, which is some of the most sensitive data any
+consumer app holds. Authentication. Rate limiting. Deployment, canaries and
+rollbacks.</p>
+<p>None of those changes the dispatch mechanism. That is exactly why it was worth
+isolating it.</p>
+<h3 id="readme-what-does-asha-actually-watch-at-three-in-the-morning">What does Asha actually watch at three in the morning?</h3>
+<p>Not CPU. These eight, and the second column is why each one earns its place on
+the screen.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Signal</th>
+  <th>Why this one and not the obvious alternative</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Dispatch <strong>p99 latency</strong></td>
+  <td>Meera is staring at a spinner; the mean hides the airport</td>
+</tr>
+<tr>
+  <td><strong>Match rate</strong>, meaning requests that got a car</td>
+  <td>The business metric that every failure in section 12 eventually degrades</td>
+</tr>
+<tr>
+  <td><strong>Offer acceptance rate</strong></td>
+  <td>Falls when ETAs are wrong, fares are wrong, or ghosts are being dispatched</td>
+</tr>
+<tr>
+  <td><strong>Time to first offer</strong>, and <strong>offers per trip</strong></td>
+  <td>Rising offers-per-trip means the matcher is picking badly</td>
+</tr>
+<tr>
+  <td><strong>Stale-pin ratio</strong> per area</td>
+  <td>The only direct signal for F1; everything else is a downstream symptom</td>
+</tr>
+<tr>
+  <td><strong>Location ingest lag</strong>, not rate</td>
+  <td>Rate looks healthy while lag is minutes; that is F5 exactly</td>
+</tr>
+<tr>
+  <td><strong>Supply-over-demand ratio per hex</strong></td>
+  <td>The input to surge and the early warning for a hot cell</td>
+</tr>
+<tr>
+  <td><strong>Cancellation rate</strong>, split by who cancelled</td>
+  <td>Where ghost dispatches and bad ETAs actually surface</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-knobs-can-you-turn-and-who-pays-when-you-do">Which knobs can you turn, and who pays when you do?</h3>
+<p>Six knobs. None of them has a globally right setting, which is the point.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>The knob</th>
+  <th>Turned down or short</th>
+  <th>Turned up or long</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>cell size</td>
+  <td>precise, but many cells to visit and more churn as drivers cross boundaries</td>
+  <td>fewer lookups, more candidates to filter, worse hot-cell behaviour</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>search stop rule</td>
+  <td>stop early: fast and bounded, slightly worse matches</td>
+  <td>cover fully: optimal within the radius, cost scales with area and density</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>offer TTL</td>
+  <td>supply recovers fast from crashes, real drivers miss offers</td>
+  <td>patient with drivers, strands cars when things break</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>freshness TTL</td>
+  <td>no ghosts, but a network blip un-matches your fleet</td>
+  <td>robust to blips, sends cars that are not there</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>greedy versus batched</td>
+  <td>greedy: this rider's seconds are protected</td>
+  <td>batched: the average rider's seconds are protected</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>claim consistency</td>
+  <td>refuse to match a driver you cannot safely claim: the CP choice</td>
+  <td>match anyway: two riders, one car, which is never acceptable</td>
+</tr>
+</tbody>
+</table></div>
+<p>Knob 5 is the one to say out loud. You are not choosing between fast and slow.
+You are choosing <em>whose</em> seconds you are spending.</p>
+<p>Knob 6 is not really a knob. It is written here as one so you can see that the
+system deliberately refuses to turn it.</p>
+<p>Multi-resolution grids such as H3 exist precisely because knob 1 has no single
+right answer. Rather than pick one cell size for the whole world, you pick a
+finer one where the drivers are.</p>
+<blockquote>
+<p><strong>CHECKPOINT — production model.</strong> You can now read a real ride-hailing
+architecture talk and know which parts are the dispatch core, which are the
+firehose, and which are ordinary backend plumbing wearing a map.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> You must pick one number to define whether dispatch is
+healthy, and it will be on a screen in front of your director. Which number,
+and what does it miss?</p>
+<details><summary>A good answer sounds like</summary>
+"Match rate: the share of ride requests that ended with a car on the way.
+Every failure in section 12 eventually pushes it down, so it is the one number
+that notices everything.
+
+<p>What it misses is <em>how long</em> the match took. A city where everyone gets a car
+after four minutes has a perfect match rate and a terrible product. So it
+needs p99 time-to-first-offer standing next to it.&quot;</p>
+</details>
+
+</blockquote>
+<h2 id="readme-17-where-does-this-sit-and-what-should-you-learn-next">17. Where does this sit, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab is a junction. Nine earlier labs feed into it, and
+four later ones open out of it.</p>
+</blockquote>
+<h3 id="readme-what-did-this-lab-lean-on-and-what-does-it-open-up">What did this lab lean on, and what does it open up?</h3>
+<pre class="mermaid">flowchart TB
+    subgraph prereq[&quot;Already learned — this lab leaned on all of these&quot;]
+      CAP[&quot;cap-theorem&lt;br/&gt;claim is CP, index is AP&quot;]
+      CACHE[&quot;caching&lt;br/&gt;the geo index is a cache&quot;]
+      OUTBOX[&quot;transactional-outbox&lt;br/&gt;trip event + trip commit together&quot;]
+      SAGA[&quot;saga&lt;br/&gt;trip is the pivot step&quot;]
+      REDIS[&quot;redis&lt;br/&gt;lease, fencing token, hot key&quot;]
+      RATE[&quot;distributed-rate-limiting&lt;br/&gt;shedding, breakers, hot key&quot;]
+      ARCH[&quot;software-architecture-patterns&lt;br/&gt;the service boundaries&quot;]
+      PROTO[&quot;communication-protocols&lt;br/&gt;websockets, at-least-once, idempotency&quot;]
+      CH[&quot;consistent-hashing&lt;br/&gt;which node owns which driver&quot;]
+    end
+    UBER[&quot;**uber-system-design**&lt;br/&gt;geospatial index + claim-with-a-lease&quot;]
+    prereq --&gt; UBER
+    UBER --&gt; KAFKA[&quot;kafka&lt;br/&gt;the firehose and the event log&quot;]
+    UBER --&gt; GEO[&quot;geospatial-indexing&lt;br/&gt;H3, S2, quadtrees, R-trees&quot;]
+    UBER --&gt; LB[&quot;load-balancing&lt;br/&gt;routing 250k writes/s&quot;]
+    UBER --&gt; IDEM[&quot;idempotency-keys&lt;br/&gt;end to end, through payments&quot;]
+</pre>
+<h3 id="readme-which-pairs-of-ideas-get-confused-and-what-separates-them">Which pairs of ideas get confused, and what separates them?</h3>
+<p>Each row is one sentence you can use to end the confusion on the spot.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Confused pair</th>
+  <th>The sentence that separates them</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>dispatch versus a job queue</td>
+  <td>A queue hands work to whichever worker is free; dispatch must choose a <em>specific</em> driver, because which one it is decides Meera's wait.</td>
+</tr>
+<tr>
+  <td>geospatial index versus a normal database index</td>
+  <td>A B-tree orders one dimension; nearness is two-dimensional and cannot be a range over one column, and the whole point of a cell id is that it fakes one.</td>
+</tr>
+<tr>
+  <td>surge versus rate limiting</td>
+  <td>Rate limiting <em>rejects</em> excess demand; surge <em>reprices</em> it, so some of it leaves voluntarily and more supply arrives.</td>
+</tr>
+<tr>
+  <td>offer versus assignment</td>
+  <td>An offer is a lease Ben may refuse and time will revoke; an assignment is a fact.</td>
+</tr>
+<tr>
+  <td>matching versus routing</td>
+  <td>Matching picks <em>who</em>; routing picks <em>which roads</em>, and the second one feeds the first.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-should-you-type-next">What should you type next?</h3>
+<div class="code"><pre><code class="language-bash">/learn kafka                  # the firehose and the event log, twice referenced above
+/learn geospatial-indexing    # H3, S2, quadtrees, R-trees — how the grid gets smart
+/learn load-balancing         # how 250,000 writes/s find the right shard
+/learn idempotency-keys       # the retry-safety story, end to end through payments
+</code></pre></div>
+<p>The exercises are in <a href="notes.html#exercises"><code>EXERCISES.md</code></a>, with worked answers in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Eight rungs, from &quot;explain it to a
+non-engineer&quot; to &quot;design it for three cities&quot;. Rung 6 hides a single planted bug
+in <span class="missing" title="Not in the hub: src/BrokenIndex.java is in the lab folder on your laptop"><code>src/BrokenIndex.java</code></span> and asks which invariant from
+section 13 it breaks.</p>
+<h2 id="readme-18-glossary--which-word-means-what">18. Glossary — which word means what?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every word this lab introduced, in four groups, each row
+pointing back at the moment you met the thing.</p>
+</blockquote>
+<h3 id="readme-the-market-and-the-decision">The market and the decision</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>dispatch</strong></td>
+  <td>Deciding which car goes to which rider, and doing the bookkeeping around it.</td>
+  <td>section 3, Asha's naive loop</td>
+</tr>
+<tr>
+  <td><strong>supply / demand</strong></td>
+  <td>The cars and the riders, neither of which the system owns or controls.</td>
+  <td>section 7, group one</td>
+</tr>
+<tr>
+  <td><strong>marketplace</strong></td>
+  <td>A system whose inventory can say no: drivers decline, riders cancel.</td>
+  <td>the concert scene in <code>Sim.java</code></td>
+</tr>
+<tr>
+  <td><strong>surge multiplier</strong></td>
+  <td>A local demand-over-supply price signal that reshapes both sides of the market.</td>
+  <td>section 7, group three</td>
+</tr>
+<tr>
+  <td><strong>batched matching</strong></td>
+  <td>Holding requests for a few seconds to match a whole group at once.</td>
+  <td>section 10, v8</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-the-filing-cabinet">The filing cabinet</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>geospatial index</strong></td>
+  <td>A structure that files entities by where they are, so proximity is a lookup.</td>
+  <td>section 6, idea one</td>
+</tr>
+<tr>
+  <td><strong>cell</strong></td>
+  <td>One square (or hexagon) of the map; the key under which a driver is filed.</td>
+  <td>section 8, the pegboard hooks</td>
+</tr>
+<tr>
+  <td><strong>ring search</strong></td>
+  <td>Widening the cell search outward one ring at a time from the rider's own cell.</td>
+  <td>section 10, v2 and v3</td>
+</tr>
+<tr>
+  <td><strong>ETA</strong></td>
+  <td>Estimated time of arrival: the ranking key, computed from roads, not straight lines.</td>
+  <td>section 10, v4, where Ben loses to Dev</td>
+</tr>
+<tr>
+  <td><strong>hot cell</strong></td>
+  <td>One cell holding a huge share of the fleet, so the index stops narrowing anything.</td>
+  <td>section 12, F4, the airport</td>
+</tr>
+<tr>
+  <td><strong>H3 / S2</strong></td>
+  <td>Production cell systems: hexagonal (Uber) and spherical (Google), multi-resolution.</td>
+  <td>section 16, the production chain</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-taking-a-car-without-lying-to-anybody">Taking a car without lying to anybody</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>offer</strong></td>
+  <td>A reservation of one driver for one trip, carrying an id and an expiry.</td>
+  <td>section 10, v5 and v6</td>
+</tr>
+<tr>
+  <td><strong>lease</strong></td>
+  <td>A right that must be renewed to stay valid; both an offer and a driver's &quot;I'm online&quot;.</td>
+  <td>section 6, idea two</td>
+</tr>
+<tr>
+  <td><strong>claim (compare-and-set)</strong></td>
+  <td>Taking a resource in one indivisible step that exactly one caller wins.</td>
+  <td>section 4, the third crack</td>
+</tr>
+<tr>
+  <td><strong>fencing (offer id)</strong></td>
+  <td>Requiring the current reservation's id, so a stale popup cannot act.</td>
+  <td>section 10, v6</td>
+</tr>
+<tr>
+  <td><strong>idempotency key</strong></td>
+  <td>A client-generated id making a repeated request a no-op instead of a second trip.</td>
+  <td>section 12, F3, Priya's double tap</td>
+</tr>
+<tr>
+  <td><strong>pivot step</strong></td>
+  <td>The point in a saga after which you can only go forward: here, the completed trip.</td>
+  <td>section 12, F7</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-supply-that-lies-and-systems-that-wobble">Supply that lies, and systems that wobble</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>heartbeat / ping</strong></td>
+  <td>The periodic location report that renews a driver's presence.</td>
+  <td>section 8, re-stamping the tokens</td>
+</tr>
+<tr>
+  <td><strong>freshness TTL</strong></td>
+  <td>The age past which a reported position stops being trusted.</td>
+  <td>section 4, the second crack</td>
+</tr>
+<tr>
+  <td><strong>ghost driver</strong></td>
+  <td>A car whose pin is on the map and whose driver is not there.</td>
+  <td>Omar, from section 2 onward</td>
+</tr>
+<tr>
+  <td><strong>firehose</strong></td>
+  <td>The constant, high-volume stream of location pings, 150× the dispatch rate here.</td>
+  <td>section 11, the capacity table</td>
+</tr>
+<tr>
+  <td><strong>metastable failure</strong></td>
+  <td>A system kept down by the retries its own slowness caused.</td>
+  <td>section 12, F9</td>
+</tr>
+<tr>
+  <td><strong>DISCO / Ringpop</strong></td>
+  <td>Uber's published dispatch system and its consistent-hashing membership library.</td>
+  <td>section 16, the production chain</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-19-about-this-lab-what-is-it-made-of-and-where-do-the-numbers-come-from">19. About this lab: what is it made of, and where do the numbers come from?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A document, a console you can break, eleven small Java
+files and an exercise ladder. Every number above came from running those
+files, and this section says exactly how.</p>
+</blockquote>
+<h3 id="readme-what-is-it-made-of-and-how-do-you-run-it">What is it made of, and how do you run it?</h3>
+<div class="code"><pre><code class="language-bash">java src/Sim.java           # one narrated evening in Bengaluru
+java src/Experiments.java   # six ways to break it, measured
+java src/Tests.java         # 14 guarantees, asserted
+</code></pre></div>
+<p>There is no build tool and there are no dependencies. Alongside the code sits
+<a href="visualization.html"><code>visualization.html</code></a>, the Dispatch Console, published at
+<a href="https://claude.ai/code/artifact/7c601922-ea5c-4d46-946a-79bf6a489ff0" target="_blank" rel="noopener">https://claude.ai/code/artifact/7c601922-ea5c-4d46-946a-79bf6a489ff0</a>. Every
+rule the matcher follows is a switch you can flip there, and each switch breaks
+something specific.</p>
+<p>The exercise ladder is <a href="notes.html#exercises"><code>EXERCISES.md</code></a> with worked answers in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<h3 id="readme-where-do-the-numbers-come-from">Where do the numbers come from?</h3>
+<p>Every figure in sections 4, 10, 12 and 15 was produced by running
+<code>src/Experiments.java</code> on one ordinary laptop, one representative run each.</p>
+<p>Timings vary by machine. The ratios are the lesson, not the absolute
+milliseconds. Two figures move between runs, so they are quoted as ranges. The
+double-booking count in experiment 3 lands near 98 or 100, depending on thread
+scheduling. The airport slowdown in experiment 5 lands between 15× and 25×. The
+driver counts, including the 6,399 in the busiest cell, are exact.</p>
+<p>The capacity table in section 11 is different in kind. Those are round numbers
+chosen to be <em>plausible</em>, not measurements and not reported figures. They exist
+to show which order of magnitude forces which design decision.</p>
+<p>The nine failures in section 12 are not all of the same kind. Two of them run
+from a command: F1 and F4. Two more play out in scenes of <code>Sim.java</code>, F2 in
+SCENE 5 and F3 in SCENE 8. The last five, F5 through F9, are argued rather than
+run.</p>
+<p>Each of those five says so at the point where it is introduced. A single
+process with no queue and no network cannot demonstrate a partition or a
+backlog, and pretending otherwise would be worse than admitting it.</p>
+<p>The named Uber components (DISCO, Ringpop, H3, Schemaless and Docstore) come
+from Uber's published engineering talks and blog posts. Treat them as &quot;how a
+system like this has been built&quot;, not as a current internal diagram. Real
+architectures churn, and today's has not been verified here.</p>
+<h3 id="readme-what-is-in-the-folder">What is in the folder?</h3>
+<div class="code"><pre><code>README.md              this document
+EXERCISES.md           eight rungs, from &quot;explain it&quot; to &quot;design it for three cities&quot;
+SOLUTIONS.md           worked answers — try first
+visualization.html     the Dispatch Console (also published as an artifact)
+src/Loc.java           distance, and how wide a metre is in longitude
+src/Driver.java        the driver, and the AtomicReference that carries the lab
+src/DriverState.java   OFFLINE / AVAILABLE / OFFERED / ON_TRIP
+src/Offer.java         a reservation with a deadline
+src/Trip.java          the rider&#x27;s side of the story
+src/TripState.java     REQUESTED / MATCHED / IN_PROGRESS / COMPLETED / CANCELLED / NO_DRIVERS
+src/Index.java         the interface both indexes implement
+src/NaiveIndex.java    full scan — the correctness oracle
+src/CellIndex.java     the grid: cheap writes, bounded reads, ring expansion
+src/BrokenIndex.java   the same grid with one planted bug (exercise 6)
+src/Dispatch.java      search, rank, claim, lease, idempotency, surge
+src/Sim.java           one narrated evening in Indiranagar
+src/Experiments.java   six measured failures
+src/Tests.java         fourteen guarantees, asserted (`java src/Tests.java broken` for exercise 6)
+</code></pre></div>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--uber-high-level-system-design">Exercises — Uber high-level system design</h1>
+<p>Eight rungs, easiest first. Rungs 1–3 need nothing but the console and your head.
+Rungs 4–7 need the code. Rung 8 is an interview-grade design conversation.</p>
+<p>Answers are in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Attempt first — especially the
+predictions, where being wrong is the point.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Explain to a non-engineer why finding the nearest available car is hard
+once there are a hundred thousand cars, without using the words index, cell,
+shard, or database.</p>
+<p><strong>1.2</strong> In two sentences, why is &quot;find the nearest free car, then mark it busy&quot;
+wrong? Your answer must not contain the word &quot;slow&quot;.</p>
+<p><strong>1.3</strong> A colleague says: &quot;Just cache the driver locations and the problem goes
+away.&quot; Which of the four problems from Rani's evening does caching address, and
+which three does it leave untouched?</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a> and reset it.</p>
+<p><strong>2.1</strong> Request a ride. Which car was reserved, and which car is physically
+closest? If they differ, quote the log line that explains why.</p>
+<p><strong>2.2</strong> Click that reserved car. What is its state, which square is it in, how
+long ago did it report, and which trip is holding it?</p>
+<p><strong>2.3</strong> Set the search rule to <em>Everything within 1.5 km</em>. How many squares does
+the map shade, and how many cars are in them? Now set it to <em>Widen until 3 cars
+found</em>. How many squares now? What did you give up?</p>
+<p><strong>2.4</strong> In <span class="missing" title="Not in the hub: src/Dispatch.java is in the lab folder on your laptop"><code>src/Dispatch.java</code></span>, find the one line that makes
+&quot;two riders, one car&quot; impossible. In <span class="missing" title="Not in the hub: src/CellIndex.java is in the lab folder on your laptop"><code>src/CellIndex.java</code></span>,
+find the one line that makes 250,000 location pings per second affordable.</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Write your answer down <em>before</em> running the command.</p>
+<p><strong>3.1</strong> A driver is 40 m away from the rider but just across a cell boundary, and
+the matcher searches only the rider's own cell. Out of 5,000 random requests, what
+fraction do you think find <em>no</em> driver at all? What fraction find a <em>worse</em>
+driver and report success?
+<code>java src/Experiments.java 2</code></p>
+<p><strong>3.2</strong> 200 riders on one corner, 200 free cars, 8 threads, and a matcher that
+checks <code>is_free</code> and then writes. How many riders are promised a car that
+somebody else also got? Guess a number, not a range.
+<code>java src/Experiments.java 3</code></p>
+<p><strong>3.3</strong> The whole fleet of 20,000 cars parks at one airport. The index still
+works correctly. Within a factor of two, by how much does a nearby query slow
+down?
+<code>java src/Experiments.java 5</code></p>
+<p><strong>3.4</strong> In <code>Sim.java</code> SCENE 7, D4's pin is 71 m from Arjun and every other car is
+at least 316 m away. Which car gets the offer, and why? Then predict what changes
+if you set <code>dispatch.ignorePingFreshness = true</code>.
+<code>java src/Sim.java</code></p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>Each of these is a one-line change. For each: what breaks, why, and is the
+property you lost <strong>safety</strong> (something wrong happens) or <strong>liveness</strong>
+(something good stops happening)?</p>
+<p><strong>4.1</strong> In <code>Sim.java</code>, build the index as <code>new CellIndex(50, true)</code> — 50 m cells
+instead of 500 m. Run <code>java src/Experiments.java 1</code> with the same change in
+<code>scanVsIndex</code>. What happens to cells visited, and why does making the index
+<em>finer</em> make the search <em>slower</em>?</p>
+<p><strong>4.2</strong> Set <code>dispatch.offerTtlMs = 2000</code> (2 seconds). Run <code>Sim.java</code>. What
+happens to real drivers? Now set it to <code>300_000</code> (5 minutes) and reason about
+what a crashed matcher costs you.</p>
+<p><strong>4.3</strong> Set <code>dispatch.pingTtlMs = 2000</code>. Run <code>java src/Experiments.java 4</code>. What
+fraction of your fleet becomes unmatchable, and what real-world event would
+trigger exactly this?</p>
+<p><strong>4.4</strong> In <code>Dispatch.matchOnce</code>, delete the <code>t.triedDrivers.contains(id)</code> check.
+Then make a driver decline. What happens, and what is the name of this failure
+mode in general?</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1 — the rider cancels.</strong> Add <code>void cancelTrip(String tripId)</code> to <code>Dispatch</code>.
+It must: release an <code>OFFERED</code> driver back to <code>AVAILABLE</code>; mark the trip
+<code>CANCELLED</code>; do nothing at all if the trip is already <code>COMPLETED</code>; and be safe to
+call twice. Add this test to <code>Tests.java</code> and make it pass:</p>
+<div class="code"><pre><code class="language-java">static void cancelling_releases_the_car_and_is_safe_to_repeat() {
+    AtomicLong clock = new AtomicLong(1000);
+    Dispatch d = fresh(clock, true);
+    d.goOnline(new Driver(&quot;A&quot;, HOME.moved(100, 0), 1.0));
+    Trip t = d.requestRide(&quot;r&quot;, HOME, HOME.moved(3000, 0), &quot;k1&quot;);
+    d.cancelTrip(t.id);
+    d.cancelTrip(t.id);                                     // the retry
+    boolean released = d.drivers.get(&quot;A&quot;).state.get() == DriverState.AVAILABLE;
+    check(&quot;cancelling_releases_the_car_and_is_safe_to_repeat&quot;,
+            released &amp;&amp; t.state == TripState.CANCELLED, &quot;driver=&quot; + d.drivers.get(&quot;A&quot;).state.get());
+}
+</code></pre></div>
+<p>Then answer: why must the release use <code>compareAndSet</code> rather than
+<code>state.set(AVAILABLE)</code>? Name the concrete race.</p>
+<p><strong>5.2 — cap the ranking.</strong> Add <code>int maxRanked = 10</code> to <code>Dispatch</code> and stop
+<code>matchOnce</code> from ranking more than that many candidates. Which experiment's
+numbers change, and which stay identical? What quality do you lose, and in which
+kind of neighbourhood do you lose the most?</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><span class="missing" title="Not in the hub: src/BrokenIndex.java is in the lab folder on your laptop"><code>src/BrokenIndex.java</code></span> contains exactly one planted bug.</p>
+<div class="code"><pre><code class="language-bash">java src/Tests.java broken
+</code></pre></div>
+<p><strong>6.1</strong> Which tests fail, and what is the single line (or missing line) that
+causes both?</p>
+<p><strong>6.2</strong> Which invariant from README §13 does it violate?</p>
+<p><strong>6.3</strong> This bug would pass a code review and a manual test. Describe how it
+would present in production after a week — what would riders complain about,
+which dashboard would move first, and why would the obvious dashboards look fine?</p>
+<p><strong>6.4</strong> Write the smallest possible test that catches it — smaller than the two
+that do.</p>
+<hr />
+<h2 id="exercises-rung-7--handle-a-failure-the-system-does-not-yet-survive">Rung 7 — Handle a failure the system does not yet survive</h2>
+<p><strong>7.1 — the crash between the claim and the answer.</strong> Today, if dispatch claims a
+driver and then dies before replying to the rider, the rider's app retries with
+the same idempotency key. Trace what happens now, step by step. What is
+guaranteed, and what is merely <em>likely</em>? Then design the fix: what must the
+server store, at what moment, for the retry to be genuinely harmless? (Hint: at
+what point in <code>requestRide</code> is the idempotency key written, relative to the
+claim?)</p>
+<p><strong>7.2 — the driver's app dies mid-trip.</strong> The trip is <code>IN_PROGRESS</code>, the driver's
+phone dies, the passenger is in the car and arrives 20 minutes later. The driver
+reinstalls the app. What must the system do so the trip completes exactly once
+and is charged exactly once? Which existing mechanism in this lab already covers
+part of it, and what is missing?</p>
+<p><strong>7.3 — degrade, don't fail.</strong> The maps/ETA service becomes unavailable. Design
+the fallback: what does the matcher rank by, what does the rider see, what do you
+log, and how do you avoid a retry storm while it recovers? Which lab's toolkit
+are you reaching into?</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p>Worked design discussions, not single answers. Write the answer you would give at
+a whiteboard.</p>
+<p><strong>8.1 — the airport.</strong> Two thousand drivers wait at one airport; arrivals come in
+bursts as flights land. The cell index measurably collapses here (22× slower, one
+cell holding 6,399 cars). Design the airport: how are drivers indexed, how are
+they matched, what do you show the driver, and what do you monitor? Which parts
+of this lab's design survive and which must change?</p>
+<p><strong>8.2 — three cities, one system.</strong> Bengaluru, Mumbai, Delhi. Where do you shard,
+what is the routing key, what happens to a trip that starts near a boundary, and
+what does a region-wide outage in one city take down elsewhere? Justify the
+consistency posture for each piece of state (index, driver state, trip record,
+payments) using the CAP vocabulary from <a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a>.</p>
+<p><strong>8.3 — the 10× day.</strong> New Year's Eve: 10× the requests, roughly the same number
+of drivers. Rank your levers — surge, batching window, search radius, offer TTL,
+load shedding, ping interval — by how much they help and how much they hurt.
+Which single lever would you pull first, and what would tell you it worked?</p>
+<p><strong>8.4 — the metric you would defend.</strong> You must pick one number to define whether
+dispatch is healthy, and it will be on a screen in front of your director. Which
+number, why not the obvious alternatives, and what is the failure it would miss?</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--uber-high-level-system-design">Solutions — Uber high-level system design</h1>
+<p>Try <a href="notes.html#exercises"><code>EXERCISES.md</code></a> first. For rungs 7–8 these are worked
+discussions, not single right answers.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> You are looking for a car that is moving, among a hundred thousand cars
+that are all moving, and the answer has to arrive before the person gets bored —
+about a second. Two things make it hard. First, &quot;who is near me?&quot; is a question
+about <em>every</em> car unless you have organised them by where they are in advance.
+Second, the answer goes stale while you are computing it: by the time you say
+&quot;that one&quot;, it has moved, or somebody else has already been promised it.</p>
+<p><strong>1.2</strong> Because between <em>finding</em> the free car and <em>marking</em> it busy there is a
+gap, and another request fits inside that gap perfectly — so both requests find
+the same car free and both mark it busy. The fix is not a faster check; it is
+making the check and the mark one indivisible action that only one request can
+win.</p>
+<p><strong>1.3</strong> Caching addresses problem 1 (the scan) and only partly: it makes reads
+cheap, and creates a new correctness question about how stale the cached position
+is. It does nothing for problem 2 (two callers, one car — a cache makes this
+<em>worse</em>, because now several machines each hold their own copy of &quot;car 47 is
+free&quot;), nothing for problem 3 (a pin that lies — a cache faithfully caches the
+lie), and nothing for problem 4 (a reservation nobody releases).</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> From a fresh console, ranking by soonest arrival, the reserved car is
+<strong>K3</strong> while the closest car is <strong>K2</strong> — K2 is roughly 200 m away with a roads
+factor of 3.4×, so it is about 700 m of driving. The log line names both.</p>
+<p><strong>2.2</strong> The inspector shows: <code>state = OFFERED</code>, its cell, its position in metres,
+how many seconds ago it reported, its roads factor, distance and arrival time to
+the rider, and <code>reserved for T1 (expires t+15s)</code>.</p>
+<p><strong>2.3</strong> <em>Everything within 1.5 km</em> shades 49 squares (a 7×7 block). <em>Widen until
+3 cars found</em> usually shades 9 (rings 0 and 1), sometimes 1 or 25 depending on
+where you stand. What you gave up: the guarantee that no better car exists
+slightly further out. What you bought: a search cost that depends on nearby
+supply rather than on the size of the search radius.</p>
+<p><strong>2.4</strong> The claim:</p>
+<div class="code"><pre><code class="language-java">return d.state.compareAndSet(DriverState.AVAILABLE, DriverState.OFFERED);
+</code></pre></div>
+<p>The cheap write:</p>
+<div class="code"><pre><code class="language-java">if (oldKey != null &amp;&amp; oldKey == newKey) return;    // moved, but not out of its cell
+</code></pre></div>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> <strong>44.9%</strong> of requests find nobody at all, and <strong>13.3%</strong> return a worse
+driver than the true nearest (116 m worse on average, 445 m at worst). The second
+number is the dangerous one: those requests succeed, log nothing, and simply make
+every rider wait a little longer forever.</p>
+<p><strong>3.2</strong> <strong>About 98 of 200</strong> — it lands near half every run, and the exact number
+moves with thread scheduling. Not a rare race — the common case, because
+every rider on the same corner ranks the cars in the same order and reaches for
+the same one.</p>
+<p><strong>3.3</strong> <strong>15–25×</strong> (112 µs → 2,442 µs per query in one run), with 6,399 cars in the single
+busiest 500 m square. Nothing is broken; the index simply stopped narrowing,
+because narrowing to &quot;nearby&quot; only helps when nearby is a small set.</p>
+<p><strong>3.4</strong> <strong>D1 gets the offer</strong>, at 316 m, even though D4's pin is 71 m away — D4
+last reported 65 seconds ago and the freshness limit is 30. With
+<code>ignorePingFreshness = true</code>, D4 wins and the rider is sent a car that may be
+anywhere; <code>ghostDispatches</code> counts it.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1 — 50 m cells.</strong> Measured, 100,000 drivers, 3 km radius:</p>
+<div class="code"><pre><code>   50m cells:   4.32 ms/query,  14,641 cells visited,  2,129 drivers measured
+  200m cells:   0.71 ms/query,     961 cells visited,  2,221 drivers measured
+  500m cells:   0.50 ms/query,     169 cells visited,  2,425 drivers measured
+ 2000m cells:   0.91 ms/query,      25 cells visited,  5,586 drivers measured
+</code></pre></div>
+<p>A finer index is <em>slower</em> because the cost of a search has two halves: the cells
+you visit and the drivers you measure. Shrinking cells trades the second for the
+first, and at 50 m you visit 14,641 mostly-empty squares to save measuring 300
+drivers. Too coarse is bad in the other direction — at 2 km you visit 25 squares
+and measure 5,586 drivers. The curve is U-shaped and its minimum depends on
+density, which is precisely the argument for multi-resolution grids (H3/S2): one
+size cannot be right for an airport and a highway at the same time.</p>
+<p>Nothing here is a safety loss. It is pure liveness/latency.</p>
+<p><strong>4.2 — offer TTL.</strong> At 2 seconds, real drivers lose offers they were reaching
+for: the offer expires, the trip re-matches, and the first driver sees a popup
+vanish. Acceptance rate drops, offers-per-trip rises, and riders wait longer —
+liveness, degraded by trying too hard to be quick. At 5 minutes, a crashed
+matcher takes a car out of supply for five minutes, and a driver who ignores a
+popup is unreachable for five minutes. Neither setting is unsafe; the TTL is a
+straight trade between <em>driver reaction time</em> and <em>how long a failure strands a
+car</em>.</p>
+<p><strong>4.3 — ping TTL of 2 seconds.</strong> Almost the whole fleet becomes unmatchable,
+because drivers ping every ~4 seconds and normal network jitter puts most of them
+over the limit at any instant. Real-world trigger: an ingest slowdown of a few
+seconds — a redeploy, a GC pause, a slow shard. <strong>This is the self-inflicted
+outage to design against</strong>: the freshness TTL must be comfortably larger than
+normal ping interval plus normal ingest lag, or a small blip un-matches your
+entire supply. Liveness, lost catastrophically, from a rule that exists to
+protect quality.</p>
+<p><strong>4.4 — remove the <code>triedDrivers</code> guard.</strong> Measured: the declining driver is
+immediately re-offered the same trip, forever.</p>
+<div class="code"><pre><code>first offer: A
+after decline 1: offered to A
+after decline 2: offered to A
+...
+</code></pre></div>
+<p>The general name is <strong>livelock</strong> (or a retry loop with no progress): the system
+is busy, nothing is wrong with any individual step, and no work completes. In
+production it also becomes an accidental denial-of-service against one driver's
+phone.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> A correct <code>cancelTrip</code>:</p>
+<div class="code"><pre><code class="language-java">void cancelTrip(String tripId) {
+    Trip t = trips.get(tripId);
+    if (t == null || t.state == TripState.COMPLETED || t.state == TripState.CANCELLED) return;
+    String held = t.pendingOfferDriver;
+    if (held != null) {
+        Driver d = drivers.get(held);
+        // compareAndSet, not set: the driver may have accepted a millisecond ago.
+        if (d != null &amp;&amp; d.state.compareAndSet(DriverState.OFFERED, DriverState.AVAILABLE)) {
+            d.offer = null;
+        }
+        t.pendingOfferDriver = null;
+    }
+    t.state = TripState.CANCELLED;
+    log(&quot;%s cancelled by the rider; %s released&quot;, tripId, held);
+}
+</code></pre></div>
+<p><strong>Why <code>compareAndSet</code> and not <code>set</code>:</strong> the concrete race is <em>cancel racing
+accept</em>. The rider taps cancel at the same moment the driver taps accept. The
+accept moves the driver <code>OFFERED → ON_TRIP</code>; if cancel then blindly writes
+<code>AVAILABLE</code>, you have a driver who is driving to a cancelled pickup <strong>and</strong> is in
+the pool to be offered to someone else — the double-booking bug, re-entering
+through the cancel path. With <code>compareAndSet(OFFERED, AVAILABLE)</code> the cancel
+simply fails to release, sees the driver is already on a trip, and the cancel
+becomes a &quot;cancel after accept&quot;, which is a different (and paid) business case.</p>
+<p><strong>5.2 — cap the ranking.</strong> Sorting is not where the cost is; the candidate list
+is. Experiment 1's <em>drivers measured per request</em> is unchanged (the index still
+returned them), while ranking time drops — so with <code>nearProgressive</code> already
+stopping early, the cap changes very little. It matters most in exactly one
+place: dense areas, where the ring search returns hundreds and you would rank
+them all. The quality you lose is the tail — the best of 200 candidates is
+slightly better than the best of 10 — and you lose the most in dense
+neighbourhoods, which is also where the difference between the 1st and 10th best
+car is smallest. That asymmetry is why the cap is a good trade.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> Two tests fail:</p>
+<div class="code"><pre><code>FAIL  a_moving_driver_changes_cells_and_stays_findable    still findable at the old position=true
+FAIL  an_offline_driver_disappears_from_every_cell_it_ever_visited   2 stale copies still findable
+</code></pre></div>
+<p>The cause is one <strong>missing</strong> line in <code>BrokenIndex.update</code>: it adds the driver to
+its new cell but never removes it from the old one.</p>
+<div class="code"><pre><code class="language-java">public void update(String driverId, Loc loc) {
+    long newKey = pack(ixOf(loc), iyOf(loc));
+    // MISSING: Long oldKey = driverCell.get(driverId);
+    //          if (oldKey != null &amp;&amp; oldKey != newKey) cells.get(oldKey).remove(driverId);
+    cells.computeIfAbsent(newKey, k -&gt; new ConcurrentHashMap&lt;&gt;()).put(driverId, loc);
+    driverCell.put(driverId, newKey);
+}
+</code></pre></div>
+<p><code>remove()</code> then only cleans the <em>current</em> cell, so every cell the driver ever
+visited keeps a copy — at the position it had when it was there.</p>
+<p><strong>6.2</strong> Invariant <strong>I1</strong>: a driver is filed under exactly one cell. Note that I2
+(one rider per car) still holds — the claim is unaffected. This is a <em>quality</em>
+bug, not a safety bug, which is exactly why it survives review.</p>
+<p><strong>6.3</strong> After a week: the index has grown to hold every cell every driver has
+ever passed through, so memory climbs steadily and search gets slower as ghosts
+accumulate. Riders complain that the app &quot;sent a car that was miles away&quot; and
+that ETAs are wrong. The dashboards that look fine: error rate (zero), dispatch
+success rate (fine — a car is always found), CPU (gradual). The dashboards that
+move first: index memory, candidates examined per query, and <em>offer acceptance
+rate</em> — drivers decline offers for pickups they are nowhere near.</p>
+<p><strong>6.4</strong> The smallest catching test:</p>
+<div class="code"><pre><code class="language-java">Index idx = newIndex(true);
+idx.update(&quot;A&quot;, HOME);
+idx.update(&quot;A&quot;, HOME.moved(2000, 0));
+check(&quot;moving leaves nothing behind&quot;, idx.near(HOME, 200).isEmpty(), &quot;...&quot;);
+</code></pre></div>
+<p>Two updates and one query. Note what makes it work: it asserts on <strong>absence</strong>.
+Tests that only assert the driver is findable <em>at its new position</em> pass happily
+against the bug.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-a-failure">Rung 7 — Handle a failure</h2>
+<p><strong>7.1 — crash between the claim and the answer.</strong></p>
+<p>What happens today, in order: <code>requestRide</code> writes the idempotency key → creates
+the trip → claims a driver → returns. If dispatch dies <em>after</em> the claim and
+before the reply, the retry finds the key, returns the same trip, and does <strong>not</strong>
+match again — so the outcome is correct. That is guaranteed <em>because the key is
+written before the claim</em>. Reverse those two lines and the retry re-enters
+matching and claims a second car for the same rider, and now you are holding two
+cars for one trip.</p>
+<p>What is merely likely rather than guaranteed: that the trip and its key survived
+the crash at all. In this lab both live in memory, so a real dispatch crash loses
+them and the retry creates a genuinely new trip while the first driver sits in
+<code>OFFERED</code> until the lease expires. The fix is that the idempotency key and the
+trip must be written <strong>durably, together, before the claim</strong> — one transaction —
+and the claim must be recoverable from the trip record. Then the retry is
+harmless no matter where the crash landed.</p>
+<p>The general rule worth taking away: <em>the record of intent must be durable before
+the side effect that acts on it.</em> Same shape as the outbox.</p>
+<p><strong>7.2 — the driver's app dies mid-trip.</strong> Already covered: <code>completeTrip</code> is
+idempotent (I6), so a replayed completion charges once. What is missing:</p>
+<ul>
+<li><strong>The trip must be resumable.</strong> On reinstall, the app asks &quot;what am I doing?&quot;
+and the server answers from the durable trip record — the client cannot be the
+source of truth for an in-progress trip.</li>
+<li><strong>The completion must be reconstructable without the app.</strong> If the phone never
+comes back, the trip is stuck <code>IN_PROGRESS</code> forever. Real systems have a
+sweeper: trips in progress with no telemetry for N minutes go to a resolution
+path (auto-complete with an estimated fare, or a support queue).</li>
+<li><strong>Fare inputs must be durable as they accrue</strong>, not computed from a final
+client message — otherwise a dead phone loses the distance travelled.</li>
+</ul>
+<p><strong>7.3 — the ETA service is down.</strong></p>
+<ul>
+<li><strong>Rank by:</strong> straight-line distance, with a per-area correction factor cached
+from the last known good ETAs — degraded, still ordered sensibly.</li>
+<li><strong>The rider sees:</strong> a car, and a range instead of a precise ETA (&quot;about 5–8
+min&quot;). Never a spinner, never a failure.</li>
+<li><strong>Log:</strong> a distinct <code>degraded_ranking</code> counter, so the quality loss is visible
+in the same dashboards as everything else, and so post-hoc match quality can be
+compared.</li>
+<li><strong>Avoid the storm:</strong> a circuit breaker around the ETA client (fail fast while
+it is open rather than waiting for timeouts on every request), bounded retries
+with jitter, and a timeout budget shorter than the rider's patience.</li>
+</ul>
+<p>Toolkit: <a href="../06-software-architecture-patterns/notes.html#readme"><code>software-architecture-patterns</code></a>
+(breaker, bulkhead, graceful degradation) and
+<a href="../60-distributed-rate-limiting/notes.html#readme"><code>distributed-rate-limiting</code></a> (shedding,
+fail-open vs fail-closed — here, <strong>fail-open with degraded quality</strong>, because a
+worse car now beats no car at all).</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — the airport.</strong> What survives: the claim, the lease, the freshness rule,
+the trip state machine. What must change:</p>
+<ul>
+<li><strong>Indexing.</strong> One 500 m cell holding 6,399 cars is not an index. Either
+sub-divide (a finer resolution inside hot cells — H3 exists for this) or stop
+treating an airport as geography at all and treat it as a <strong>queue</strong>: drivers
+join a FIFO on arrival and the matcher pops rather than searches. This is the
+right answer, and it is also the fair one — the airport's real problem is not
+latency but that &quot;nearest&quot; is meaningless when 2,000 cars are within 200 m of
+each other, so some other ordering has to be chosen deliberately.</li>
+<li><strong>Matching.</strong> Batched, not greedy: arrivals come in bursts as flights land, and
+a burst is exactly the case where batching wins most.</li>
+<li><strong>The driver sees</strong> their queue position — otherwise the ordering feels
+arbitrary and drivers game it by circling.</li>
+<li><strong>Monitor:</strong> queue length and wait time per terminal, join/leave rate, and
+matches from the queue versus from geographic search.</li>
+</ul>
+<p><strong>8.2 — three cities.</strong> Shard by <strong>city/region</strong>, because rides are local: a
+pickup and a drop-off are almost always in the same region, so this keeps the hot
+path inside one region and one failure domain.</p>
+<ul>
+<li><strong>Routing key:</strong> the geographic cell of the <em>pickup</em> — it is known at request
+time and it is what the index is keyed by anyway.</li>
+<li><strong>Boundary trips</strong> (rare, real: airport runs between metro areas): the trip
+belongs to the region that owns the pickup, for its whole life. Do not migrate
+a live trip between regions; you would be inventing distributed transactions
+for the sake of tidiness.</li>
+<li><strong>Consistency posture, per piece of state:</strong><ul>
+<li><em>Geo index</em> — <strong>AP</strong>. Stale or partial is a worse match, not a wrong one.</li>
+<li><em>Driver state (the claim)</em> — <strong>CP</strong>, single owner per driver id. A driver
+whose owner is unreachable is unmatchable, and that is the correct answer.</li>
+<li><em>Trip record</em> — <strong>CP</strong> within its region, durable, replicated.</li>
+<li><em>Payments</em> — <strong>CP</strong>, and idempotent end to end; money never gets AP.</li>
+</ul>
+</li>
+<li><strong>A region outage</strong> takes down dispatch in that city and nothing else, provided
+the shared services (identity, payments, maps) are not single-region. The
+design goal is that the blast radius equals the region.</li>
+</ul>
+<p><strong>8.3 — the 10× day.</strong> Ranked by effect, best first:</p>
+<ol>
+<li><strong>Surge</strong> — the only lever that changes <em>demand</em>. Everything else rearranges a
+queue; this shortens it. Cost: unpopular, needs caps and communication.</li>
+<li><strong>Load shedding at the gateway</strong> — protects the system from the retry storm
+that a 10× day guarantees. Cost: some riders get a clear &quot;try again&quot; instead
+of a spinner, which is the honest failure.</li>
+<li><strong>Batching window</strong>, widened from ~2 s to ~5 s — 10× demand means many
+candidates per batch, so batching pays more than usual. Cost: seconds added to
+everyone's wait.</li>
+<li><strong>Ping interval</strong>, lengthened from 4 s to 8 s — halves the firehose at the
+cost of position accuracy. Cheap insurance if ingest lag rises.</li>
+<li><strong>Search radius</strong>, <em>reduced</em> — counter-intuitively. When supply is scarce, a
+wide search sends cars on long empty drives, removing them from where they
+were needed. Cost: more &quot;no cars available&quot;, sooner and more honestly.</li>
+<li><strong>Offer TTL</strong>, shortened a little — recovers unanswered offers faster when
+every car counts. Cost: more missed offers for slow drivers; do not overdo it.</li>
+</ol>
+<p>First lever: <strong>surge</strong>, and the evidence it worked is the <em>supply/demand ratio
+per area</em> moving back toward 1 — not revenue, and not the multiplier itself.</p>
+<p><strong>8.4 — the one metric.</strong> I would put up <strong>the fraction of ride requests that get
+an accepted driver within 60 seconds</strong> (a &quot;good match rate&quot;), sliced by area.</p>
+<ul>
+<li>Why not dispatch p99 latency: it can be beautiful while nobody gets a car.</li>
+<li>Why not match rate alone: it counts a match to a ghost car as a success.</li>
+<li>Why not average wait: the average is dominated by the healthy majority and
+hides the airport and the outer suburbs entirely.</li>
+<li>What it misses: <strong>match quality</strong> — it says nothing about whether the rider got
+the <em>best</em> car, so a matcher that quietly picks the second-best forever (the
+cell-edge bug, 13.3% of requests) looks perfectly healthy. That is why offer
+acceptance rate and mean pickup ETA sit next to it on the same screen.</li>
+</ul>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../69-whatsapp-system-design/notes.html"><small>← Lab 69</small>whatsapp-system-design</a><a href="../71-google-docs-system-design/notes.html" style="text-align:right"><small>Lab 71 →</small>google-docs-system-design</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-is-finding-each-other-the-whole-business">1. Why is finding each other the whole business?</a><a href="#readme-2-what-comes-apart-in-ranis-evening">2. What comes apart in Rani&#x27;s evening?</a><a href="#readme-3-what-is-the-naive-program-and-is-it-actually-wrong">3. What is the naive program, and is it actually wrong?</a><a href="#readme-4-where-do-the-three-cracks-show-up-when-you-measure-ashas-program">4. Where do the three cracks show up when you measure Asha&#x27;s program?</a><a href="#readme-5-what-has-to-be-true-whatever-technology-you-pick">5. What has to be true, whatever technology you pick?</a><a href="#readme-6-what-are-the-two-ideas-everything-else-follows-from">6. What are the two ideas everything else follows from?</a><a href="#readme-7-which-words-do-you-need-now-and-what-did-each-one-cost-to-earn">7. Which words do you need now, and what did each one cost to earn?</a><a href="#readme-8-what-two-pictures-should-you-keep-in-your-head">8. What two pictures should you keep in your head?</a><a href="#readme-9-can-you-go-and-break-it-with-your-own-hands">9. Can you go and break it with your own hands?</a><a href="#readme-10-how-does-meeras-tap-become-a-reserved-car">10. How does Meera&#x27;s tap become a reserved car?</a><a href="#readme-11-what-does-the-whole-system-look-like-on-one-page">11. What does the whole system look like on one page?</a><a href="#readme-12-what-actually-goes-wrong-and-what-survives-each-time">12. What actually goes wrong, and what survives each time?</a><a href="#readme-13-what-is-guaranteed-and-what-was-traded-away-for-it">13. What is guaranteed, and what was traded away for it?</a><a href="#readme-14-which-four-lines-of-code-carry-the-whole-lab">14. Which four lines of code carry the whole lab?</a><a href="#readme-15-what-do-the-six-experiments-prove">15. What do the six experiments prove?</a><a href="#readme-16-what-does-the-real-thing-do-that-this-lab-does-not">16. What does the real thing do that this lab does not?</a><a href="#readme-17-where-does-this-sit-and-what-should-you-learn-next">17. Where does this sit, and what should you learn next?</a><a href="#readme-18-glossary--which-word-means-what">18. Glossary — which word means what?</a><a href="#readme-19-about-this-lab-what-is-it-made-of-and-where-do-the-numbers-come-from">19. About this lab: what is it made of, and where do the numbers come from?</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

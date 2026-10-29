@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en" data-hub-lab="21-java-version-features">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Java 11 — the first modern LTS, and the last one to still be common</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 21 · java-11.md</span><nav class="tabs" aria-label="This lab"><a href="notes.html">Lab notes</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 21 · java-version-features</p><h1 id="doc-java-11--the-first-modern-lts-and-the-last-one-to-still-be-common">Java 11 — the first modern LTS, and the last one to still be common</h1>
+<p><strong>GA:</strong> September 2018 · <strong>LTS:</strong> <strong>yes</strong> · <strong>Class file major version:</strong> 55 ·
+<strong>Oracle Premier Support:</strong> ended September 2023 · <strong>Extended:</strong> January 2032
+<strong>[documented — Oracle roadmap]</strong></p>
+<p><strong>Previous:</strong> <a href="java-10.html">Java 10</a> · <strong>Next:</strong> <a href="java-12.html">Java 12</a> ·
+<strong>Back to:</strong> <a href="notes.html#readme">the story</a></p>
+<hr />
+<h2 id="doc-the-one-thing-to-remember">The one thing to remember</h2>
+<p><strong>Java 11 is where the world went after Java 8, and where a lot of it stopped.</strong>
+It is the first LTS under the new release train, and for years it was <em>the</em>
+answer to &quot;which Java should we run.&quot; If you inherit a legacy service today, it
+is on 8 or on 11.</p>
+<p>Its feature set is modest. Its importance is that it is a <strong>support target</strong>,
+and — critically — it is the release where the Java EE modules were removed,
+which is the concrete reason many 8→11 migrations took weeks.</p>
+<h2 id="doc-what-you-actually-get">What you actually get</h2>
+<h3 id="doc-httpclient-becomes-standard--jep-321"><code>HttpClient</code> becomes standard — JEP 321</h3>
+<p>Incubated in <a href="java-09.html">Java 9</a> as <code>jdk.incubator.http</code>, now
+<code>java.net.http</code>. <strong>The package rename is the incubator mechanism working
+exactly as designed</strong> — every early adopter's imports broke on graduation, on
+purpose.</p>
+<div class="code"><pre><code class="language-java">HttpClient client = HttpClient.newBuilder()
+        .version(HttpClient.Version.HTTP_2)
+        .connectTimeout(Duration.ofSeconds(5))
+        .followRedirects(HttpClient.Redirect.NORMAL)
+        .build();
+
+HttpRequest req = HttpRequest.newBuilder(URI.create(&quot;https://api.example.com/orders&quot;))
+        .header(&quot;Accept&quot;, &quot;application/json&quot;)
+        .timeout(Duration.ofSeconds(10))
+        .GET()
+        .build();
+
+// synchronous
+HttpResponse&lt;String&gt; res = client.send(req, HttpResponse.BodyHandlers.ofString());
+
+// asynchronous
+CompletableFuture&lt;HttpResponse&lt;String&gt;&gt; f =
+        client.sendAsync(req, HttpResponse.BodyHandlers.ofString());
+</code></pre></div>
+<p>What it gives you over <code>HttpURLConnection</code>: HTTP/2 with multiplexing,
+WebSocket, a fluent builder, real timeouts, and an async API returning
+<code>CompletableFuture</code>. What it does not give you: connection-pool tuning
+comparable to Apache HttpClient or OkHttp, or the ergonomics of a declarative
+client. For a Spring application <code>RestClient</code>/<code>WebClient</code> still usually wins;
+<code>HttpClient</code> is excellent for libraries and small services that don't want a
+dependency.</p>
+<p>Note for later: HTTP/3 arrives for this client in JDK 26 (JEP 517).</p>
+<h3 id="doc-single-file-source-code-programs--jep-330">Single-file source-code programs — JEP 330</h3>
+<div class="code"><pre><code>$ java Hello.java
+</code></pre></div>
+<p>No <code>javac</code>, no class file on disk. This is what makes Java viable for
+scripting, and it is why every snippet in a modern Java tutorial can be run
+directly. <a href="java-22.html">Java 22</a> extends it to multiple files.</p>
+<h3 id="doc-string-methods"><code>String</code> methods</h3>
+<div class="code"><pre><code class="language-java">&quot;  hi  &quot;.strip()          // Unicode-aware trim (trim() only handles ASCII &lt;= U+0020)
+&quot;  hi  &quot;.stripLeading()
+&quot;  hi  &quot;.stripTrailing()
+&quot;&quot;.isBlank()              // true; also true for &quot;   &quot; and &quot;\t&quot;
+&quot;a\nb\nc&quot;.lines()         // Stream&lt;String&gt;, handles \n, \r\n and \r
+&quot;ab&quot;.repeat(3)            // &quot;ababab&quot;
+</code></pre></div>
+<p><code>strip()</code> vs <code>trim()</code> is the one to internalise: <code>trim()</code> removes characters
+with code point ≤ U+0020, which means it does <em>not</em> remove a non-breaking space
+(U+00A0) — a very common source of &quot;this string looks empty but isn't&quot; bugs
+with data pasted from spreadsheets or web pages. <code>strip()</code> uses
+<code>Character.isWhitespace</code> and handles it.</p>
+<h3 id="doc-var-in-lambda-parameters--jep-323"><code>var</code> in lambda parameters — JEP 323</h3>
+<div class="code"><pre><code class="language-java">(var a, var b) -&gt; a + b
+(@NonNull var a, @NonNull var b) -&gt; a + b   // the actual reason: annotations
+</code></pre></div>
+<p>The only real motivation is being able to annotate an inferred lambda
+parameter. You either need this or you don't.</p>
+<h3 id="doc-files-convenience-methods">Files convenience methods</h3>
+<div class="code"><pre><code class="language-java">Files.readString(path);              // whole file to String, UTF-8 by default
+Files.writeString(path, content);
+</code></pre></div>
+<p>Note &quot;UTF-8 by default&quot; here is a property of <em>these</em> methods, which specified
+UTF-8 from the start — unlike the platform default charset, which only becomes
+UTF-8 in <a href="java-18.html">Java 18</a>.</p>
+<h3 id="doc-collection-and-predicate-additions">Collection and predicate additions</h3>
+<div class="code"><pre><code class="language-java">list.toArray(String[]::new);         // cleaner than new String[0]
+Predicate.not(String::isBlank);      // instead of s -&gt; !s.isBlank()
+</code></pre></div>
+<h3 id="doc-zgc-arrives-experimental--jep-333">ZGC arrives (experimental) — JEP 333</h3>
+<p>A concurrent, low-latency collector targeting sub-10ms pauses at multi-terabyte
+heaps. <strong>Experimental in 11</strong> — behind <code>-XX:+UnlockExperimentalVMOptions -XX:+UseZGC</code>, and not for production here. It becomes a production feature in
+<a href="java-15.html">Java 15</a>.</p>
+<h3 id="doc-epsilon-a-no-op-garbage-collector--jep-318">Epsilon: a no-op garbage collector — JEP 318</h3>
+<p>A collector that allocates and never reclaims. When the heap fills, the JVM
+exits. Useful for two narrow things: benchmarking allocation cost without GC
+noise, and very short-lived batch jobs that will exit before they fill the
+heap. Not a production collector for services.</p>
+<h3 id="doc-flight-recorder-is-open-source--jep-328">Flight Recorder is open source — JEP 328</h3>
+<p>JFR — the JVM's built-in, always-on-capable profiler — was a commercial Oracle
+feature. From Java 11 it is in OpenJDK.</p>
+<p>This is genuinely one of the most valuable things in this release and it is
+routinely overlooked. JFR gives you allocation profiles, lock contention, GC
+detail, I/O and exception rates at roughly 1% overhead, recordable in
+production:</p>
+<div class="code"><pre><code>java -XX:StartFlightRecording=duration=60s,filename=app.jfr ...
+</code></pre></div>
+<p>Open the file in JDK Mission Control. If you have a latency problem and you are
+guessing, this is what to reach for. It keeps improving through the releases —
+event streaming in <a href="java-14.html">14</a>, CPU-time profiling and method timing in
+<a href="java-25.html">25</a>.</p>
+<h3 id="doc-tls-13--jep-332">TLS 1.3 — JEP 332</h3>
+<p>Faster handshakes, better security. Mostly transparent, but it can break
+brittle middleboxes and old test fixtures that pinned a cipher suite.</p>
+<h2 id="doc-pipeline-movement-this-release">Pipeline movement this release</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Feature</th>
+  <th>State here</th>
+  <th>Ends up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>HTTP Client (JEP 321)</td>
+  <td><strong>Standard</strong> — graduated from incubator</td>
+  <td>done</td>
+</tr>
+<tr>
+  <td>ZGC (JEP 333)</td>
+  <td>Experimental</td>
+  <td>Production in <a href="java-15.html">15</a>; generational in <a href="java-21.html">21</a></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="doc-what-broke--and-this-is-the-release-where-it-hurts">What broke — and this is the release where it hurts</h2>
+<p><strong>This is the migration everyone remembers, and F2 in the README is the reason.</strong></p>
+<ul>
+<li><p><strong>Java EE and CORBA modules removed — JEP 320.</strong> <code>javax.xml.bind</code> (JAXB),
+<code>javax.xml.ws</code> (JAX-WS), <code>javax.annotation</code>, <code>javax.activation</code>,
+<code>javax.transaction</code>, <code>java.corba</code>. Deprecated in 9, gone in 11. In 9 and 10
+you could bridge with <code>--add-modules java.xml.bind</code>; in 11 that module does
+not exist, so you must add real dependencies:</p>
+<div class="code"><pre><code class="language-xml">&lt;dependency&gt;
+  &lt;groupId&gt;jakarta.xml.bind&lt;/groupId&gt;&lt;artifactId&gt;jakarta.xml.bind-api&lt;/artifactId&gt;
+&lt;/dependency&gt;
+&lt;dependency&gt;
+  &lt;groupId&gt;org.glassfish.jaxb&lt;/groupId&gt;&lt;artifactId&gt;jaxb-runtime&lt;/artifactId&gt;
+&lt;/dependency&gt;
+</code></pre></div>
+<p>Beware the second migration hiding inside this one: current versions use the
+<code>jakarta.*</code> package prefix, not <code>javax.*</code>. That rename is a <strong>Jakarta EE
+trademark consequence, not a JDK change</strong> — the same rename Spring Boot 3
+required — but it lands on your desk at the same time and the two get
+confused constantly.</p>
+</li>
+<li><p><strong>JavaFX removed from the JDK.</strong> Now a separate project (OpenJFX / Gluon).</p>
+</li>
+<li><p><strong>Java Web Start and the browser plugin removed.</strong> No replacement; the
+successor for desktop distribution is <code>jpackage</code> (<a href="java-16.html">Java 16</a>).</p>
+</li>
+<li><p><strong>Nashorn deprecated</strong> — JEP 335. Removed in <a href="java-15.html">15</a>.</p>
+</li>
+<li><p><strong>Pack200 deprecated</strong> — JEP 336. Removed in <a href="java-14.html">14</a>.</p>
+</li>
+</ul>
+<h2 id="doc-verdict-for-your-day-job">Verdict for your day job</h2>
+<p><strong>A defensible place to be, and a bad place to stay.</strong></p>
+<p>Oracle Premier Support ended in September 2023; extended support runs to 2032,
+and other vendors have their own dates. So you are not unsupported — but you
+are five releases and seven years behind, and you are missing records, sealed
+classes, pattern matching, text blocks and virtual threads.</p>
+<p><strong>If you are on 11 today, the target is <a href="java-25.html">25</a>, and the route is
+through <a href="java-17.html">17</a>.</strong> Do the 11→17 hop first as its own piece of work,
+because that hop is where strong encapsulation lands
+(<a href="notes.html#readme-f3--inaccessibleobjectexception-strong-encapsulation-jdk-1617">F3</a>)
+and it is the genuinely risky part. 17→21→25 afterwards is comparatively
+gentle.</p>
+</main><aside aria-label="On this page"><h2>On this page</h2><a href="#doc-the-one-thing-to-remember">The one thing to remember</a><a href="#doc-what-you-actually-get">What you actually get</a><a href="#doc-pipeline-movement-this-release">Pipeline movement this release</a><a href="#doc-what-broke--and-this-is-the-release-where-it-hurts">What broke — and this is the release where it hurts</a><a href="#doc-verdict-for-your-day-job">Verdict for your day job</a><h2>More in this lab</h2><a href="java-09.html">java-09</a><a href="java-10.html">java-10</a><a href="java-11.html">java-11</a><a href="java-12.html">java-12</a><a href="java-13.html">java-13</a><a href="java-14.html">java-14</a><a href="java-15.html">java-15</a><a href="java-16.html">java-16</a><a href="java-17.html">java-17</a><a href="java-18.html">java-18</a><a href="java-19.html">java-19</a><a href="java-20.html">java-20</a><a href="java-21.html">java-21</a><a href="java-22.html">java-22</a><a href="java-23.html">java-23</a><a href="java-24.html">java-24</a><a href="java-25.html">java-25</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

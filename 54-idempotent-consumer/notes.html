@@ -1,0 +1,2660 @@
+<!doctype html>
+<html lang="en" data-hub-lab="54-idempotent-consumer">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>54. idempotent-consumer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 54 of 71 · Stage 6</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 54 · Work That Spans Services</p><article id="readme"><h1 id="readme-the-idempotent-consumer--one-effect-per-message-from-a-message-that-has-no-caller">The Idempotent Consumer — one effect per message, from a message that has no caller</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Asha pays ₹2,000 once, and Meera's loyalty service gives
+her 50 points twice. Nothing crashed loudly and nothing was logged. The
+service simply read the same fact a second time, because a broker only ever
+promises &quot;at least once&quot;. Everyone names the same fix: make the consumer
+idempotent. That is really three separate jobs. Give the message a name,
+record that you handled it in the same breath as handling it, and keep that
+record long enough. The third job is the one that fails in production. How
+long is long enough gets decided by Priya replaying a queue nine days later,
+not by anything in your code.</p>
+</blockquote>
+<p>Keep <a href="visualization.html"><code>visualization.html</code></a> open beside this page; §9 maps
+its four designs onto the five versions built in §10. §17 says what this lab is
+made of and where its numbers come from.</p>
+<hr />
+<h2 id="readme-1-why-does-a-message-consumer-inherit-everyone-elses-uncertainty">1. Why does a message consumer inherit everyone else's uncertainty?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A consumer is handed facts by strangers. Any of those
+strangers can hand it the same fact twice. None of them will mention that
+they did.</p>
+</blockquote>
+<p>You already own most of the parts for this lab.</p>
+<p>The <a href="../49-idempotency/notes.html#readme">idempotency</a> lab built a three-part protocol. The
+caller mints a key. The server claims that key atomically with the effect. The
+server replays the stored response for a repeat. That lab also proved the claim
+must be an <code>INSERT</code> under a <code>UNIQUE</code> constraint, never a check-then-act.</p>
+<p>The <a href="../53-kafka/notes.html#readme">kafka</a> lab established the vocabulary this one leans on. A
+<strong>topic</strong> is an append-only log, split into <strong>partitions</strong>. A <strong>consumer group</strong>
+is a set of processes sharing that log. Each partition belongs to exactly one
+member of the group at a time. Each group keeps one number per partition, its
+<strong>offset</strong>, meaning &quot;I have read up to here&quot;. Handing a partition from one
+member to another is a <strong>rebalance</strong>.</p>
+<p>That lab also showed the commit position is a forced choice with no third
+option. Commit the offset before processing and you get at-most-once. Commit it
+after and you get at-least-once.</p>
+<p>The <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> lab ended, like eight
+other labs, with the same sentence: <em>&quot;…and therefore consumers must be
+idempotent.&quot;</em></p>
+<p>So why a whole lab for the consumer?</p>
+<p>Because a message consumer is not a request handler with a queue in front of
+it. Three things are structurally different. Each one breaks a different part of
+the protocol you already know.</p>
+<p><strong>Nobody is calling you.</strong> No caller mints a key on your behalf. No caller waits
+for a response. So part 1 and part 3 of the idempotency protocol have no owner
+at all. The name of the message has to come from somewhere else, and the first
+two places engineers reach for are both wrong.</p>
+<p><strong>The duplicate does not come from one place.</strong> On an HTTP endpoint the
+duplicate is a client retry, and it arrives seconds after the original. A
+consumer's second copy can come from six other directions, and the gap can be
+nine days. That spread of <em>redelivery age</em> turns out to be the entire story of
+the hardest failure in this lab.</p>
+<p><strong>Your bookkeeping lives in a second system.</strong> Your effect lands in Postgres.
+Your read position lands in Kafka. That is a dual write, in a lab series where
+&quot;dual write&quot; has been the villain since the outbox. Whether it is a <em>dangerous</em>
+dual write is worth answering precisely, because the popular answer (&quot;store
+offsets in your database&quot;) is often the wrong trade.</p>
+<p>This lab opens up the slogan for the consumer specifically. By the end you
+should be able to look at any consumer in your codebase and answer four
+questions about it, in this order.</p>
+<ol>
+<li>What names this message?</li>
+<li>What makes the record of processing atomic with the effect?</li>
+<li>How long must that record survive?</li>
+<li>What would the operation do if the record were gone?</li>
+</ol>
+<h3 id="readme-who-is-in-this-story">Who is in this story?</h3>
+<p>Here is the cast for the whole lab. Keep them; every trace uses them, and every
+failure belongs to one of them.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Who</th>
+  <th>What they own</th>
+  <th>Where you meet them</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Asha</strong></td>
+  <td>She is member <code>M-77</code>. Her ₹2,000 payment is worth 50 points.</td>
+  <td>§2, and every trace after it</td>
+</tr>
+<tr>
+  <td><strong>Meera</strong></td>
+  <td>The <code>loyalty</code> service. Every version of the consumer in §10 is hers.</td>
+  <td>§3 onwards</td>
+</tr>
+<tr>
+  <td><strong>Arjun</strong></td>
+  <td>The <code>payments</code> service and the <code>relay</code> that ships its events.</td>
+  <td>§1, and §11 F3</td>
+</tr>
+<tr>
+  <td><strong>Priya</strong></td>
+  <td>On call. She replays dead-lettered records nine days after an incident.</td>
+  <td>§10 v3, and §11 F5</td>
+</tr>
+<tr>
+  <td><strong>Dev</strong></td>
+  <td>The database. He writes the cleanup job, then watches the table swell.</td>
+  <td>§10 v3, and §11 F10</td>
+</tr>
+<tr>
+  <td><strong>Omar</strong></td>
+  <td>A second consumer, <code>notifications</code>, reading the same topic.</td>
+  <td>§10 v2, and §12</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ben runs the platform team. He arrives in §13 with a proposal, and §14 explains
+why it is half right.</p>
+<p>Now the moving parts they operate.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Part</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>payments</code></strong></td>
+  <td>Arjun's service. Captures a payment, writes an event to its outbox in the same transaction.</td>
+</tr>
+<tr>
+  <td><strong><code>relay</code></strong></td>
+  <td>Arjun's outbox poller. Reads unpublished outbox rows and sends them to Kafka.</td>
+</tr>
+<tr>
+  <td><strong><code>payments.captured</code></strong></td>
+  <td>A Kafka topic, 1 partition for now, so ordering is not yet a variable.</td>
+</tr>
+<tr>
+  <td><strong><code>loyalty</code></strong></td>
+  <td>Meera's consumer. One consumer group, <code>loyalty-v1</code>.</td>
+</tr>
+<tr>
+  <td><strong><code>members</code></strong></td>
+  <td>A Postgres table in the loyalty service. The row <code>M-77</code> is Asha.</td>
+</tr>
+<tr>
+  <td><strong><code>evt-9f31</code></strong></td>
+  <td>The event for payment <code>pay-8812</code>: ₹2,000, member <code>M-77</code>, worth <strong>50 points</strong>.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Meera's whole loyalty handler is one line.</p>
+<div class="code"><pre><code class="language-sql">-- the effect: accumulative, therefore NOT naturally idempotent
+UPDATE members SET points = points + 50 WHERE id = &#x27;M-77&#x27;;
+</code></pre></div>
+<p>That one line is the reason this lab exists. Suppose the effect were
+<code>SET tier = 'GOLD'</code> instead. That is an <em>assignment</em>. Running it twice leaves
+exactly the state that running it once leaves, and much of this lab would be
+unnecessary. Adding is not like that. Adding remembers how many times it
+happened.</p>
+<h3 id="readme-where-can-a-second-copy-of-one-fact-come-from">Where can a second copy of one fact come from?</h3>
+<p>Count the places. This is not a theoretical list. Every entry is a mechanism you
+have already learned in an earlier lab.</p>
+<p>Five of them are produced by machines. Read the last column first: it says
+whether the second copy lands at the <em>same</em> address in the log or a <em>new</em> one,
+and that column decides which designs in §10 survive.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Who does it</th>
+  <th>What happens</th>
+  <th>Typical gap</th>
+  <th>Same address?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Arjun's <code>relay</code></td>
+  <td>It crashed after <code>send()</code> returned but before it marked the outbox row published. On restart it publishes the row again.</td>
+  <td>seconds to minutes</td>
+  <td>new offset</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Arjun's producer</td>
+  <td>A network retry inside one producer session resends the record.</td>
+  <td>milliseconds</td>
+  <td>new offset</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Meera's consumer</td>
+  <td>It crashed after the <code>UPDATE</code> committed and before the offset commit.</td>
+  <td>seconds</td>
+  <td>same offset</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>A rebalance</td>
+  <td>The group re-assigns partition 0 while the consumer is half-way through a batch.</td>
+  <td>seconds</td>
+  <td>same offset</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>A retry topic</td>
+  <td>Spring Kafka's non-blocking retries republish the failed record to <code>payments.captured-retry-1</code>.</td>
+  <td>seconds to minutes</td>
+  <td>new offset, new topic</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two of those five deserve a sentence each. Source 1 is the outbox lab's own
+at-least-once guarantee, seen from the receiving end. Kafka now holds the same
+<em>event</em> at two different offsets. Source 3 is the kafka lab's forced choice,
+paid in full. Source 2 is mitigated by Kafka's idempotent producer, but only
+within one producer session, and only inside the cluster.</p>
+<p>The other two sources are produced by people. That difference is not a
+curiosity. It is the reason §10 v3 fails.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Who does it</th>
+  <th>What happens</th>
+  <th>Typical gap</th>
+  <th>Same address?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>6</td>
+  <td>Priya</td>
+  <td>She re-injects 40,000 dead-letter records nine days after the incident that produced them.</td>
+  <td>days to months</td>
+  <td>new offset</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>Meera</td>
+  <td>She fixed a bug in the points calculation and reset the group to offset 0 on purpose.</td>
+  <td>any</td>
+  <td>same offsets, re-read</td>
+</tr>
+</tbody>
+</table></div>
+<p>Seven sources. Note two properties of that list, because the rest of the lab is
+built on them.</p>
+<p>The <strong>time gap</strong> between the original and the duplicate ranges over six orders
+of magnitude. Milliseconds for source 2. Months for source 6.</p>
+<p>The <strong>identity</strong> of the duplicate differs by source. In sources 3 and 4 it is
+the <em>same record at the same offset</em>. In sources 1, 5 and 6 it is a <em>different
+record, at a different offset, possibly on a different topic, carrying the same
+business fact</em>.</p>
+<blockquote>
+<p>🔮 <strong>Predict:</strong> suppose Meera keeps a table of every offset she has already
+processed, and skips anything already in it. Which of the seven sources does
+that table actually stop?</p>
+</blockquote>
+<details><summary>Reveal</summary>
+
+<p>It stops sources 3 and 4, the two where the <em>same record at the same offset</em>
+comes back. Those are exactly the two it was designed for, which is why it feels
+like a complete answer.</p>
+<p>It does not stop sources 1, 5 or 6. Each of those puts the same fact at a <em>new</em>
+offset, and a new offset is honestly new. Source 2 is usually handled for you
+inside the cluster by Kafka's idempotent producer. Source 7 re-reads the same
+offsets, so the table does suppress it — and that turns out to be a different
+problem, waiting for you in §11 F6.</p>
+<p>If you said &quot;all of them, because the offset is unique&quot;, you have the right fact
+and the wrong conclusion. Uniqueness of the address is not stability of the
+name.</p>
+</details>
+
+<p>Any dedup scheme that only handles same-offset redelivery handles two of seven
+cases. That is the trap in §10 v1, and it is extremely common in real code.</p>
+<hr />
+<h2 id="readme-2-how-does-asha-end-up-with-100-points-for-one-payment">2. How does Asha end up with 100 points for one payment?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Meera's consumer adds the points, saves them, and dies one
+instant before it can write down how far it had read. When it restarts it
+reads the same event again and adds the points again.</p>
+</blockquote>
+<p>Real values, ordered events. The consumer is the naive one everybody writes
+first: poll, process, commit.</p>
+<div class="code"><pre><code>t=0     relay publishes evt-9f31            → topic offset 41
+t=1     loyalty polls                        → gets [offset 41 : evt-9f31]
+t=2     loyalty runs UPDATE members
+          SET points = points + 50           → members: M-77 points = 50   ✅
+t=3     loyalty COMMITs the DB transaction   → durable
+t=4     ── the pod is evicted ──                (OOM, deploy, node drain, k8s)
+                                                the offset commit never happened
+t=5     new pod starts, joins group loyalty-v1
+t=6     group coordinator reports committed offset = 41
+t=7     loyalty polls                        → gets [offset 41 : evt-9f31]  again
+t=8     loyalty runs UPDATE members
+          SET points = points + 50           → members: M-77 points = 100  ❌
+t=9     COMMIT, then commit offset 42        → all clean, nobody alerts
+</code></pre></div>
+<p>Nothing crashed <em>visibly</em>. No exception was logged at t=8. Meera's consumer did
+exactly what it was told. Asha has 100 points for one ₹2,000 payment, and the
+only evidence is a number in a row.</p>
+<p>That last sentence is the shape of every failure in this lab. The damage is a
+value, not an error.</p>
+<blockquote>
+<p>🔮 <strong>Predict before reading on.</strong> The pod died between the database commit and
+the offset commit. Suppose Meera swaps the two lines. She commits the offset
+<em>first</em>, then runs the <code>UPDATE</code>. What is the worst thing that can now happen,
+and is it better or worse than what you just read?</p>
+</blockquote>
+<details><summary>Reveal</summary>
+
+<p>The window does not close. It inverts.</p>
+<p>If the pod dies after the offset commit and before the <code>UPDATE</code>, the event is
+gone. The group's position has already moved past 41. No future poll will ever
+return it again. Asha gets <strong>0 points</strong>, permanently, and again nothing is
+logged.</p>
+<p>If you guessed &quot;better, because a lost event is quieter than a wrong number&quot;,
+you have the right instinct and the wrong conclusion. Quiet is the problem.</p>
+<p>Which is worse depends on a property most teams never state out loud: <strong>a
+duplicate is detectable and repairable downstream; a silent loss is neither.</strong>
+You can reconcile 100 points against a payments ledger and find the double. You
+cannot find a payment that produced <em>no</em> loyalty record by looking only at
+loyalty. That asymmetry is why the entire industry standardised on at-least-once
+delivery plus consumer-side deduplication. Not fairness. Not elegance.</p>
+</details>
+
+<p><strong>Where this lab takes you.</strong> Stop at any of the four depth checkpoints and you
+still have something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner</strong></td>
+  <td>1–6</td>
+  <td>say why the offset commit is not the fix, and name the three obligations hiding inside the word &quot;idempotent&quot;</td>
+</tr>
+<tr>
+  <td><strong>Intermediate</strong></td>
+  <td>7–10</td>
+  <td>build the mechanism five times, and replay in the simulator the trace that kills each version</td>
+</tr>
+<tr>
+  <td><strong>Engineering</strong></td>
+  <td>11–12</td>
+  <td>reason about the consumer's own failure catalogue, and state the guarantee and its two silent lapses</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>13–14</td>
+  <td>wire it in Kafka, Spring, SQS, RabbitMQ and CDC, graph the right four things, and refuse the eight wrong models</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-3-what-if-the-consumer-simply-remembers-what-it-has-seen">3. What if the consumer simply remembers what it has seen?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> If the problem is that the consumer forgot, give it a
+memory. That instinct is right. Where you put the memory is where it goes
+wrong.</p>
+</blockquote>
+<p>Meera writes the obvious thing.</p>
+<div class="code"><pre><code class="language-java">// loyalty consumer, attempt 1
+private final Set&lt;String&gt; seen = new HashSet&lt;&gt;();
+
+void onMessage(Record r) {
+    if (seen.contains(r.eventId())) return;   // skip the duplicate
+    awardPoints(r);                            // UPDATE ... points + 50
+    seen.add(r.eventId());
+}
+</code></pre></div>
+<p>The field named <code>seen</code> is her memory: the list of event names already handled.
+This is the obvious solution, and it is a genuinely reasonable first attempt. It
+<em>does</em> fix a real class of problem. Two deliveries within one process lifetime, back to back, are now
+handled. She runs it in a test and the test passes.</p>
+<blockquote>
+<p>🔮 <strong>Predict:</strong> Meera's test passes. Name the property of her test that makes
+it pass, and say which of the seven sources in §1 the test cannot express.</p>
+</blockquote>
+<details><summary>Reveal</summary>
+
+<p>The test runs in one process that never dies. Every source in §1 except source 2
+involves either a process ending or a second process starting. A test that keeps
+one object alive for its whole duration cannot express any of them.</p>
+<p>If you said &quot;the test is too fast&quot;, that is close but not the property. Speed is
+not what saves the set. Living is.</p>
+</details>
+
+<hr />
+<h2 id="readme-4-three-ways-that-memory-fails--which-one-is-actually-interesting">4. Three ways that memory fails — which one is actually interesting?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The first two failures are about <em>where</em> the memory lives,
+and both are easy to fix. The third is about <em>when</em> the memory is consulted,
+and it is the one that survives every obvious fix.</p>
+</blockquote>
+<p><strong>Way one: the memory is in the wrong place.</strong> The set named <code>seen</code> is a field
+on a heap, and that heap dies with the pod. The failure in §2 is precisely a pod
+death. The set is empty at t=5. Every duplicate that matters survives the thing
+that was supposed to remember it.</p>
+<p><strong>Way two: the memory is per instance.</strong> Meera scales the deployment to three
+pods. Each pod has its own <code>seen</code>. A rebalance moves partition 0 from pod A to
+pod B, and pod B has never heard of <code>evt-9f31</code>. Even a durable per-pod set would
+not help. It is not durable <em>per partition</em>, and partitions move.</p>
+<p>Both of those go away if the memory moves into the database.</p>
+<div class="code"><pre><code class="language-sql">SELECT 1 FROM processed_messages WHERE event_id = &#x27;evt-9f31&#x27;;  -- seen?
+UPDATE members SET points = points + 50 WHERE id = &#x27;M-77&#x27;;     -- effect
+INSERT INTO processed_messages(event_id) VALUES (&#x27;evt-9f31&#x27;);  -- remember
+</code></pre></div>
+<p><strong>Way three: the memory is consulted in a gap.</strong> You have met this exact shape
+before. The idempotency lab called it check-then-act and killed it there. So
+here is only what is <em>different</em> about it inside a consumer.</p>
+<p>On an HTTP endpoint, the two racers are two client retries hitting two threads.
+In a consumer, the two racers are <strong>two consumer instances that both believe
+they own partition 0</strong>. That is not a rare interleaving. It is the ordinary
+outcome of a rebalance. It lasts as long as the old owner's handler takes to
+notice it has been fenced, which can be <code>max.poll.interval.ms</code>, five minutes by
+default.</p>
+<p>Watch the two pods interleave. Read the two columns as two clocks running at
+once.</p>
+<div class="code"><pre><code>        pod A (old owner)                    pod B (new owner)
+t=0     SELECT → not seen
+t=1                                          SELECT → not seen
+t=2     UPDATE points +50   (= 50)
+t=3                                          UPDATE points +50   (= 100)
+t=4     INSERT processed_messages            INSERT → unique violation, rolls back
+</code></pre></div>
+<p>Pod A is a <strong>zombie</strong>: still executing, already replaced. Now look at the shape
+of the damage, because it is easy to miss. The <code>UNIQUE</code> constraint <em>did</em> fire.
+It fired at t=4, which is after both <code>UPDATE</code> statements already landed.</p>
+<p>A constraint only protects the statements inside the same transaction as the
+violation. Here the check, the effect and the record were three separate
+decisions. Only the last one was guarded.</p>
+<p>This is the moment the lab's real subject appears. &quot;Make the consumer
+idempotent&quot; sounds like one obligation. It is three, and they fail
+independently.</p>
+<hr />
+<h2 id="readme-5-what-is-make-it-idempotent-really-asking-for">5. What is &quot;make it idempotent&quot; really asking for?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three promises, not one. Name the message. Record it in the
+same instant you act on it. Keep that record until the last possible duplicate
+has arrived.</p>
+</blockquote>
+<p>Here is the real requirement, stated plainly. We will spend the rest of the lab
+on these three lines.</p>
+<blockquote>
+<p><strong>R1 — Identity.</strong> Every message must carry a name that stays the same across
+every path that can redeliver it.</p>
+<p><strong>R2 — Atomicity.</strong> The record &quot;I have processed this name&quot; must become
+durable in the <em>same atomic act</em> as the effect it guards.</p>
+<p><strong>R3 — Memory.</strong> That record must still exist when the duplicate arrives. The
+arrival time of the duplicate is not bounded by anything in your code.</p>
+</blockquote>
+<p>R2 is the one you already know how to satisfy. It is the idempotency lab's
+single-transaction claim. For a consumer whose effect is a local database write,
+it is genuinely easy.</p>
+<p><strong>R1 and R3 are the consumer's own problems.</strong> They have no counterpart in the
+HTTP case. Each of them has a popular answer that is wrong in a way that
+produces no error message.</p>
+<p>Map the three obligations onto the three failures you just watched.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Obligation</th>
+  <th>The failure that violates it</th>
+  <th>Where you saw it</th>
+  <th>What it looks like</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>R1 identity</strong></td>
+  <td>dedup on the address instead of the fact</td>
+  <td>§10 v1</td>
+  <td>the same event applied twice at two offsets</td>
+</tr>
+<tr>
+  <td><strong>R2 atomicity</strong></td>
+  <td>check, then act, then record</td>
+  <td>§4 way three</td>
+  <td>two pods both pass the check, both add points</td>
+</tr>
+<tr>
+  <td><strong>R3 memory</strong></td>
+  <td>the record was deleted before the duplicate arrived</td>
+  <td>§10 v3</td>
+  <td>a replay applies 40,000 facts a second time</td>
+</tr>
+</tbody>
+</table></div>
+<p>The rest of the mechanism section is those three obligations, in that order.</p>
+<blockquote>
+<p><strong>Checkpoint — the beginner layer ends here.</strong> You can now explain why
+committing the offset is not a fix in either direction, and why a durable
+dedup table checked <em>before</em> the effect is still broken.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>idempotent</em>, <em>offset</em> or
+<em>transaction</em>, explain to a friend why Asha ended up with 100 points, and why
+writing down &quot;I did this one&quot; in a table did not save her.</p>
+<details><summary>A good answer sounds like</summary>
+"The service added her points, then died before it could write down how far it
+had got. When it came back it read the same thing again and added them again.
+Writing it in a notebook does not help on its own. Two copies of the service
+can both look at the notebook and both see nothing. Then both add the points,
+before either one has written anything down. The looking and the writing have
+to be one movement, not two."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-6-what-is-the-one-key-idea-underneath-all-of-it">6. What is the one key idea underneath all of it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Stop asking whether you have seen this <em>delivery</em>. Start
+asking whether this <em>fact</em> is already in your state, and write the answer down
+in the same commit that applies it.</p>
+</blockquote>
+<p>A consumer becomes idempotent when it stops asking <em>&quot;have I seen this
+delivery?&quot;</em> and starts asking <em>&quot;has this <strong>fact</strong> already been applied to my
+state?&quot;</em> Then it records the answer in the same commit as the application.</p>
+<p>Everything below is the consequence of taking two words literally: <strong>fact</strong>, and
+<strong>same commit</strong>.</p>
+<p><em>Fact</em> is obligation R1. A delivery is a thing that happened to a wire. A fact is
+a thing that happened in Arjun's payments service. They are not the same object,
+and only one of them survives being sent twice.</p>
+<p><em>Same commit</em> is obligation R2. Not &quot;immediately after&quot;. Not &quot;in a transaction
+that usually succeeds&quot;. The same commit, so that a database, not your code,
+decides which of two racers wins.</p>
+<p>Obligation R3 has no clever word. It is a duration, and §10 v3 is the story of
+choosing it wrong.</p>
+<hr />
+<h2 id="readme-7-which-four-words-does-this-lab-have-to-earn">7. Which four words does this lab have to earn?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four new ideas. The first is a pair: where a copy arrived,
+versus what the copy says. Then the table that remembers, then how late a
+duplicate can be, then a trick that makes the memory problem disappear.</p>
+</blockquote>
+<p>You already own <em>at-least-once</em>, <em>idempotency key</em>, <em>dedup window</em>, <em>offset</em>,
+<em>consumer group</em>, <em>rebalance</em>, <em>DLQ</em>, and <em>effectively-once</em> from
+<a href="../53-kafka/notes.html#readme">kafka</a> and <a href="../49-idempotency/notes.html#readme">idempotency</a>. These four are new
+here, and each one is earned by something that has already happened in the story.</p>
+<h3 id="readme-71-where-a-copy-arrived-or-what-the-copy-says">7.1 Where a copy arrived, or what the copy says?</h3>
+<p>Arjun's <code>relay</code> sends <code>evt-9f31</code>. Kafka appends it and stamps it with an
+address: this topic, this partition, this position. The address is
+<code>payments.captured/0/41</code>.</p>
+<p>Then the relay restarts and sends the same outbox row again. Kafka appends it a
+second time and stamps a <em>different</em> address, <code>payments.captured/0/58</code>. Two
+addresses. One fact.</p>
+<p>Engineers call the address <strong>delivery identity</strong>: the triple
+<code>(topic, partition, offset)</code>, assigned by the broker at append time, unique per
+<em>append</em>. They call the name inside the record <strong>message identity</strong>: a value
+carried in the record, assigned by the producer when the fact was created, and
+identical across every append of that fact.</p>
+<p>Why does the distinction need a name at all? Because a single business fact can
+be appended more than once. A relay republish does it. A retry topic does it. A
+mirrored cluster does it. Each append gets a fresh delivery identity.
+Deduplicating on delivery identity therefore fails on exactly the sources that
+produce duplicates <em>across</em> appends.</p>
+<p>You have met message identity before without the name. The
+<a href="../52-change-data-capture/notes.html#readme">CDC</a> lab's <code>source.lsn</code> is one. That field exists so
+that a sink can key on what the record says, rather than on where it sat in the
+stream.</p>
+<h3 id="readme-72-what-is-an-inbox-and-why-is-it-the-outbox-in-a-mirror">7.2 What is an inbox, and why is it the outbox in a mirror?</h3>
+<p>Meera's table of facts she has already applied is called an <strong>inbox table</strong>. In
+code it is usually called <code>processed_messages</code>. Precisely: a table keyed by
+<code>(consumer, message_id)</code> with a <code>UNIQUE</code> constraint, written in the same
+transaction as the effect.</p>
+<p>Hold the outbox next to it. The outbox makes &quot;I decided this&quot; and &quot;I told
+someone&quot; atomic. The inbox makes &quot;I was told this&quot; and &quot;I acted on it&quot; atomic.
+Same trick, opposite direction, which is why the two labs read as mirror images.</p>
+<p>Why does it work? Because it converts &quot;did I already do this?&quot; from a question
+about your own past behaviour into a database constraint. A constraint is the
+only place in the system where two racers get serialized for free.</p>
+<h3 id="readme-73-how-late-can-a-duplicate-be">7.3 How late can a duplicate be?</h3>
+<p>Priya's replay lands nine days after the incident. That gap has a name:
+<strong>redelivery age</strong>, the maximum wall-clock interval between two deliveries of one
+message identity, taken over every redelivery source your architecture has.</p>
+<p>It needs a name for three reasons, and the third is the uncomfortable one. It is
+the input to the only sizing decision in the whole pattern, which is how long the
+inbox must remember. It is not a configuration value anywhere. And it is usually
+set by a human running a dead-letter replay, rather than by software.</p>
+<h3 id="readme-74-can-you-remember-everything-with-one-number">7.4 Can you remember everything with one number?</h3>
+<p>Instead of a list of everything seen, keep the highest number seen. That is
+<strong>watermark deduplication</strong>, also called high-water-mark deduplication.</p>
+<p>Precisely: per dedup scope, usually per entity key, store the largest
+monotonically increasing sequence applied. Apply an incoming message only if its
+sequence is strictly greater. Then advance the stored value in the same
+transaction.</p>
+<p>Why bother? Because it turns obligation R3 from a retention problem into no
+problem at all. A number that only moves forward never needs pruning. The price
+is that it demands monotone, per-key-ordered sequences.</p>
+<p>It is the same move you have made twice before. It is <code>expected_version</code> in
+<a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>, and <code>source.lsn</code> in
+<a href="../52-change-data-capture/notes.html#readme">CDC</a>, used defensively rather than for ordering.</p>
+<p>Four ideas, five names, and the place in the story that earned each one.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>The moment that earned it</th>
+  <th>Section</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Delivery identity</strong></td>
+  <td>Arjun's relay puts one fact at two offsets</td>
+  <td>§7.1</td>
+</tr>
+<tr>
+  <td><strong>Message identity</strong></td>
+  <td>the id minted in the outbox row, unchanged by republication</td>
+  <td>§7.1</td>
+</tr>
+<tr>
+  <td><strong>Inbox table</strong></td>
+  <td>Meera's <code>processed_messages</code>, written with the effect</td>
+  <td>§7.2</td>
+</tr>
+<tr>
+  <td><strong>Redelivery age</strong></td>
+  <td>Priya's nine-day gap between incident and replay</td>
+  <td>§7.3</td>
+</tr>
+<tr>
+  <td><strong>Watermark</strong></td>
+  <td>one number per member instead of a list of events</td>
+  <td>§7.4</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-8-what-picture-should-you-carry-in-your-head">8. What picture should you carry in your head?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A bouncer with a ledger. He recognises the guest by name,
+writes the name and opens the door as one movement, and never tears out a page
+while that guest can still come back.</p>
+</blockquote>
+<p>Two mental models follow. The first is a picture you can hold. The second is the
+same machine with the real names on it.</p>
+<h3 id="readme-simple-model--can-one-bouncer-with-a-ledger-do-the-job">Simple model — can one bouncer with a ledger do the job?</h3>
+<p>A club, one door, one bouncer, one ledger. A guest may only be let in once. The
+bouncer must do three things, and they map exactly onto R1, R2 and R3.</p>
+<p>He must <strong>recognise the guest</strong> by a name, not by which taxi they arrived in.
+That is R1. The taxi is the offset. The name is the event id.</p>
+<p>He must <strong>write the name and open the door as one movement</strong>. If he opens the
+door and <em>then</em> writes, someone slips in during the pen stroke. That is R2, and
+that pen stroke is the gap in §4.</p>
+<p>He must <strong>not tear out yesterday's page</strong> while yesterday's guest can still come
+back. That is R3, and Priya is yesterday's guest.</p>
+<h3 id="readme-engineering-model--what-is-inside-the-box-and-what-is-outside-it">Engineering model — what is inside the box, and what is outside it?</h3>
+<p>The same machine in real names. The important thing in this diagram is not what
+is in the box. It is what is <em>not</em>.</p>
+<div class="code"><pre><code>                     ┌──────────────────────────────────────────────┐
+ broker              │              consumer process                │
+ ┌───────────┐       │                                              │
+ │ offset 41 │──poll─┼─► handler(record)                            │
+ │ evt-9f31  │       │      │                                       │
+ └───────────┘       │      │  ┌──── ONE database transaction ───┐  │
+       ▲             │      └─►│ INSERT inbox(consumer,msg_id)   │  │
+       │             │         │        ▲ UNIQUE ⇒ arbitrates    │  │
+       │             │         │ UPDATE members SET points+50    │  │
+   commit offset ◄───┼─────────│ COMMIT                          │  │
+   (after commit,    │         └─────────────────────────────────┘  │
+    and only as an   │                                              │
+    optimisation)    └──────────────────────────────────────────────┘
+</code></pre></div>
+<p>The same shape drawn as a flow, if that reads more easily:</p>
+<pre class="mermaid">flowchart TD
+    A[&quot;Kafka topic&lt;br&gt;payments.captured&lt;br&gt;offset 41 : evt-9f31&quot;] --&gt;|poll| B[&quot;Meera&#x27;s handler&lt;br&gt;receives the record&quot;]
+    B --&gt; C{&quot;ONE database&lt;br&gt;transaction&quot;}
+    C --&gt; D[&quot;INSERT into inbox&lt;br&gt;consumer plus message id&lt;br&gt;UNIQUE picks the winner&quot;]
+    C --&gt; E[&quot;UPDATE members&lt;br&gt;points = points + 50&quot;]
+    D --&gt; F[&quot;COMMIT&lt;br&gt;both, or neither&quot;]
+    E --&gt; F
+    F --&gt;|&quot;afterwards, and only&lt;br&gt;as an optimisation&quot;| G[&quot;commit offset 42&lt;br&gt;back to the broker&quot;]
+    F --&gt;|&quot;on UNIQUE violation&quot;| H[&quot;roll back everything&lt;br&gt;skip, ack, move on&quot;]
+</pre>
+<p>Read the picture for one thing: <strong>the offset commit is outside the box.</strong> It is
+not part of the correctness argument. It is an optimisation that stops you
+re-reading records you have already suppressed. If it fails, you re-read, and
+the inbox absorbs it.</p>
+<p>That single observation dissolves a lot of anxiety about &quot;the consumer's dual
+write&quot;. We make it precise in §10 v2.</p>
+<h3 id="readme-where-does-the-story-lie-to-you">Where does the story lie to you?</h3>
+<p>The bouncer is an entry point, not the model. He hides the two hardest facts in
+the lab, so replace them now.</p>
+<p><strong>There are two bouncers, not one.</strong> Whenever a rebalance is in flight, two
+processes are running, and both are convinced they are the only one. The ledger
+is what makes them agree, not their belief about who owns the door. Any design
+where the bouncer decides on something <em>he</em> remembers is broken under this fact.
+The decision has to be a write that the ledger accepts or rejects.</p>
+<p><strong>The guest can come back wearing a different wristband.</strong> Republication gives
+the same fact a new delivery identity. A ledger that records wristband numbers
+will happily admit the same guest twice. That is §10 v1, in one sentence.</p>
+<hr />
+<h2 id="readme-9-what-can-the-second-delivery-show-you-that-this-page-cannot">9. What can &quot;The Second Delivery&quot; show you that this page cannot?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This page tells you which designs fail. The simulator lets
+you break them yourself, one redelivery source at a time, and watch Asha's
+points move.</p>
+</blockquote>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a> now, or after §10 v2. It runs
+Meera's loyalty consumer against the topic with four selectable designs. It also
+lets you inject the four redelivery sources by hand.</p>
+<p>The four designs on the page are the versions built in §10, one letter each.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>On the page</th>
+  <th>In §10</th>
+  <th>What it stores</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>A · no dedup</strong></td>
+  <td>the naive consumer of §2</td>
+  <td>nothing at all</td>
+</tr>
+<tr>
+  <td><strong>B · dedup by offset</strong></td>
+  <td>v1</td>
+  <td><code>processed_offsets(topic, partition, offset)</code></td>
+</tr>
+<tr>
+  <td><strong>C · inbox by event id</strong></td>
+  <td>v2 and v3</td>
+  <td><code>inbox(consumer, message_id)</code> plus a retention setting</td>
+</tr>
+<tr>
+  <td><strong>D · watermark per key</strong></td>
+  <td>v4</td>
+  <td>one <code>last_seq</code> number on Asha's member row</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What to look at.</strong> The verdict line at the top says how many points Asha has
+for <em>one</em> payment. Everything else on the page exists to explain that number.
+The dedup store panel is the interesting one. Watch what goes into it under each
+design, and in design C watch what the retention slider throws away.</p>
+<p><strong>The question the page answers.</strong> Each design suppresses some duplicates and
+misses others. Which ones it misses depends entirely on which redelivery source
+you inject. No design is safe against all four sources until you reach D, and
+even D trades something away.</p>
+<p>The four scenario buttons match this lab's four turning points: §2, §10 v1,
+§10 v3 and §10 v4.</p>
+<hr />
+<h2 id="readme-10-how-do-you-build-this-and-why-does-each-version-die">10. How do you build this, and why does each version die?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five versions. Each one fixes how the last one died, and
+then dies of something new. The last death is the interesting one, because
+nobody is at fault.</p>
+</blockquote>
+<p>Meera builds the consumer five times. Read them in order; each is a real design
+that real teams ship, and three of the five are still shipping somewhere today.</p>
+<hr />
+<h3 id="readme-v1--why-not-dedup-on-the-offset">v1 — why not dedup on the offset?</h3>
+<p>The instinct is simple. Kafka already gives every record a unique address, so
+use the address.</p>
+<div class="code"><pre><code class="language-sql">CREATE TABLE processed_offsets (
+  topic     text,
+  partition int,
+  &quot;offset&quot;  bigint,
+  PRIMARY KEY (topic, partition, &quot;offset&quot;)
+);
+</code></pre></div>
+<div class="code"><pre><code>BEGIN;
+  INSERT INTO processed_offsets VALUES (&#x27;payments.captured&#x27;, 0, 41);
+  UPDATE members SET points = points + 50 WHERE id = &#x27;M-77&#x27;;
+COMMIT;
+</code></pre></div>
+<p>Obligation R2 is now satisfied. The record and the effect are one transaction.
+The primary key arbitrates between two racers, instead of a <code>SELECT</code> doing it.</p>
+<p>Run the §2 trace and the §4 zombie trace against this design. <strong>Both are
+fixed.</strong></p>
+<div class="code"><pre><code>t=8   second delivery of offset 41
+      INSERT processed_offsets (…,41) → PK violation → transaction rolls back
+      the UPDATE rolls back with it → M-77 stays at 50 points ✅
+</code></pre></div>
+<p>That is a real improvement, and it is where a great many production consumers
+stop. Now break it.</p>
+<blockquote>
+<p>🔮 <strong>Predict:</strong> Arjun's relay crashed after <code>send()</code> and republished the outbox
+row. Kafka now holds <code>evt-9f31</code> at offset 41 <strong>and</strong> at offset 58, and Meera's
+consumer has already processed 41. What does v1 do at offset 58?</p>
+</blockquote>
+<details><summary>Reveal</summary>
+
+<p><code>INSERT INTO processed_offsets VALUES ('payments.captured', 0, 58)</code> succeeds.
+Offset 58 has genuinely never been seen. The <code>UPDATE</code> runs. Asha has 100 points.</p>
+<p>If you said &quot;the primary key catches it&quot;, you are trusting the table to answer a
+question it was never asked. The dedup table did its job perfectly, and the
+outcome is still wrong. It knows every <em>delivery</em> it has consumed. It knows
+nothing about which <em>facts</em> it has applied.</p>
+</details>
+
+<p>The same hole opens for three more sources. The retry topic has a different
+topic name, so a different key. A mirrored or migrated cluster re-assigns
+offsets, because they do not survive MirrorMaker. And any reprocess that
+re-publishes records rather than re-reading them lands at new offsets too.</p>
+<p><strong>v1's lesson is the lab's first main result.</strong> Offsets are delivery identity.
+Deduplication requires message identity, and only the producer can supply it.</p>
+<p>Concretely, Arjun must put an id in the event at creation time. For an outbox
+that id is the outbox row's id, minted inside the same transaction as the state
+change.</p>
+<div class="code"><pre><code class="language-sql">-- in the payments service, one transaction
+UPDATE payments SET status=&#x27;CAPTURED&#x27; WHERE id=&#x27;pay-8812&#x27;;
+INSERT INTO outbox(id, topic, key, payload)
+VALUES (&#x27;evt-9f31&#x27;, &#x27;payments.captured&#x27;, &#x27;M-77&#x27;, &#x27;{...}&#x27;);
+</code></pre></div>
+<p>Republished later from the same row, that <code>id</code> is unchanged. That is the
+property that makes it usable.</p>
+<hr />
+<h3 id="readme-v2--what-changes-when-you-dedup-on-the-message-id">v2 — what changes when you dedup on the message id?</h3>
+<p>Meera keys on what the record says, not on where it landed.</p>
+<div class="code"><pre><code class="language-sql">CREATE TABLE inbox (
+  consumer   text  NOT NULL,      -- &#x27;loyalty-v1&#x27;
+  message_id text  NOT NULL,      -- &#x27;evt-9f31&#x27;
+  applied_at timestamptz NOT NULL DEFAULT now(),
+  PRIMARY KEY (consumer, message_id)
+);
+</code></pre></div>
+<div class="code"><pre><code>BEGIN;
+  INSERT INTO inbox(consumer, message_id) VALUES (&#x27;loyalty-v1&#x27;,&#x27;evt-9f31&#x27;);
+  UPDATE members SET points = points + 50 WHERE id = &#x27;M-77&#x27;;
+COMMIT;                              -- on PK violation: roll back, skip, ack
+</code></pre></div>
+<p>Two details in that table definition are load-bearing, and both are routinely
+missed.</p>
+<p><strong>The <code>consumer</code> column is part of the key.</strong> Three services consume
+<code>payments.captured</code>, and one of them is Omar's <code>notifications</code>. Suppose all
+three share one <code>inbox</code> table keyed only by <code>message_id</code>. The first service to
+process an event then suppresses it for the other two. Omar's welcome message
+never goes out, and nothing anywhere reports an error. Either key by
+<code>(consumer, message_id)</code>, or give each consumer its own table. One table with a
+compound key is usually better: one retention job, one dashboard.</p>
+<p><strong>The <code>INSERT</code> comes first, before the <code>UPDATE</code>.</strong> Not because ordering matters
+to the database, because inside one transaction it does not. It matters because
+putting the insert first makes the duplicate path cost one failed insert, rather
+than a full effect plus a failed insert. On a hot partition that is the
+difference between a cheap skip and a lock-contention incident.</p>
+<p>Now re-run every trace so far. Read the last three rows: those are the sources
+that defeat v1.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Redelivery source</th>
+  <th>v1</th>
+  <th>v2</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Crash before offset commit (§2)</td>
+  <td>✅ suppressed</td>
+  <td>✅ suppressed</td>
+</tr>
+<tr>
+  <td>Rebalance zombie (§4)</td>
+  <td>✅ suppressed</td>
+  <td>✅ suppressed</td>
+</tr>
+<tr>
+  <td>Relay republish, new offset</td>
+  <td>❌ <strong>double</strong></td>
+  <td>✅ suppressed</td>
+</tr>
+<tr>
+  <td>Retry topic</td>
+  <td>❌ double</td>
+  <td>✅ suppressed</td>
+</tr>
+<tr>
+  <td>DLQ replay 9 days later</td>
+  <td>❌ double</td>
+  <td>✅ suppressed (for now — see v3)</td>
+</tr>
+</tbody>
+</table></div>
+<h4 id="readme-is-the-consumers-dual-write-the-same-bug-as-the-outboxs">Is the consumer's dual write the same bug as the outbox's?</h4>
+<p>Meera's effect commits to Postgres. Her offset commits to Kafka. Two systems,
+two writes, no atomicity between them. Given how much damage the dual-write
+problem has done in this curriculum, this deserves a straight answer rather than
+a reflex.</p>
+<blockquote>
+<p>🔮 <strong>Predict:</strong> there are four ways a crash can land across those two writes.
+One of the four is genuinely bad. Before you read the table, say which one it
+is, and say whether Meera can make it unreachable.</p>
+</blockquote>
+<details><summary>Reveal</summary>
+
+<p>The bad one is: the database transaction did <strong>not</strong> commit, and the offset
+commit <strong>did</strong>. The event is skipped forever, and nothing records that it was.</p>
+<p>Meera can make it unreachable, and the way she does it is boring. She commits
+the offset only after the database transaction returns. If you guessed the row
+where the database commits and the offset does not, that row is the one the
+inbox was built for: it is a re-read, absorbed silently.</p>
+</details>
+
+<p>Enumerate all four crash points.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>DB txn</th>
+  <th>offset commit</th>
+  <th>Consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>✗</td>
+  <td>✗</td>
+  <td>Redelivered, processed. Correct.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>✓</td>
+  <td>✗</td>
+  <td>Redelivered, <strong>inbox suppresses it</strong>. Correct.</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>✗</td>
+  <td>✓</td>
+  <td><strong>Event skipped forever. Data loss.</strong></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>✓</td>
+  <td>✓</td>
+  <td>Correct.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Row 3 is the only bad one, and it is unreachable as long as you commit the
+offset <em>after</em> the database transaction. That is exactly what
+<code>enable.auto.commit=false</code> plus a manual ack after the handler returns gives
+you. So:</p>
+<blockquote>
+<p><strong>The consumer's dual write is benign, because the second write is guarded by
+the first.</strong> The inbox turns &quot;the offset commit was lost&quot; from a correctness
+problem into a performance problem: you re-read some records and throw them
+away.</p>
+</blockquote>
+<p>This matters practically, because there is a popular alternative. Store the
+offset in your own database, inside the same transaction as the effect. That
+alternative is real and it is correct. It is also usually a worse trade than it
+looks, for three reasons.</p>
+<p>It <em>only</em> handles same-offset redelivery. It is v1 wearing a different hat, and
+it inherits v1's blindness to republication. Teams adopt it believing it is
+stronger than an inbox. It is strictly weaker.</p>
+<p>It requires a <code>ConsumerRebalanceListener</code> that seeks to your stored offsets on
+every partition assignment. You now own a piece of the group protocol.</p>
+<p>And it is defeated by any deliberate replay, because your stored offset <em>is</em> the
+thing you were trying to move.</p>
+<p><strong>Rule:</strong> you need offsets in your database only if you have decided not to keep
+an inbox. Keeping both is coherent, and Spring's Kafka plus JPA chained
+transaction managers effectively do. It buys nothing the inbox has not already
+bought.</p>
+<blockquote>
+<p><strong>Checkpoint.</strong> v2 is a correct idempotent consumer for a local, transactional
+effect. If Meera's handler only writes to one database, and her inbox never
+forgets, she is done. Most of the internet's advice ends here. The next two
+versions exist because &quot;never forgets&quot; is not a thing a table does.</p>
+</blockquote>
+<hr />
+<h3 id="readme-v3--what-happens-when-the-inbox-has-to-forget">v3 — what happens when the inbox has to forget?</h3>
+<p><code>payments.captured</code> carries 4,000 events per second. Put that through a
+calendar and the table stops being a design.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Interval</th>
+  <th>Rows in Meera's inbox</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>one second</td>
+  <td>4,000</td>
+  <td>one row per event, forever, by construction</td>
+</tr>
+<tr>
+  <td>one day</td>
+  <td>345 million</td>
+  <td>more rows per day than the members table has, ever</td>
+</tr>
+<tr>
+  <td>one year</td>
+  <td>126 billion</td>
+  <td>not a table any more, a countdown</td>
+</tr>
+</tbody>
+</table></div>
+<p>So Dev adds the obvious cleanup job.</p>
+<div class="code"><pre><code class="language-sql">DELETE FROM inbox WHERE applied_at &lt; now() - interval &#x27;7 days&#x27;;
+</code></pre></div>
+<p>Seven days sounds generous, and Dev's reasoning is good. Consumer restarts take
+seconds. Rebalances take tens of seconds. Arjun's relay republishes within a
+minute. Seven days is four orders of magnitude of headroom against every
+duplicate anyone on the team has ever seen.</p>
+<blockquote>
+<p>🔮 <strong>Predict:</strong> Diwali weekend. Meera's downstream tier-service is down for two
+hours, so 40,000 records land in the dead-letter queue. The incident is closed
+on Monday. Nine days later, during cleanup, Priya replays the DLQ to &quot;get those
+members their points&quot;. What happens?</p>
+</blockquote>
+<details><summary>Reveal</summary>
+
+<p>Every one of the 40,000 events is now older than the retention window. Their
+inbox rows were deleted on day 7 by Dev's job. To the consumer they are
+brand-new facts, and they are applied a second time.</p>
+<p>40,000 members get double points, in a single batch, at 3pm on a Tuesday, from
+an operation whose entire purpose was to <em>repair</em> the incident.</p>
+<p>Nothing errors. Priya's replay tool reports 40,000 successes.</p>
+<p>If you guessed &quot;the inbox suppresses them&quot;, you were right about the mechanism
+and wrong about the timing. The inbox does suppress them — for seven days.</p>
+</details>
+
+<p>This is the most important failure in the lab, so state its lesson exactly.</p>
+<blockquote>
+<p><strong>The inbox's retention must exceed the maximum redelivery age — and
+redelivery age is set by human operational behaviour, not by any config file in
+your repository.</strong></p>
+</blockquote>
+<p>There is no software setting anywhere that bounds &quot;how long after an incident
+might someone replay a dead-letter queue&quot;. Which produces an uncomfortable
+conclusion. For the replay source and the deliberate-reprocess source, a
+retention-based inbox is not a guarantee. It is a <em>bet</em>, and it is a bet whose
+losing side is silent.</p>
+<p>There are three honest ways to respond. They are listed in order of how much
+they actually fix.</p>
+<p><strong>Write the number down, and make it bigger than the replay you allow.</strong> Set
+retention explicitly longer than your stated maximum replay age, and put that
+number in the runbook: &quot;DLQ records older than 30 days must not be replayed;
+regenerate them from source instead.&quot; This is cheap, and it converts a silent
+failure into a documented policy. It is only as good as the human reading it.</p>
+<p><strong>Give replays their own dedup scope.</strong> Priya's replay run gets a fresh
+<code>consumer</code> value, <code>loyalty-v1-replay-2026-09-01</code>. Crucially, the results of that
+run are then <em>reviewed</em> rather than trusted. This is honest about what a replay
+is. It is a deliberate reprocess, not a duplicate.</p>
+<p><strong>Stop needing retention at all</strong>, which is v4.</p>
+<hr />
+<h3 id="readme-v4--can-memory-that-never-grows-also-never-expire">v4 — can memory that never grows also never expire?</h3>
+<p>Change what is stored. Instead of a set of facts, keep one number per entity.</p>
+<p>Arjun stamps each event with a per-key monotonically increasing sequence. For an
+outbox this is easy. It is a per-aggregate counter incremented in the same
+transaction, or the outbox row id when a single writer produces that key's
+events in order.</p>
+<div class="code"><pre><code>evt-9f31  member M-77  seq 17  +50 points
+evt-a044  member M-77  seq 18  +30 points
+</code></pre></div>
+<p>In words: this is Asha's seventeenth loyalty event, then her eighteenth. The
+number belongs to Asha, not to the topic.</p>
+<p>Meera stores the highest sequence she has applied, on Asha's own row.</p>
+<div class="code"><pre><code class="language-sql">CREATE TABLE members (
+  id          text PRIMARY KEY,
+  points      int  NOT NULL,
+  last_seq    bigint NOT NULL DEFAULT 0    -- the watermark, IN the entity row
+);
+</code></pre></div>
+<p>The whole dedup mechanism is now one extra line in the <code>UPDATE</code>.</p>
+<div class="code"><pre><code class="language-sql">BEGIN;
+  UPDATE members
+     SET points   = points + 50,
+         last_seq = 17
+   WHERE id = &#x27;M-77&#x27;
+     AND last_seq &lt; 17;          -- the entire dedup mechanism, one predicate
+COMMIT;
+-- 0 rows updated ⇒ already applied (or superseded) ⇒ skip and ack
+</code></pre></div>
+<p>Read <code>last_seq &lt; 17</code> as a sentence: <em>only apply this if the highest thing I have
+already applied to Asha is older than event seventeen.</em></p>
+<p>Look at what just happened to the three obligations.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Obligation</th>
+  <th>How v4 satisfies it</th>
+  <th>What it costs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>R1 identity</strong></td>
+  <td><code>(key, seq)</code> is producer-minted, and survives republication exactly like an event id does</td>
+  <td>the producer must have a per-key counter</td>
+</tr>
+<tr>
+  <td><strong>R2 atomicity</strong></td>
+  <td>the guard is a <code>WHERE</code> clause on the row being modified: no second table, no second index, no extra write</td>
+  <td>nothing</td>
+</tr>
+<tr>
+  <td><strong>R3 memory</strong></td>
+  <td><em>dissolved</em> — <code>last_seq</code> is one number per member and only moves forward, so it is never pruned</td>
+  <td>deliberate replay becomes hard, see below</td>
+</tr>
+</tbody>
+</table></div>
+<p>That middle row is the <a href="../10-optimistic-vs-pessimistic-locking/notes.html#readme">optimistic-vs-pessimistic-locking</a>
+lab's conditional write, wearing yet another costume.</p>
+<p>The third row is worth pausing on. There is no window any more, so Priya's
+nine-day replay in v3 is suppressed correctly. Storage is now O(entities)
+instead of O(messages): a few million rows instead of a hundred billion.</p>
+<p>It also gives Meera something the inbox never did: <strong>reorder safety</strong>. Suppose
+<code>seq 18</code> is processed before <code>seq 17</code>, because of a retry topic, a partition
+change, or two concurrent handlers. Then <code>seq 17</code> is rejected by <code>last_seq &lt; 17</code>
+rather than applied out of order.</p>
+<blockquote>
+<p>🔮 <strong>Predict:</strong> with v4 in place, Meera resets the consumer group to offset 0.
+She wants to reprocess the last month, because she has fixed a bug in the
+points calculation. What happens?</p>
+</blockquote>
+<details><summary>Reveal</summary>
+
+<p><strong>Nothing happens.</strong> Every event in the topic has a sequence at or below the
+watermark already stored on its member row. So every <code>UPDATE</code> matches zero rows.
+The consumer runs at full speed through a month of data, logs nothing unusual,
+commits offsets, and changes no state at all.</p>
+<p>If you guessed &quot;everyone's points are doubled&quot;, you have v2's failure in mind.
+The watermark does not double anything. It does nothing at all, which is worse
+to discover.</p>
+<p>If the intent was &quot;suppress duplicates&quot;, this is a triumph. If the intent was
+&quot;recompute everyone's points with the fixed formula&quot;, it is a silent no-op that
+will be discovered by a customer.</p>
+</details>
+
+<p>That is v4's honest cost, and it is the mirror of v3's. <strong>The same property that
+makes a watermark retention-free makes a deliberate replay impossible without an
+explicit reset.</strong> A well-run system therefore ships a documented procedure for
+both. &quot;How to reprocess&quot; is a first-class operation, not an improvisation.</p>
+<p>The other three costs, stated plainly.</p>
+<p><strong>It needs per-key ordered delivery.</strong> With key-based partitioning
+(<code>key = M-77</code>) Kafka gives you that per partition. Lose it and events arrive out
+of order. You lose it by repartitioning, by parallelising a partition across
+threads, or by routing through a retry topic. Out of order, the watermark does
+not merely fail to dedup. It <em>discards</em> legitimate updates, which is worse than
+a duplicate.</p>
+<p><strong>It needs a monotone per-key sequence from the producer.</strong> Not every producer
+has one. CDC gives it free through <code>source.lsn</code>. A hand-written outbox needs a
+counter added.</p>
+<p><strong>It is per key and per stream.</strong> Two different event types updating Asha's row
+need either one shared sequence, or one watermark column each.</p>
+<hr />
+<h3 id="readme-v5--what-does-a-production-consumer-actually-do">v5 — what does a production consumer actually do?</h3>
+<p>No single design wins. A real consumer picks per handler, from four tools, in
+this order of preference.</p>
+<p><strong>1. Natural idempotency — use it whenever the operation allows.</strong> If the effect
+can be written as an <em>assignment</em> rather than an accumulation, then duplicates
+need no dedup machinery at all.</p>
+<div class="code"><pre><code class="language-sql">UPDATE orders SET status = &#x27;SHIPPED&#x27; WHERE id = &#x27;ord-51&#x27;;   -- idempotent
+INSERT ... ON CONFLICT (id) DO UPDATE SET ...               -- idempotent
+INSERT INTO shipment_events(event_id, ...) VALUES (...)      -- idempotent (PK)
+</code></pre></div>
+<p>Beware the standing trap: naturally idempotent is not the same as reorder-safe.
+<code>SET status = 'SHIPPED'</code> applied after <code>SET status = 'DELIVERED'</code> moves the
+order backwards, and no dedup scheme in this lab notices. Idempotence handles
+duplicates. Versioning handles order. Locking handles concurrency. Three
+orthogonal defences, and you frequently need two of them.</p>
+<p><strong>2. Watermark — when events for a key are ordered and carry a monotone
+sequence.</strong> Cheapest, retention-free, reorder-safe. It is the default choice for
+projections, read models, replicated caches and CDC sinks. Anything shaped like
+&quot;apply this stream of changes to this entity&quot;.</p>
+<p><strong>3. Inbox table — when events are independent facts with no per-key order.</strong>
+&quot;Send Asha a welcome email.&quot; &quot;Award points for this specific payment.&quot; &quot;Create a
+shipment.&quot; This needs a documented retention at least as long as the maximum
+redelivery age.</p>
+<p><strong>4. Claim-first plus external effect — when the effect leaves the database.</strong>
+This is the <a href="../49-idempotency/notes.html#readme">idempotency</a> lab's v4 shape, unchanged. The
+claim commits alone as <code>RUNNING</code>. The external call happens next, carrying <em>its
+own</em> idempotency key. The outcome commits second. A reaper re-drives claims
+stranded in <code>RUNNING</code>.</p>
+<p>Nothing about being a consumer changes that shape, with one twist. The &quot;caller&quot;
+who must not be left in doubt is now the broker's redelivery. A stranded
+<code>RUNNING</code> claim will be re-driven by the redelivery itself, if you let it.</p>
+<blockquote>
+<p><strong>Checkpoint — the intermediate layer ends here.</strong> You can now build the
+mechanism five ways and name the trace that kills each one.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>inbox</em>, <em>watermark</em> or <em>retention</em>,
+explain to a friend why Meera's second design was correct on Monday and wrong
+nine days later, and why her fourth design has the opposite problem.</p>
+<details><summary>A good answer sounds like</summary>
+"Her second design kept a list of everything it had already done, and it
+worked. But the list was getting enormous, so somebody started throwing away
+anything older than a week. Then a colleague re-sent some week-old work, the
+list had forgotten it, and it all happened twice. Her fourth design keeps one
+number per customer instead of a list, so it never forgets and never grows. The
+price is that when she genuinely wants to redo old work, the number says 'already
+done' and nothing happens at all."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-11-what-breaks-when-you-live-behind-a-broker">11. What breaks when you live behind a broker?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The general shape of duplicate handling is settled. Ten
+things still go wrong, and they go wrong because a broker sits in front of you
+rather than a caller.</p>
+</blockquote>
+<p>These ten belong to the cast. Meera owns four of them, Priya one, Dev one, and
+Arjun one. The rest are nobody's fault, which is the point.</p>
+<h3 id="readme-f1--what-if-the-pod-dies-between-the-effect-and-the-offset-commit">F1 — what if the pod dies between the effect and the offset commit?</h3>
+<p>Meera's pod is evicted. It happens for boring reasons: out of memory, a deploy, a
+node drain. In a busy cluster it happens several times a week.</p>
+<p>The database transaction committed. The offset commit did not. So the group's
+position is still 41, and the next poll returns <code>evt-9f31</code> again. You would see
+it in the consumer log as the same offset appearing twice.</p>
+<p>Designs v2 and v4 suppress it. Design v1 also suppresses this particular shape,
+because the offset is the same one — but v1 fails the moment the redelivery
+arrives by republication instead. Nothing is lost here, because the offset never
+advanced.</p>
+<h3 id="readme-f2--what-if-two-consumers-own-the-same-partition-at-once">F2 — what if two consumers own the same partition at once?</h3>
+<p>Meera's handler is slow today, because a downstream dependency is slow. It
+exceeds <code>max.poll.interval.ms</code> (default 5 min). The group coordinator
+declares the member dead and reassigns the partition — while the handler is
+still running, and still holding a database connection.</p>
+<p>Two consumers now execute the same message concurrently. That is the zombie
+trace in §4, and it is not exotic. It is what a rebalance does for a living.</p>
+<p>Only one thing saves Meera here: a conditional write at the database. The inbox
+primary key does it. So does the <code>last_seq &lt;</code> predicate. The loser's whole
+transaction rolls back.</p>
+<p>Three things do not save her. An in-memory check does not. A <code>SELECT</code> before the
+effect does not. And, most importantly, no assumption that partition assignment
+is exclusive. Assignment is exclusive from the <em>coordinator's</em> point of view. It
+is never exclusive from the point of view of code already running.</p>
+<p>In production this correlates with a long-tail dependency. The fix that removes
+the cause is smaller batches, plus a <code>max.poll.interval.ms</code> above your p99.9
+handler time. The fix that removes the <em>damage</em> is the conditional write.</p>
+<h3 id="readme-f3--what-if-arjuns-relay-publishes-the-same-fact-twice">F3 — what if Arjun's relay publishes the same fact twice?</h3>
+<p>The relay sent the record, then crashed before it could mark the outbox row
+published. On restart it sends again. Same fact, new offset.</p>
+<p>Design v1 is defeated. Designs v2 and v4 hold.</p>
+<p>Kafka's idempotent producer does not help here, and it is worth knowing why. It
+deduplicates a <code>(PID, epoch, sequence)</code> conversation within one producer
+session. A relay restart is a new session, so from Kafka's point of view this is
+an honestly new record.</p>
+<h3 id="readme-f4--what-does-a-retry-topic-do-to-your-ordering">F4 — what does a retry topic do to your ordering?</h3>
+<p>Spring Kafka's non-blocking retries publish a failed record to <code>…-retry-1</code> with
+a backoff. Meanwhile the main partition carries on.</p>
+<p>So <code>seq 17</code> is sitting in the retry topic while <code>seq 18</code> sails past on the main
+topic and is applied first. Deduplication is not violated. Both events are
+applied exactly once. The <em>order</em> is violated.</p>
+<p>An inbox consumer produces <code>points = base + 30 + 50</code>, which is fine, because
+addition commutes. An assignment consumer produces the wrong final status, which
+is not fine.</p>
+<p>What this teaches is a trade, not a bug. Non-blocking retries buy availability by
+trading away per-key ordering. If your handler relies on order, blocking retries
+are the correct choice — or a watermark that rejects the late one. Note what the
+watermark's &quot;rejection&quot; now is. It is a deliberate drop, and you must be able to
+explain it.</p>
+<h3 id="readme-f5--what-does-priyas-replay-do-nine-days-later">F5 — what does Priya's replay do nine days later?</h3>
+<p>This is the §10 v3 incident, and it is the only failure in this lab whose cause
+is a human with good intentions.</p>
+<p>What you would see is a spike in successful applications where <code>applied_at</code> is
+far away from <code>event_time</code>. That gap has a name: <strong>event age at apply time</strong>. It
+is the metric that would have caught this before it became an incident. Almost
+nobody graphs it.</p>
+<h3 id="readme-f6--what-if-your-own-dedup-defeats-a-repair-you-meant-to-run">F6 — what if your own dedup defeats a repair you meant to run?</h3>
+<p>Meera resets the group to offset 0 after fixing a calculation bug. Design v2
+skips everything with a primary-key violation. Design v4 skips everything below
+the watermark.</p>
+<p>Both are working exactly as designed. Both defeat the operation.</p>
+<p>A reprocess is a different intention, so give it a different dedup scope. Use a
+new <code>consumer</code> value, or reset the watermarks, or build a dedicated backfill path
+that <em>computes</em> the answer rather than accumulating it. The general principle
+from the idempotency lab holds here too: different intentions must not share a
+key.</p>
+<h3 id="readme-f7--what-does-a-poison-message-do-to-a-claim-first-handler">F7 — what does a poison message do to a claim-first handler?</h3>
+<p>One record makes the handler throw every time. With blocking retries it
+head-of-line-blocks the partition. Lag climbs on that partition while throughput
+reads perfectly normal for every other one.</p>
+<p>Here is the trap specific to this lab, and it is a natural instinct after reading
+the idempotency lab. Suppose you &quot;claim&quot; the message by inserting into the inbox
+in its <strong>own</strong> transaction, before doing the work. Then the failing message is
+marked processed and will never be retried. You have converted a loud poison
+message into a silent skip.</p>
+<p>For a local effect, the inbox insert must be in the <em>same</em> transaction as the
+effect, so that it rolls back with it. Claim-first is only correct when paired
+with a <code>RUNNING</code> state and a reaper, which means only for external effects.</p>
+<h3 id="readme-f8--what-if-the-effect-leaves-the-database">F8 — what if the effect leaves the database?</h3>
+<p>The handler writes to Elasticsearch, or S3, or Redis, or an email provider.
+There is no transaction to put the inbox row into, so obligation R2 cannot be
+satisfied the easy way.</p>
+<p>There are three responses, and which one you pick depends on what the sink will
+accept.</p>
+<p>Make the sink hold the dedup itself. An Elasticsearch document id equal to the
+message id does it. So does <code>version_type=external</code> with the event's sequence as
+the version, which is a watermark implemented by the sink.</p>
+<p>Or use claim-first with a downstream idempotency key. Email providers and
+payment APIs accept one.</p>
+<p>Or, for a genuinely unkeyable sink, accept at-least-once, reconcile afterwards,
+and publish the measured residual. That is the idempotency lab's &quot;box G&quot;,
+unchanged.</p>
+<h3 id="readme-f9--what-if-two-threads-touch-ashas-row-at-once">F9 — what if two threads touch Asha's row at once?</h3>
+<p>Meera parallelises a partition across a thread pool for throughput. Two threads
+process two <em>different</em> events for member <code>M-77</code> simultaneously.</p>
+<blockquote>
+<p>🔮 <strong>Predict:</strong> Meera has the v2 inbox in place, and both events have distinct
+event ids. Does the inbox protect Asha's points here?</p>
+</blockquote>
+<details><summary>Reveal</summary>
+
+<p>No. Both inserts succeed, because the two ids really are different. Both threads
+then read Asha's current points, add to it, and write back. One of the two
+additions is overwritten and lost.</p>
+<p>If you said &quot;yes, the primary key protects her&quot;, you are asking the constraint a
+question about <em>sameness</em> when the problem is about <em>timing</em>. Two different
+facts arriving together is not a duplicate at all.</p>
+</details>
+
+<p>This is not a duplicate. It is a lost update, and deduplication does nothing
+about it at all. She needs row locking or a version check, and she has just given
+up per-key ordering as well, which brings F4 along for the ride.</p>
+<p>Hold on to the distinction. Deduplication answers &quot;is this the same fact twice?&quot;
+Concurrency control answers &quot;are two different facts colliding?&quot; Same table,
+different problem.</p>
+<h3 id="readme-f10--what-happens-when-the-inbox-itself-becomes-the-bottleneck">F10 — what happens when the inbox itself becomes the bottleneck?</h3>
+<p>Every message now costs an extra indexed insert, and Dev's inbox is the hottest
+write target in the schema. Index bloat follows. Autovacuum pressure follows,
+which the <a href="../09-mvcc-and-vacuum/notes.html#readme">mvcc-and-vacuum</a> lab covers. And the retention
+<code>DELETE</code> ends up competing with the workload it exists to protect.</p>
+<p>Dev has three moves. Partition the table by day and <code>DROP</code> partitions instead of
+deleting rows: one metadata operation, rather than a hundred million row
+versions. Prefer the watermark wherever the shape allows it. And never let the
+retention job be the thing that discovers the table is too big.</p>
+<h3 id="readme-which-design-survives-which-failure">Which design survives which failure?</h3>
+<p>One table for all ten. The last column is the one to read twice: it says what
+you would actually see on a dashboard.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>What goes wrong</th>
+  <th>Whose</th>
+  <th>Which design survives</th>
+  <th>What you would see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1</td>
+  <td>crash between effect and offset commit</td>
+  <td>Meera</td>
+  <td>v1, v2, v4</td>
+  <td>the same offset twice in the log</td>
+</tr>
+<tr>
+  <td>F2</td>
+  <td>rebalance zombie, two live handlers</td>
+  <td>Meera</td>
+  <td>v1, v2, v4 (conditional write only)</td>
+  <td>a burst of constraint violations</td>
+</tr>
+<tr>
+  <td>F3</td>
+  <td>relay republication, new offset</td>
+  <td>Arjun</td>
+  <td>v2, v4</td>
+  <td>nothing — v1 fails silently</td>
+</tr>
+<tr>
+  <td>F4</td>
+  <td>retry topic reorders <code>seq 17</code> after <code>seq 18</code></td>
+  <td>Meera</td>
+  <td>v4 rejects the late one</td>
+  <td>wrong final status, right total</td>
+</tr>
+<tr>
+  <td>F5</td>
+  <td>DLQ replay past retention</td>
+  <td>Priya</td>
+  <td>v4, or v2 with longer retention</td>
+  <td>apply-time far from event time</td>
+</tr>
+<tr>
+  <td>F6</td>
+  <td>deliberate reprocess suppressed</td>
+  <td>Meera</td>
+  <td>none — all of them suppress it</td>
+  <td>a replay that changes nothing</td>
+</tr>
+<tr>
+  <td>F7</td>
+  <td>poison message, claim in its own transaction</td>
+  <td>Meera</td>
+  <td>v2 and v4 when the claim is in-transaction</td>
+  <td>lag on one partition only</td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>non-transactional sink</td>
+  <td>Meera</td>
+  <td>none directly; the sink must hold it</td>
+  <td>duplicate documents or emails</td>
+</tr>
+<tr>
+  <td>F9</td>
+  <td>two threads, two facts, one row</td>
+  <td>Meera</td>
+  <td>none — this is not deduplication</td>
+  <td>a total that is quietly too low</td>
+</tr>
+<tr>
+  <td>F10</td>
+  <td>the inbox is the hottest table</td>
+  <td>Dev</td>
+  <td>v4 avoids the table entirely</td>
+  <td>vacuum lag and write latency</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-12-what-exactly-is-guaranteed-and-how-does-it-stop-holding">12. What exactly is guaranteed, and how does it stop holding?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You get &quot;the effect happens once&quot; for one named message, in
+one consumer, against one database. Five assumptions hold that up, and two of
+them fail quietly.</p>
+</blockquote>
+<p><strong>What is guaranteed</strong>, for design v2 or v4 with a local transactional effect:</p>
+<blockquote>
+<p>For a given <code>(consumer, message identity)</code>, the effect is applied <strong>at most
+once</strong>. Because delivery is at-least-once, that adds up to <strong>exactly once in
+effect</strong>. Two consumers racing on the same message produce one application and
+one rolled-back transaction.</p>
+</blockquote>
+<p><strong>What that guarantee rests on.</strong> Each row below is an assumption, and each one
+is a real place where production systems break.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>The assumption</th>
+  <th>How it breaks</th>
+  <th>Where you saw it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>the producer mints a stable identity that survives republication</td>
+  <td>the id is generated at send time rather than at fact-creation time</td>
+  <td>§10 v1</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>identities do not collide across different facts</td>
+  <td>someone uses a business key such as <code>orderId</code> for events that can legitimately repeat</td>
+  <td>§12, below</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>the dedup record and the effect are in one transaction, against one database</td>
+  <td>a second sink is added to the handler</td>
+  <td>§11 F8</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>the dedup record outlives every redelivery</td>
+  <td>a retention job deletes it first</td>
+  <td>§11 F5</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>the scope is per consumer</td>
+  <td>Omar's service shares the table</td>
+  <td>§10 v2</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What is not guaranteed, and never was.</strong> Five things, and the first one is not
+achievable by anybody, ever.</p>
+<p><em>Exactly-once delivery</em> is impossible, for the reason the
+<a href="../49-idempotency/notes.html#readme">idempotency</a> lab established from the two-generals result.
+What you have is at-least-once delivery plus at-most-once <em>application</em>.</p>
+<p><em>Ordering</em> is not guaranteed. Deduplication is order-blind. F4 and §10 v5 spell
+out the separate mechanism you need.</p>
+<p><em>Protection against business duplicates</em> is not guaranteed either. Two
+<em>different</em> events can describe the same real-world fact. A double-submitted
+refund produces two event ids. Those are two identities, so both will be
+applied. Deduplication is defined on identities. Only the producer knows which
+two sends are one intention.</p>
+<p><em>Anything outside the transaction</em> is not covered. The email sent in the middle
+of the handler was sent, whatever the transaction later decides.</p>
+<p><em>Safety of a replay</em> is not covered. Suppression is not safety, as §10 v4 and F6
+both showed.</p>
+<p><strong>The trade Meera made.</strong> Every version above buys correctness with a write on
+the hot path. That is an extra insert in v2, or an extra predicate and column in
+v4, on every single message. It also buys a permanent operational obligation:
+retention, or a documented reprocess procedure.</p>
+<p>That is the cost of at-least-once. The alternative is not &quot;no cost&quot;. The
+alternative is at-most-once and silent loss.</p>
+<blockquote>
+<p><strong>Checkpoint — the engineering layer ends here.</strong> You can now state the
+guarantee, name the five assumptions under it, and say which two lapse without
+an error message.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>guarantee</em>, <em>atomic</em> or
+<em>assumption</em>, tell a friend what Meera can promise Asha, and what she cannot.</p>
+<details><summary>A good answer sounds like</summary>
+"For one named event, in one service, writing to one database, Asha's points
+go up once and only once, even if the event turns up ten times. What Meera
+cannot promise is anything about order, anything about a second system she
+writes to in the same handler, and anything about two genuinely different
+events that describe the same real payment. And her promise quietly expires if
+somebody deletes the record of what she has already done."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-13-what-does-this-look-like-in-kafka-sqs-rabbitmq-and-cdc">13. What does this look like in Kafka, SQS, RabbitMQ and CDC?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four brokers, four different ways the duplicate arrives, and
+one dashboard. Every setting below quietly decides something you would rather
+decide on purpose.</p>
+</blockquote>
+<p>Ben runs the platform team. He arrives with a proposal, and this section is what
+Meera needs before she can answer him.</p>
+<h3 id="readme-kafka-and-spring--which-knob-decides-what">Kafka and Spring — which knob decides what?</h3>
+<p>These are the pieces you will actually touch. Each one silently decides
+something.</p>
+<p><strong><code>enable.auto.commit</code>.</strong> The default is <code>true</code>, and that default is not
+at-least-once. It commits on a timer <em>during</em> <code>poll()</code>. So what it means depends
+on code far away from the setting. With inline processing it approximates a
+coarse commit-after. Hand the batch to a thread pool and it becomes silent
+at-most-once. Set it <code>false</code> and ack explicitly. The <a href="../53-kafka/notes.html#readme">kafka</a> lab
+established this; it is repeated here because it is the single most common cause
+of the F1 family in the wild.</p>
+<p><strong><code>@Transactional</code> on the <code>@KafkaListener</code> method.</strong> This puts the inbox insert
+and the effect in one transaction, which is exactly v2. The offset ack happens
+after the method returns, outside that transaction. That is the correct and
+intended arrangement. §10 v2's four-row crash table is why the gap is benign.</p>
+<p><strong><code>DefaultErrorHandler</code> with <code>DeadLetterPublishingRecoverer</code>.</strong> Blocking retries,
+then the dead-letter queue. It preserves order and blocks the partition.</p>
+<p><strong><code>@RetryableTopic</code>.</strong> Non-blocking retries. It does not block, and it gives up
+per-key ordering, which is F4. Choosing between these two handlers is choosing
+between availability and order. There is no third option.</p>
+<p><strong>Kafka transactions, sold as exactly-once semantics.</strong> They make
+read, process, write and commit-offset atomic <strong>inside Kafka</strong>. Read the next two
+sentences twice, because they are Ben's whole answer.</p>
+<p>If your consumer's output is another Kafka topic, exactly-once semantics is the
+complete answer, and you need none of this lab. If your consumer writes to a
+database, calls an API, or sends an email, it covers none of that, and you need
+all of this lab.</p>
+<p>That distinction is the single most valuable sentence to be able to say out loud
+in a design review.</p>
+<h3 id="readme-sqs--how-does-a-duplicate-arrive-here">SQS — how does a duplicate arrive here?</h3>
+<p><strong>Standard queues</strong> are at-least-once by contract, and the duplicate arrives
+through <strong>visibility-timeout expiry</strong>. If your handler outruns the timeout, the
+message becomes visible again and a second worker takes it <em>while the first is
+still working</em>.</p>
+<p>That is F2's zombie, produced by a different mechanism, and it is far more
+frequent than a Kafka rebalance.</p>
+<p><strong>FIFO queues</strong> offer a <code>MessageDeduplicationId</code> with a <strong>5-minute</strong> window. Read
+that as one sentence: AWS deduplicates producer retries for you, and nothing
+else. Every source in §1 with a gap longer than five minutes is still yours to
+handle.</p>
+<h3 id="readme-rabbitmq--can-you-trust-the-redelivered-flag">RabbitMQ — can you trust the redelivered flag?</h3>
+<p>The <code>redelivered</code> flag on a delivery is a <em>hint</em>, not a guarantee. It can be
+<code>false</code> on a genuine redelivery after a broker failover.</p>
+<p>Never branch on it for correctness. Use it only for logging.</p>
+<h3 id="readme-cdc-and-debezium-sinks--why-are-these-the-easiest-consumers">CDC and Debezium sinks — why are these the easiest consumers?</h3>
+<p>This is the best-behaved case in practice, because the producer's identity
+problem is already solved for you. Postgres gives <code>source.lsn</code>. MySQL gives the
+binlog coordinate. Either one is a monotone per-source sequence, and records are
+keyed by primary key.</p>
+<p>So a sink that upserts by primary key and guards with <code>WHERE last_lsn &lt; :lsn</code> is
+v4, with no extra work. That is exactly what the
+<a href="../52-change-data-capture/notes.html#readme">change-data-capture</a> lab meant by &quot;convergence under
+replay&quot;.</p>
+<h3 id="readme-the-dashboard--which-four-lines-would-have-caught-this">The dashboard — which four lines would have caught this?</h3>
+<p>Four things are worth graphing, and only the first is commonly present.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Metric</th>
+  <th>The question it answers</th>
+  <th>The shape that means trouble</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>consumer lag</td>
+  <td>are we keeping up?</td>
+  <td>the one everyone already has</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>duplicate suppression rate</td>
+  <td>is the dedup being exercised?</td>
+  <td>a spike, or a flat zero forever</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>event age at apply time</td>
+  <td>are we applying something ancient?</td>
+  <td>a sudden jump to days or weeks</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>inbox size and oldest-row age</td>
+  <td>can we still remember far enough back?</td>
+  <td>oldest row younger than your replay policy</td>
+</tr>
+</tbody>
+</table></div>
+<p>Row 2 needs a definition: it is inbox primary-key violations, or zero-row
+watermark updates, counted per second. A steady low rate is healthy. A sudden
+spike means a rebalance storm or a republish loop. A rate of exactly zero,
+forever, means your dedup has never been exercised, and you do not know whether
+it works.</p>
+<p>Row 3 is <code>now() − event_timestamp</code> at the moment the effect commits. It is the
+metric that catches F5 before it becomes an incident, and it is the one nobody
+has.</p>
+<p>Row 4 must be sized against a <em>written down</em> maximum redelivery age. Not against
+disk.</p>
+<h3 id="readme-the-runbook--which-one-sentence-prevents-the-worst-incident">The runbook — which one sentence prevents the worst incident?</h3>
+<p>One sentence, in the dead-letter replay procedure, prevents this lab's worst
+outcome. It is the sentence Priya did not have.</p>
+<blockquote>
+<p><em>Before replaying dead-lettered records, confirm the records are younger than
+the consumer's inbox retention. Older records must be regenerated from the
+source of truth, not replayed.</em></p>
+</blockquote>
+<blockquote>
+<p><strong>Checkpoint — the production layer ends here.</strong> You can now wire this into
+four brokers, choose between availability and order deliberately, and name the
+graph that would have caught Priya's replay.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Ben says: &quot;we are turning on exactly-once semantics
+platform-wide, so nobody needs an inbox any more.&quot; Answer him in three
+sentences, without using the words <em>atomic</em>, <em>transaction</em> or <em>semantics</em>.</p>
+<details><summary>A good answer sounds like</summary>
+"That setting makes Kafka-to-Kafka work safe, and for those consumers you are
+right. Every consumer that writes to a database, calls an API or sends an email
+is doing something Kafka cannot take back, so its guarantee stops at the edge
+of the cluster. Those consumers still need to recognise a repeat fact and
+refuse it themselves."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-14-which-comfortable-beliefs-about-this-are-wrong">14. Which comfortable beliefs about this are wrong?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight things that sound right, and the smallest concrete
+case that kills each one.</p>
+</blockquote>
+<p><strong>&quot;We turned on the idempotent producer and exactly-once semantics, so consumers
+don't need this.&quot;</strong> This is Ben's proposal, and it feels reasonable because both
+features carry &quot;exactly once&quot; in their marketing. The smallest thing that breaks
+it: both features on, consumer writes to Postgres, pod dies between the database
+commit and the offset commit. Redelivery, double points. The guarantee is
+exactly-once <em>within the Kafka cluster</em>. The moment an effect leaves the cluster
+it is at-least-once again.</p>
+<p><strong>&quot;Deduplicate on the offset.&quot;</strong> Genuinely appealing, because the offset really
+is unique. Arjun's relay republishes the same outbox row after a crash, and the
+new offset is honestly new. Applied twice (§10 v1).</p>
+<p><strong>&quot;An inbox table gives exactly-once.&quot;</strong> It gives at-most-once <em>application</em>,
+given the five assumptions in §12. It stops giving it, quietly, when one of them
+lapses. Most often that one is retention.</p>
+<p><strong>&quot;Check whether we've seen it, then process.&quot;</strong> The gap between the check and
+the write is not a rare interleaving. A rebalance produces two live processors as
+a matter of routine (§4). Only a conditional write arbitrates.</p>
+<p><strong>&quot;Seven days of retention is plenty.&quot;</strong> It is plenty for every duplicate a
+machine produces. It is useless against the one a human produces. Redelivery age
+is bounded by your operational practice, not by your software (§10 v3).</p>
+<p><strong>&quot;Idempotent means I can safely replay anything.&quot;</strong> Replay is <em>suppressed</em>,
+which is a different thing from safe. A reprocess intended to fix data will do
+nothing at all, silently (§10 v4, and F6).</p>
+<p><strong>&quot;Our handler is <code>UPDATE … SET status='PAID'</code>, so it's idempotent and we're
+done.&quot;</strong> It is idempotent. It is also not reorder-safe, and non-blocking retries
+reorder. Duplicates, ordering and concurrency are three problems with three
+mechanisms (F4, F9).</p>
+<p><strong>&quot;The consumer's dual write is the same bug as the outbox's.&quot;</strong> It looks
+identical, and it is not. The consumer's failure mode is a lost offset commit,
+which the inbox absorbs. The outbox's failure mode is a lost event, which nothing
+absorbs. That asymmetry is the whole argument (§10 v2).</p>
+<p>Eight beliefs, and where each one dies.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The belief</th>
+  <th>Where it dies</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>exactly-once semantics removes the need</td>
+  <td>§13, and the first entry above</td>
+</tr>
+<tr>
+  <td>the offset is a good dedup key</td>
+  <td>§10 v1</td>
+</tr>
+<tr>
+  <td>an inbox gives exactly-once</td>
+  <td>§12, five assumptions</td>
+</tr>
+<tr>
+  <td>check first, then process</td>
+  <td>§4, way three</td>
+</tr>
+<tr>
+  <td>seven days is plenty</td>
+  <td>§10 v3</td>
+</tr>
+<tr>
+  <td>replay is safe because we are idempotent</td>
+  <td>§10 v4 and §11 F6</td>
+</tr>
+<tr>
+  <td>assignment effects need nothing</td>
+  <td>§11 F4 and F9</td>
+</tr>
+<tr>
+  <td>the consumer's dual write is the outbox bug</td>
+  <td>§10 v2</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-15-where-does-this-sit-and-what-should-you-learn-next">15. Where does this sit, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This is the knowledge map. Five labs feed into this one,
+three assume it, four things are routinely confused with it, and four next
+steps follow it.</p>
+</blockquote>
+<p><strong>Builds directly on</strong></p>
+<ul>
+<li><a href="../49-idempotency/notes.html#readme">idempotency</a> — the claim under a unique constraint, the
+check-then-act gap, and claim-first for external effects. This lab is that
+protocol with the caller removed and the redelivery sources multiplied.</li>
+<li><a href="../53-kafka/notes.html#readme">kafka</a> — offsets, consumer groups, rebalance,
+<code>max.poll.interval.ms</code>, retry topics, DLQ, the idempotent producer, and
+exactly-once semantics.</li>
+<li><a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> — the inbox is its mirror
+image, and Arjun's relay is redelivery source number one.</li>
+<li><a href="../10-optimistic-vs-pessimistic-locking/notes.html#readme">optimistic-vs-pessimistic-locking</a> —
+the watermark predicate is the conditional write again.</li>
+<li><a href="../52-change-data-capture/notes.html#readme">change-data-capture</a> — <code>source.lsn</code> is a
+ready-made watermark, and CDC sinks are the easiest idempotent consumers there
+are.</li>
+</ul>
+<p><strong>Related</strong></p>
+<ul>
+<li><a href="../47-saga/notes.html#readme">saga</a>, <a href="../51-cqrs/notes.html#readme">cqrs</a> and
+<a href="../50-event-sourcing/notes.html#readme">event-sourcing</a> — all three assume idempotent
+consumers. This is the mechanism they assumed.</li>
+<li><a href="../09-mvcc-and-vacuum/notes.html#readme">mvcc-and-vacuum</a> — why a <code>DELETE</code>-based retention job
+on a hot table is a worse idea than partition-and-drop.</li>
+<li><a href="../43-distributed-locking/notes.html#readme">distributed-locking</a> — the zombie consumer in F2
+is its expired-lease problem, and the answer is the same: do not trust
+ownership, guard the write.</li>
+</ul>
+<p><strong>Commonly confused with</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Thing</th>
+  <th>What it actually does</th>
+  <th>Why it is not this</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><em>Idempotent producer</em></td>
+  <td>deduplicates a producer's network retries inside one session</td>
+  <td>different layer, different lifetime</td>
+</tr>
+<tr>
+  <td><em>Exactly-once semantics</em></td>
+  <td>atomic read-process-write <strong>within Kafka</strong></td>
+  <td>covers no effect that leaves the cluster</td>
+</tr>
+<tr>
+  <td><em>Broker deduplication</em> (SQS FIFO, 5 minutes)</td>
+  <td>a producer-retry window</td>
+  <td>not a consumer guarantee</td>
+</tr>
+<tr>
+  <td><em>Optimistic locking</em></td>
+  <td>rejects a <em>stale</em> writer</td>
+  <td>deduplication rejects a <em>repeat</em> writer</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Next steps</strong></p>
+<ul>
+<li><code>/learn backpressure</code> — the consumer-side pressure this lab assumed away.</li>
+<li><code>/learn schema-evolution</code> — the inbox survives a redeploy; does the payload?</li>
+<li><code>/learn observability-slos</code> — &quot;event age at apply time&quot; needs somewhere to
+live.</li>
+<li><code>/learn stream-processing-semantics</code> — windowing and joins, where dedup and
+ordering stop being separable.</li>
+</ul>
+<hr />
+<h2 id="readme-16-glossary--what-does-each-word-mean-exactly">16. GLOSSARY — what does each word mean exactly?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every word this lab earned, in the order it appeared, with
+the place in the story it came from.</p>
+</blockquote>
+<p>These four are about naming a message.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>What it means</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Redelivery source</strong></td>
+  <td>any mechanism that can hand a consumer a second copy of one fact</td>
+  <td>seven of them, in §1</td>
+</tr>
+<tr>
+  <td><strong>Delivery identity</strong></td>
+  <td><code>(topic, partition, offset)</code>. Assigned by the broker, unique per append, <em>not</em> stable across republication</td>
+  <td>§7.1</td>
+</tr>
+<tr>
+  <td><strong>Message identity</strong></td>
+  <td>an id carried inside the record, minted by the producer when the fact was created. Stable across every republication</td>
+  <td>§7.1</td>
+</tr>
+<tr>
+  <td><strong>Accumulative versus assignment effect</strong></td>
+  <td><code>points = points + 50</code> versus <code>status = 'PAID'</code>. The first is not naturally idempotent; the second is</td>
+  <td>§1, and §10 v5</td>
+</tr>
+</tbody>
+</table></div>
+<p>These four are about remembering.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>What it means</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Inbox table</strong></td>
+  <td>the consumer's <code>processed_messages</code>, keyed by <code>(consumer, message_id)</code>, written in the effect's transaction</td>
+  <td>§7.2, built in §10 v2</td>
+</tr>
+<tr>
+  <td><strong>Redelivery age</strong></td>
+  <td>the maximum wall-clock gap between two deliveries of the same fact, across all redelivery sources. It sets the inbox's required retention</td>
+  <td>§7.3, and Priya's replay in §10 v3</td>
+</tr>
+<tr>
+  <td><strong>Dedup scope</strong></td>
+  <td>the <code>consumer</code> component of the inbox key. Two consumers of one topic need two scopes; a deliberate reprocess needs a third</td>
+  <td>§10 v2, and §11 F6</td>
+</tr>
+<tr>
+  <td><strong>Watermark deduplication</strong></td>
+  <td>storing the highest applied per-key sequence instead of a set of seen ids. Retention-free and reorder-safe; it requires per-key ordering and a monotone producer sequence</td>
+  <td>§7.4, built in §10 v4</td>
+</tr>
+</tbody>
+</table></div>
+<p>These three are about what you can and cannot promise.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>What it means</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Zombie consumer</strong></td>
+  <td>an instance still executing a handler for a partition the coordinator has already reassigned. Produces two concurrent writers</td>
+  <td>§4, and §11 F2</td>
+</tr>
+<tr>
+  <td><strong>Event age at apply time</strong></td>
+  <td><code>now() − event_timestamp</code> at the moment the effect commits. The metric that detects a replay outside the dedup window</td>
+  <td>§11 F5, and §13</td>
+</tr>
+<tr>
+  <td><strong>Effectively-once, or exactly-once processing</strong></td>
+  <td>at-least-once delivery plus at-most-once application. The only honest form of &quot;exactly once&quot; that crosses a system boundary</td>
+  <td>§12</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-17-about-this-lab">17. About this lab</h2>
+<p><strong>What this lab is made of.</strong> This document · <a href="visualization.html"><code>visualization.html</code></a>
+(interactive: &quot;The Second Delivery&quot;) · <a href="notes.html#exercises"><code>EXERCISES.md</code></a> ·
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. There is no runnable code here. Mechanisms are
+shown as hand-worked traces in this document, and as a controllable simulator on
+the visualization page.</p>
+<p><strong>Where this sits among your other labs.</strong> It assumes three of them and is
+assumed by three more. §15 has the full map. The short version: read
+<a href="../49-idempotency/notes.html#readme">idempotency</a> and <a href="../53-kafka/notes.html#readme">kafka</a> first, because this
+lab uses their vocabulary without re-teaching it. The
+<a href="../55-kafka-exactly-once/notes.html#readme">kafka-exactly-once</a> lab is the natural sequel: it is
+the case where the effect stays inside Kafka, which is the one case this lab
+tells you to stop worrying.</p>
+<p><strong>How the numbers were produced.</strong> Every figure in this lab is an illustrative
+production shape, not a benchmark result. The 4,000 events per second on
+<code>payments.captured</code> is the same rate the kafka lab used for Deodar's scanners,
+kept deliberately so that the two labs size the same way.</p>
+<p>The 345 million rows per day and 126 billion rows per year follow from that rate
+by arithmetic. The 40,000 dead-lettered records and the nine-day gap are the
+shape of a festival-season incident, rounded. Asha's ₹2,000 payment and 50
+points exist so that a doubled value is obvious on sight.</p>
+<p><strong>What the visualization checks.</strong> The four scenarios on the page are the four
+turning points of this document, and they run against the same rules the
+document describes. Design B is §10 v1. Design C is §10 v2 with the retention of
+§10 v3 attached to a slider. Design D is §10 v4.</p>
+<p><strong>The depth layers.</strong> The concrete problem in §2 through §6 is the beginner
+layer. The terminology and the mechanism, §7 through §10, are the intermediate
+layer. The failure catalogue and the correctness statement, §11 and §12, are the
+engineering layer. Production and the wrong models, §13 and §14, are the
+production layer. Each layer ends with a Say-it-back box.</p>
+<p><strong>The exercises.</strong> <a href="notes.html#exercises"><code>EXERCISES.md</code></a> has eight levels. Levels 1 to 5
+check that you can operate the mechanism. Levels 6 to 8 check that you understand
+why it is shaped the way it is. Several of them ask you to check an answer in the
+simulator rather than trusting the prose, including this document's prose. Do
+that.</p>
+<p><strong>A note on the terminology in §7.</strong> Four words are defined there and one more,
+watermark, is built in §10 v4. They are introduced as things that happened in the
+story first, and given their engineering names second. If a word appears in a
+later section without its story, that is a defect in this document, not in your
+memory.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--the-idempotent-consumer">Exercises — The Idempotent Consumer</h1>
+<p>Work through these before opening <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Levels 1–5
+check that you can operate the mechanism; 6–8 check that you understand why it
+is shaped the way it is. Several ask you to verify with
+<a href="visualization.html"><code>visualization.html</code></a> — do that rather than trusting the
+prose, including this document's.</p>
+<p>Cast, unchanged from the lab: <code>payments</code> → outbox → <code>relay</code> →
+<code>payments.captured</code> → <code>loyalty</code> (group <code>loyalty-v1</code>) → <code>members</code> in Postgres.
+<code>evt-9f31</code> is member <code>M-77</code>, sequence 17, worth 50 points.</p>
+<hr />
+<h2 id="exercises-level-1--explain">Level 1 — Explain</h2>
+<p><strong>1.1</strong> In four sentences, explain to a colleague who has never used a broker
+why a consumer that &quot;just processes each message once&quot; is not a thing that
+exists. Do not use the words <em>idempotent</em>, <em>exactly-once</em>, or <em>at-least-once</em>.</p>
+<p><strong>1.2</strong> The lab claims &quot;idempotent consumer&quot; is really three obligations, not
+one. Name them, and for each give the one-line failure that happens when only
+that one is missing.</p>
+<p><strong>1.3</strong> Why is it <em>fortunate</em> that the industry standardised on at-least-once
+delivery rather than at-most-once? Answer in terms of what you can and cannot
+detect after the fact.</p>
+<hr />
+<h2 id="exercises-level-2--identify">Level 2 — Identify</h2>
+<p><strong>2.1</strong> For each item, say whether it is <strong>delivery identity</strong> or <strong>message
+identity</strong>, and in one clause say why it matters:
+<code>(topic, partition, offset)</code> · the outbox row's UUID · Kafka's producer
+<code>(PID, epoch, sequence)</code> · SQS <code>MessageId</code> · SQS <code>MessageDeduplicationId</code> ·
+Debezium's <code>source.lsn</code> · your <code>orderId</code>.</p>
+<p><strong>2.2</strong> In this handler, name every line that is part of the correctness
+argument and every line that is merely an optimisation:</p>
+<div class="code"><pre><code class="language-java">@KafkaListener(topics = &quot;payments.captured&quot;)
+@Transactional
+public void onCaptured(PaymentCaptured e, Acknowledgment ack) {
+    inboxRepo.insert(&quot;loyalty-v1&quot;, e.eventId());     // (a)
+    memberRepo.addPoints(e.memberId(), e.points());  // (b)
+    ack.acknowledge();                               // (c)
+}
+</code></pre></div>
+<p><strong>2.3</strong> In the §4 zombie trace, the <code>UNIQUE</code> constraint <em>did</em> fire and the
+outcome was still wrong. Point at the exact statement whose position in the
+transaction caused that, and say what it should have been instead.</p>
+<hr />
+<h2 id="exercises-level-3--predict">Level 3 — Predict</h2>
+<p>For each, commit to an answer before checking in the visualization.</p>
+<p><strong>3.1</strong> Design B (dedup by offset). The pod is evicted between the database
+commit and the offset commit. Points?</p>
+<p><strong>3.2</strong> Design B. The relay republishes <code>evt-9f31</code> at a new offset after the
+first copy was processed cleanly. Points?</p>
+<p><strong>3.3</strong> Design C (inbox by event id), retention 7 days. A DLQ replay on day 9.
+Points? Now change retention to <em>forever</em> and predict again.</p>
+<p><strong>3.4</strong> Design D (watermark). Events arrive <code>seq 18</code>, then <code>seq 17</code> (a retry
+topic delivered 17 late). What is on <code>M-77</code> at the end, and is that outcome
+correct, incorrect, or &quot;correct but a decision someone should have made
+deliberately&quot;?</p>
+<p><strong>3.5</strong> Design D. The group is reset to offset 0 to recompute points after a
+formula bugfix. Predict the number of database rows changed.</p>
+<hr />
+<h2 id="exercises-level-4--modify">Level 4 — Modify</h2>
+<p><strong>4.1</strong> You move the <code>INSERT INTO inbox</code> out of the handler's transaction and
+into its own transaction that commits <em>first</em>. Name two things that get better
+and one thing that becomes catastrophic. Which failure in §11 is it?</p>
+<p><strong>4.2</strong> Three services consume <code>payments.captured</code> and all three write to the
+same <code>inbox</code> table, keyed on <code>message_id</code> alone. Describe what the second and
+third services observe, and how long it takes anyone to notice.</p>
+<p><strong>4.3</strong> Your inbox retention is 7 days. The business asks you to support
+replaying dead-lettered records &quot;up to a quarter old&quot;. What exactly must change,
+and which of those changes is not a code change?</p>
+<p><strong>4.4</strong> You raise consumer throughput by processing each partition across an
+8-thread pool. Which of the four designs still gives the guarantee it gave
+before, and which property did you spend to buy the throughput?</p>
+<hr />
+<h2 id="exercises-level-5--trace">Level 5 — Trace</h2>
+<p><strong>5.1</strong> Hand-trace the following against <strong>design C</strong> with retention = forever.
+Write the state of <code>members.points</code> and the inbox after every line.</p>
+<div class="code"><pre><code>day 0   offset 41  evt-9f31  seq 17  +50   → processed, offset committed
+day 0   ── relay republishes evt-9f31 at offset 43 ──
+day 0   offset 42  evt-a044  seq 18  +30
+day 0   offset 43  evt-9f31  seq 17  +50
+day 5   ── rebalance: pod B takes over mid-handler on offset 44 ──
+day 5   offset 44  evt-b210  seq 19  +20   (both pods run it)
+</code></pre></div>
+<p><strong>5.2</strong> Same trace against <strong>design D</strong>. Where do the two designs produce
+different <em>database writes</em> even though they produce the same final points?</p>
+<p><strong>5.3</strong> Now run 5.1 against <strong>design B</strong> and mark the exact line where the two
+diverge.</p>
+<hr />
+<h2 id="exercises-level-6--spot-the-flaw">Level 6 — Spot the flaw</h2>
+<p>Each design below is subtly wrong. For each: construct the <em>smallest</em> concrete
+scenario where it fails, name the obligation (R1/R2/R3) it violates, and say
+what an operator would see on a dashboard.</p>
+<p><strong>6.1</strong></p>
+<div class="code"><pre><code class="language-sql">BEGIN;
+  UPDATE members SET points = points + 50 WHERE id = &#x27;M-77&#x27;;
+  INSERT INTO inbox(consumer, message_id) VALUES (&#x27;loyalty-v1&#x27;, :eventId);
+COMMIT;
+</code></pre></div>
+<p>(Note: this is <em>not</em> about statement order inside the transaction.)</p>
+<p><strong>6.2</strong> The consumer computes its own dedup key:
+<code>sha256(memberId + amount + eventDate)</code>.</p>
+<p><strong>6.3</strong> The consumer stores its offsets in Postgres inside the effect's
+transaction and keeps no inbox table, on the reasoning that this is strictly
+stronger than an inbox.</p>
+<p><strong>6.4</strong> A watermark consumer where the producer stamps <code>seq</code> with
+<code>System.currentTimeMillis()</code> at send time.</p>
+<p><strong>6.5</strong> The retention job runs <code>DELETE FROM inbox WHERE applied_at &lt; now() - interval '7 days'</code> every night at 02:00, and the DBA has tuned it to run in
+batches of 10,000 with a sleep between batches so it does not affect the
+workload.</p>
+<hr />
+<h2 id="exercises-level-7--handle-failure">Level 7 — Handle failure</h2>
+<p><strong>7.1</strong> The loyalty handler must now also push a document into Elasticsearch.
+There is no shared transaction. Design the consumer so that a redelivery
+produces one points award and one ES document, and state precisely what you are
+<em>not</em> guaranteeing and why.</p>
+<p><strong>7.2</strong> The handler calls an external SMS provider to tell Asha about her
+points. The provider accepts an idempotency key. Sketch the states the consumer
+moves through, what happens if it dies after the SMS is sent but before
+anything is recorded, and what re-drives it. Name which lab this shape comes
+from.</p>
+<p><strong>7.3</strong> A poison record makes the handler throw on every attempt. You have
+blocking retries and a DLQ. Walk through what happens to (a) the partition,
+(b) consumer lag on the <em>other</em> partitions, (c) the inbox row for that message,
+and (d) what an alert on queue depth would show. Which of those four is the
+reason &quot;alarm on age, never on count&quot; is a rule.</p>
+<p><strong>7.4</strong> You discover the loyalty points formula has been wrong for a month and
+must be recomputed for 4 million members. Your consumer is design D. Write the
+procedure. It should not contain the words &quot;just replay the topic&quot;.</p>
+<hr />
+<h2 id="exercises-level-8--design">Level 8 — Design</h2>
+<p><strong>8.1</strong> You are designing the consumer contract for a new platform with 40
+teams. Write the four questions every team must answer about each handler
+before it goes to production, in the order they must be answered, and say what
+a bad answer to each one costs.</p>
+<p><strong>8.2</strong> A payments reconciliation service consumes <code>payments.captured</code> and
+maintains a daily total per merchant. Volume is 20,000/s. Choose a design from
+§10-v5, justify it against the three obligations, size the storage, and name the
+one metric you would page on.</p>
+<p><strong>8.3</strong> Counterfactual. Suppose brokers <em>did</em> offer true exactly-once delivery
+to a consumer — one delivery, guaranteed, forever. List everything in this lab
+that becomes unnecessary, and everything that does <strong>not</strong>. (There is more in
+the second list than in the first; that is the point of the exercise.)</p>
+<p><strong>8.4</strong> Your company runs Kafka and is considering enabling EOS
+(<code>transactional.id</code> on producers, <code>read_committed</code> on consumers) as a
+platform-wide policy, described in the proposal as &quot;this removes the need for
+idempotent consumers&quot;. Write the three-sentence reply that a design review
+needs, and name the one class of consumer for which the proposal is actually
+correct.</p>
+<p><strong>8.5</strong> Design the dashboard. Four panels, each with the question it answers and
+the shape that means trouble. At least one of them must be a metric almost no
+team has.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--the-idempotent-consumer">Solutions — The Idempotent Consumer</h1>
+<p>Attempt <a href="notes.html#exercises"><code>EXERCISES.md</code></a> first. Design questions (levels 7–8) show
+a worked reasoning process, not a single correct answer — what is being checked
+is whether you reached for the right <em>obligation</em>, not whether you matched the
+words here.</p>
+<hr />
+<h2 id="solutions-level-1--explain">Level 1 — Explain</h2>
+<p><strong>1.1</strong> When a sender gets no reply, it cannot tell &quot;you never received this&quot;
+from &quot;you did it and the reply was lost&quot;, so it has to send again — and that is
+true of every hop, including the one between your consumer and its own
+bookkeeping. So copies of the same message are normal traffic, not a bug. A
+consumer therefore cannot be built to <em>receive</em> each message once; it can only
+be built to <em>act</em> on each message once, which is a different and achievable
+goal. Everything else in the lab is about how it recognises that it has already
+acted.</p>
+<p><strong>1.2</strong></p>
+<ul>
+<li><strong>Identity</strong> — a stable name for the fact. Missing it, you deduplicate the
+<em>address</em> rather than the fact, and every republication slips through
+(§10-v1).</li>
+<li><strong>Atomicity</strong> — the record of processing and the effect commit together.
+Missing it, two racers both pass the check and both act; the constraint fires
+too late to prevent anything (§4).</li>
+<li><strong>Memory</strong> — the record still exists when the duplicate arrives. Missing it,
+the duplicate is a new fact; the classic form is a DLQ replay past the
+retention window (§10-v3).</li>
+</ul>
+<p><strong>1.3</strong> Both are failure modes; only one is <em>observable after the fact</em>. A
+duplicate leaves evidence — two applications of one identity — that can be
+found by reconciling against the source, and repaired. A dropped message leaves
+nothing: you cannot query loyalty for a payment that produced no loyalty
+record, because the absence looks identical to a payment that never happened.
+The industry chose the failure it can detect.</p>
+<hr />
+<h2 id="solutions-level-2--identify">Level 2 — Identify</h2>
+<p><strong>2.1</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Thing</th>
+  <th>Kind</th>
+  <th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>(topic, partition, offset)</code></td>
+  <td>delivery</td>
+  <td>fresh on every append; blind to republication</td>
+</tr>
+<tr>
+  <td>outbox row UUID</td>
+  <td><strong>message</strong></td>
+  <td>minted with the fact, survives every republish — the right dedup key</td>
+</tr>
+<tr>
+  <td><code>(PID, epoch, sequence)</code></td>
+  <td>delivery</td>
+  <td>a producer <em>session</em>'s conversation with a broker; a relay restart makes a new PID</td>
+</tr>
+<tr>
+  <td>SQS <code>MessageId</code></td>
+  <td>delivery</td>
+  <td>assigned per send; a re-send after visibility timeout is a <em>redelivery</em> of the same MessageId, but a producer re-send is a new one</td>
+</tr>
+<tr>
+  <td>SQS <code>MessageDeduplicationId</code></td>
+  <td><strong>message</strong></td>
+  <td>producer-supplied — but honoured for only 5 minutes</td>
+</tr>
+<tr>
+  <td>Debezium <code>source.lsn</code></td>
+  <td><strong>message</strong> (and monotone)</td>
+  <td>position in the source WAL, stable across connector restarts — a ready-made watermark</td>
+</tr>
+<tr>
+  <td>your <code>orderId</code></td>
+  <td><strong>message</strong>, conditionally</td>
+  <td>correct only if one order produces at most one such event; wrong the moment an order can be updated twice</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>2.2</strong></p>
+<ul>
+<li><strong>(a) and (b) together are the entire correctness argument.</strong> They must be in
+one transaction; that is what <code>@Transactional</code> is doing, and it is the only
+reason the zombie in §4 is harmless.</li>
+<li><strong>(c) is an optimisation.</strong> If the ack is lost the records are re-read and
+(a) rejects them. See §10-v2's four-row crash table: the only bad row is
+&quot;effect not committed, offset committed&quot;, which acking <em>after</em> the method
+makes unreachable.</li>
+</ul>
+<p><strong>2.3</strong> The <code>SELECT 1 FROM processed_messages</code> — the check — is the culprit, and
+its problem is not where it sits in the transaction but that it exists at all.
+A read cannot arbitrate between two writers. Replace it with the <code>INSERT</code>
+itself, inside the effect's transaction, and let the <code>UNIQUE</code> violation be the
+answer. This is the check-then-act result from the
+<a href="../49-idempotency/notes.html#readme">idempotency</a> lab, and the reason it bites harder here is that
+the two racers are two <em>consumer instances</em>, which a rebalance produces
+routinely.</p>
+<hr />
+<h2 id="solutions-level-3--predict">Level 3 — Predict</h2>
+<p><strong>3.1</strong> 80 (each fact once). Same offset redelivered, primary key rejects it,
+transaction rolls back. This is the case design B was built for.</p>
+<p><strong>3.2</strong> 130 — <code>evt-9f31</code> applied twice. The republished copy has a genuinely
+new offset, so the key accepts it. Verified in the visualization's scenario 2.</p>
+<p><strong>3.3</strong> Retention 7: <strong>160</strong>, both facts doubled — the inbox rows were deleted
+on day 7 and the replayed events are new to the consumer. Retention <em>forever</em>:
+<strong>80</strong>, both suppressed. Nothing else changes between the two runs, which is
+the whole lesson: the design was never wrong, the <em>memory</em> was.</p>
+<p><strong>3.4</strong> <code>points = base + 30</code>, <code>last_seq = 18</code>. <code>seq 17</code> is rejected because
+<code>18 &lt; 17</code> is false. That is the third answer: <strong>correct but a deliberate
+decision</strong>. The watermark did not deduplicate anything here — it <em>discarded a
+legitimate update</em> because it arrived out of order. For an accumulative effect
+that is data loss; for an assignment effect (a projection catching up) it is
+exactly right. Which is why the choice between blocking and non-blocking
+retries (F4) is not a tuning question.</p>
+<p><strong>3.5</strong> <strong>Zero rows.</strong> Every sequence in the log is at or below the watermark
+already on the row, so every <code>UPDATE</code> matches nothing. Full-speed run, clean
+logs, committed offsets, no state change. Visualization scenario 4.</p>
+<hr />
+<h2 id="solutions-level-4--modify">Level 4 — Modify</h2>
+<p><strong>4.1</strong> Better: the duplicate path gets cheaper (one insert, no effect work),
+and the claim is visible to other processes immediately so a second consumer
+can back off rather than contend. Catastrophic: a message whose handler throws
+is now permanently marked processed — the claim committed, the effect did not,
+and the redelivery is suppressed. A loud poison message becomes a <strong>silent
+skip</strong>. That is <strong>F7</strong>. Claim-first is only correct when it also writes a
+<code>RUNNING</code> state that a reaper re-drives — i.e. only when the effect is external
+and cannot be in your transaction anyway.</p>
+<p><strong>4.2</strong> The first service to process an event inserts the row; services two and
+three then hit the primary key violation and conclude &quot;already processed&quot;, so
+they skip the message entirely. They lose data, quietly, from the very
+mechanism installed to protect them, and the loss is proportional to how often
+they lose the race — which is <em>most of the time</em> if service one is faster. It
+is noticed when someone reconciles a downstream total, typically weeks later.
+Fix: key on <code>(consumer, message_id)</code>.</p>
+<p><strong>4.3</strong> Three things, and the third is not code:</p>
+<ol>
+<li>Retention becomes ≥ 90 days plus a margin. Sizing changes accordingly — at
+4,000/s that is ~31 billion rows, which forces the table to be partitioned
+by day with <code>DROP PARTITION</code> rather than <code>DELETE</code> (F10), or forces a move to
+a watermark design where the shape allows.</li>
+<li>The dedup key must be certain to be stable over 90 days — no
+content-derived keys, no keys that a producer redeploy could change.</li>
+<li><strong>The runbook and the replay tool</strong> must state and enforce the limit:
+records older than retention are regenerated from source, never replayed.
+Retention is only a guarantee if something refuses the operation that would
+exceed it.</li>
+</ol>
+<p><strong>4.4</strong> Designs A, B and C give the same guarantee as before — deduplication is
+per-message and does not depend on order. <strong>Design D breaks</strong>: two threads
+processing <code>seq 17</code> and <code>seq 18</code> concurrently for the same member can apply 18
+first, after which 17 is silently dropped. You spent <strong>per-key ordering</strong>,
+which was Kafka's only ordering guarantee and D's precondition. If you need the
+throughput and the watermark, partition by key across <em>consumers</em>, not threads
+within one.</p>
+<hr />
+<h2 id="solutions-level-5--trace">Level 5 — Trace</h2>
+<p><strong>5.1 Design C, retention forever</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>inbox</th>
+  <th>points</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>off 41 <code>evt-9f31</code></td>
+  <td><code>{9f31@d0}</code></td>
+  <td>50</td>
+</tr>
+<tr>
+  <td>off 42 <code>evt-a044</code></td>
+  <td><code>{9f31, a044}</code></td>
+  <td>80</td>
+</tr>
+<tr>
+  <td>off 43 <code>evt-9f31</code> (republish)</td>
+  <td>unchanged — PK violation, txn rolls back</td>
+  <td>80</td>
+</tr>
+<tr>
+  <td>off 44 <code>evt-b210</code>, pod A</td>
+  <td><code>{9f31, a044, b210}</code></td>
+  <td>100</td>
+</tr>
+<tr>
+  <td>off 44 <code>evt-b210</code>, pod B (zombie race)</td>
+  <td>unchanged — PK violation</td>
+  <td>100</td>
+</tr>
+</tbody>
+</table></div>
+<p>Final: <strong>100 points, three facts, each once.</strong> Correct.</p>
+<p><strong>5.2 Design D</strong> — same final points (100) and same final <code>last_seq</code> (19), but
+the <em>writes</em> differ: C performs an insert into a second table plus an index
+maintenance operation for every applied message and a rejected insert for every
+duplicate; D performs one conditional <code>UPDATE</code> against a row it was already
+going to touch, and a zero-row <code>UPDATE</code> for every duplicate. Over a year at
+4,000/s that is ~126 billion inbox rows versus zero extra rows. That difference
+— not correctness — is the reason to prefer D when its preconditions hold.</p>
+<p><strong>5.3 Design B</strong> — identical through offset 42. <strong>Divergence at offset 43</strong>:
+<code>(0/43)</code> has never been seen, so the insert succeeds and <code>evt-9f31</code> is applied a
+second time → 130. Everything afterwards is correct again (the zombie at 44 is
+still caught), which is what makes this bug so durable in production: the design
+works for every failure the team has <em>tested</em>, and fails only for the one that
+requires a relay crash to reproduce.</p>
+<hr />
+<h2 id="solutions-level-6--spot-the-flaw">Level 6 — Spot the flaw</h2>
+<p><strong>6.1</strong> Nothing is wrong with the SQL. The flaw is what is <strong>missing</strong>: no
+<code>consumer</code> scoping in the key you would need if any other service shares the
+table (4.2), and — the intended answer — <strong>no retention policy at all</strong>, which
+is correct on day one and an outage by month six (F10). The smallest failing
+scenario is not a correctness trace, it is a capacity one: the table's index
+stops fitting in memory, insert latency crosses the handler's budget, handlers
+exceed <code>max.poll.interval.ms</code>, and the resulting rebalance storm produces
+exactly the zombies the table was protecting you from. Violates <strong>R3</strong>, in the
+direction nobody plans for. Dashboard: inbox size and p99 handler latency
+rising together, weeks before anything breaks.</p>
+<p><strong>6.2</strong> Violates <strong>R1</strong>. The key is derived from content, so two legitimately
+distinct facts with identical content collide — Asha buys the same ₹500 coffee
+twice on the same day and the second purchase is silently swallowed as a
+&quot;duplicate&quot;. Smallest scenario: two identical purchases, one day. Worse, it is
+undetectable from inside the consumer: suppressing a real event and suppressing
+a duplicate look identical. Only the producer knows which two sends are one
+intention; a consumer that invents an identity is guessing. Dashboard: nothing.
+Ever. That is the point.</p>
+<p><strong>6.3</strong> Violates <strong>R1</strong>. Offsets are delivery identity, so this is §10-v1 with
+extra machinery: it survives crashes and rebalances and is defeated by the relay
+republish, the retry topic, a cluster migration and any replay. It is not
+stronger than an inbox, it is strictly weaker, <em>and</em> it costs you a
+<code>ConsumerRebalanceListener</code> and a piece of the group protocol. Smallest
+scenario: relay crashes after <code>send()</code>, republishes, double application.</p>
+<p><strong>6.4</strong> Violates <strong>R1</strong> and D's monotonicity precondition. <code>currentTimeMillis()</code>
+is not monotone across producers (clock skew — see
+<a href="../30-clock-synchronization/notes.html#readme">clock-synchronization</a>), not monotone across a
+single producer's NTP correction, and not unique under 4,000/s on one
+millisecond. Smallest scenario: two events for one member from two producer
+pods whose clocks differ by 30 ms; the later fact carries the smaller number
+and is silently discarded. Note the failure mode is <strong>loss, not duplication</strong> —
+a watermark's failures always are, and that is why its sequence source must be
+a real counter (an outbox row id, an LSN, a per-aggregate version), never a
+clock.</p>
+<p><strong>6.5</strong> Violates <strong>R2</strong>, subtly, and only under a specific timing. The batching
+and sleeping mean the retention job is not atomic with anything: it deletes
+inbox rows in one transaction while the consumer is applying messages in
+another. That is fine. The real flaw is that the job's <em>criterion</em> is
+<code>applied_at</code>, which is when the consumer acted, while the risk it must bound is
+the <strong>redelivery age</strong>, which is measured from the <em>event's</em> creation. A
+message that sat in a retry topic for six days is applied on day 6 and its
+inbox row is deleted on day 13 — seven days of protection for a fact that is
+already thirteen days old, against a replay window everyone believes is seven
+days. The window you think you have and the window you have differ by the
+consumer's own lag. Dashboard: <strong>event age at apply time</strong> — and if that graph
+does not exist, nothing shows this at all.</p>
+<hr />
+<h2 id="solutions-level-7--handle-failure">Level 7 — Handle failure</h2>
+<p><strong>7.1</strong> The move is to stop trying to make one transaction cover two systems
+and instead give the second system its own idempotence.</p>
+<ul>
+<li>Points: inbox row + <code>UPDATE</code> in the Postgres transaction, as before.</li>
+<li>Elasticsearch: index with <code>_id = eventId</code> (or <code>_id = memberId</code> with
+<code>version_type=external, version=seq</code>). An index call with a fixed document id
+is an upsert — naturally idempotent, and the second call produces the same
+document.</li>
+<li>Order: Postgres transaction first, ES second, and let redelivery re-drive ES
+if the consumer dies between them. Committing the offset only after both means
+the failure is a redelivery, and both sides absorb it.</li>
+</ul>
+<p><strong>Not guaranteed:</strong> that the two systems are ever consistent <em>with each other</em>
+at an instant. There is a window where points are awarded and the ES document
+is missing, bounded by the redelivery interval, and if the consumer is down for
+an hour the window is an hour. You are buying per-system idempotence, not
+cross-system atomicity — that would need the effect to be one system, which is
+what <a href="../51-cqrs/notes.html#readme">CQRS</a>'s &quot;the read model is a lagging derived copy&quot; was already
+telling you.</p>
+<p><strong>7.2</strong> This is the <a href="../49-idempotency/notes.html#readme">idempotency</a> lab's v4, unchanged.</p>
+<div class="code"><pre><code>poll → INSERT claim(eventId, state=RUNNING)   COMMIT       (alone)
+     → SMS provider call, carrying idempotency key = eventId
+     → UPDATE claim SET state=DONE, response=… ; effects   COMMIT
+     → commit offset
+</code></pre></div>
+<p>Die after the SMS but before the second commit: the claim sits in <code>RUNNING</code>.
+Two things can re-drive it, and you should have both — the broker's redelivery
+(the offset was never committed, so the message comes back) and a reaper that
+sweeps <code>RUNNING</code> claims older than a threshold, which covers the case where the
+offset <em>was</em> committed. The re-driven call carries the same key, so the provider
+replays its own stored response rather than sending a second SMS. The
+guarantee's last mile lives in the provider, which is the recursion the
+idempotency lab described: each hop's doubt is absorbed by the next hop's key
+table.</p>
+<p><strong>7.3</strong>
+(a) The partition stops. Nothing behind the poison record is processed.
+(b) Unaffected — the other partitions run normally, so aggregate throughput
+barely moves.
+(c) There is <strong>no inbox row</strong>, because the transaction rolls back every time.
+That is correct and is what makes retry safe.
+(d) Queue depth on that partition is <em>flat and low</em>, because one message is
+being retried, not accumulating.</p>
+<p>(d) is the reason for the rule. Depth is a count; a stuck partition has a small
+count and an unbounded <strong>age</strong>. The alarm that fires is &quot;oldest unprocessed
+message age &gt; N minutes&quot;; the alarm that stays silent forever is anything
+counting messages.</p>
+<p><strong>7.4</strong> Design D suppresses replays by construction, so the procedure must make
+the reprocess a <em>different intention</em> rather than a duplicate.</p>
+<ol>
+<li>Decide the scope precisely: which members, which date range, which formula
+version. &quot;Everyone&quot; is a scope; &quot;all of it&quot; is not.</li>
+<li>Do not use the live consumer. Build a <strong>backfill job</strong> that reads the source
+of truth (the payments ledger, or the topic with a dedicated group id) and
+<strong>computes</strong> each member's correct total rather than accumulating deltas.
+Computed totals are assignments — naturally idempotent, safely re-runnable,
+and immune to whatever the watermark says.</li>
+<li>Write the result to a shadow column or table first. Diff against live.
+Expect the diff to be non-empty; investigate any member whose diff is <em>zero</em>
+as hard as any whose diff is large.</li>
+<li>Cut over with an assignment (<code>SET points = :computed</code>) that also sets
+<code>last_seq</code> to the highest sequence included, so the live consumer resumes
+cleanly from the right watermark and does not re-apply events the backfill
+already covered.</li>
+<li>Leave the live consumer running throughout; step 4's watermark write is what
+makes that safe.</li>
+</ol>
+<p>The general principle: <strong>a recomputation is not a replay.</strong> Replay re-applies
+history through a path designed to suppress repetition; recomputation derives
+the answer and assigns it.</p>
+<hr />
+<h2 id="solutions-level-8--design">Level 8 — Design</h2>
+<p><strong>8.1</strong> The four questions, in this order, because each one's answer constrains
+the next:</p>
+<ol>
+<li><strong>What names this message, and does that name survive republication?</strong>
+A bad answer (an offset, a content hash) means every other answer is
+irrelevant — you are deduplicating the wrong thing.</li>
+<li><strong>What makes the record of processing atomic with the effect?</strong> A bad answer
+(a <code>SELECT</code> first, a separate transaction, an in-memory set) costs you
+double-application under every rebalance, i.e. weekly.</li>
+<li><strong>How long must that record survive, and what enforces the limit?</strong> A bad
+answer costs the F5 incident: a repair operation that doubles data, silently,
+run by a human trying to help.</li>
+<li><strong>What would this handler do if the record were gone entirely?</strong> This is the
+quality question. If the honest answer is &quot;nothing bad — the operation is an
+assignment/upsert&quot;, the team needs far less of the machinery above. If it is
+&quot;double the money&quot;, the first three answers had better be excellent.</li>
+</ol>
+<p><strong>8.2</strong> Volume forces the choice. 20,000/s is 1.7 billion messages/day; an inbox
+with any usable retention is 50–150 billion rows, so <strong>design D (watermark)</strong> is
+the only affordable option — <em>if</em> events are keyed by merchant and carry a
+monotone sequence. Against the obligations: R1 satisfied by <code>(merchantId, seq)</code>,
+producer-minted; R2 by a conditional <code>UPDATE</code> on the daily-total row itself, no
+second table; R3 dissolved. Storage is O(merchants × days), a few million rows,
+not O(messages). Precondition to verify explicitly: partitioning is by
+<code>merchantId</code> and retries are <strong>blocking</strong>, because non-blocking retries would
+reorder and the watermark converts reordering into silent loss.</p>
+<p>Page on: <strong>event age at apply time, p99</strong>. It catches lag, stalled partitions,
+and out-of-window replays with one number, and it is the one that would have
+caught every failure in §11 except the zombie (which the conditional write
+handles without human involvement anyway). A daily reconciliation of the totals
+against the payments ledger is the backstop, and its residual is the number you
+publish.</p>
+<p><strong>8.3</strong></p>
+<p><em>Becomes unnecessary:</em> the inbox table, its retention policy, the retention
+runbook line, the watermark's dedup role, and the duplicate-suppression metric.</p>
+<p><em>Does not become unnecessary:</em></p>
+<ul>
+<li><strong>Ordering.</strong> Exactly-once delivery says nothing about sequence; retry topics
+and repartitioning still reorder, and versioning is still required.</li>
+<li><strong>Concurrency control.</strong> Two <em>different</em> messages touching one row still race
+(F9).</li>
+<li><strong>The consumer's dual write.</strong> Your effect is still in a different system from
+your read position; &quot;delivered exactly once&quot; does not mean &quot;your database
+transaction committed&quot;.</li>
+<li><strong>External effects.</strong> The SMS you sent mid-handler is still sent whatever the
+transaction decides, and the payment API still needs its own idempotency key.</li>
+<li><strong>Business duplicates.</strong> Two distinct events describing one real-world fact
+are two messages; delivery semantics cannot see that.</li>
+<li><strong>Reprocessing.</strong> You still need a procedure for recomputation, and it still
+cannot be &quot;replay the topic&quot;.</li>
+</ul>
+<p>The second list is longer than the first, which is the exercise's point:
+&quot;exactly-once&quot; was never the whole problem, and most teams who believe they have
+solved it have solved the smallest part of it.</p>
+<p><strong>8.4</strong> Something close to:</p>
+<blockquote>
+<p>EOS makes read → process → write → commit-offset atomic <strong>inside Kafka</strong>, so
+it fully covers consumers whose only output is another Kafka topic — for those
+it genuinely does remove the need for an inbox. It covers nothing that leaves
+the cluster, so any consumer that writes to a database, calls an API or sends
+a message still needs consumer-side deduplication exactly as before. It also
+has two costs worth stating: a hung transactional producer stalls every
+<code>read_committed</code> consumer until <code>transaction.timeout.ms</code>, and
+<code>isolation.level</code> still defaults to <code>read_uncommitted</code>, so enabling it on
+producers changes nothing until every consumer is changed too.</p>
+</blockquote>
+<p>The class for which the proposal is correct: <strong>Kafka-to-Kafka stream processors</strong>
+(Kafka Streams applications, filters, enrichments, aggregations whose entire
+output is topics and changelogs).</p>
+<p><strong>8.5</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Panel</th>
+  <th>Question it answers</th>
+  <th>Shape that means trouble</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Consumer lag per partition</strong></td>
+  <td>Are we keeping up?</td>
+  <td>One partition flat while others drain = poison record (F7). Alarm on <em>age</em>, not count.</td>
+</tr>
+<tr>
+  <td><strong>Duplicate suppression rate</strong></td>
+  <td>Is the dedup working, and is something upstream misbehaving?</td>
+  <td>A spike = rebalance storm or a republish loop. A permanent <strong>zero</strong> is worse than a spike: it means the mechanism has never been exercised and you do not know whether it works.</td>
+</tr>
+<tr>
+  <td><strong>Event age at apply time (p99 / max)</strong></td>
+  <td>Are we applying facts far older than our dedup remembers?</td>
+  <td>Any value approaching inbox retention. This is the panel almost nobody has, and it is the only one that catches F5 <em>before</em> the double-application.</td>
+</tr>
+<tr>
+  <td><strong>Inbox size and oldest-row age</strong></td>
+  <td>Is retention doing what the runbook claims?</td>
+  <td>Size growing faster than volume (the delete job is losing), or oldest-row age drifting below the documented maximum replay age (your stated guarantee quietly stopped being true).</td>
+</tr>
+</tbody>
+</table></div>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../53-kafka/notes.html"><small>← Lab 53</small>kafka</a><a href="../55-kafka-exactly-once/notes.html" style="text-align:right"><small>Lab 55 →</small>kafka-exactly-once</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-a-message-consumer-inherit-everyone-elses-uncertainty">1. Why does a message consumer inherit everyone else&#x27;s uncertainty?</a><a href="#readme-2-how-does-asha-end-up-with-100-points-for-one-payment">2. How does Asha end up with 100 points for one payment?</a><a href="#readme-3-what-if-the-consumer-simply-remembers-what-it-has-seen">3. What if the consumer simply remembers what it has seen?</a><a href="#readme-4-three-ways-that-memory-fails--which-one-is-actually-interesting">4. Three ways that memory fails — which one is actually interesting?</a><a href="#readme-5-what-is-make-it-idempotent-really-asking-for">5. What is &quot;make it idempotent&quot; really asking for?</a><a href="#readme-6-what-is-the-one-key-idea-underneath-all-of-it">6. What is the one key idea underneath all of it?</a><a href="#readme-7-which-four-words-does-this-lab-have-to-earn">7. Which four words does this lab have to earn?</a><a href="#readme-8-what-picture-should-you-carry-in-your-head">8. What picture should you carry in your head?</a><a href="#readme-9-what-can-the-second-delivery-show-you-that-this-page-cannot">9. What can &quot;The Second Delivery&quot; show you that this page cannot?</a><a href="#readme-10-how-do-you-build-this-and-why-does-each-version-die">10. How do you build this, and why does each version die?</a><a href="#readme-11-what-breaks-when-you-live-behind-a-broker">11. What breaks when you live behind a broker?</a><a href="#readme-12-what-exactly-is-guaranteed-and-how-does-it-stop-holding">12. What exactly is guaranteed, and how does it stop holding?</a><a href="#readme-13-what-does-this-look-like-in-kafka-sqs-rabbitmq-and-cdc">13. What does this look like in Kafka, SQS, RabbitMQ and CDC?</a><a href="#readme-14-which-comfortable-beliefs-about-this-are-wrong">14. Which comfortable beliefs about this are wrong?</a><a href="#readme-15-where-does-this-sit-and-what-should-you-learn-next">15. Where does this sit, and what should you learn next?</a><a href="#readme-16-glossary--what-does-each-word-mean-exactly">16. GLOSSARY — what does each word mean exactly?</a><a href="#readme-17-about-this-lab">17. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

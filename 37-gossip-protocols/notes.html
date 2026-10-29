@@ -1,0 +1,2688 @@
+<!doctype html>
+<html lang="en" data-hub-lab="37-gossip-protocols">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>37. gossip-protocols</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 37 of 71 · Stage 5</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 37 · Copies and Agreement</p><article id="readme"><h1 id="readme-gossip-protocols">Gossip protocols</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Five hundred people are at the school fête, and the buses
+have just been moved to a different gate. Nobody is in charge of telling
+anybody. So Asha turns to the two people nearest her and says it. Each of them
+turns to two more, and a minute later the whole field knows. Arjun was on the
+phone under the mango tree, Dev had gone home early, and half the shouts were
+lost in the noise, and it still got everywhere. That is the whole protocol:
+once a second, tell two random peers everything you know. The number of people
+who know then multiplies instead of creeping up by one.</p>
+</blockquote>
+<p>The cluster you can drive yourself is <a href="visualization.html"><code>visualization.html</code></a>
+— the Rumour Mill, also published at
+<a href="https://claude.ai/code/artifact/25ee9543-4e48-4ea0-8bcd-4f79c1160fdb" target="_blank" rel="noopener">https://claude.ai/code/artifact/25ee9543-4e48-4ea0-8bcd-4f79c1160fdb</a>. What the
+lab is made of, how to run it, and where every number below came from are in
+<a href="#readme-19-about-this-lab">section 19</a>.</p>
+<hr />
+<h1 id="readme-beginner-model">BEGINNER MODEL</h1>
+<h2 id="readme-1-why-does-a-machine-need-to-know-who-else-is-alive">1. Why does a machine need to know who else is alive?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A machine that has not heard its neighbour died keeps
+posting work into a hole. Two machines that disagree about the settings send
+the same request to two different places. And there is nobody to ring five
+hundred machines and tell them.</p>
+</blockquote>
+<p>You have five hundred machines. Every one of them has to keep two kinds of fact
+straight.</p>
+<p>The first kind is <strong>who else is currently working</strong>. Send a request to a machine
+that is gone, and the request simply vanishes.</p>
+<p>The second kind is <strong>the current shared settings</strong>. Which machine owns which
+data. Which version is live. Who the write leader is.</p>
+<p>Nobody can be told these things by a person. Machines join. Machines crash.
+Machines freeze for eight seconds in the middle of garbage collection and then
+come back as if nothing happened.</p>
+<p>If a machine never finds out that another one has died, it keeps sending it work
+that disappears. If two machines disagree about the settings, they send the same
+request to different places, and your data ends up in two homes.</p>
+<p>So here is the problem in one line. Five hundred machines, all of which must
+keep agreeing about a changing set of facts, with no one in charge, on a network
+that loses messages.</p>
+<p>By the end of this lab you will know how a thousand machines agree on who is
+alive and what the current config is — with no coordinator, no broadcast, no
+acknowledgements and no retries.</p>
+<h3 id="readme-what-did-your-last-lab-leave-in-a-black-box">What did your last lab leave in a black box?</h3>
+<p>The <a href="../35-consistent-hashing/notes.html#readme"><code>consistent-hashing</code></a> lab ended with an
+admission. Every client depends on a membership list. While that list is still
+spreading, two clients route the same key to two different machines. That lab
+put a number on the damage and then changed the subject.</p>
+<p>Read the middle column first. It says what the figure is counting.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What the consistent-hashing lab reported</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Keyspace in disagreement while a change spreads</td>
+  <td>9.5%</td>
+  <td>share of keys that two clients would send to different machines</td>
+</tr>
+</tbody>
+</table></div>
+<p>It left the spreading itself as a black box. <strong>This lab is that box.</strong></p>
+<h2 id="readme-2-what-goes-wrong-when-one-person-has-to-ring-five-hundred-families">2. What goes wrong when one person has to ring five hundred families?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The school office can telephone every family, and it works
+right up to the evening the office phone is out. Then nobody hears anything at
+all, and nobody finds out that nobody heard.</p>
+</blockquote>
+<p>Meet a school with 500 families. Ben runs the office. Something changes. Tomorrow's
+trip is cancelled, and every family has to hear about it tonight.</p>
+<p><strong>The obvious plan is Ben's office.</strong> He telephones all 500 families. It works,
+right up until the evening it doesn't.</p>
+<ul>
+<li>One person makes 500 calls. If each takes a minute, the last family hears
+eight hours later.</li>
+<li>If the office line is out, <strong>nobody hears anything</strong>. Not &quot;some people hear
+late&quot; — nobody, ever, because Ben was the only one making calls.</li>
+<li>Every family also has to ring Ben when they move house. So his line is busy
+all evening with 500 families calling in.</li>
+</ul>
+<p><strong>The other obvious plan is that everybody rings everybody.</strong> No single point of
+failure, and it is fast. It also means each family makes 499 calls, and the town
+makes 249,500 calls. Every evening. Whether or not anything has changed.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>A third plan. Five families volunteer as relays. Ben rings
+the five, and each relay rings a hundred families. What breaks?</em></p>
+<details><summary>Reveal</summary>
+
+<p>You have not removed the single point of failure. You have made five of them,
+and now the failure is <em>partial and silent</em>.</p>
+<p>If relay number three is out, a hundred families never hear, and nobody
+notices. From Ben's point of view the call to relay three went through fine.</p>
+<p>If you guessed &quot;nothing much, it is five times faster&quot;, you are right about
+the speed and wrong about the risk. Speed was never the thing that hurt.</p>
+<p>This is the shape of every hierarchical scheme. It converts a total, obvious
+failure into a partial, invisible one. That is usually worse, because you find
+out from the families who missed the trip.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-who-is-on-the-field-on-saturday">Who is on the field on Saturday?</h3>
+<p>Now walk across to the school field. It is Saturday, the fête is on, and the
+same 500 people are standing about in the sun. Nobody has a microphone. Nobody
+has a list. This crowd is the machine you are going to build, so meet the people
+you will be following all the way to the glossary.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>At the fête</th>
+  <th>What they do</th>
+  <th>Where they matter most</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Asha</strong></td>
+  <td>sells tickets at the tea stall, and hears the news first</td>
+  <td>the key idea, section 6</td>
+</tr>
+<tr>
+  <td><strong>Meera</strong></td>
+  <td>standing next to Asha, so she hears it second — and then keeps hearing it</td>
+  <td>when to stop repeating, section 10</td>
+</tr>
+<tr>
+  <td><strong>Priya</strong></td>
+  <td>right at the far end, by the tug-of-war rope</td>
+  <td>the last mile, section 10</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>At the fête</th>
+  <th>What goes wrong for them</th>
+  <th>Where it matters most</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Arjun</strong></td>
+  <td>takes a long phone call under the mango tree, out of sight</td>
+  <td>suspicion and refutation, sections 10 and 11</td>
+</tr>
+<tr>
+  <td><strong>Dev</strong></td>
+  <td>goes home early without telling anybody</td>
+  <td>a genuine crash, section 11</td>
+</tr>
+<tr>
+  <td><strong>Omar</strong></td>
+  <td>stands behind the marquee, beside the amplifiers</td>
+  <td>one cut cable, sections 10 and 11</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where this lab takes you.</strong> Stop at any checkpoint and you still have
+something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Stages</th>
+  <th>You will be able to</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner model</strong></td>
+  <td>1–9</td>
+  <td>explain why a coordinator is not the answer, and what &quot;tell two random friends&quot; buys</td>
+</tr>
+<tr>
+  <td><strong>Intermediate model</strong></td>
+  <td>10</td>
+  <td>walk the protocol step by step and justify every strange-looking detail</td>
+</tr>
+<tr>
+  <td><strong>Engineering model</strong></td>
+  <td>11–14</td>
+  <td>reason about its failures, and state exactly what it does and does not guarantee</td>
+</tr>
+<tr>
+  <td><strong>Production model</strong></td>
+  <td>15</td>
+  <td>read Cassandra's, Consul's and Redis Cluster's docs and know what you are looking at</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-is-one-machine-in-charge-really-such-a-naive-answer">3. Is &quot;one machine in charge&quot; really such a naive answer?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ben's office, translated to servers, is a coordinator. It is
+not a strawman. Several systems you use every day are built exactly that way.</p>
+</blockquote>
+<p>Translated to servers, Ben's office is a <strong>coordinator</strong>: one process that holds
+the real membership list and the real settings. Everyone reports to it, everyone
+reads from it, and it tells everyone about changes.</p>
+<p>This is a completely reasonable design. Kubernetes has etcd. Kafka had ZooKeeper
+and now has a controller quorum. Redis Cluster has a slot table that a
+coordinator publishes.</p>
+<p>The <a href="../35-consistent-hashing/notes.html#readme"><code>consistent-hashing</code></a> lab called this the &quot;fixed
+slots plus a coordinator&quot; answer, and it found real advantages: exact control,
+no disagreement window, placement you can move by hand.</p>
+<p>So the question is not &quot;is a coordinator bad?&quot;. The question is: <strong>what does it
+cost, and what happens when you cannot afford it?</strong></p>
+<h2 id="readme-4-what-are-the-three-costs-and-which-one-is-fatal">4. What are the three costs, and which one is fatal?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A coordinator has to be kept alive, has to be talked to by
+everybody, and has to be reachable. The third one is the killer, because the
+network splits exactly when you most need an answer.</p>
+</blockquote>
+<h3 id="readme-the-first-one-who-keeps-bens-office-alive">The first one: who keeps Ben's office alive?</h3>
+<p>A coordinator that matters cannot be one process. It becomes three or five,
+running a consensus protocol (<a href="../39-paxos/notes.html#readme"><code>paxos</code></a>, Raft) to agree on every
+change. You now operate a distributed database in order to answer &quot;who is
+alive?&quot;.</p>
+<h3 id="readme-the-second-one-what-happens-when-everybody-rings-ben">The second one: what happens when everybody rings Ben?</h3>
+<p>Every machine reports in. Every machine reads the list. The load grows with the
+cluster, and it lands on the one component whose failure is total.</p>
+<h3 id="readme-the-third-one-what-if-you-cannot-reach-ben-at-all">The third one: what if you cannot reach Ben at all?</h3>
+<p>This is the fatal one. When the network splits, the machines on the wrong side
+have no membership list at all. They are up. Their peers are up. And they cannot
+see each other's health, because the thing that told them is on the other side.</p>
+<p>Asha, Meera and Priya are all standing on the same field, perfectly able to talk
+to each other. The one thing that could tell them who is present is on the far
+side of the marquee.</p>
+<p>That is <a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a> arriving exactly where you least want
+it. A consistent coordinator must refuse to answer during a partition, and &quot;who
+is alive?&quot; is a question you need answered <em>especially</em> during a partition.</p>
+<h3 id="readme-and-what-does-everybody-rings-everybody-cost">And what does &quot;everybody rings everybody&quot; cost?</h3>
+<p>Ben's other plan has arithmetic you can do on paper. Experiment 1 prints it, and
+the third column says what each row is counting.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Machines in the cluster</th>
+  <th>Messages each machine sends each second</th>
+  <th>Messages in the cluster each second</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>10</td>
+  <td>9</td>
+  <td>90</td>
+</tr>
+<tr>
+  <td>100</td>
+  <td>99</td>
+  <td>9,900</td>
+</tr>
+<tr>
+  <td>500</td>
+  <td>499</td>
+  <td>249,500</td>
+</tr>
+<tr>
+  <td>1000</td>
+  <td>999</td>
+  <td>999,000</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>At 1,000 machines the all-to-all column says 999 messages per
+machine per second. What does the design in this lab send per machine per
+second at that size — 999, about 100, about 30, or fewer than 10?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Six.</strong> Not six hundred. Six, at every cluster size in that table.</p>
+<p>If you guessed &quot;about a hundred&quot;, you are still imagining a cost that grows
+with the cluster. It does not grow at all. That is the single most surprising
+fact in this lab, and section 6 is where it starts to make sense.</p>
+<p>Experiment 1 prints a second half of that table showing the same comparison in
+full. It is written in words you have not been given yet, so it is held back
+until section 14.</p>
+</details>
+
+</blockquote>
+<p>At 1,000 machines, all-to-all means every machine sends 999 messages <strong>every
+second, for ever</strong>, whether or not anything has changed.</p>
+<h2 id="readme-5-what-would-a-good-answer-actually-have-to-do">5. What would a good answer actually have to do?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Everybody learns everything, nobody is special, each
+machine's bill stays the same as the cluster grows, and none of it depends on
+the network behaving.</p>
+</blockquote>
+<p>Five requirements. Each one is a person on the field. The fifth is the one people
+forget.</p>
+<ol>
+<li><strong>Every machine eventually learns every fact</strong> — memberships and settings.
+Priya, at the far end by the tug-of-war rope, must end up knowing everything
+Asha knows.</li>
+<li><strong>No machine is special.</strong> Any machine may die at any moment without stopping
+the flow of information. When Dev goes home, or Ben's office closes, the news
+has to keep moving anyway.</li>
+<li><strong>Each machine's cost is fixed.</strong> It must not grow as the cluster grows. Meera
+cannot be asked to make more calls just because more families turned up.</li>
+<li><strong>It survives a lossy network</strong> with no acknowledgements and no retry
+bookkeeping. Half of what Asha says is lost in the noise, and nobody is
+keeping a list of what to repeat to whom.</li>
+<li><strong>Machines discover failures themselves.</strong> The thing that would otherwise have
+told them is exactly the thing that might be unreachable. Nobody is going to
+announce that Arjun has stepped away, or that Omar cannot be heard.</li>
+</ol>
+<p>Look at who requirement 5 is really about. Arjun is not gone. Dev is. Omar is
+right there and inaudible. From the outside, all three look identical, and no
+machine on the field can tell them apart.</p>
+<p>Now look hard at the word <strong>eventually</strong> in the first requirement. It is doing
+enormous work, and giving it up is the price of everything else on the list.</p>
+<p>Asha's crowd is not going to know things at the same instant. It is going to know
+them shortly.</p>
+<h2 id="readme-6-what-if-everybody-just-told-two-people">6. What if everybody just told two people?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Once a second, every machine picks two others at random and
+tells them everything it knows. Anyone who hears something new starts telling
+it too. So the number who know multiplies instead of creeping up by one.</p>
+</blockquote>
+<p>Here is the key idea, and it is small enough to say out loud.</p>
+<blockquote>
+<p><strong>Every machine, once a second, picks two other machines at random and tells
+them everything it knows. That is the entire protocol.</strong></p>
+</blockquote>
+<p>Asha, at the tea stall, hears that the buses have moved to Gate 7. She does not
+look for a microphone. She does not fetch a list. She turns to the two people
+nearest her, one of whom is Meera, and says it.</p>
+<p>A minute later Meera turns to two more. So does the other one. So does Asha.
+Nobody keeps a record of who has been told. Some people are told six times.</p>
+<h3 id="readme-why-does-multiplying-beat-adding">Why does multiplying beat adding?</h3>
+<p>Because a person who has just heard the news starts telling it too. So the group
+that knows does not grow by two each minute. It <strong>multiplies</strong>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Minute</th>
+  <th>People on the field who know</th>
+  <th>Why the number is that</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0</td>
+  <td>1</td>
+  <td>only Asha</td>
+</tr>
+<tr>
+  <td>1</td>
+  <td>3</td>
+  <td>Asha plus the two she turned to</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>9</td>
+  <td>each of the three turned to two more</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>27</td>
+  <td>and again</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>81</td>
+  <td>and again</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>500</td>
+  <td>tripling runs out of strangers before it runs out of minutes</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Five hundred people. If Asha's crowd told one new person each
+minute in an orderly chain, it would take 500 minutes. If everyone tells two
+people, how many minutes until the whole field knows — 250, 50, or under 10?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Six.</strong> Doubling would take 9. Tripling takes 6.</p>
+<p>If you said 250, you halved a queue instead of multiplying a group. That is
+the whole difference between a design that scales and one that does not, and
+it comes from a rule you could explain to a child.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-what-are-the-two-numbers-that-decide-everything">What are the two numbers that decide everything?</h3>
+<p>Two quantities run the rest of this lab. Both are things Asha does, before they
+are words, and words before they are symbols.</p>
+<p>The first is how many people she turns to each minute. The second is how many
+minutes pass before the last person on the field has heard.</p>
+<p>Read this table left to right. The story is in column one, the plain sentence in
+column two, and only then the symbol you will see in the code.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The thing at the fête</th>
+  <th>The same thing in words</th>
+  <th>Written as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>how many people Asha turns to each minute</td>
+  <td>the number of randomly chosen peers a node contacts in one round</td>
+  <td><code>fanout</code></td>
+</tr>
+<tr>
+  <td>one minute of the fête</td>
+  <td>one firing of a node's gossip timer</td>
+  <td>a <strong>round</strong></td>
+</tr>
+<tr>
+  <td>minutes until the last person hears</td>
+  <td>rounds until every node has the fact — it grows with the <em>logarithm</em> of the crowd, not with the crowd</td>
+  <td><code>O(log n)</code></td>
+</tr>
+<tr>
+  <td>the field of a thousand people, at fanout 3, taking five minutes</td>
+  <td>with a two-way exchange the informed group multiplies by about four each round, so the count is the logarithm of 1,000 to base 4</td>
+  <td><code>log₄(1000)</code></td>
+</tr>
+<tr>
+  <td>every shout, by everyone, until the news has landed</td>
+  <td>total messages spent on one fact across the whole cluster</td>
+  <td><code>O(n log n)</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>That third row is the reason any of this works. <strong>Doubling the crowd adds one
+round, not double the rounds.</strong> A cluster ten times larger needs roughly two
+more minutes, not ten times as many.</p>
+<p>The story uses two people because two is easy to picture. The runs later in this
+lab use three, and because each exchange goes both ways, three peers means six
+messages per machine per second. That is the <strong>6</strong> from the prediction in
+section 4.</p>
+<h3 id="readme-what-is-the-second-half-of-the-idea">What is the second half of the idea?</h3>
+<p>There is one more piece, and it arrives properly in section 10 once you have
+felt the need for it.</p>
+<p><strong>When two machines exchange what they know, the way they combine their two
+versions must not depend on who spoke first.</strong></p>
+<p>Hold on to that sentence. It is the difference between a protocol and a game of
+telephone.</p>
+<h2 id="readme-7-what-do-engineers-call-the-things-you-have-just-watched">7. What do engineers call the things you have just watched?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten words, and you have already felt the distinction behind
+every one of them. Here is the terminology, each word attached to the moment
+at the fête where you met the thing it names.</p>
+</blockquote>
+<p>The full one-line definitions live in the glossary at the end. What follows is
+the map back to the story.</p>
+<h3 id="readme-what-is-this-family-of-protocols-called-and-what-are-its-two-dials">What is this family of protocols called, and what are its two dials?</h3>
+<p>What Asha's crowd is doing has a name. A <strong>gossip protocol</strong>, also called an
+<em>epidemic protocol</em>, is a family of protocols in which each node periodically
+exchanges state with randomly chosen peers. Information therefore spreads
+probabilistically, rather than along a planned route.</p>
+<p>The word exists to separate this from two neighbours. <strong>Broadcast</strong> is a planned
+delivery to everyone. <strong>Consensus</strong> is an agreement reached before anyone
+proceeds. Gossip promises neither delivery nor agreement. It promises that if you
+wait, everyone ends up knowing. Cassandra nodes gossip once per second with up to
+three peers, which is this exact idea in production.</p>
+<p>You already met one line about &quot;periodic sync/gossip&quot; in a table in
+<a href="../60-distributed-rate-limiting/notes.html#readme"><code>distributed-rate-limiting</code></a>. This lab is that
+line, opened up.</p>
+<p>Two dials control the spread, and section 6 introduced both.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>At the fête</th>
+  <th>The word</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>one minute, when everyone makes their calls</td>
+  <td><strong>round</strong>, also called the <em>gossip interval</em></td>
+  <td>section 6, &quot;each second&quot;</td>
+</tr>
+<tr>
+  <td>how many people you turn to</td>
+  <td><strong>fanout</strong></td>
+  <td>section 6, the two people nearest Asha</td>
+</tr>
+<tr>
+  <td>the moment everybody on the field has the same answer</td>
+  <td><strong>convergence</strong></td>
+  <td>section 6, minute 6</td>
+</tr>
+</tbody>
+</table></div>
+<p>A round is the period between one node's gossip exchanges. In this lab every node
+ticks together, which makes the traces legible. In production each node has its
+own timer and nothing is synchronised. The word matters because it is the unit in
+which the time to reach everybody is stated. &quot;Five rounds&quot; is a portable answer.
+&quot;Five seconds&quot; depends entirely on how you set the timer.</p>
+<p>Fanout is the one dial that trades bandwidth for speed, and its effect is
+lopsided: cost is linear in fanout, benefit is only logarithmic. Fanout 3 in a
+500-node cluster reaches everyone in about 5 rounds. Fanout 1 takes about 8.3
+rounds (experiment 3).</p>
+<p>Convergence is the state in which every node's copy of the shared state is
+identical. Gossip guarantees it <em>eventually and with high probability</em>, never at
+any fixed time. The word exists to name the goal precisely enough to put a number
+on it, and to force the honest qualifier. Convergence is a destination, not a
+promise about when you arrive. It is the eventual consistency of
+<a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a> and the consistency window of
+<a href="../51-cqrs/notes.html#readme"><code>cqrs</code></a>, applied to the membership list rather than to your data.</p>
+<h3 id="readme-which-two-numbers-does-every-machine-carry-about-itself">Which two numbers does every machine carry about itself?</h3>
+<p>Arjun goes under the mango tree to take a call. He is not gone. He is just not
+saying anything. Two small numbers exist entirely because of people like Arjun.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>At the fête</th>
+  <th>The word</th>
+  <th>Where you meet it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>tapping the table every minute so the people near you know you are still there</td>
+  <td><strong>heartbeat counter</strong></td>
+  <td>section 10, version 3</td>
+</tr>
+<tr>
+  <td>coming back and saying &quot;I am here, and that was <em>before</em> — ignore it&quot;</td>
+  <td><strong>incarnation number</strong></td>
+  <td>section 10, version 5</td>
+</tr>
+</tbody>
+</table></div>
+<p>A heartbeat counter is a per-node number that only ever increases. It is gossiped
+with the node's entry. Peers keep the highest value they have seen, and time how
+long since it last moved.</p>
+<p>Why a counter and not a clock? Because a counter answers &quot;is this fresher than
+what I have?&quot; <strong>without comparing clocks</strong>. Two machines' clocks may differ by
+seconds. A number that only goes up needs no agreement about time at all. So
+<code>n5: heartbeat 412</code> merged with <code>n5: heartbeat 419</code> keeps 419, on every machine,
+in any order.</p>
+<p>An incarnation number is a per-node counter that <strong>only that node may increase</strong>.
+It exists because bad news spreads and cannot be un-spread. Once the crowd
+believes Arjun has gone home, no third party can talk it out of that belief. You
+need one authority whose word outranks the rumour, and the only sensible
+authority about Arjun is Arjun.</p>
+<p>So Arjun is suspected at incarnation 1. He comes back, sets incarnation 2, and
+says he is fine. Everyone prefers the higher incarnation, so his correction
+overtakes the rumour wherever it goes. That is the same shape as the <strong>fencing
+token</strong> in <a href="../13-redis/notes.html#readme"><code>redis</code></a> and the expected-version check in
+<a href="../50-event-sourcing/notes.html#readme"><code>event-sourcing</code></a>: a number that decides whose claim is
+current.</p>
+<h3 id="readme-how-does-a-crowd-decide-that-somebody-has-gone-home">How does a crowd decide that somebody has gone home?</h3>
+<p>Dev leaves the fête without telling anybody. Nobody announces it. All anyone has
+is an absence.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>At the fête</th>
+  <th>The word</th>
+  <th>Where you meet it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the rule you use to decide Dev has gone</td>
+  <td><strong>failure detector</strong></td>
+  <td>section 10, versions 3 and 4</td>
+</tr>
+<tr>
+  <td>saying &quot;I think Dev has gone&quot; out loud, so he can contradict you</td>
+  <td><strong>suspicion</strong></td>
+  <td>section 10, version 5</td>
+</tr>
+</tbody>
+</table></div>
+<p>A failure detector is the component that turns silence into a verdict. Typically:
+no evidence of life for some time, then suspect, then dead. The word exists to
+insist that this is a <em>separate, fallible component</em>, not a property of the
+network. It can be wrong in two directions, and the two errors trade against each
+other.</p>
+<p>That is the timeout-versus-retry judgement from
+<a href="../01-networking-for-developers/notes.html#readme"><code>networking-for-developers</code></a>, arriving again.
+You cannot tell a dropped packet from a slow server. You pick a number and you
+accept both kinds of error.</p>
+<p>Suspicion is an intermediate state between alive and dead, gossiped like any
+other fact, which gives the accused a chance to answer before being written off.
+It exists because going straight from alive to dead on a timeout makes a garbage
+collection pause indistinguishable from a crash, and evicts healthy machines.
+Suspicion turns an instant verdict into an appealable one.</p>
+<h3 id="readme-what-are-the-two-ways-to-talk-and-the-two-layers-of-the-system">What are the two ways to talk, and the two layers of the system?</h3>
+<p>Priya is at the far end of the field. Nobody has walked over. She could wait, or
+she could ask.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>At the fête</th>
+  <th>The word</th>
+  <th>Where you meet it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>I tell you; I ask you; we swap</td>
+  <td><strong>push</strong>, <strong>pull</strong>, <strong>push-pull</strong></td>
+  <td>section 10, version 6</td>
+</tr>
+<tr>
+  <td>walking the whole field at the end, comparing notes properly</td>
+  <td><strong>anti-entropy</strong></td>
+  <td>section 10, version 7</td>
+</tr>
+</tbody>
+</table></div>
+<p>Push sends your state to a peer. Pull requests a peer's state. Push-pull does both
+in one exchange. The words exist because the three styles have opposite
+weaknesses, and the difference only shows up at the <em>end</em> of a spread. Push is
+quick to start and slow to finish. Pull is the reverse. Experiment 4 puts numbers
+on both.</p>
+<p>Anti-entropy is a background reconciliation: two machines compare everything they
+hold, in full or as a digest, and fix whatever differs. Its opposite number is
+<strong>rumour mongering</strong>, which spreads individual new facts eagerly and then stops.</p>
+<p>The pair of names exists to label a safety net. Rumour spreading is fast and can
+miss nodes. Anti-entropy is slow and misses nobody. Experiment 5 shows what
+happens without the net: an eager stop rule left 9 nodes in 1,000 without the
+news, for ever. Real systems run both layers, and the names tell you which one you
+are talking about.</p>
+<h2 id="readme-8-where-does-the-crowd-picture-stop-being-true">8. Where does the crowd picture stop being true?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The crowd is a good picture of how news spreads and a bad
+picture of what machines are like. Real people garble rumours, remember who
+they told, and never declare each other dead. Machines do the opposite of all
+three.</p>
+</blockquote>
+<h3 id="readme-the-simple-model-a-rumour-in-a-crowded-room">The simple model: a rumour in a crowded room</h3>
+<p>Two hundred people at a party. One of them learns that the band has cancelled.
+Every minute, each person who knows tells whoever is nearest. Nobody organises it.
+Nobody keeps a list of who has been told. Some people are told six times.</p>
+<p>Within a few minutes the whole room knows. And if a few people had left the party
+halfway through, everyone else would still have found out.</p>
+<h3 id="readme-the-engineering-model-one-row-per-machine-and-one-rule">The engineering model: one row per machine, and one rule</h3>
+<p>Each node holds one row per node, and a rule for combining rows.</p>
+<pre class="mermaid">stateDiagram-v2
+    [*] --&gt; ALIVE : node is running and its heartbeat keeps rising
+    ALIVE --&gt; SUSPECT : no evidence of life for `suspectAfter` rounds
+    SUSPECT --&gt; ALIVE : the node itself refutes, with a higher incarnation
+    SUSPECT --&gt; DEAD : still nothing after `deadAfter` more rounds
+    DEAD --&gt; [*] : no longer gossiped to
+    note right of SUSPECT
+      A verdict that can be appealed.
+      Only the accused node can appeal it.
+    end note
+</pre>
+<p>The whole engineering model is four short facts. The middle column is the machine
+version; the right-hand column says the same thing in plain words.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Part</th>
+  <th>The machine version</th>
+  <th>In plain words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>State a node keeps</td>
+  <td>its own <code>heartbeat</code> and <code>incarnation</code>, plus a table <code>peer → (incarnation, status, heartbeat, last-changed)</code></td>
+  <td>one row about itself, and one row about every peer</td>
+</tr>
+<tr>
+  <td>What a message is</td>
+  <td>that whole table, sent to a random peer</td>
+  <td>&quot;here is everything I believe about everybody&quot;</td>
+</tr>
+<tr>
+  <td>The merge rule</td>
+  <td>keep whichever version is larger, comparing <code>(incarnation, status, heartbeat)</code> in that order</td>
+  <td>when two rows disagree, the larger wins, and &quot;larger&quot; is decided one field at a time</td>
+</tr>
+<tr>
+  <td>The invariants</td>
+  <td>merging is order-independent; a node's own entry is only ever raised by that node; merging the same message twice changes nothing</td>
+  <td>order, duplicates and timing cannot change where you end up</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-parts-of-the-crowd-map-onto-which-parts-of-the-machine">Which parts of the crowd map onto which parts of the machine?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>At the party</th>
+  <th>In the cluster</th>
+  <th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Telling whoever is nearest</td>
+  <td>pick <code>fanout</code> peers uniformly at random</td>
+  <td>Uniform choice is what makes the spread exponential</td>
+</tr>
+<tr>
+  <td>Being told six times</td>
+  <td>redundant delivery</td>
+  <td>The redundancy replaces acknowledgements and retries</td>
+</tr>
+<tr>
+  <td>&quot;The band cancelled at 9:15&quot;</td>
+  <td>version / heartbeat number</td>
+  <td>Lets a listener tell new news from old</td>
+</tr>
+<tr>
+  <td>Somebody insisting they are fine</td>
+  <td>incarnation number</td>
+  <td>The only claim that outranks a rumour</td>
+</tr>
+<tr>
+  <td>Not hearing from a friend all evening</td>
+  <td>failure detector timeout</td>
+  <td>Silence is the only symptom available</td>
+</tr>
+<tr>
+  <td>Comparing notes properly at the end</td>
+  <td>anti-entropy</td>
+  <td>Catches whoever the rumour missed</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-the-story-lies-to-you--read-this-before-you-trust-it">Where the story lies to you — read this before you trust it</h3>
+<p>Four lies. Each is a place where a real cluster is not like a party.</p>
+<p><strong>Rumours mutate; gossip state must not.</strong> The party version gets garbled. Ours is
+defined by a merge rule that is deterministic, commutative and idempotent. Without
+those three properties, two nodes given the same facts in different orders end up
+in <em>different</em> states permanently. That is the difference between a protocol and a
+game of telephone, and it is why section 10 spends so long on one comparison.</p>
+<p><strong>People know who they told; nodes do not.</strong> A node keeps no record of who it has
+informed. That record is exactly the bookkeeping that grows with the cluster, and
+avoiding it is the whole point. The node just keeps saying it.</p>
+<p><strong>A person can ask &quot;are you okay?&quot; and get an answer.</strong> A node cannot. Silence is
+all it ever observes, and silence has three causes it cannot tell apart: crashed,
+busy, unreachable.</p>
+<p><strong>Party guests do not declare each other dead.</strong> Ours do, and it is the most
+dangerous thing they do. Experiment 10 shows a cluster of 100 perfectly healthy
+machines declaring every one of its members dead.</p>
+<h2 id="readme-9-can-you-watch-twenty-machines-do-it">9. Can you watch twenty machines do it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Open the page, tell one machine something, and step the
+rounds. The grid underneath is the interesting part: it shows what each machine
+believes about every other machine.</p>
+</blockquote>
+<p>Go and run the cluster yourself. Open
+<a href="visualization.html"><code>visualization.html</code></a>
+(<a href="https://claude.ai/code/artifact/25ee9543-4e48-4ea0-8bcd-4f79c1160fdb" target="_blank" rel="noopener">https://claude.ai/code/artifact/25ee9543-4e48-4ea0-8bcd-4f79c1160fdb</a>).</p>
+<p>Twenty machines in a ring. Below them, a grid with one row per machine, showing
+what <em>that</em> machine believes about every other.</p>
+<p>The grid is the thing to watch. A column in one colour means the cluster agrees.
+A mottled column is the cluster in two minds — the disagreement window from the
+consistent-hashing lab, made visible.</p>
+<p>In this order:</p>
+<ol>
+<li><strong>Tell n1 something new</strong>, then press <strong>Run one round</strong> five times. Watch the
+violet ring spread: 1, 3, 9, 20. That is Asha's field, in miniature.</li>
+<li>Set message loss to <strong>60%</strong> and do it again. It still gets everywhere.</li>
+<li>Click a machine, press <strong>Crash selected</strong>, and step. That machine is Dev. Watch
+its grid column turn amber a few cells at a time — every machine works it out
+separately.</li>
+<li>Click another, press <strong>Pause selected 5 rounds</strong>, and keep stepping past its
+return. That machine is Arjun under the mango tree. Read the log line where it
+<em>refutes</em> its own death.</li>
+<li>Run situation <strong>7</strong>. Twenty healthy machines, 90% packet loss, and the grid goes
+entirely red. Nothing crashed.</li>
+</ol>
+<p><strong>Step back</strong> undoes one round at a time, so any moment can be replayed.</p>
+<blockquote>
+<p><strong>CHECKPOINT — end of the beginner model.</strong>
+You can now say why a coordinator is not always the answer, what &quot;tell two
+random peers&quot; buys, and why the number that matters is a multiplication rather
+than an addition. What is missing is the mechanism: the exact rule two machines
+use when they compare notes, and why several parts of it look strange until you
+watch the simpler version break.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>fanout</em>, <em>round</em> or <em>convergence</em>,
+explain to a friend why a field of a thousand people takes about five minutes to
+hear something, while a field of a hundred takes about three and a half.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;Everyone who hears it starts telling it too. So the group that knows does not
+grow by a fixed number each minute — it multiplies. Multiplying gets through a
+crowd ten times bigger in about two more minutes, because the question is how
+many times you have to multiply, not how many people are left.&quot;</p>
+</details>
+
+</blockquote>
+<hr />
+<h1 id="readme-intermediate-model">INTERMEDIATE MODEL</h1>
+<h2 id="readme-10-how-would-you-actually-build-this-and-where-would-you-go-wrong">10. How would you actually build this, and where would you go wrong?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight versions. Each one is what a careful engineer writes
+next, and each breaks in a way that forces the following one. Every
+odd-looking detail in the finished protocol is the scar of one of these
+breaks.</p>
+</blockquote>
+<p>This is the actual mechanism, built the way it actually gets built.</p>
+<p>Throughout, keep five machines in your head, <code>n1</code> to <code>n5</code>, and one shared fact.
+The fact is the identity of the current write leader — the machine that accepts
+writes right now.</p>
+<p>At the fête, the same fact is which gate the buses leave from. Asha (machine
+<code>n1</code>) is at the tea stall. Meera, Priya, Arjun (machine <code>n4</code>) and Omar (machine
+<code>n5</code>) are spread across the field. When you read &quot;the leader is <code>n7</code>&quot;, hear
+&quot;the buses go from Gate 7&quot;.</p>
+<h3 id="readme-v1--what-if-you-just-say-what-you-know">v1 — what if you just say what you know?</h3>
+<p>Each node picks a random peer each second and sends its copy of the settings.
+The receiver overwrites its copy with whatever arrived.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Asha learns <code>leader=n7</code> at 09:00:01 — the buses go from Gate
+7. Priya learns <code>leader=n9</code> at 09:00:04, a genuinely newer decision. Both
+start telling people. Where does the field end up?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Nowhere in particular, and different people end up in different places
+permanently.</strong></p>
+<p>Someone who hears Asha last believes Gate 7. Someone who hears Priya last
+believes Gate 9. There is no &quot;last&quot; in a network, only &quot;last as observed by
+me&quot;. So the crowd settles into two camps and stays there.</p>
+<p>If you guessed &quot;the newer one wins because it is newer&quot;, ask who is holding
+the clock. Nobody is. Nothing in v1 carries the information that Gate 9 came
+later.</p>
+<p>Nothing detects this. Every node is behaving correctly by its own rule.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v2--what-if-every-fact-carries-a-version">v2 — what if every fact carries a version?</h3>
+<p>Every fact carries a version number, and on receipt you keep the higher version.
+Asha's announcement is the fourth of the day. Priya's is the fifth.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The two versions</th>
+  <th>Written as</th>
+  <th>What the merge keeps</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the fourth announcement, Gate 7</td>
+  <td><code>leader=n7 (v4)</code></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>the fifth announcement, Gate 9</td>
+  <td><code>leader=n9 (v5)</code></td>
+  <td><code>leader=n9 (v5)</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>That result holds on every node, in any order, however many times each message
+arrives. Three properties now hold, and they are the ones that matter for the
+rest of this lab.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Property</th>
+  <th>In words</th>
+  <th>Why gossip needs it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>commutative</td>
+  <td>combining a and b gives the same answer as combining b and a</td>
+  <td>order does not exist in a network, so it must not matter</td>
+</tr>
+<tr>
+  <td>idempotent</td>
+  <td>the same message twice is the same as once</td>
+  <td>duplicates are free, so nothing has to be de-duplicated</td>
+</tr>
+<tr>
+  <td>monotonic</td>
+  <td>the result is never older than either input</td>
+  <td>information never goes backwards</td>
+</tr>
+</tbody>
+</table></div>
+<p>Together they make &quot;highest version wins&quot; a <strong>join</strong>: the merge always moves the
+node's state upward in an ordering both sides agree on.</p>
+<p>That is the whole correctness argument for the dissemination half of this
+protocol. It is why gossip needs no ordering, no delivery guarantees and no
+de-duplication.</p>
+<h3 id="readme-v3--how-do-you-find-out-who-is-alive">v3 — how do you find out who is alive?</h3>
+<p>The settings were the easy half. Now: who is alive?</p>
+<p>Each node increases its own <strong>heartbeat counter</strong> every round and gossips it.
+Everyone keeps the highest value they have seen for each peer, plus the local
+time at which it last increased.</p>
+<p>Why a counter rather than a timestamp? A timestamp requires two machines to agree
+about the time, and they do not. A counter compared with <code>max</code> needs no agreement
+at all. It is the same trick as v2's version numbers, applied to liveness.</p>
+<p>Detection is then local arithmetic. If a peer's heartbeat has not moved for
+<code>suspectAfter</code> rounds, something is wrong with that peer. At the fête,
+<code>suspectAfter</code> is how many minutes of silence you give somebody before you start
+telling people they have gone home.</p>
+<h3 id="readme-v4--how-long-should-you-wait-before-you-say-somebody-has-gone">v4 — how long should you wait before you say somebody has gone?</h3>
+<p>Arjun is under the mango tree on a call. He is fine. He is just not saying
+anything, and his peers use a three-round timeout.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Arjun is healthy but silent for four rounds. His peers give up
+after three. What fraction of the cluster declares him dead — almost none,
+about a tenth, or nearly all of it?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>About a tenth: 12% of a 50-node cluster.</strong> At 50 nodes,
+<code>java src/Experiments.java 7</code> prints the whole dial, and the last column is
+the one that hurts.</p>
+<p>| <code>suspectAfter</code> (rounds of silence allowed) | Rounds to spot a real crash | Nodes wrongly suspecting a 4-round pause |
+|---|---|---|
+| 1 | 3.6 | 98% |
+| 2 | 3.8 | 81% |
+| 3 | 6.0 | 12% |
+| 5 | 7.9 | 0% |
+| 8 | 11.0 | 0% |</p>
+<p>If you guessed &quot;almost none&quot;, look at the top two rows. At a one-round
+timeout, 98% of the cluster writes Arjun off for stepping away.</p>
+<p><strong>There is no good row.</strong> Fast detection and no false alarms are the same dial
+pulled in opposite directions, because <strong>a crashed node and a busy node produce
+exactly the same observation: nothing.</strong> No cleverness removes this. It is the
+<a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a> lab's &quot;you cannot tell slow from dead&quot;,
+arriving as a number you have to choose.</p>
+</details>
+
+</blockquote>
+<p>So we do not go straight from alive to dead. We add <strong>SUSPECT</strong>: a public
+statement that a node looks gone, gossiped like any other fact, which the accused
+gets a chance to answer.</p>
+<h3 id="readme-v5--why-can-the-accused-not-simply-say-i-am-here">v5 — why can the accused not simply say &quot;I am here&quot;?</h3>
+<p>Arjun comes back. Every other node is saying SUSPECT about him. He says &quot;I am
+alive&quot; — and his message is just one more opinion about Arjun, merged against
+nineteen opinions saying otherwise.</p>
+<p>It is worse than a stalemate. With a naive &quot;worse status wins&quot; rule, the SUSPECT
+rumour keeps circulating and re-infecting every node Arjun corrects. <strong>Arjun is
+dead for ever, while standing right there.</strong></p>
+<p>The fix is to give exactly one node the last word about each node. That is the
+<strong>incarnation number</strong>, which only that node may raise. Arjun sets incarnation 2
+and says ALIVE. The merge rule prefers the higher incarnation over any status, so
+the refutation beats the rumour everywhere it goes, including at nodes the rumour
+reaches first.</p>
+<p>The complete rule is a comparison of three fields in a fixed order.</p>
+<div class="code"><pre><code class="language-java">// PeerState.mergeFrom -- keep whichever state is LARGER, comparing
+// (incarnation, then status, then heartbeat), exactly like version 2.7.1.
+int cmp = Long.compare(in.incarnation, this.incarnation);
+if (cmp == 0) cmp = Integer.compare(in.status.ordinal(), this.status.ordinal());  // ALIVE&lt;SUSPECT&lt;DEAD
+if (cmp == 0) cmp = Long.compare(in.heartbeat, this.heartbeat);
+if (cmp &lt;= 0) return false;      // mine is already at least as new
+</code></pre></div>
+<p>Two things about that snippet are worth more than they look.</p>
+<h4 id="readme-why-does-bad-news-win-at-the-same-incarnation">Why does bad news win at the same incarnation?</h4>
+<p>Within one incarnation, SUSPECT beats ALIVE. Otherwise a suspicion would be
+cancelled by any node that had not heard it yet, and a real failure would never
+be agreed on. Dev really has gone home, and that news has to travel.</p>
+<p>So bad news must travel. Only the accused, carrying a fresh incarnation, may stop
+it.</p>
+<h4 id="readme-why-are-the-fields-compared-in-a-fixed-order-and-never-mixed">Why are the fields compared in a fixed order, and never mixed?</h4>
+<p>Writing this lab I first implemented &quot;take the higher heartbeat, and separately
+take the worse status&quot;. It reads perfectly sensibly out loud. It is wrong.</p>
+<p>The test <code>merging_in_either_order_gives_the_same_answer</code> caught it immediately.
+Forty orderings of the same five facts produced <strong>two different final states</strong>.</p>
+<p>Mixing the fields destroys commutativity, and a cluster whose merge is not
+commutative never converges. Nodes that saw the same news in different orders
+stay different for ever. That test is in <code>Tests.java</code> because of this bug, and
+exercise 6 plants it back for you to find.</p>
+<h3 id="readme-v6--who-tells-priya-at-the-far-end-of-the-field">v6 — who tells Priya, at the far end of the field?</h3>
+<p>With push only, the spread is fast at the start and slow at the finish. Priya is
+the problem. Late in a spread, walking up to a random person is useful only if
+that person is one of the few still in the dark, and by then those are rare.</p>
+<p>Run <code>java src/Experiments.java 4</code> — 500 nodes at fanout 1. The right-hand column
+is the price.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Exchange style</th>
+  <th>Rounds to reach every node</th>
+  <th>Rounds to reach 90% of nodes</th>
+  <th>Messages spent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>PUSH</code> — I tell you</td>
+  <td>16.5</td>
+  <td>11.9</td>
+  <td>8,250</td>
+</tr>
+<tr>
+  <td><code>PULL</code> — I ask you</td>
+  <td>12.0</td>
+  <td>10.4</td>
+  <td>12,000</td>
+</tr>
+<tr>
+  <td><code>PUSH_PULL</code> — we swap</td>
+  <td>8.3</td>
+  <td>7.0</td>
+  <td>8,300</td>
+</tr>
+</tbody>
+</table></div>
+<p>Look at the two round columns for push. Reaching 90% takes 11.9 rounds, and the
+last 10% takes almost as long again.</p>
+<p>Pull has the mirror-image problem: early on, the person you ask probably knows
+nothing. It also has the mirror-image strength. An uninformed node <em>asks</em>, so the
+tail finishes fast. Priya walking over and asking is worth more than twenty
+people walking past her.</p>
+<p>Doing both costs about the same as push and finishes twice as quickly.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Push spends 8,250 messages and pull spends 12,000. Push-pull
+does both jobs in one exchange. Does it cost about 8,250, about 12,000, or
+about 20,000?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>8,300 — essentially the same as push alone.</strong></p>
+<p>If you guessed 20,000, you counted the two directions as two exchanges. They
+are one exchange with a reply, and the exchange stops happening once everybody
+already knows. Finishing sooner is what pays for the reply.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v7--when-do-you-stop-repeating-yourself">v7 — when do you stop repeating yourself?</h3>
+<p>Meera has now heard about Gate 9 from four different people. A node cannot
+repeat every fact for ever, so here is the obvious rule: stop telling a fact once
+you have heard it back a few times. That is evidence it is already widespread.</p>
+<p>This is called <strong>rumour mongering</strong>, and it is a real optimisation.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>1,000 nodes, fanout 1, and each stops repeating a fact after
+hearing it back once. How many nodes never learn it — none, about nine, or
+about a hundred?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Nine. And they never will.</strong> <code>java src/Experiments.java 5</code>, over 40 rounds:</p>
+<p>| Stop rule | Nodes reached | Messages that carried the news | What the row costs you |
+|---|---|---|---|
+| stop after hearing it back once (1x) | 991.0/1000 | 4,696 | 9 nodes never hear it |
+| stop after hearing it back twice (2x) | 998.8/1000 | 6,300 | about 1 node never hears it |
+| stop after hearing it back three times (3x) | 999.8/1000 | 7,584 | a fifth of a node, on average |
+| stop after hearing it back five times (5x) | 1000.0/1000 | 9,917 | nothing, at twice the traffic |
+| never stop (anti-entropy) | 1000.0/1000 | 29,933 | nothing, at six times the traffic |</p>
+<p>If you guessed &quot;none&quot;, you assumed somebody notices the gap. Nobody does. A
+stopped rumour cannot restart, because no node knows that any node is missing
+it.</p>
+<p>Meanwhile the saving is real: 4,696 messages against 29,933, and the gap grows
+with every round that passes.</p>
+<p>So neither layer is optional. Production systems run <strong>rumour mongering</strong> for
+speed. Underneath it they run <strong>anti-entropy</strong>, a slower, always-on exchange of
+full state, which repairs whatever the rumours missed. The
+<a href="../38-anti-entropy/notes.html#readme"><code>anti-entropy</code></a> lab is that second layer in full.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v8--is-omar-quiet-or-can-you-just-not-hear-him">v8 — is Omar quiet, or can you just not hear him?</h3>
+<p>One last break. Omar is standing behind the marquee, next to the amplifiers. He
+can hear the rest of the field perfectly. The rest of the field cannot hear a
+word he says to Asha.</p>
+<p>In machine terms: the cable between <code>n1</code> and <code>n5</code> is cut, and every other link is
+fine.</p>
+<p>With heartbeat gossip, <code>n1</code> keeps seeing <code>n5</code>'s heartbeat rise via the other 18
+nodes, so it never suspects <code>n5</code> — and keeps sending it work it cannot deliver.</p>
+<p>If instead only <em>direct</em> contact counts as proof of life, <code>n1</code> correctly notices
+the problem, and then does something much worse. It declares a healthy node dead,
+and gossips that verdict to nodes for which it is false.</p>
+<p>Run <code>java src/Experiments.java 8</code> — 20 nodes, one cut cable.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>How liveness is judged</th>
+  <th>Nodes that suspect or bury <code>n5</code></th>
+  <th>What the number tells you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>heartbeats via anyone (Cassandra-style)</td>
+  <td>0.0 of 20</td>
+  <td>nobody notices; <code>n1</code> keeps posting into a hole</td>
+</tr>
+<tr>
+  <td>only direct contact counts (SWIM-style)</td>
+  <td>9.7 of 20</td>
+  <td>half the cluster buries a healthy machine</td>
+</tr>
+<tr>
+  <td>direct contact plus 3 indirect probes (SWIM)</td>
+  <td>0.0 of 20</td>
+  <td>the right answer, at the cost of asking around</td>
+</tr>
+</tbody>
+</table></div>
+<p>The third row is the fix, and it is the idea at the heart of SWIM: <strong>before
+blaming a node, ask a few other nodes to try it for you.</strong> If any of them can
+reach it, the problem is the path, not the node.</p>
+<p>That converts an unanswerable question, &quot;is Omar there?&quot;, into an answerable one:
+&quot;can anybody hear Omar?&quot;</p>
+<h3 id="readme-what-does-one-finished-exchange-look-like-end-to-end">What does one finished exchange look like, end to end?</h3>
+<p>Two machines, one exchange. Read the notes down the middle: they are what each
+side does with what it just received.</p>
+<pre class="mermaid">sequenceDiagram
+    participant A as n1
+    participant B as n7
+    Note over A: timer fires: heartbeat++ and pick 2 random peers
+    A-&gt;&gt;B: everything I know (my table + the shared facts)
+    Note over B: merge each row: keep the larger of&lt;br/&gt;(incarnation, status, heartbeat)
+    B-&gt;&gt;A: everything I know
+    Note over A: merge the same way
+    Note over A,B: both sides now hold the join of the two views
+    Note over B: is n1 saying I am SUSPECT at my current incarnation?&lt;br/&gt;then raise my incarnation and say ALIVE
+    Note over A,B: each node then checks its own table:&lt;br/&gt;any peer silent too long moves ALIVE→SUSPECT→DEAD
+</pre>
+<blockquote>
+<p><strong>CHECKPOINT — end of the intermediate model.</strong>
+You can now justify every field in the protocol: versions, heartbeats,
+incarnations, suspicion, push-pull, anti-entropy, indirect probes. Next: what
+happens when the network itself misbehaves — including the failure that takes
+down a cluster in which nothing has failed.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>incarnation</em> or <em>commutative</em>,
+explain to a friend why Arjun cannot clear his name by simply saying &quot;I am
+here&quot;, and what the protocol gives him instead.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;His word counts the same as everyone else's, and there are nineteen of them
+saying he has gone. So he is outvoted for ever, and the old rumour keeps coming
+back round. The fix is to let him stamp his statement with a number that only
+he is allowed to raise. Everyone prefers the higher number, so his correction
+beats the rumour wherever the two meet — even at people who heard the rumour
+first.&quot;</p>
+</details>
+
+</blockquote>
+<hr />
+<h1 id="readme-engineering-model">ENGINEERING MODEL</h1>
+<h2 id="readme-11-what-are-the-failure-scenarios-and-which-of-them-survive">11. What are the failure scenarios, and which of them survive?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight ways this goes wrong. Seven of them the protocol
+handles, and the eighth takes down a cluster in which not a single process has
+failed.</p>
+</blockquote>
+<p>Eight short stories first, then two tables that compare all eight at once. The
+first table is what you would see. The second is what it costs you.</p>
+<h3 id="readme-f1--what-happens-when-dev-simply-goes-home">F1 — what happens when Dev simply goes home?</h3>
+<p>Dev leaves the fête without telling anybody. Nobody is notified, because there is
+nobody to notify.</p>
+<p>For <code>suspectAfter</code> rounds, nothing happens at all. Then peers begin suspecting
+him, one at a time, as each one's own timer runs out. The suspicion is itself a
+fact, so it spreads — which means the last few machines learn it from gossip
+rather than from their own timers. In the 8-node simulation, everyone believes
+the crashed node is dead within 13 rounds of the crash.</p>
+<p>The protocol's answer is the three-state walk: ALIVE, then SUSPECT, then DEAD.
+Dead nodes are dropped from the gossip partner list.</p>
+<p>Convergence holds — every node reaches the same verdict. What bends is the gap
+before it: for several rounds, some machines are still routing work to a machine
+that is gone.</p>
+<p>In a real cluster that gap is the <em>detection latency</em> you tune. It is why a
+service that must fail over fast, such as a database primary, uses a shorter
+timeout than one that merely needs an accurate roster.</p>
+<h3 id="readme-f2--what-happens-when-arjun-is-only-on-the-phone">F2 — what happens when Arjun is only on the phone?</h3>
+<p>Arjun has not left. He is under the mango tree, or in a garbage collection pause,
+or waiting on a slow disk, or in the middle of a long <code>fsync</code>.</p>
+<p>His peers observe exactly what they observed for Dev: silence. So they suspect
+him. With a three-round timeout and a four-round pause, 12% of the cluster
+wrongly suspects him. With a one-round timeout, 98% do.</p>
+<p><em>No</em> failure detector can tell a paused process from a dead one. That is not a
+gap in this implementation; it is the shape of the problem.</p>
+<p>The protocol's answer is suspicion rather than death, plus refutation. Arjun
+raises his incarnation on return and the correction overtakes the rumour. He
+keeps his identity, his data and his place in the ring.</p>
+<p>What bends is the middle: work routed to him stalls during the pause, and if the
+pause runs long enough he is evicted and has to rejoin.</p>
+<p>This is why Cassandra uses a <strong>phi-accrual</strong> detector. Instead of a fixed
+threshold it learns each peer's normal reply distribution and emits a suspicion
+<em>level</em>. A node on a jittery link is given more rope than one that is normally
+instant.</p>
+<h3 id="readme-f3--what-happens-when-a-machine-that-was-declared-dead-comes-back">F3 — what happens when a machine that was declared dead comes back?</h3>
+<p>Arjun again, but this time the verdict has already landed. Without incarnation
+numbers he is re-killed for ever: his &quot;I'm alive&quot; is one vote against many, and
+the old rumour keeps re-infecting the nodes he corrects.</p>
+<p>Bad news has to be monotonic, because F1 needs it to be. So only a distinguished
+authority can reverse it, and the incarnation number is that authority.</p>
+<p>Convergence holds, and so does the rule that no node ever believes itself dead.
+Nothing bends at all — this one is free, once the merge rule is right.</p>
+<p>The same mechanism appears under the same name in SWIM, Serf, memberlist and
+Ringpop.</p>
+<h3 id="readme-f4--what-happens-when-most-of-the-shouting-is-lost">F4 — what happens when most of the shouting is lost?</h3>
+<p>Set message loss to 60% on the page, or run <code>java src/Experiments.java 6</code>.
+Convergence slows and nothing breaks.</p>
+<p>The reason is that every node retries implicitly every round, with <em>different</em>
+partners. There is no retry logic anywhere in this lab, because none is needed.</p>
+<p>Here is the slowdown at 500 nodes and fanout 3. The right-hand column is the one
+to read: it says how much worse than a perfect network each row is.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Packet loss</th>
+  <th>Rounds to converge</th>
+  <th>How much slower than no loss</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0%</td>
+  <td>5.0</td>
+  <td>1.00x</td>
+</tr>
+<tr>
+  <td>40%</td>
+  <td>7.8</td>
+  <td>1.56x</td>
+</tr>
+<tr>
+  <td>80%</td>
+  <td>21.7</td>
+  <td>4.34x</td>
+</tr>
+<tr>
+  <td>95%</td>
+  <td>91.4</td>
+  <td>18.28x</td>
+</tr>
+</tbody>
+</table></div>
+<p>Everything is intact. What bends is latency, and it bends gracefully. Losing four
+messages in five costs you a factor of four, not a broken cluster.</p>
+<p>This is why gossip runs over UDP, and why it is the layer that keeps working when
+TCP-based control planes are timing out.</p>
+<h3 id="readme-f5--can-a-network-fault-kill-a-cluster-in-which-nothing-has-failed">F5 — can a network fault kill a cluster in which nothing has failed?</h3>
+<p>This is the honest limit of the design, and it deserves your full attention.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>100 machines. Not one of them crashes. The network drops 90%
+of packets and the suspicion timeout is three rounds. After 40 rounds, what
+fraction of all the beliefs in the cluster say DEAD?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>All of them.</strong> Every machine has written off every other machine.</p>
+<p>| Packet loss | Processes actually running | Beliefs saying DEAD | Nodes that got the news |
+|---|---|---|---|
+| 60% | 100 of 100 | 15% | 100 of 100 |
+| 80% | 100 of 100 | 64% | 93 of 100 |
+| 90% | 100 of 100 | 100% | 10 of 100 |</p>
+<p>If you guessed &quot;it degrades like F4 did&quot;, you were reasoning about the
+spreading half, which really is that robust. This is the <em>judging</em> half, and it
+has no such property.</p>
+<p>At 90% loss every node has written off every other node, stopped gossiping to
+all of them, and the cluster has gone silent. It cannot recover on its own,
+because recovery would mean talking to nodes it has already buried.</p>
+</details>
+
+</blockquote>
+<p>Silence is the detector's only symptom, and a bad network manufactures unlimited
+silence. Every process is running the whole time.</p>
+<p>There is no response to this in the lab, and that is the point. Nothing useful
+survives, and everything bends, from a network problem that broke no process.</p>
+<p>Real mitigations exist, and every one of them is partial. All four are about the
+same thing: refusing to be certain.</p>
+<ul>
+<li>Adaptive timeouts, such as phi-accrual.</li>
+<li>Lifeguard's trick of extending your own timeouts when <em>you</em> look unhealthy to
+others.</li>
+<li>Never garbage-collecting a &quot;dead&quot; node without an explicit administrative
+removal.</li>
+<li>Alerting on the rate of state changes, rather than on any single node's state.</li>
+</ul>
+<h3 id="readme-f6--what-happens-when-the-field-splits-in-two">F6 — what happens when the field splits in two?</h3>
+<p>The marquee comes down across the middle of the field. Asha's half cannot hear
+Priya's half at all.</p>
+<p>Each half converges internally and is unreachable from the other. Each half sees
+the other half's nodes fall silent and starts suspecting them. From inside, a
+partition looks exactly like &quot;half the cluster died&quot;. That is
+<a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a>, unchanged.</p>
+<p>Healing needs no repair step. The first ordinary message across the mended link
+carries higher versions, and the merge rule does the rest — 1.8 rounds to full
+reconvergence in a 100-node cluster.</p>
+<p>Convergence holds once connectivity returns, and there is no split-brain in the
+<em>data</em> sense, because there is no election and nothing to win. What bends is
+serious. During the split each side has a wrong membership list. Anything built
+on top of it, such as a hash ring or a router, is making decisions from it.</p>
+<p>This is why membership gossip is <strong>AP</strong>. Any decision that must not be made
+twice, such as a leader, a lock or an owner, needs a <strong>CP</strong> mechanism on top.
+Gossip tells you who is probably there. It never tells you who is in charge.</p>
+<h3 id="readme-f7--what-happens-to-the-person-the-rumour-never-reached">F7 — what happens to the person the rumour never reached?</h3>
+<p>Run experiment 5 with an eager stop rule. Nine nodes in 1,000 never learn the
+fact, permanently, and nothing in the system notices.</p>
+<p>The stop rule is local. &quot;I have heard this back twice&quot; cannot know about a node
+that nobody happened to pick.</p>
+<p>The answer is the anti-entropy layer underneath: a full-state exchange that
+eventually compares everything with somebody. Eventual convergence holds
+<em>because of</em> that second layer. With rumour mongering alone the fact would be
+lost entirely.</p>
+<p>Cassandra's gossip carries full digests for exactly this reason, and the
+read-repair and hinted-handoff machinery is the same anti-entropy idea applied to
+data rather than to membership.</p>
+<h3 id="readme-f8--what-happens-when-the-message-itself-grows-with-the-cluster">F8 — what happens when the message itself grows with the cluster?</h3>
+<p>This one is not run in the lab. It is stated, because the arithmetic is plain.</p>
+<p>Each message carries one row per known node. So a 10,000-node cluster is carrying
+a 10,000-row table in every message, several times a second. The payload is the
+whole membership table.</p>
+<p>Real systems answer it three ways. They send a <strong>digest</strong>, which is ids and
+versions only, and let the peer ask for just the rows it lacks. They cap the
+number of updates piggybacked per message, preferring the freshest and
+least-disseminated ones. And they keep packets under the network's MTU: see
+<a href="../01-networking-for-developers/notes.html#readme"><code>networking-for-developers</code></a>, where a message
+above the path MTU is a black hole waiting to happen.</p>
+<p><code>Cluster.java</code> has a <code>maxEntriesPerMessage</code> knob that implements the cap, so
+exercise 5 can put a number on what bounding it costs. What bends is convergence
+speed, because each message now carries less news.</p>
+<h3 id="readme-all-eight-at-once--what-would-you-see">All eight at once — what would you see?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Failure</th>
+  <th>How to create it</th>
+  <th>What you would see</th>
+  <th>Why it happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1 crash</td>
+  <td><code>java src/Sim.java</code> scene 3, or <strong>Crash selected</strong></td>
+  <td>silence, then suspicion spreading node by node; dead in 13 rounds in the 8-node sim</td>
+  <td>nobody is notified; each node notices an absence on its own</td>
+</tr>
+<tr>
+  <td>F2 pause</td>
+  <td><strong>Pause selected 5 rounds</strong>; experiment 7</td>
+  <td>the same silence as F1; 12% wrongly suspect at a 3-round timeout, 98% at 1</td>
+  <td>a paused process and a dead one produce identical observations</td>
+</tr>
+<tr>
+  <td>F3 return</td>
+  <td><code>java src/Sim.java</code> scene 4; test <code>a_node_that_was_only_slow_refutes_its_own_death_and_stays_alive</code></td>
+  <td>without incarnations, the node is re-killed for ever</td>
+  <td>bad news is monotonic by design, so only its subject can reverse it</td>
+</tr>
+<tr>
+  <td>F4 loss</td>
+  <td>page loss 60%; <code>java src/Experiments.java 6</code></td>
+  <td>convergence slows and nothing else changes</td>
+  <td>every round is an implicit retry, with different partners</td>
+</tr>
+<tr>
+  <td>F5 meltdown</td>
+  <td><code>java src/Experiments.java 10</code>, or page situation 7</td>
+  <td>100 healthy machines, 100% of beliefs saying DEAD, cluster silent</td>
+  <td>silence is the only symptom, and a bad network makes unlimited silence</td>
+</tr>
+<tr>
+  <td>F6 partition</td>
+  <td><strong>Split the cluster</strong>; <code>Sim.java</code> scene 5; experiment 9</td>
+  <td>two halves, each converged internally, each suspecting the other</td>
+  <td>from inside, a partition looks exactly like half the cluster dying</td>
+</tr>
+<tr>
+  <td>F7 missed</td>
+  <td>experiment 5 with an eager stop rule</td>
+  <td>9 nodes in 1,000 never hear it, permanently</td>
+  <td>the stop rule is local and cannot know who was skipped</td>
+</tr>
+<tr>
+  <td>F8 payload</td>
+  <td>not run here — stated</td>
+  <td>a 10,000-row table in every message, several times a second</td>
+  <td>the payload is the whole membership table</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-all-eight-at-once--what-does-it-cost-you">All eight at once — what does it cost you?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Failure</th>
+  <th>What the protocol does about it</th>
+  <th>What stays intact</th>
+  <th>What bends</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1 crash</td>
+  <td>ALIVE → SUSPECT → DEAD, and dead peers leave the partner list</td>
+  <td>convergence: every node reaches the same verdict</td>
+  <td>several rounds of work routed to a machine that is gone</td>
+</tr>
+<tr>
+  <td>F2 pause</td>
+  <td>suspicion rather than death, then refutation on return</td>
+  <td>the node's identity, its data, its place in the ring</td>
+  <td>work stalls during the pause; a long enough pause evicts it</td>
+</tr>
+<tr>
+  <td>F3 return</td>
+  <td>the incarnation number, raised only by the node itself</td>
+  <td>convergence, and &quot;no node believes itself dead&quot;</td>
+  <td>nothing — this one is free once the merge rule is right</td>
+</tr>
+<tr>
+  <td>F4 loss</td>
+  <td>nothing; there is no retry logic in the lab at all</td>
+  <td>everything</td>
+  <td>latency only, and gracefully</td>
+</tr>
+<tr>
+  <td>F5 meltdown</td>
+  <td>nothing in this lab — it is the honest limit</td>
+  <td>nothing useful</td>
+  <td>everything, from a fault that broke no process</td>
+</tr>
+<tr>
+  <td>F6 partition</td>
+  <td>nothing on healing; ordinary messages carry higher versions</td>
+  <td>convergence once connectivity returns; no data split-brain</td>
+  <td>each side runs on a wrong membership list while split</td>
+</tr>
+<tr>
+  <td>F7 missed</td>
+  <td>the anti-entropy layer underneath the rumours</td>
+  <td>eventual convergence, because of that second layer</td>
+  <td>it would be lost outright with rumour mongering alone</td>
+</tr>
+<tr>
+  <td>F8 payload</td>
+  <td>digests, a per-message cap, and packets kept under the MTU</td>
+  <td>constant per-node message count</td>
+  <td>convergence slows, because each message carries less news</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-is-actually-guaranteed-and-what-did-the-guarantee-cost">12. What is actually guaranteed, and what did the guarantee cost?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Gossip guarantees that everyone ends up agreeing, and
+guarantees nothing whatsoever about when. Almost every hard question in this
+lab is a question about <em>when</em>.</p>
+</blockquote>
+<h3 id="readme-which-invariants-hold-and-what-enforces-each-one">Which invariants hold, and what enforces each one?</h3>
+<p>Seven promises, each with a named piece of code behind it and a test that fails
+if the code stops keeping it.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Invariant</th>
+  <th>Enforced by</th>
+  <th>Test</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>I1</td>
+  <td>Merging is order-independent</td>
+  <td>the fixed-order comparison in <code>PeerState.mergeFrom</code></td>
+  <td><code>merging_in_either_order_gives_the_same_answer</code></td>
+</tr>
+<tr>
+  <td>I2</td>
+  <td>Merging the same message twice changes nothing</td>
+  <td>the same comparison returning <code>false</code> on a tie</td>
+  <td><code>merging_the_same_news_twice_changes_nothing</code></td>
+</tr>
+<tr>
+  <td>I3</td>
+  <td>Information never moves backwards</td>
+  <td>the merge only ever replaces a smaller tuple with a larger one</td>
+  <td><code>a_higher_incarnation_always_wins</code></td>
+</tr>
+<tr>
+  <td>I4</td>
+  <td>A suspicion may only be overturned by its subject</td>
+  <td>incarnation is raised only in the &quot;somebody is talking about me&quot; branch of <code>Node.merge</code></td>
+  <td><code>a_refuted_node_is_not_re_suspected_by_stale_gossip</code></td>
+</tr>
+<tr>
+  <td>I5</td>
+  <td>Within one incarnation, bad news wins</td>
+  <td><code>status.ordinal()</code> comparison, <code>ALIVE &lt; SUSPECT &lt; DEAD</code></td>
+  <td><code>bad_news_beats_good_news_at_the_same_incarnation</code></td>
+</tr>
+<tr>
+  <td>I6</td>
+  <td>No running node believes itself dead</td>
+  <td>a node always rewrites its own row each round</td>
+  <td><code>no_node_ever_believes_itself_dead</code></td>
+</tr>
+<tr>
+  <td>I7</td>
+  <td>Dead nodes stop receiving traffic</td>
+  <td><code>Node.randomTargets</code> skips <code>DEAD</code> peers</td>
+  <td><code>nobody_keeps_gossiping_to_a_node_declared_dead</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Invariant I4 is Arjun's protection. Invariant I5 is what makes Dev's departure
+stick. Invariant I7 is why nobody keeps walking over to where Dev was standing.</p>
+<h3 id="readme-what-is-guaranteed">What is guaranteed?</h3>
+<p><strong>Eventual convergence, with high probability.</strong> If the network delivers <em>some</em>
+messages, and the membership stops changing, every node reaches the same state.
+This is a probabilistic statement, not a deadline. The probability that a given
+node has not heard after <code>r</code> rounds falls exponentially in <code>r</code>, and it is never
+exactly zero.</p>
+<p><strong>Order independence.</strong> Nodes may receive the same facts in any order, twice, or
+not at all, and still agree.</p>
+<p><strong>Constant cost per node.</strong> The bill is <code>fanout × message size</code>, and it does not
+depend on how big the cluster is.</p>
+<p><strong>Self-healing.</strong> No repair step exists because none is needed. After a
+partition, a crash or a storm of loss, the ordinary mechanism <em>is</em> the recovery
+mechanism.</p>
+<h3 id="readme-what-is-explicitly-not-guaranteed">What is explicitly not guaranteed?</h3>
+<p><strong>No agreement at any instant.</strong> There is no moment at which the cluster &quot;has&quot; a
+membership list. Experiment 9 shows a single crash leaving the cluster with a
+peak of <strong>45% of nodes disagreeing</strong>, for about 10 rounds.</p>
+<p><strong>No delivery guarantee</strong> for any individual message, and no way to know whether
+one arrived.</p>
+<p><strong>No total order.</strong> Two facts published concurrently at different nodes have no
+defined relative order. The version numbers only order <em>updates to the same
+fact</em>. Genuinely concurrent updates need version vectors or a CRDT, which is
+beyond this lab.</p>
+<p><strong>No accuracy from the failure detector.</strong> It is wrong in both directions, by
+design, and F5 shows it can be catastrophically wrong.</p>
+<p><strong>Nothing about leadership.</strong> Gossip cannot elect anything. It reports beliefs; it
+does not create facts.</p>
+<p><strong>No security.</strong> Any node that can talk to the cluster can inject any belief,
+including &quot;everyone is dead&quot;.</p>
+<h3 id="readme-why-is-the-safety-argument-so-short-and-the-liveness-argument-so-long">Why is the safety argument so short, and the liveness argument so long?</h3>
+<p>The unusual thing about gossip is that its <strong>safety property is trivial</strong>.
+Nothing bad can happen from merging states, because the merge is a join over a
+partial order, and every node only ever moves upward in it. There is no
+equivalent of two Raft leaders or a lost committed write.</p>
+<p>So almost everything interesting is a <strong>liveness</strong> question: <em>when</em> does everyone
+know?</p>
+<p>And the one true safety-flavoured failure is F5, the cluster declaring itself
+dead. That one does not come from the gossip at all. It comes from the
+<strong>judgement</strong> layered on top of it.</p>
+<p>That division is worth carrying away. Spreading is robust. Deciding is fragile.</p>
+<h3 id="readme-what-does-it-all-cost-in-one-table">What does it all cost, in one table?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Quantity</th>
+  <th>Cost</th>
+  <th>What the figure means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>messages per node per round</td>
+  <td><code>fanout</code> (×2 for push-pull)</td>
+  <td>independent of cluster size — this is requirement 3 from section 5</td>
+</tr>
+<tr>
+  <td>rounds to converge</td>
+  <td><code>O(log n)</code></td>
+  <td>2 rounds at 10 nodes, 6 at 5,000, both at fanout 3</td>
+</tr>
+<tr>
+  <td>total messages per fact</td>
+  <td><code>O(n log n)</code></td>
+  <td>15,000 for 500 nodes at fanout 3</td>
+</tr>
+<tr>
+  <td>message size</td>
+  <td><code>O(n)</code> naive, <code>O(1)</code> with a cap</td>
+  <td>F8; real systems cap it</td>
+</tr>
+<tr>
+  <td>detection latency</td>
+  <td><code>suspectAfter + deadAfter</code> rounds, plus spread</td>
+  <td>tuned against false positives, and there is no good setting</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-13-which-lines-of-code-carry-the-meaning">13. Which lines of code carry the meaning?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight small files, no build tool, no dependencies. Four
+short passages do nearly all the work, and each one is a thing you have
+already watched happen on the field.</p>
+</blockquote>
+<h3 id="readme-the-four-lines-that-decide-every-disagreement">The four lines that decide every disagreement</h3>
+<p><strong><span class="missing" title="Not in the hub: src/PeerState.java is in the lab folder on your laptop"><code>src/PeerState.java</code></span> — the merge rule.</strong> The whole
+protocol's correctness lives here.</p>
+<div class="code"><pre><code class="language-java">int cmp = Long.compare(in.incarnation, this.incarnation);
+if (cmp == 0) cmp = Integer.compare(in.status.ordinal(), this.status.ordinal());
+if (cmp == 0) cmp = Long.compare(in.heartbeat, this.heartbeat);
+if (cmp &lt;= 0) return false;
+</code></pre></div>
+<p>Fixed order, no mixing. Commutative, idempotent and monotonic — the three
+properties that make ordering, de-duplication and acknowledgement unnecessary.</p>
+<h3 id="readme-the-one-place-a-node-writes-a-number-about-itself">The one place a node writes a number about itself</h3>
+<p><strong><span class="missing" title="Not in the hub: src/Node.java is in the lab folder on your laptop"><code>src/Node.java</code></span> — refutation.</strong> This is Arjun coming back from
+the mango tree, in code. It is the only number a node writes about itself that
+every other node must accept.</p>
+<div class="code"><pre><code class="language-java">if (in.status != Status.ALIVE &amp;&amp; in.incarnation &gt;= incarnation) {
+    incarnation = in.incarnation + 1;     // only I may raise my own incarnation
+    ...
+}
+</code></pre></div>
+<h3 id="readme-the-arithmetic-that-turns-silence-into-a-verdict">The arithmetic that turns silence into a verdict</h3>
+<p><strong><span class="missing" title="Not in the hub: src/Node.java is in the lab folder on your laptop"><code>src/Node.java</code></span> — detection, and its honest comment.</strong> Local
+arithmetic over one number, with a note about what it fundamentally cannot see.
+This is the rule that writes Dev off, and the rule that nearly writes Arjun off.</p>
+<div class="code"><pre><code class="language-java">long silence = round - p.lastChangedRound;
+if (p.status == Status.ALIVE &amp;&amp; silence &gt; suspectAfter) p.status = Status.SUSPECT;
+</code></pre></div>
+<h3 id="readme-the-line-that-makes-a-round-mean-anything">The line that makes a &quot;round&quot; mean anything</h3>
+<p><strong><span class="missing" title="Not in the hub: src/Cluster.java is in the lab folder on your laptop"><code>src/Cluster.java</code></span> — the frozen snapshot.</strong></p>
+<div class="code"><pre><code class="language-java">Map&lt;String, Snap&gt; frozen = new LinkedHashMap&lt;&gt;();
+for (Node n : nodes) if (n.running) frozen.put(n.id, snap(n));
+</code></pre></div>
+<p>Without it, a fact relays through the entire cluster inside one tick, and every
+convergence number in this lab would be a fiction of the simulator. I know,
+because the first version did exactly that. It reported 1,000 nodes converging in
+2.3 rounds, which is faster than theory allows. The fix moved it to 5.0 — bang on
+<code>log₄(1000)</code>.</p>
+<p>The rest of the files: <code>Status</code>, <code>Cluster</code> (the breakable network), <code>Sim</code> (the
+narrated afternoon), <code>Experiments</code>, <code>Tests</code>, and <code>BrokenMerge</code> for exercise 6.</p>
+<h2 id="readme-14-what-will-you-predict-before-you-run-it">14. What will you predict before you run it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten runs. Write your answer down first — the right-hand
+column is deliberately the last thing you should read.</p>
+</blockquote>
+<p>Each row is a question, the command that answers it, and what the number turns
+out to be. Rows 7 and 8 are Arjun and Omar, in numbers. Row 5 is the nine people
+nobody ever walked over to.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>The question</th>
+  <th>Command</th>
+  <th>What the run says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>What does a coordinator-free design cost per node?</td>
+  <td><code>java src/Experiments.java 1</code></td>
+  <td>6 messages per node per second, at every size; all-to-all is 999</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>How does convergence grow with the cluster?</td>
+  <td><code>...2</code></td>
+  <td>if 10 nodes take 2 rounds, 5,000 take 6 — that is <code>log₄ n</code> at fanout 3</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Is a bigger fanout worth it?</td>
+  <td><code>...3</code></td>
+  <td>going from 6 to 10 buys almost nothing, for 67% more traffic for ever</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Who finishes the last mile?</td>
+  <td><code>...4</code></td>
+  <td>push is slower at the <em>end</em>, by nearly 2×</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>What does an eager stop rule lose?</td>
+  <td><code>...5</code></td>
+  <td>nine of 1,000 nodes never hear it, permanently</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Does 80% packet loss break it?</td>
+  <td><code>...6</code></td>
+  <td>a 4.3× slowdown, with no retry logic anywhere</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>How fast should a failure detector be?</td>
+  <td><code>...7</code></td>
+  <td>there is no setting that is good in both columns</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>Who gets blamed for one broken cable?</td>
+  <td><code>...8</code></td>
+  <td>the strict model buries a healthy node; indirect probes fix it</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>How long is the cluster of two minds?</td>
+  <td><code>...9</code></td>
+  <td>45% of nodes disagree at the peak, for about 10 rounds</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>Can a network fault kill a cluster with no failed process?</td>
+  <td><code>...10</code></td>
+  <td>at 90% loss, all 100 healthy machines declare all the others dead</td>
+</tr>
+</tbody>
+</table></div>
+<p>And end to end, one narrated afternoon in an 8-node cluster: <code>java src/Sim.java</code>.</p>
+<blockquote>
+<p><strong>CHECKPOINT — end of the engineering model.</strong>
+You can now defend the protocol under loss, partition, pauses and false
+verdicts, and you know its one catastrophic mode. What remains is the distance
+between this lab and the systems on your cluster.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>detector</em>, <em>timeout</em> or <em>partition</em>,
+explain to a friend how a hundred perfectly healthy machines can end up
+convinced that every one of them is dead.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;The only evidence any machine has that another one is alive is hearing from
+it. A bad enough network means almost nothing gets through. So every machine
+waits, hears nothing, and concludes the others have gone — and once it has
+concluded that, it stops trying to talk to them. Now there is no way back,
+because getting back would mean talking to the machines it has already written
+off.&quot;</p>
+</details>
+
+</blockquote>
+<hr />
+<h1 id="readme-production-model">PRODUCTION MODEL</h1>
+<h2 id="readme-15-what-does-a-real-system-add-that-this-lab-leaves-out">15. What does a real system add that this lab leaves out?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The shape is the same. What changes is that nothing ticks
+together, the message is a summary rather than the whole table, and the
+timeout learns instead of sitting still.</p>
+</blockquote>
+<p>Everything below is the same field, at production scale. Asha is still telling
+two people. Arjun is still under the mango tree. What a real system adds is
+mostly better judgement about Arjun, and a smaller thing to say to Meera.</p>
+<h3 id="readme-from-this-toy-to-the-real-thing--what-changes-and-why">From this toy to the real thing — what changes, and why?</h3>
+<p>Read the right-hand column first. It says why the toy is not enough.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In this lab</th>
+  <th>In real systems</th>
+  <th>Why the toy is not enough</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>lock-step rounds</td>
+  <td>each node's own timer; nothing synchronised</td>
+  <td>Real gossip has no rounds; the spread shape is the same, and the reasoning about &quot;rounds&quot; becomes &quot;gossip intervals&quot;</td>
+</tr>
+<tr>
+  <td>whole table in every message</td>
+  <td>digests (id + version), then a targeted exchange of differences; Merkle trees for data anti-entropy</td>
+  <td>F8: the payload cannot be allowed to grow with the cluster</td>
+</tr>
+<tr>
+  <td>fixed <code>suspectAfter</code></td>
+  <td><strong>phi-accrual</strong> (Cassandra): learns each peer's reply distribution and outputs a suspicion level</td>
+  <td>Experiment 7 has no good row; an adaptive detector picks the row per peer, continuously</td>
+</tr>
+<tr>
+  <td>SUSPECT plus incarnation</td>
+  <td><strong>SWIM</strong> (Consul/Serf, memberlist, Ringpop): direct ping, then indirect ping via k peers, then suspicion with a timeout, plus <strong>Lifeguard</strong> refinements</td>
+  <td>Experiment 8: reachability is per-observer, so a second opinion is mandatory</td>
+</tr>
+<tr>
+  <td>everyone knows everyone at boot</td>
+  <td><strong>seed nodes</strong>: a handful of well-known addresses, and the rest is learned by gossiping</td>
+  <td>Bootstrapping is a real problem this lab skips entirely</td>
+</tr>
+<tr>
+  <td>one config value</td>
+  <td>membership plus schema versions plus token ranges plus load plus datacentre and rack topology, all gossiped together</td>
+  <td>The payload is where the design effort actually goes</td>
+</tr>
+<tr>
+  <td>in-memory, one process</td>
+  <td>UDP for probes, TCP for state sync, both encrypted and authenticated</td>
+  <td>Anyone who can send a packet can currently inject &quot;everyone is dead&quot;</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-real-systems-should-you-go-and-read">Which real systems should you go and read?</h3>
+<p><strong>Cassandra</strong> gossips once per second with up to three peers. Its per-node state
+is <code>(generation, version)</code>, where generation is the boot count and therefore
+plays the role of the incarnation number. Failure detection is phi-accrual. Every
+idea in this lab appears there, under these names.</p>
+<p><strong>Consul, Serf and HashiCorp memberlist</strong> are a direct SWIM implementation, plus
+<strong>Lifeguard</strong>. Lifeguard's core insight is that a node that is <em>itself</em>
+overloaded should be more forgiving of others, because its own observations are
+suspect. That is the honest answer to F5 that this lab does not implement.</p>
+<p><strong>Redis Cluster</strong> runs its cluster bus as gossip. A node's private suspicion is
+called PFAIL; it is promoted to a cluster-wide FAIL verdict only once a majority
+of primaries agree. Note the difference from this lab: Redis requires a
+<strong>quorum</strong> before a verdict becomes binding, precisely to avoid one node burying
+a healthy peer. Worth pairing with <a href="../13-redis/notes.html#readme"><code>redis</code></a>.</p>
+<p><strong>Ringpop</strong>, from Uber, is SWIM plus consistent hashing — exactly the pairing the
+<a href="../70-uber-system-design/notes.html#readme"><code>uber-system-design</code></a> lab needed to answer &quot;which node
+owns which driver&quot;.</p>
+<p><strong>Amazon Dynamo</strong>, the 2007 paper, is the origin of gossiped membership plus
+consistent hashing in one design, and still the clearest short read.</p>
+<p><em>(These descriptions come from published papers and documentation. Treat the
+details as &quot;how these systems have been described&quot;, not as a guarantee about the
+version you are running.)</em></p>
+<h3 id="readme-what-has-this-lab-intentionally-left-out">What has this lab intentionally left out?</h3>
+<p>Ten things, each of which a real deployment has to answer.</p>
+<ul>
+<li>Bootstrapping from seed nodes.</li>
+<li>Digests and delta exchange.</li>
+<li>Merkle-tree anti-entropy over data.</li>
+<li>Phi-accrual detection.</li>
+<li>Lifeguard.</li>
+<li>Encryption and authentication.</li>
+<li>NAT and multi-datacentre topology, where real systems gossip <em>less</em> across
+datacentre links.</li>
+<li>Version vectors for genuinely concurrent updates.</li>
+<li>Persistent membership across restarts, and explicit leave and join
+announcements.</li>
+<li>Quorum-gated verdicts.</li>
+</ul>
+<h3 id="readme-what-does-an-on-call-engineer-actually-watch">What does an on-call engineer actually watch?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Signal</th>
+  <th>Why it is the one that matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Convergence time</strong> — fact published until all nodes have it</td>
+  <td>The number everything else is a proxy for</td>
+</tr>
+<tr>
+  <td><strong>Membership flap rate</strong> — state changes per node per hour</td>
+  <td>A rising flap rate is the early warning for F2 and F5, long before an outage</td>
+</tr>
+<tr>
+  <td><strong>Nodes in SUSPECT</strong>, as a rate rather than a state</td>
+  <td>A steady trickle is normal; a spike is a network event, not a node event</td>
+</tr>
+<tr>
+  <td><strong>Disagreement</strong> — distinct membership views across the cluster</td>
+  <td>The window from experiment 9 — directly, the thing that misroutes requests</td>
+</tr>
+<tr>
+  <td><strong>Gossip message rate and size</strong></td>
+  <td>Where F8 shows up, before it becomes a packet-size cliff</td>
+</tr>
+<tr>
+  <td><strong>Phi values and suspicion levels per peer</strong></td>
+  <td>Which links are marginal, before they are broken</td>
+</tr>
+</tbody>
+</table></div>
+<p>The alerting rule worth stealing: <strong>alert on the rate of membership change, not
+on any node's membership state.</strong></p>
+<p>A single node marked dead is routine. Fifty marked dead in a minute is a network
+event, and F5 says your cluster may be about to write itself off.</p>
+<h3 id="readme-which-trade-offs-will-you-actually-be-asked-about">Which trade-offs will you actually be asked about?</h3>
+<ol>
+<li><strong>Fanout</strong> — cost is linear, benefit is logarithmic. Real systems sit near 3.</li>
+<li><strong>Gossip interval</strong> — detection latency against constant background traffic.</li>
+<li><strong>Suspicion timeout</strong> — false positives against slow failover. There is no good
+setting; adaptive detectors choose per peer, continuously.</li>
+<li><strong>Rumour mongering against anti-entropy</strong> — speed and cheapness against
+completeness. Run both.</li>
+<li><strong>Hearsay against direct evidence</strong> — a cheap, forgiving view of liveness
+against an accurate view of <em>reachability</em> that needs second opinions to be
+safe.</li>
+<li><strong>Gossip against a coordinator</strong> — no single point of failure and constant
+per-node cost, bought with permanent uncertainty about the present moment.
+That is the <a href="../35-consistent-hashing/notes.html#readme"><code>consistent-hashing</code></a> lab's
+&quot;coordination for control&quot; trade, seen from the other side.</li>
+</ol>
+<blockquote>
+<p><strong>CHECKPOINT — production model.</strong> You can now read the Cassandra gossip docs,
+the SWIM paper and Redis Cluster's PFAIL/FAIL rules and recognise every moving
+part, including the ones this lab deliberately left out.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>gossip</em>, <em>quorum</em> or <em>consensus</em>,
+explain to a friend why the crowd on the field can tell you who is probably
+there, but can never tell you who is in charge.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;Everyone is passing on what they last heard, and nobody is counting votes. So
+the crowd is very good at spreading a fact that somebody else already decided,
+and completely unable to decide one. Two halves of a split field would each
+happily crown their own captain, and nothing in the passing-it-on would ever
+notice.&quot;</p>
+</details>
+
+</blockquote>
+<h2 id="readme-16-can-you-do-it-yourself">16. Can you do it yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs of exercises, from saying it in your own words to
+designing membership for three datacentres. Three of them need nothing but the
+page and your head.</p>
+</blockquote>
+<p><a href="notes.html#exercises"><code>EXERCISES.md</code></a> has eight rungs, from explaining it in your own
+words to designing membership for three datacentres. Answers are in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a> — try first, especially the predictions.</p>
+<h2 id="readme-17-what-did-this-lean-on-and-what-comes-next">17. What did this lean on, and what comes next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab is the knowledge map's missing box between
+consistent hashing and everything that needs a membership list. What you learn
+next depends on whether &quot;eventually&quot; was good enough for you.</p>
+</blockquote>
+<pre class="mermaid">flowchart TB
+    subgraph prereq[&quot;Already learned — this lab leaned on all of these&quot;]
+      CAP[&quot;cap-theorem&lt;br/&gt;membership gossip is AP&quot;]
+      CH[&quot;consistent-hashing&lt;br/&gt;the membership list this fills in&quot;]
+      REDIS[&quot;redis&lt;br/&gt;cluster bus, PFAIL/FAIL, fencing&quot;]
+      PAXOS[&quot;paxos&lt;br/&gt;what gossip deliberately is not&quot;]
+      NET[&quot;networking-for-developers&lt;br/&gt;timeouts, MTU, loss&quot;]
+      UBER[&quot;uber-system-design&lt;br/&gt;Ringpop: who owns which driver&quot;]
+    end
+    GOSSIP[&quot;**gossip-protocols**&lt;br/&gt;random exchange + a merge that&lt;br/&gt;does not care about order&quot;]
+    prereq --&gt; GOSSIP
+    GOSSIP --&gt; CRDT[&quot;crdts&lt;br/&gt;merge rules for data,&lt;br/&gt;not just membership&quot;]
+    GOSSIP --&gt; QUORUM[&quot;quorums-and-replication&lt;br/&gt;when eventually is not enough&quot;]
+    GOSSIP --&gt; RAFT[&quot;raft&lt;br/&gt;the CP answer, in full&quot;]
+    GOSSIP --&gt; VC[&quot;vector-clocks&lt;br/&gt;ordering concurrent updates&quot;]
+</pre>
+<h3 id="readme-what-is-this-commonly-confused-with">What is this commonly confused with?</h3>
+<p>Six pairs, and the one sentence that separates each.</p>
+<p><strong>Gossip against broadcast.</strong> Broadcast plans a delivery to everyone; gossip
+makes no plan and relies on repetition. That is why broadcast fails completely
+when a link fails, and gossip merely slows down.</p>
+<p><strong>Gossip against consensus (Raft, Paxos).</strong> Consensus decides <em>one</em> value and can
+tell you it is decided. Gossip spreads values somebody else decided, and can
+never tell you it is finished. Use consensus to pick a leader; use gossip to tell
+everyone who it is.</p>
+<p><strong>Gossip against a heartbeat to a monitor.</strong> A monitor is one observer with one
+opinion; gossip has many observers whose opinions merge. That is why gossip
+degrades into &quot;half the cluster disagrees&quot; rather than &quot;the monitor is down and
+nobody knows anything&quot;.</p>
+<p><strong>Anti-entropy against rumour mongering.</strong> Same protocol family, opposite jobs.
+Rumours are fast and can miss. Anti-entropy is slow and misses nobody.</p>
+<p><strong>Failure detector against failure.</strong> The detector is a component with its own
+error modes. Experiment 10 is entirely a detector failure with zero process
+failures — a distinction that matters enormously at 3am.</p>
+<p><strong>Eventually consistent against eventually convergent.</strong> Convergence is about
+<em>replicas of the same state agreeing</em>. Consistency is about what a <em>reader</em> is
+promised. Gossip gives you the first; what a client sees is a separate design
+question.</p>
+<h3 id="readme-what-should-you-type-next">What should you type next?</h3>
+<div class="code"><pre><code class="language-bash">/learn crdts                    # the merge rule of §10 v2, generalised to real data
+/learn quorums-and-replication  # R + W &gt; N: what to do when eventual is not enough
+/learn raft                     # the CP answer in full; the tool gossip cannot replace
+/learn vector-clocks            # ordering updates that gossip&#x27;s version numbers cannot
+/learn kafka                    # the last unopened box in the consistent-hashing map
+</code></pre></div>
+<h2 id="readme-18-glossary--what-does-each-word-mean-exactly">18. Glossary — what does each word mean, exactly?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Twenty words, one line each. Every one of them is something
+you watched happen on the field before it was given a name.</p>
+</blockquote>
+<p>In order of first appearance, split into four groups so that each one fits on a
+screen.</p>
+<p><strong>The two designs.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>coordinator</strong></td>
+  <td>A designated node that holds the authoritative state; simple, and a single point of failure and unavailability.</td>
+</tr>
+<tr>
+  <td><strong>gossip protocol (epidemic protocol)</strong></td>
+  <td>Each node periodically exchanges state with a few random peers, so facts spread by repetition rather than by plan.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The dials and the goal.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>round (gossip interval)</strong></td>
+  <td>One firing of a node's gossip timer; the unit convergence is measured in.</td>
+</tr>
+<tr>
+  <td><strong>fanout</strong></td>
+  <td>How many random peers a node contacts per round; cost is linear in it, speed logarithmic.</td>
+</tr>
+<tr>
+  <td><strong>convergence</strong></td>
+  <td>The state in which every node holds identical state — guaranteed eventually and probabilistically, never at a fixed time.</td>
+</tr>
+<tr>
+  <td><strong>push / pull / push-pull</strong></td>
+  <td>I tell you / I ask you / we swap; push starts fast and finishes slowly, pull the reverse.</td>
+</tr>
+<tr>
+  <td><strong>merge rule (join)</strong></td>
+  <td>The order-independent function combining two views; commutative, idempotent and monotonic, which is why gossip needs no ordering or acknowledgements.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The numbers a node carries, and the verdicts it reaches.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>heartbeat counter</strong></td>
+  <td>A per-node number that only increases, so freshness can be compared without any agreement about clocks.</td>
+</tr>
+<tr>
+  <td><strong>incarnation number</strong></td>
+  <td>A per-node counter only that node may raise, letting it overrule the cluster's belief about itself.</td>
+</tr>
+<tr>
+  <td><strong>failure detector</strong></td>
+  <td>The rule that turns silence into a verdict; a fallible component, wrong in both directions.</td>
+</tr>
+<tr>
+  <td><strong>suspicion</strong></td>
+  <td>A public, appealable &quot;this node looks gone&quot;, sitting between alive and dead.</td>
+</tr>
+<tr>
+  <td><strong>detector meltdown</strong></td>
+  <td>A cluster in which no process has failed writing every member off, because the network manufactured enough silence.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The two layers, and what production adds.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>anti-entropy</strong></td>
+  <td>A slow, always-on exchange of full state that repairs whatever the fast rumours missed.</td>
+</tr>
+<tr>
+  <td><strong>rumour mongering</strong></td>
+  <td>Spreading a new fact eagerly and stopping once it has been heard back a few times.</td>
+</tr>
+<tr>
+  <td><strong>piggybacking</strong></td>
+  <td>Carrying updates on messages that were being sent anyway.</td>
+</tr>
+<tr>
+  <td><strong>digest</strong></td>
+  <td>Ids and versions only, so a peer can ask for just what it lacks instead of receiving everything.</td>
+</tr>
+<tr>
+  <td><strong>seed node</strong></td>
+  <td>A well-known address a joining node contacts to discover the rest of the cluster.</td>
+</tr>
+<tr>
+  <td><strong>phi-accrual detector</strong></td>
+  <td>A detector that learns each peer's normal timing and outputs a suspicion level instead of a yes/no.</td>
+</tr>
+<tr>
+  <td><strong>SWIM</strong></td>
+  <td>The membership protocol built on direct probe → indirect probe → suspicion → refutation.</td>
+</tr>
+<tr>
+  <td><strong>Lifeguard</strong></td>
+  <td>SWIM refinements in which an overloaded node distrusts its own observations and becomes more forgiving.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<h3 id="readme-how-do-you-run-it">How do you run it?</h3>
+<div class="code"><pre><code class="language-bash">java src/Sim.java           # one narrated afternoon in an 8-node cluster
+java src/Experiments.java   # ten measurements (or pass 1-10 for one)
+java src/Tests.java         # 12 guarantees, asserted
+java src/Tests.java broken  # the planted-bug merge rule, for exercise 6
+</code></pre></div>
+<p>The page is <a href="visualization.html"><code>visualization.html</code></a> — the Rumour Mill, also
+published at
+<a href="https://claude.ai/code/artifact/25ee9543-4e48-4ea0-8bcd-4f79c1160fdb" target="_blank" rel="noopener">https://claude.ai/code/artifact/25ee9543-4e48-4ea0-8bcd-4f79c1160fdb</a>. Twenty
+machines, every rule exposed as a switch, and seven predict-then-run situations.</p>
+<h3 id="readme-where-did-the-numbers-come-from">Where did the numbers come from?</h3>
+<p>Every figure in this document was measured by running the Java simulator in this
+folder, on one machine, with no network involved. Runs that involve randomness
+are averaged over repeated trials, which is why several results are printed with
+a decimal point — 8.3 rounds, 9.7 nodes, 998.8 nodes reached.</p>
+<p>The one number that is not measured is F8's 10,000-row message. That is stated
+arithmetic, not a run.</p>
+<p>The simulator's convergence figures are only meaningful because of the frozen
+snapshot in <code>Cluster.java</code> described in section 13. The first version of the
+engine let a fact relay across the whole cluster inside one tick and reported
+1,000 nodes converging in 2.3 rounds. That was verified against theory, found to
+be impossible, and fixed; the corrected figure is 5.0 rounds.</p>
+<p>The twelve assertions in <code>Tests.java</code> are run headlessly and all pass. The
+<code>broken</code> variant deliberately fails several of them, which is the point of
+exercise 6.</p>
+<h3 id="readme-what-is-in-this-folder">What is in this folder?</h3>
+<div class="code"><pre><code>README.md              this document
+EXERCISES.md           eight rungs, from &quot;explain it&quot; to &quot;design it for three datacentres&quot;
+SOLUTIONS.md           worked answers — try first
+visualization.html     the Rumour Mill (also published as an artifact)
+src/Status.java        ALIVE / SUSPECT / DEAD, and why the order matters
+src/PeerState.java     one row of the membership list, and THE merge rule
+src/Node.java          a member: its view, its merge, its refutation, its detection
+src/Cluster.java       the breakable network and the round loop
+src/Sim.java           one narrated afternoon in an 8-node cluster
+src/Experiments.java   ten measurements
+src/Tests.java         twelve guarantees (`java src/Tests.java broken` for exercise 6)
+src/BrokenMerge.java   the planted bug
+</code></pre></div>
+<h3 id="readme-where-does-this-sit-among-your-other-labs">Where does this sit among your other labs?</h3>
+<p>It is the box that <a href="../35-consistent-hashing/notes.html#readme"><code>consistent-hashing</code></a> left closed:
+how the membership list every client depends on actually gets everywhere. Its
+sequel is <a href="../38-anti-entropy/notes.html#readme"><code>anti-entropy</code></a>, which takes the merge rule you
+built here and asks what goes and looks for the copies the rumours missed.</p>
+<p>The cast is Asha, Meera, Priya, Arjun, Ben, Dev and Omar. They are the same
+people you will meet in the other labs in this folder.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--gossip-protocols">Exercises — gossip protocols</h1>
+<p>Eight rungs. Rungs 1–3 need only the page and your head; 4–7 need the code; 8 is
+a design conversation. Answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a> — attempt first,
+especially the predictions.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Explain to a colleague who has never heard of this why a cluster of 500
+machines does not just keep the membership list on one machine. Do not use the
+words CAP, quorum or consensus.</p>
+<p><strong>1.2</strong> In two sentences, why does telling two random peers per round reach
+everybody in about five rounds rather than 250?</p>
+<p><strong>1.3</strong> A colleague says: &quot;Gossip is just eventual consistency for the membership
+list, so we can use it to elect the leader too.&quot; What is wrong with the second
+half of that sentence?</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a> and reset it.</p>
+<p><strong>2.1</strong> Press <strong>Tell n1 something new</strong> and run three rounds. How many machines
+have the news, and what is the ratio between consecutive rounds?</p>
+<p><strong>2.2</strong> Click any machine. What does the inspector show it believes about the
+other 19? Now look at the ring: whose opinion is it showing while a machine is
+selected — the cluster's or that machine's?</p>
+<p><strong>2.3</strong> In the belief grid, find a column that is not all one colour. What does a
+mixed column mean, and which stat box in the panel above puts a number on it?</p>
+<p><strong>2.4</strong> In <span class="missing" title="Not in the hub: src/PeerState.java is in the lab folder on your laptop"><code>src/PeerState.java</code></span>, find the four lines that
+decide every disagreement in the whole protocol. In
+<span class="missing" title="Not in the hub: src/Node.java is in the lab folder on your laptop"><code>src/Node.java</code></span>, find the one place a node writes a number about
+<em>itself</em> that every other node must accept.</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Write the answer down before running the command.</p>
+<p><strong>3.1</strong> 5,000 nodes, fanout 3, push-pull. If 10 nodes converge in 2 rounds, how
+many rounds for 5,000? <code>java src/Experiments.java 2</code></p>
+<p><strong>3.2</strong> 1,000 nodes, fanout 1, and each node stops repeating a fact once it has
+heard it back <strong>once</strong>. How many nodes never learn it, and can they recover?
+<code>java src/Experiments.java 5</code></p>
+<p><strong>3.3</strong> Which is slower to reach the <em>last</em> node: push-only or pull-only? By how
+much? <code>java src/Experiments.java 4</code></p>
+<p><strong>3.4</strong> 100 machines, none of which crash, on a network dropping 90% of packets,
+with a 3-round suspicion timeout. After 40 rounds, what fraction of all beliefs
+say DEAD? <code>java src/Experiments.java 10</code></p>
+<p><strong>3.5</strong> The cable between n1 and n5 is cut; every other link is fine. Under
+Cassandra-style heartbeat gossip, how many of the 20 nodes end up suspecting n5?
+<code>java src/Experiments.java 8</code></p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>For each: what breaks, why, and is what you lost <strong>safety</strong> (something wrong
+happens) or <strong>liveness</strong> (something good stops happening)?</p>
+<p><strong>4.1</strong> In <code>Experiments.convergenceVsSize</code>, change fanout from 3 to 1. Predict
+the new rounds column before running, then explain the relationship between the
+two columns in one sentence.</p>
+<p><strong>4.2</strong> In <code>Sim.java</code>, set <code>c.suspectAfter = 1</code>. Run it. What happens in scene 4
+(the paused node) and what would this setting do to a cluster whose nodes garbage
+collect for 200 ms every few seconds?</p>
+<p><strong>4.3</strong> In <code>Cluster.java</code>, set <code>maxEntriesPerMessage = 3</code> and run
+<code>java src/Experiments.java 9</code>. What happens to the disagreement window, and what
+real constraint would make you accept that cost?</p>
+<p><strong>4.4</strong> In <code>Node.detect</code>, delete the <code>SUSPECT</code> state — go straight from <code>ALIVE</code>
+to <code>DEAD</code> on timeout. Which test fails first, and what has the cluster lost?</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1 — the digest exchange (F8).</strong> Right now every message carries the whole
+membership table. Implement a two-step exchange: a node sends
+<code>peer → (incarnation, heartbeat)</code> only, the receiver replies asking for the rows
+where its own copy is older, and only those rows are sent in full. Measure the
+bytes moved (use <code>entriesTransferred</code>) at n = 500 before and after, and the cost
+in rounds. Add this test:</p>
+<div class="code"><pre><code class="language-java">static void a_digest_exchange_converges_like_a_full_one() {
+    Cluster full = new Cluster(200, 3), digest = new Cluster(200, 3);
+    digest.useDigests = true;                       // your new knob
+    for (Cluster c : List.of(full, digest)) {
+        c.fanout = 3; c.suspectAfter = 10_000;
+        c.publishConfig(&quot;n1&quot;, &quot;v&quot;, 2);
+    }
+    int rf = 0, rd = 0;
+    while (full.nodesWith(2) &lt; 200 &amp;&amp; rf &lt; 50) { full.runRound(); rf++; }
+    while (digest.nodesWith(2) &lt; 200 &amp;&amp; rd &lt; 50) { digest.runRound(); rd++; }
+    check(&quot;a_digest_exchange_converges_like_a_full_one&quot;,
+            digest.nodesWith(2) == 200 &amp;&amp; rd &lt;= rf + 2,
+            &quot;full: &quot; + rf + &quot; rounds / &quot; + full.entriesTransferred + &quot; entries; &quot;
+          + &quot;digest: &quot; + rd + &quot; rounds / &quot; + digest.entriesTransferred + &quot; entries&quot;);
+}
+</code></pre></div>
+<p><strong>5.2 — an adaptive timeout (a poor engineer's phi-accrual).</strong> Instead of a fixed
+<code>suspectAfter</code>, have each node track the mean gap between updates it has seen for
+each peer, and suspect when silence exceeds, say, four times that peer's mean.
+Re-run <code>java src/Experiments.java 7</code>. Does any row now look good in both columns?
+What new failure have you introduced for a peer that has been silent since boot?</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><span class="missing" title="Not in the hub: src/BrokenMerge.java is in the lab folder on your laptop"><code>src/BrokenMerge.java</code></span> contains one planted bug in the
+merge rule.</p>
+<div class="code"><pre><code class="language-bash">java src/Tests.java broken
+</code></pre></div>
+<p><strong>6.1</strong> Which tests fail? What is the single wrong idea behind all of them?</p>
+<p><strong>6.2</strong> The buggy rule reads perfectly sensibly out loud — say it out loud, then
+say why it is wrong.</p>
+<p><strong>6.3</strong> Which invariant from README §12 does it violate, and which <em>user-visible</em>
+symptom would you see in a real cluster running it? (Hint: think about what
+happens to a node after a garbage-collection pause.)</p>
+<p><strong>6.4</strong> Write the smallest possible test that catches it.</p>
+<hr />
+<h2 id="exercises-rung-7--handle-a-failure-the-lab-does-not-survive">Rung 7 — Handle a failure the lab does not survive</h2>
+<p><strong>7.1 — the detector meltdown (F5).</strong> At 90% packet loss, 100 healthy machines
+write each other off and the cluster goes silent, permanently. Design a
+mitigation and argue its cost. Consider: a floor on how many peers may be
+suspected at once; requiring a second opinion before a verdict becomes binding
+(what does Redis Cluster do?); making a node that cannot reach <em>anyone</em> distrust
+its own judgement rather than the cluster's (what does Lifeguard do?). Which of
+these can a node decide with purely local information?</p>
+<p><strong>7.2 — a node rejoins with the same name and a fresh memory.</strong> A machine is
+rebuilt: same hostname, same id, <code>incarnation</code> back to 1. The cluster still holds
+<code>n7: DEAD, incarnation 9</code>. Trace what happens to the rebuilt node, step by step.
+Then design the fix — and say what it costs you in operations (what must now be
+generated, stored, or coordinated?).</p>
+<p><strong>7.3 — a malicious or buggy node.</strong> One node starts gossiping <code>everyone: DEAD, incarnation 999</code>. Trace the damage. Then answer: which of this lab's mechanisms
+limit it, which amplify it, and what class of protocol would you need to survive
+it properly?</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — three datacentres.</strong> 300 nodes, 100 per DC, 80 ms between DCs, and the
+cross-DC links are the flaky ones. Design the gossip: what is the fanout within
+and between DCs, which nodes talk across, what are the timeouts, and what happens
+when a DC is cut off entirely? Which parts of this lab's design survive, and
+which must change?</p>
+<p><strong>8.2 — 10,000 nodes.</strong> Which numbers in this lab break first at that size, in
+order? For each: the mechanism that breaks, the symptom you would see, and the
+production technique that addresses it.</p>
+<p><strong>8.3 — the alert you would actually page on.</strong> You must choose one metric that
+pages a human at 3am for membership problems. Which, at what threshold, and why
+not the obvious alternatives? What failure would your choice miss?</p>
+<p><strong>8.4 — gossip or a coordinator?</strong> You are designing the control plane for a
+service mesh: 2,000 proxies that must learn about each other and about routing
+config. Argue both designs, then commit to one and name the specific failure that
+would make you regret it.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--gossip-protocols">Solutions — gossip protocols</h1>
+<p>Try <a href="notes.html#exercises"><code>EXERCISES.md</code></a> first. Rungs 7–8 are worked discussions, not
+single right answers. Every number below was measured with the code in this lab.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Because that machine becomes the thing everything else depends on. Every
+one of the 500 has to call it to report in and to find out about the others, so
+it carries load that grows with the cluster. If it stops, nobody learns anything
+new. And worst of all: if the network splits, the machines on the far side cannot
+reach it, so they are left with no idea who is alive — at exactly the moment when
+knowing that matters most. To make it reliable you end up running several copies
+that must agree with each other, which is a harder problem than the one you
+started with.</p>
+<p><strong>1.2</strong> Because every machine that hears the news starts telling it too, so the
+number who know is multiplied each round rather than increased by one: 1, 3, 9,
+27. Reaching 500 by multiplication takes about five steps; reaching it by
+addition takes 500.</p>
+<p><strong>1.3</strong> Gossip can spread the <em>news</em> of who the leader is, but it cannot <em>pick</em>
+one. It has no notion of agreement at an instant — two halves of a partition will
+each happily gossip a different leader, and both are internally consistent.
+Electing requires a mechanism that can refuse to proceed without a majority
+(<a href="../39-paxos/notes.html#readme"><code>paxos</code></a>, Raft). The usual architecture is both: consensus decides,
+gossip distributes.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> From a fresh page with fanout 2: 1 → 3 → 7 → 15-ish, then all 20. The
+ratio is roughly 3 (each knower tells 2 more and keeps knowing), until it runs
+out of uninformed nodes to reach.</p>
+<p><strong>2.2</strong> The inspector shows whether it is running, whether it has the news, its
+heartbeat and incarnation, and how many peers it believes alive / suspect / dead.
+While a machine is selected the ring shows <strong>its</strong> opinion — the page says so
+under the table, and it is the fastest way to see that different machines hold
+different views at the same moment.</p>
+<p><strong>2.3</strong> A mixed column means the nodes disagree about that machine — some say
+alive, some suspect, some dead. The <strong>nodes disagreeing</strong> stat box puts a
+percentage on it, and it is the same quantity the <code>consistent-hashing</code> lab called
+the membership propagation window.</p>
+<p><strong>2.4</strong> The merge:</p>
+<div class="code"><pre><code class="language-java">int cmp = Long.compare(in.incarnation, this.incarnation);
+if (cmp == 0) cmp = Integer.compare(in.status.ordinal(), this.status.ordinal());
+if (cmp == 0) cmp = Long.compare(in.heartbeat, this.heartbeat);
+if (cmp &lt;= 0) return false;
+</code></pre></div>
+<p>The refutation, in <code>Node.merge</code>: <code>incarnation = in.incarnation + 1;</code> inside the
+branch that handles somebody gossiping about <em>me</em>.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> <strong>6 rounds.</strong> 10 nodes take 2. The rule is <code>log(n)/log(fanout+1)</code> =
+log₄(5000) ≈ 6.1. Five hundred times the cluster, three times the rounds.</p>
+<p><strong>3.2</strong> <strong>Nine of 1,000 never learn it, and they never will.</strong> A stopped rumour
+cannot restart: no node knows anybody is missing it. That is exactly why an
+anti-entropy layer runs underneath the rumour layer. The stop rule is still worth
+having — it used 4,696 messages against 29,933.</p>
+<p><strong>3.3</strong> <strong>Push is slower at the tail</strong>, 16.5 rounds against pull's 12.0 for 500
+nodes at fanout 1. Push reaches 90% in 11.9 rounds and then spends another 4.6
+finding the last 10%, because a push only helps if it lands on one of the few
+remaining uninformed nodes. Pull has the opposite shape, and push-pull (8.3) beats
+both.</p>
+<p><strong>3.4</strong> <strong>100% of beliefs say DEAD</strong>, with all 100 processes running, and only 10
+of 100 nodes ever got the news. The failure detector, not the network, produced
+the outage.</p>
+<p><strong>3.5</strong> <strong>Zero.</strong> Heartbeat gossip carries n5's rising heartbeat to n1 through the
+other 18 nodes, so n1 never suspects it — and cheerfully keeps sending work down a
+link that does not work. Under the strict rule it is 9.7 of 20, which is the
+opposite error. Indirect probes give 0 for the right reason.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Measured, push-pull:</p>
+<div class="code"><pre><code>     n=10     fanout 1: 3.5    fanout 3: 2.0
+     n=100    fanout 1: 6.4    fanout 3: 3.9
+     n=1000   fanout 1: 9.0    fanout 3: 5.1
+     n=5000   fanout 1: 11.0   fanout 3: 6.0
+</code></pre></div>
+<p>One sentence: fanout 1 tracks log₂(n) and fanout 3 tracks log₄(n), because the
+informed population multiplies by (fanout + 1) each round — so fanout changes the
+<em>base</em> of the logarithm, which is why going 1→3 helps a lot and 6→10 barely
+registers. Nothing unsafe happens; this is pure liveness/latency.</p>
+<p><strong>4.2</strong> With <code>suspectAfter = 1</code>, scene 4's paused node is suspected almost
+immediately and by nearly everyone (experiment 7: 98% of the cluster). A cluster
+whose nodes pause for 200 ms every few seconds would flap constantly: nodes
+endlessly suspected, endlessly refuting, membership changing many times a minute.
+Every consumer of that list — a hash ring, a router — then reshuffles on each
+change, which is far more damaging than the pauses were. Liveness lost, and
+avoidably.</p>
+<p><strong>4.3</strong> Measured, 100 nodes, one crash, rounds until every node agrees again:</p>
+<div class="code"><pre><code>   maxEntriesPerMessage = 0 (unlimited) : 10.0 rounds
+   maxEntriesPerMessage = 3             : did not reconverge within 200 rounds
+</code></pre></div>
+<p>A 3-row cap in a 100-node cluster starves the news: each message carries almost
+nothing, so a change cannot outrun the noise. The real constraint that makes a cap
+non-negotiable is packet size — a UDP datagram above the path MTU is fragmented or
+silently dropped (see <a href="../01-networking-for-developers/notes.html#readme"><code>networking-for-developers</code></a>),
+so real systems cap the payload and compensate by sending <strong>digests</strong> and letting
+peers ask for the rows they lack, which is exercise 5.1.</p>
+<p><strong>4.4</strong> Removing SUSPECT (straight ALIVE → DEAD) fails
+<code>a_node_that_was_only_slow_refutes_its_own_death_and_stays_alive</code> — measured, 11
+passed, 1 failed. What the cluster lost is the <em>appeal window</em>: there is no longer
+a public statement of doubt that the accused can answer before the verdict is
+final.</p>
+<p>Whether the node ever recovers now depends on something that ought to be
+unrelated — the exchange mode. Under push-pull it still recovers, because it keeps
+initiating exchanges and the replies carry the verdict back to it, which triggers
+refutation. Under push-only it is buried permanently: nobody gossips to a dead
+node, so it never hears the verdict and never refutes (verified in 7.2 below). A
+protocol whose recovery depends on that accident is a protocol with a missing
+state.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1 — digest exchange.</strong> The shape: send <code>{id: (incarnation, heartbeat)}</code>, have
+the receiver diff it against its own table and reply with (a) the ids where it is
+<em>behind</em>, requesting full rows, and (b) full rows where it is <em>ahead</em>. Two
+observations worth having before you start:</p>
+<ul>
+<li>The digest is <code>O(n)</code> too — just with a much smaller constant (two numbers per
+node instead of a full row). To get a genuinely bounded message you must also
+cap it and rotate which ids you include, which is what real implementations do.</li>
+<li>Convergence should cost roughly one extra round-trip per exchange, not more
+rounds of spread: the same information moves, in two messages instead of one.</li>
+</ul>
+<p><strong>5.2 — adaptive timeout.</strong> Track a per-peer mean gap and suspect at ~4× it. You
+should find rows that look better in <em>both</em> columns of experiment 7, because a
+node with a fast reliable link gets a tight threshold while a jittery one gets a
+loose one — that is precisely the argument for phi-accrual.</p>
+<p>The new failure you have introduced: a peer with <strong>no history</strong> (just booted, or
+just became reachable) has no mean, so whatever default you pick is applied to
+exactly the nodes you know least about. Real detectors handle this with a
+conservative default and a warm-up period, and it is worth noticing that the
+warm-up window is itself an attack surface for flapping.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> Three tests fail:</p>
+<div class="code"><pre><code>FAIL  merging_in_either_order_gives_the_same_answer   2 distinct results from 40 orderings
+FAIL  bad_news_beats_good_news_at_the_same_incarnation
+FAIL  a_refuted_node_is_not_re_suspected_by_stale_gossip
+</code></pre></div>
+<p>The single wrong idea: <strong>&quot;whoever has the newer heartbeat has the newer
+information&quot;</strong> — deciding on the heartbeat <em>first</em> instead of on the incarnation
+and status.</p>
+<p><strong>6.2</strong> Said out loud it sounds obviously right: a bigger heartbeat is more
+recent, so prefer it. It is wrong because heartbeat is only meaningful <em>within</em>
+one incarnation and one status. A stale message can carry a large heartbeat with
+an old status, and under this rule that stale status wins — so a node that
+refuted its death gets re-buried by an old rumour still circulating behind it.
+And because the ordering of the three fields is now inconsistent, the merge stops
+being commutative: 40 orderings of the same five facts produce two different final
+states, so two nodes given the same news in different orders never agree again.</p>
+<p><strong>6.3</strong> It violates <strong>I1</strong> (order independence) and <strong>I4</strong> (only the subject may
+overturn a suspicion). The user-visible symptom: nodes that pause — a long garbage
+collection, a slow disk — get marked dead, refute, and get marked dead again by
+the rumour that is still going round. The membership list flaps for those nodes
+indefinitely, and everything downstream (a hash ring, a router, a shard map)
+reshuffles on every flip.</p>
+<p><strong>6.4</strong> Two merges and one assertion:</p>
+<div class="code"><pre><code class="language-java">PeerState p = new PeerState(2, 11, Status.ALIVE, 0);        // a fresh refutation
+p.mergeFrom(new PeerState(1, 99, Status.SUSPECT, 0), 1);    // an old rumour, big heartbeat
+check(&quot;a stale rumour cannot bury a refuted node&quot;, p.status == Status.ALIVE, p.toString());
+</code></pre></div>
+<p>Note the shape: it asserts that something did <strong>not</strong> change. A test that only
+checks the happy merge direction passes against the bug.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-a-failure">Rung 7 — Handle a failure</h2>
+<p><strong>7.1 — the detector meltdown.</strong> Three mitigations, and the one thing that
+separates them:</p>
+<ul>
+<li><strong>A cap on simultaneous suspicion</strong> (&quot;never suspect more than X% of the cluster
+at once&quot;). Purely local, trivial to implement, and blunt: it delays the
+meltdown rather than preventing it, and picks an arbitrary victim set.</li>
+<li><strong>A quorum before a verdict binds.</strong> This is Redis Cluster's PFAIL → FAIL: one
+node's private suspicion is only promoted to a cluster-wide verdict when a
+majority of primaries agree. Strong, and it costs you a majority — during the
+very partition where you cannot get one, no node can be marked dead at all.
+That is a deliberate CP-flavoured choice inside an AP protocol.</li>
+<li><strong>Self-doubt (Lifeguard).</strong> A node that is failing to hear from <em>many</em> peers
+concludes that the problem is probably itself, and lengthens its own timeouts
+and lowers its confidence. This is the one that directly addresses F5, because
+in a meltdown every node is in exactly that situation.</li>
+</ul>
+<p>The distinguishing question the exercise asks: <strong>which can a node decide with
+purely local information?</strong> The cap and self-doubt can — a node knows how many of
+its own peers have gone quiet. The quorum cannot: it needs to talk to a majority,
+which is precisely what a bad network denies. That is why the local, humble
+mechanism is the one that saves you in the worst case.</p>
+<p><strong>7.2 — a rebuilt node with a reset incarnation.</strong> Measured on a 20-node cluster
+where n7 was buried by all 19 peers, then rebuilt with incarnation 1:</p>
+<div class="code"><pre><code>  push-pull : every peer says ALIVE again; n7&#x27;s incarnation is 2
+  push-only : 0 peers say ALIVE; n7 stays buried, incarnation still 1
+</code></pre></div>
+<p>The step-by-step: nobody gossips <em>to</em> a dead node, so n7 hears nothing. Under
+push-pull, n7 still initiates exchanges; the peer ignores its stale <code>ALIVE(inc 1)</code>
+(the peer holds <code>DEAD(inc 9)</code>, which is larger) but its <strong>reply</strong> carries that
+<code>DEAD(inc 9)</code> back to n7, whose refutation branch fires and jumps to incarnation
+10. Under push-only there is no reply, so the verdict never reaches n7 and its
+protests never win. A rebuilt node is invisible for ever.</p>
+<p>The fix is to make the incarnation <strong>strictly increasing across restarts</strong>, which
+means it cannot live only in memory. Options and their real costs: a boot
+timestamp (Cassandra's <em>generation</em> — free, but it trusts the clock, and a machine
+whose clock jumps backwards after a rebuild is silently unrecoverable); a counter
+persisted to disk before joining (correct, but now joining requires a durable
+write and a rebuilt-from-blank machine has lost it); or a fresh unique id per
+process (correct and free, but the node is now a <em>different member</em>, so anything
+keyed by node identity — a hash ring position, stored shards — must be rebuilt,
+which is the very churn you were avoiding).</p>
+<p><strong>7.3 — a malicious or buggy node.</strong> One node gossiping <code>everyone: DEAD, incarnation 999</code> is catastrophic in this design: the merge rule is built to prefer
+higher incarnations, so the lie beats every truthful record, and gossip's own
+efficiency spreads it to the whole cluster in log(n) rounds. Every real node
+would refute <em>itself</em> on hearing its own death — but only for its own row, and
+only if it hears; meanwhile every node's belief about every <em>other</em> node is now
+DEAD, and dead nodes are not gossiped to.</p>
+<p>What limits it: the self-refutation path, and (in Redis Cluster's design) a
+quorum requirement before a verdict binds. What amplifies it: the merge rule's
+preference for higher incarnations, the fanout, and the fact that no node
+questions the provenance of what it is told.</p>
+<p>This is a <strong>Byzantine</strong> fault — a node that lies rather than simply stops. Nothing
+in this lab, or in Cassandra or SWIM, defends against it; they assume crash-stop
+failures. Surviving it requires signed statements about a node's own state
+(so nobody can forge a claim about you) plus a Byzantine-fault-tolerant protocol
+for anything that must be agreed. In practice, production systems buy this far
+more cheaply with authentication at the edge: you make sure only your own nodes
+can join the gossip at all.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — three datacentres.</strong> Keep the protocol, change the topology.</p>
+<ul>
+<li><strong>Within a DC:</strong> normal gossip, fanout ~3, sub-second interval, tight-ish
+timeouts. Local links are fast and reliable, so detection can be quick.</li>
+<li><strong>Across DCs:</strong> far fewer messages. Elect (by a deterministic rule, e.g. lowest
+id per DC per round) a small number of nodes that gossip cross-DC, so the WAN
+carries <code>O(DCs)</code> streams rather than <code>O(nodes)</code>. Cassandra does exactly this.</li>
+<li><strong>Timeouts must be per-link-class, not global.</strong> An 80 ms RTT with jitter needs
+a much looser threshold than a local link; a single global <code>suspectAfter</code> will
+either flap the remote DCs or fail to detect local crashes. This is the same
+reasoning as phi-accrual, applied by topology.</li>
+<li><strong>A DC cut off entirely</strong> must NOT result in the other two marking 100 nodes
+dead and reshuffling everything. Guard it with the &quot;never suspect more than X%
+at once&quot; rule from 7.1, and make cross-DC failover an operator decision rather
+than an automatic one. The important sentence: from inside, a partition and a
+dead datacentre look identical, and the cost of being wrong is very different in
+the two cases.</li>
+<li><strong>Survives from this lab:</strong> the merge rule, incarnations, suspicion,
+anti-entropy. <strong>Must change:</strong> flat uniform peer selection, one global timeout,
+and the assumption that all links are equal.</li>
+</ul>
+<p><strong>8.2 — 10,000 nodes.</strong> In order of what breaks first:</p>
+<ol>
+<li><strong>Message size (F8).</strong> 10,000 rows in every message, several times a second.
+Symptom: gossip traffic dominates the network, then packets exceed the MTU and
+are fragmented or dropped. Fix: digests plus a capped, rotating set of
+piggybacked updates.</li>
+<li><strong>Membership churn.</strong> With 10,000 nodes, <em>something</em> is always joining, dying
+or pausing, so the list never stops changing. Symptom: the disagreement window
+never closes. Fix: make consumers of the list tolerant of churn (a hash ring
+already is) and damp the flapping with adaptive timeouts.</li>
+<li><strong>Convergence time.</strong> log₄(10,000) ≈ 6.6 rounds — the <em>good</em> news, and the
+reason gossip is used at this scale at all.</li>
+<li><strong>The detector.</strong> More nodes means more simultaneous pauses, so the false
+positive rate scales with the cluster while your tolerance for it does not.
+Fix: phi-accrual, suspicion, and a cap on simultaneous suspicion.</li>
+</ol>
+<p><strong>8.3 — the alert.</strong> Page on <strong>the rate of membership state changes across the
+cluster</strong> — say, more than N transitions per minute sustained for five minutes —
+not on any node's state.</p>
+<ul>
+<li>Not &quot;node X is dead&quot;: that is routine and self-healing, and it will page you
+every night.</li>
+<li>Not &quot;cluster size below N&quot;: it fires only after the damage, and it cannot tell
+a rolling deploy from an outage.</li>
+<li>Not convergence time alone: it is the best <em>health</em> metric but it stays fine
+right up until the meltdown, then goes to infinity with nothing in between.</li>
+</ul>
+<p>What the rate metric misses: a <strong>quiet</strong> wrong state — a cluster that has settled
+on an incorrect but stable view, such as everyone agreeing a healthy node is dead.
+Nothing is changing, so nothing alerts. Cover that with a separate, cheap check
+from outside the gossip system: can a prober reach the nodes the cluster says are
+dead?</p>
+<p><strong>8.4 — 2,000 proxies: gossip or a coordinator?</strong></p>
+<p><em>For a coordinator</em> (the real service meshes' choice): routing config is
+authored centrally and must be exact, versioned and auditable; operators need to
+say &quot;roll out config v37&quot; and know what is live. Gossip cannot give you &quot;this
+version is now live everywhere&quot;, which is a requirement here rather than a nicety.</p>
+<p><em>For gossip:</em> 2,000 proxies phoning home is real load and a real dependency; a
+control-plane outage must not stop the data plane from knowing which peers exist.</p>
+<p><strong>Commit:</strong> a coordinator for <strong>configuration</strong> (it is authored, versioned and
+must be exact), and gossip for <strong>liveness</strong> (it is observed, local, and needed
+exactly when the control plane is unreachable). The two questions have opposite
+requirements, and the standard mistake is answering both with one mechanism.</p>
+<p><strong>The failure that would make me regret it:</strong> the split brain between the two
+layers — gossip says a proxy is alive while the coordinator has not sent it the
+current config, so traffic is routed to a reachable proxy running stale rules.
+The mitigation is to make config version part of the gossiped state, so peers can
+see who is behind, and to have a proxy refuse traffic for rules it knows are
+outdated — which is the <a href="../13-redis/notes.html#readme"><code>redis</code></a> lab's <code>min-replicas-to-write</code> idea
+in a different costume.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../36-partitioning-and-rebalancing/notes.html"><small>← Lab 36</small>partitioning-and-rebalancing</a><a href="../38-anti-entropy/notes.html" style="text-align:right"><small>Lab 38 →</small>anti-entropy</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-a-machine-need-to-know-who-else-is-alive">1. Why does a machine need to know who else is alive?</a><a href="#readme-2-what-goes-wrong-when-one-person-has-to-ring-five-hundred-families">2. What goes wrong when one person has to ring five hundred families?</a><a href="#readme-3-is-one-machine-in-charge-really-such-a-naive-answer">3. Is &quot;one machine in charge&quot; really such a naive answer?</a><a href="#readme-4-what-are-the-three-costs-and-which-one-is-fatal">4. What are the three costs, and which one is fatal?</a><a href="#readme-5-what-would-a-good-answer-actually-have-to-do">5. What would a good answer actually have to do?</a><a href="#readme-6-what-if-everybody-just-told-two-people">6. What if everybody just told two people?</a><a href="#readme-7-what-do-engineers-call-the-things-you-have-just-watched">7. What do engineers call the things you have just watched?</a><a href="#readme-8-where-does-the-crowd-picture-stop-being-true">8. Where does the crowd picture stop being true?</a><a href="#readme-9-can-you-watch-twenty-machines-do-it">9. Can you watch twenty machines do it?</a><a href="#readme-10-how-would-you-actually-build-this-and-where-would-you-go-wrong">10. How would you actually build this, and where would you go wrong?</a><a href="#readme-11-what-are-the-failure-scenarios-and-which-of-them-survive">11. What are the failure scenarios, and which of them survive?</a><a href="#readme-12-what-is-actually-guaranteed-and-what-did-the-guarantee-cost">12. What is actually guaranteed, and what did the guarantee cost?</a><a href="#readme-13-which-lines-of-code-carry-the-meaning">13. Which lines of code carry the meaning?</a><a href="#readme-14-what-will-you-predict-before-you-run-it">14. What will you predict before you run it?</a><a href="#readme-15-what-does-a-real-system-add-that-this-lab-leaves-out">15. What does a real system add that this lab leaves out?</a><a href="#readme-16-can-you-do-it-yourself">16. Can you do it yourself?</a><a href="#readme-17-what-did-this-lean-on-and-what-comes-next">17. What did this lean on, and what comes next?</a><a href="#readme-18-glossary--what-does-each-word-mean-exactly">18. Glossary — what does each word mean, exactly?</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

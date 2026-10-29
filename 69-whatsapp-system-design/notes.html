@@ -1,0 +1,2783 @@
+<!doctype html>
+<html lang="en" data-hub-lab="69-whatsapp-system-design">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>69. whatsapp-system-design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 69 of 71 · Stage 8</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 69 · Whole Systems</p><article id="readme"><h1 id="readme-whatsapp--how-do-you-hand-a-letter-to-someone-who-is-not-there">WhatsApp — how do you hand a letter to someone who is not there?</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Asha stands outside a restaurant in London and types &quot;on
+my way&quot; to Bilal, who is four stops down the Tube with no signal at all.
+That one sentence is the whole difficulty of building a chat app: the person
+you are writing to is usually not there to catch it. So the middle of the
+system is not a database of your conversations. It is a post office with one
+pigeonhole per phone, which holds the letter, hands it over the moment the
+phone walks in, and shreds its own copy the second the phone signs for it.
+Every tick on Asha's screen, every retry, every duplicate Bilal never sees,
+and every number in this lab falls out of that one fact.</p>
+</blockquote>
+<p>Play with the simulator while you read. It draws the pigeonholes live:
+<a href="https://claude.ai/code/artifact/bfde5919-ecab-45e9-a03a-e4c468e36d47" target="_blank" rel="noopener">https://claude.ai/code/artifact/bfde5919-ecab-45e9-a03a-e4c468e36d47</a></p>
+<h2 id="readme-1-why-is-the-easiest-looking-app-in-the-world-one-of-the-hardest-to-build">1. Why is the easiest-looking app in the world one of the hardest to build?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two people want to talk. One is underground with no
+signal. The other has a phone that falls asleep to save battery. The product
+is the feeling that neither of those things is happening.</p>
+</blockquote>
+<p>Asha wants to tell Bilal she is on her way. Bilal wants to know. Between them
+sit a tunnel, a sleeping radio, and a few thousand miles of other people's
+cables.</p>
+<p>Nobody wants to think about any of that. That is the entire product: the
+feeling that messages just work.</p>
+<p>When it goes wrong, the failures are the kind users never forgive. A message
+silently vanishes. A message appears twice. A &quot;delivered&quot; mark turns out to
+have been a lie. Or a conversation's lines land in the wrong order, so the
+argument reads backwards.</p>
+<p>And the system must do all of that for <strong>billions of people at once</strong>. Most of
+them are holding a cheap phone on a bad network.</p>
+<p>So the promise is small and the conditions are terrible. That gap is the lab.</p>
+<h2 id="readme-2-where-does-ashas-message-physically-go">2. Where does Asha's message physically go?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Asha presses send while Bilal is unreachable. The message
+has to be <em>somewhere</em> for the next forty minutes, and it cannot be on either
+of their phones.</p>
+</blockquote>
+<p>Asha is standing outside the restaurant. Bilal is on the Tube, four stops
+away, with no signal at all. Asha types <strong>&quot;on my way&quot;</strong> and hits send.</p>
+<p>Right now, at this exact moment, ask yourself the awkward question.</p>
+<p><strong>Where does that message physically go?</strong></p>
+<p>It cannot go to Bilal. Bilal is unreachable, and no amount of trying changes
+that. It cannot stay only on Asha's phone either. Her battery might die. And
+when Bilal finally surfaces she may be underground herself, so her phone will
+not be awake to hand it over.</p>
+<p>Somebody in the middle has to hold it.</p>
+<h3 id="readme-why-a-post-office-and-not-a-library">Why a post office, and not a library?</h3>
+<p>That somebody is a <strong>post office</strong>. Not a library. Not a database of your
+conversations. A post office.</p>
+<p>The clerk takes the letter. She puts it in a pigeonhole with Bilal's name on
+it. She hands it over the moment Bilal walks in. Once Bilal has it, she throws
+her copy away, because she was never in the business of keeping your letters.</p>
+<p>Give the clerk a name, because you will meet her in every section from here
+on. <strong>Meera</strong> works the counter Asha hands letters to. <strong>Omar</strong> works the
+counter Bilal is standing at, whenever Bilal is standing anywhere. The two of
+them never see the same customer at the same time. That is the job.</p>
+<p>Two more people join later. <strong>Priya</strong> also messages Bilal, from a different
+conversation. <strong>Arjun</strong> runs a 256-person group that will cost us dearly in
+section 10. <strong>Ben</strong> carries the pager in section 15, and <strong>Dev</strong> is the
+engineer who makes an entirely reasonable change that breaks everything in
+failure F10.</p>
+<p>Hold on to the picture of the pigeonhole wall. Everything in this lab is the
+post office learning, the hard way, what it takes to never lose a letter and
+never hand one over twice.</p>
+<h3 id="readme-how-deep-does-this-lab-go">How deep does this lab go?</h3>
+<p>Stop at any checkpoint and you still have something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner model</strong></td>
+  <td>1–9</td>
+  <td>explain why a chat app cannot just be a web app, and what the ticks really mean</td>
+</tr>
+<tr>
+  <td><strong>Intermediate model</strong></td>
+  <td>10</td>
+  <td>walk the delivery path packet by packet, and say why each odd detail exists</td>
+</tr>
+<tr>
+  <td><strong>Engineering model</strong></td>
+  <td>11–14</td>
+  <td>reason about crashes, partitions, duplicates and ordering, and run them</td>
+</tr>
+<tr>
+  <td><strong>Production model</strong></td>
+  <td>15</td>
+  <td>size the system, name what real WhatsApp does differently, and answer this in an interview</td>
+</tr>
+</tbody>
+</table></div>
+<p>Checkpoints between the layers tell you what you have earned and what comes
+next.</p>
+<h2 id="readme-3-what-would-any-web-developer-build-first">3. What would any web developer build first?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You already know how to build a web app, so you build the
+obvious chat app. It works. Then you multiply it by two billion.</p>
+</blockquote>
+<p>You know this shape by heart:</p>
+<ul>
+<li>Asha's phone does <code>POST /messages</code> with the text.</li>
+<li>The server writes a row into a <code>messages</code> table.</li>
+<li>Bilal's phone asks, every two seconds: <code>GET /messages?since=...</code></li>
+<li>Anything new comes back and gets drawn on his screen.</li>
+</ul>
+<p>This works. You can build it in an afternoon. For a demo with four users it is
+genuinely fine.</p>
+<p>The technique has a name. The receiver repeatedly asks &quot;anything for me yet?&quot;,
+and engineers call that <strong>polling</strong>.</p>
+<p>Here is one message travelling that path. Read Bilal's side: he is the one
+doing all the work, and almost all of it is wasted.</p>
+<pre class="mermaid">sequenceDiagram
+    participant A as Asha&#x27;s phone
+    participant S as Server + messages table
+    participant B as Bilal&#x27;s phone
+    A-&gt;&gt;S: POST /messages &quot;on my way&quot;
+    S--&gt;&gt;A: 200 OK
+    loop every 2 seconds, forever
+        B-&gt;&gt;S: GET /messages?since=...
+        S--&gt;&gt;B: [] (nothing)
+    end
+    B-&gt;&gt;S: GET /messages?since=...
+    S--&gt;&gt;B: [&quot;on my way&quot;]
+</pre>
+<blockquote>
+<p><strong>🔮 Predict 1:</strong> Two billion phones, each polling every 2 seconds. Ignore
+everything else. How many requests per second does that alone create, and
+what does each one cost even when the answer is &quot;nothing&quot;?</p>
+<details><summary>Reveal</summary>
+
+<p>2,000,000,000 ÷ 2 = <strong>one billion requests per second</strong>, and the answer to
+almost all of them is an empty list.</p>
+<p>Each one is a full network round trip. It wakes the phone's radio. It does a
+TLS handshake if the connection was not kept alive. It hits your servers, it
+queries a database, and it returns nothing.</p>
+<p>For comparison, all of WhatsApp's actual message traffic is on the order of
+~1.2 million messages per second. The polling for <em>no</em> messages would be
+roughly a thousand times more expensive than the messages themselves.</p>
+<p>If you guessed &quot;a few million&quot;, you were pricing the <em>messages</em>. The trap is
+that this design's cost has nothing to do with how much anyone talks.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-4-what-breaks-and-which-break-is-the-deep-one">4. What breaks, and which break is the deep one?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three things break. Two of them are bills you could
+argue about. The third is a fact the design can never learn, and no amount
+of tuning will teach it.</p>
+</blockquote>
+<h3 id="readme-break-one-it-costs-the-wrong-thing">Break one: it costs the wrong thing</h3>
+<p>You just did the arithmetic. The overwhelming majority of the work is asking a
+question whose answer is &quot;no&quot;. You are paying for silence.</p>
+<h3 id="readme-break-two-battery-and-speed-pull-in-opposite-directions">Break two: battery and speed pull in opposite directions</h3>
+<p>Polling has exactly one knob, the interval, and it is a straight trade.</p>
+<p>Set it to 2 seconds and the phone's radio never sleeps. That is a real,
+measurable battery drain, and it is the reason early chat apps were
+notorious. Set it to 60 seconds to save the battery and Asha's &quot;on my way&quot;
+arrives up to a minute late. A minute late is not a messaging app.</p>
+<p>There is no setting of this knob that is good. When every value of a knob is
+wrong, the shape is wrong, not the tuning.</p>
+<h3 id="readme-break-three-the-design-cannot-ever-learn-the-truth">Break three: the design cannot ever learn the truth</h3>
+<p>Look again at that sequence diagram and ask what Asha knows.</p>
+<p>She got <code>200 OK</code>. What does that mean? It means a server took her message. It
+says <em>nothing</em> about whether Bilal has it.</p>
+<p>And there is no way in this design for her to ever find out. Information only
+flows when Bilal asks a question, and Bilal is on the Tube asking nobody
+anything.</p>
+<blockquote>
+<p><strong>🔮 Predict 2:</strong> Two of those three breaks could be argued away by a
+sufficiently clever engineer with a big enough budget. Which one cannot, and
+why?</p>
+<details><summary>Reveal</summary>
+
+<p>The third. Cost and battery are <em>quantities</em>. Buy more machines, tune the
+interval, compress the requests, and you move the numbers around.</p>
+<p>The third break is not a quantity. It is <strong>missing information</strong>. The design
+has no channel over which the truth about Bilal could ever travel back to
+Asha, because every byte in this system moves only when Bilal speaks first.</p>
+<p>If you picked break one, you were reading a bill. The interesting failure is
+not that the design is expensive. It is that the design is <em>silent</em>.</p>
+</details>
+
+</blockquote>
+<p>You met the pull-versus-push distinction in the
+<a href="../02-communication-protocols/notes.html#readme">communication-protocols</a> lab, and the reason
+idle connections are cheap in the <a href="../03-io-multiplexing/notes.html#readme">io-multiplexing</a>
+lab. This is what that choice looks like when it <em>is</em> the whole product.</p>
+<h2 id="readme-5-what-exactly-must-this-system-promise">5. What exactly must this system promise?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Write the promises down in plain words now. Everything
+after this section is the pursuit of exactly this list, and every strange
+detail in the final design is one of these six lines refusing to bend.</p>
+</blockquote>
+<p>Asha does not want a distributed system. She wants six things, and she has
+never said any of them out loud.</p>
+<p><strong>One. Never lose a message.</strong> Not even if Bilal is unreachable for days. Not
+even if any single machine dies at any moment, including the one holding the
+message.</p>
+<p><strong>Two. Never show a message twice.</strong> This is harder than it sounds, because
+the only honest promise a network can make is &quot;I might deliver this more than
+once&quot;.</p>
+<p><strong>Three. Keep each conversation in order.</strong> Line 5 must not appear above line
+4. An argument that reads backwards is a broken product.</p>
+<p><strong>Four. Report the truth back to Asha.</strong> Stored, delivered to the device, read
+by the human. Three different facts, and the screen must never claim a
+stronger one than is true.</p>
+<p><strong>Five. Be fast when both people are online, and cheap when they are not.</strong>
+Fast means tens of milliseconds, not seconds. Cheap means an idle phone costs
+almost nothing.</p>
+<p><strong>Six. Do all of it while the servers cannot read the messages.</strong> Meera the
+clerk carries a sealed box. She is not allowed to open it, and the design must
+still work.</p>
+<p>Now notice what is <em>not</em> on that list. &quot;Store the user's chat history&quot; is
+missing. WhatsApp deliberately does not.</p>
+<p>That single omission changes the entire storage design. We come back to it in
+section 15, where it turns out to be the reason the storage bill is an
+afterthought.</p>
+<h2 id="readme-6-what-is-the-invention-in-two-sentences">6. What is the invention, in two sentences?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Turn the connection around so the server can speak first.
+Then make the server a queue rather than a database, so nothing is ever
+&quot;sent&quot; until somebody has confirmed holding it.</p>
+</blockquote>
+<p>Two sentences. Everything else in this lab falls out of them.</p>
+<p><strong>Turn the connection around.</strong> Instead of Bilal's phone repeatedly asking the
+server for news, the phone opens <em>one</em> connection and holds it open. The
+server writes down it the instant something arrives. An idle open connection
+costs almost nothing. A question asked a billion times costs everything.</p>
+<p><strong>Make the server a queue, not a database.</strong> For every device there is a small
+durable queue. A message goes into that queue <em>before</em> Asha is told anything.
+It comes out <em>only</em> when that device confirms it has it. Delivery is not &quot;the
+server sent it&quot;. Delivery is &quot;the queue emptied&quot;.</p>
+<p>Read those two sentences again and notice what each one fixes. The first kills
+breaks one and two from section 4, the cost and the battery. The second kills
+break three, the silence, because now there is a thing whose emptiness means
+something and can be reported back.</p>
+<p>The ticks, how repeats get discarded, ordering, group delivery: all of it is
+consequence. You will watch each one arrive as a scar in section 10.</p>
+<h2 id="readme-7-what-do-engineers-call-the-things-you-have-already-met">7. What do engineers call the things you have already met?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight words. Not one of them is new information. Each one
+names something that already happened to Asha or Bilal in the last five
+sections.</p>
+</blockquote>
+<p>A word earns its place only when you have already felt the need for it. You
+have felt all of these.</p>
+<p><strong>The line Bilal keeps open.</strong> Bilal's phone dials in once, when he unlocks it,
+and stays on the line for six hours, exchanging a few bytes of keepalive.
+Engineers call that a <strong>persistent connection</strong>: a long-lived TCP connection,
+in practice carrying a framed binary protocol, or WebSocket, held open for
+hours. Either side may send at any time without a new request.</p>
+<p>The word exists to distinguish it from the request/response connection of a normal web call,
+which exists only for the duration of one question. The difference is about who
+is allowed to speak first. On a persistent connection, <strong>the server can</strong>. That
+is exactly the WebSocket versus long-poll choice from
+<a href="../02-communication-protocols/notes.html#readme">communication-protocols</a>, and the reason one
+machine can hold a million such lines at once is the event loop from
+<a href="../03-io-multiplexing/notes.html#readme">io-multiplexing</a>.</p>
+<p><strong>The machine at the other end of the line.</strong> Something has to physically hold
+Bilal's open line. In this lab those machines are called <code>cs1</code>, <code>cs2</code> and <code>cs3</code>.
+In production they are a fleet of a few hundred boxes, each holding around a
+million connections. Engineers call one a <strong>connection server</strong>: a process that
+owns a very large number of live sockets and moves small packets between them,
+and stores nothing durable. The word matters because this box is <em>not</em> an
+application server. Its scaling limit is memory-per-socket and file
+descriptors, not CPU per request.</p>
+<p>Different limit, different machine, different failure modes.</p>
+<p><strong>The note saying which machine Bilal is plugged into.</strong> With one server there
+is no question to ask. With ten thousand, delivering anything <em>starts</em> with the
+question &quot;where is Bilal's phone right now?&quot;. The answer lives in a <strong>routing
+table</strong>, also called a session registry: a small, extremely hot, volatile
+key-value map from device to connection-server id, written on every connect and
+every disconnect. Today it says <code>bilal:phone → cs2</code>. Thirty seconds later, when
+he walks out of the Tube onto wifi, it says <code>bilal:phone → cs7</code>.</p>
+<p>This is a <strong>session</strong> store, not a user store. It describes right now, not who somebody
+is. It is a cache of a fact that is only briefly true. That is why the staleness
+lessons from <a href="../11-caching/notes.html#readme">caching</a> apply here. It is also why this lab's
+nastiest failure is a routing row that has quietly become a lie.</p>
+<p><strong>The pigeonhole with Bilal's name on it.</strong> While Bilal is underground, his
+messages have to sit somewhere. That somewhere is a <strong>mailbox</strong>: a durable
+FIFO queue, one per <strong>device</strong>, holding messages accepted from a sender but not
+yet confirmed by that device. In the lab you will see it written
+<code>mailbox[bilal:phone] = [m1, m2, m3]</code>. The word exists to separate <em>accepted</em>
+from <em>delivered</em>. Without a name for that in-between state, you cannot even
+describe what happens while Bilal is on the Tube.</p>
+<p>It is the same shape as the outbox in <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>: write it durably
+first, deliver later, delete on confirmation.</p>
+<p>Those four are the whole machinery. Read the last column, which is the reason
+each word had to be invented rather than borrowed.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In the story</th>
+  <th>Engineers say</th>
+  <th>What it holds</th>
+  <th>Why a new word was needed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The line Bilal keeps open for six hours</td>
+  <td><strong>persistent connection</strong></td>
+  <td>nothing; it is a pipe</td>
+  <td>on a normal web call only the client may speak first</td>
+</tr>
+<tr>
+  <td>The machine at the far end of that line</td>
+  <td><strong>connection server</strong></td>
+  <td>live sockets, nothing durable</td>
+  <td>it is limited by sockets and memory, not by CPU</td>
+</tr>
+<tr>
+  <td>The note saying where Bilal is plugged in</td>
+  <td><strong>routing table</strong> (session registry)</td>
+  <td><code>bilal:phone → cs2</code>, rewritten on every network change</td>
+  <td>with one server there was no question to ask</td>
+</tr>
+<tr>
+  <td>The pigeonhole with his name on it</td>
+  <td><strong>mailbox</strong></td>
+  <td>a durable queue, one per device</td>
+  <td>&quot;accepted&quot; and &quot;delivered&quot; are different states</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-does-each-of-ashas-ticks-actually-prove">What does each of Asha's ticks actually prove?</h3>
+<blockquote>
+<p><strong>In one breath:</strong> A tick is a receipt, and each one is signed by a different
+party. Confusing the signatures is the classic bug in this whole design.</p>
+</blockquote>
+<p>Asha watches her screen. Something comes back and her clock turns into a tick.
+What she just received is an <strong>acknowledgement</strong>, or ack: a message sent back
+along the path confirming receipt <em>at a specific point</em>. There are <strong>two
+different ones</strong> in this system, and mixing them up is the classic bug.</p>
+<p>The <em>server ack</em> says the service has stored it. The <em>device ack</em> says Bilal's
+phone has written it to its own disk. The word matters because &quot;sent&quot; is
+meaningless on its own. An ack names which point in the path has taken
+responsibility. Asha's first grey tick is a server ack. Her second grey tick is
+caused by a device ack.</p>
+<p>Now the ticks, stated precisely. The third column is the one people get wrong.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>On screen</th>
+  <th>Caused by</th>
+  <th>What it actually proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Clock ◷</td>
+  <td>nothing yet</td>
+  <td>the message has not left Asha's phone</td>
+</tr>
+<tr>
+  <td>One grey ✓</td>
+  <td>server ack</td>
+  <td>the service has it durably. Says <strong>nothing</strong> about Bilal</td>
+</tr>
+<tr>
+  <td>Two grey ✓✓</td>
+  <td>device ack</td>
+  <td>a device of Bilal's physically holds it</td>
+</tr>
+<tr>
+  <td>Two blue ✓✓</td>
+  <td>read receipt</td>
+  <td>a human opened the chat</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-why-can-nobody-promise-to-deliver-a-message-exactly-once">Why can nobody promise to deliver a message exactly once?</h3>
+<blockquote>
+<p><strong>In one breath:</strong> A lost message and a lost receipt look identical from the
+sender's chair. So anything that guarantees delivery must be willing to
+deliver twice, and the receiver has to clean up afterwards.</p>
+</blockquote>
+<p>Suppose the server pushes to Bilal, Bilal's phone stores it, and Bilal's ack
+dies on the way back. The server sees exactly what it would see if the message
+itself had been lost. It has one safe move: send again. Engineers call this
+<strong>at-least-once</strong> delivery. You keep trying until the other side confirms, so
+the other side may get it twice. The phrase exists to be honest that
+exactly-once is not something a network can offer. It is only ever
+manufactured, at the very edge, by the receiver.</p>
+<p>That is the same idempotent-consumer rule you met in
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>, except that here the
+consumer is a phone.</p>
+<p>How does the phone clean up? It remembers which letters it has already opened.
+Formally, the receiving device keeps the set of message ids it has accepted and
+silently drops repeats. This is <strong>deduplication by message id</strong>, and it works
+for one reason only: the id is <strong>minted by the sending device</strong>, never by a
+server. A retry therefore carries the same id and is provably the same message,
+not a new one. In the lab, <code>m1</code> arrives three times and one line appears.</p>
+<p><strong>And what happens when Arjun posts to his 256-person group?</strong> The post office
+photocopies the letter once per recipient at the moment it is posted. At send
+time the service writes one copy into each recipient device's mailbox. That is
+<strong>fan-out on write</strong>.</p>
+<p>The alternative is real: store one shared copy that
+readers come and fetch, which is <strong>fan-out on read</strong>, and it is what a forum or
+a social timeline does. Chat chooses write-fan-out because each recipient needs
+independent delivery state, meaning their own acks, their own offline queue and
+their own retries. One message into Arjun's group of 256 becomes 255 mailbox
+writes, a figure the lab produces for you in section 10 v7.</p>
+<p><strong>And the box the post office cannot open.</strong> With <strong>end-to-end encryption</strong>,
+the message is encrypted on Asha's device with keys only Bilal's devices hold.
+Servers route ciphertext and metadata. The word exists to distinguish it from
+<strong>transport encryption</strong> (TLS), which protects each hop but leaves the server
+holding plaintext at the ends. You saw exactly that distinction in the
+<a href="../14-tls/notes.html#readme">tls</a> lab: TLS secures the wire, not the endpoint.</p>
+<p>Four delivery words, four consequences. The last column says which of your
+other labs each one came from.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In the story</th>
+  <th>Engineers say</th>
+  <th>What it buys you</th>
+  <th>Met before in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Keep trying until Bilal confirms</td>
+  <td><strong>at-least-once</strong></td>
+  <td>a guarantee a real network can actually keep</td>
+  <td>transactional-outbox</td>
+</tr>
+<tr>
+  <td>The phone remembers the letters it opened</td>
+  <td><strong>deduplication by message id</strong></td>
+  <td>exactly-once on the screen, built at the edge</td>
+  <td>transactional-outbox</td>
+</tr>
+<tr>
+  <td>Photocopy once per recipient at posting time</td>
+  <td><strong>fan-out on write</strong></td>
+  <td>private delivery state per recipient</td>
+  <td>this lab, and its mirror in news feeds</td>
+</tr>
+<tr>
+  <td>A sealed box the clerk cannot open</td>
+  <td><strong>end-to-end encryption</strong></td>
+  <td>privacy that survives the server itself</td>
+  <td>tls</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-which-two-pictures-should-you-carry-and-where-do-they-disagree">8. Which two pictures should you carry, and where do they disagree?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Carry the post office for intuition and the nine-step
+diagram for engineering. Then learn the five places the post office lies to
+you, because every hard failure in this lab lives in one of them.</p>
+</blockquote>
+<h3 id="readme-the-simple-picture-what-does-the-post-office-do">The simple picture: what does the post office do?</h3>
+<p>A post office with a wall of pigeonholes. Asha hands in a letter. The clerk
+photocopies it once per recipient, drops each copy in the right pigeonhole, and
+hands her a receipt (<strong>one tick</strong>). When Bilal walks in and takes his copy, he
+signs for it, the clerk shreds the office copy, and posts Asha a note saying it
+was collected (<strong>two ticks</strong>). If Bilal opens it in front of the clerk, Asha
+gets a second note (<strong>blue ticks</strong>).</p>
+<h3 id="readme-what-does-the-same-picture-look-like-in-real-boxes">What does the same picture look like in real boxes?</h3>
+<p>Read the diagram top to bottom, and follow the numbers 1 to 9. That order is
+the whole delivery path. Every failure later in this lab is one of these nine
+steps going wrong.</p>
+<pre class="mermaid">flowchart TD
+    A[&quot;Asha&#x27;s phone&lt;br&gt;mints the message id&lt;br&gt;retries until acked&quot;]
+    subgraph SVC[&quot;The service&quot;]
+      direction TB
+      CS1[&quot;connection server cs1&lt;br&gt;holds sockets&quot;]
+      REG[(&quot;routing table&lt;br&gt;device → server&lt;br&gt;volatile, tiny, very hot&quot;)]
+      MB[(&quot;mailboxes&lt;br&gt;one durable FIFO per device&lt;br&gt;deleted on device ack&quot;)]
+      CS2[&quot;connection server cs2&lt;br&gt;holds sockets&quot;]
+    end
+    B1[&quot;Bilal&#x27;s phone&lt;br&gt;dedupes by id&lt;br&gt;acks what it stores&quot;]
+    B2[&quot;Bilal&#x27;s laptop&lt;br&gt;its own mailbox&quot;]
+
+    A -- &quot;1 send&quot; --&gt; CS1
+    CS1 -- &quot;2 write copies&quot; --&gt; MB
+    CS1 -- &quot;3 one grey tick&quot; --&gt; A
+    CS1 -- &quot;4 where is he?&quot; --&gt; REG
+    CS1 -- &quot;5 hand off&quot; --&gt; CS2
+    CS2 -- &quot;6 push&quot; --&gt; B1
+    CS2 -- &quot;6 push&quot; --&gt; B2
+    B1 -- &quot;7 device ack&quot; --&gt; CS2
+    CS2 -- &quot;8 delete copy&quot; --&gt; MB
+    CS2 -- &quot;9 two grey ticks&quot; --&gt; A
+</pre>
+<h3 id="readme-how-do-the-two-pictures-line-up-part-by-part">How do the two pictures line up, part by part?</h3>
+<p>Read these as translation tables, left to right. Nothing in the right-hand
+column is new; you met all of it in section 7. First the things that sit still.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Post office, the furniture</th>
+  <th>Engineering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the counter clerk</td>
+  <td>connection server</td>
+</tr>
+<tr>
+  <td>pigeonhole with a name on it</td>
+  <td>per-device mailbox</td>
+</tr>
+<tr>
+  <td>&quot;which branch is this person registered at?&quot;</td>
+  <td>routing table lookup</td>
+</tr>
+<tr>
+  <td>a sealed box the clerk cannot open</td>
+  <td>end-to-end encryption</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then the things that happen, in the order Asha experiences them.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Post office, the paperwork</th>
+  <th>Engineering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>photocopying per recipient</td>
+  <td>fan-out on write</td>
+</tr>
+<tr>
+  <td>the receipt you get at the counter</td>
+  <td>server ack → one grey tick</td>
+</tr>
+<tr>
+  <td>signing for your post</td>
+  <td>device ack → two grey ticks</td>
+</tr>
+<tr>
+  <td>shredding the office copy</td>
+  <td>mailbox delete on ack</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-the-story-lie-to-you">Where does the story lie to you?</h3>
+<p>Every analogy is a loan, and this one comes due here. Five lies, and each one
+is a failure you will meet by name in section 11.</p>
+<ol>
+<li><strong>A pigeonhole is per person; a mailbox is per <em>device</em>.</strong> Bilal's phone and
+his laptop have separate queues and acknowledge separately. The post office
+has no equivalent. This is not a detail. It is why &quot;delivered&quot; becomes
+ambiguous the moment somebody owns two devices.</li>
+<li><strong>The clerk does not know which branch you are at until they look it up, and
+the answer expires constantly.</strong> A real post office registration is stable
+for years. A routing row is valid only while a phone stays on one network,
+which is sometimes seconds. Almost every hard failure in this lab is a
+routing row that went stale.</li>
+<li><strong>The post office never hands you the same letter twice.</strong> The network does,
+routinely, and by design. Exactly-once is not something the middle can
+promise. It is reconstructed at the very end, by the receiving phone.</li>
+<li><strong>The clerk never posts anything on their own initiative.</strong> Here the server
+<em>pushes</em>. That reversal is the whole reason the design works at all.</li>
+<li><strong>Real post offices keep records.</strong> This one shreds every letter the moment
+it is collected, on purpose. That is why the storage bill turns out to be an
+afterthought.</li>
+</ol>
+<h2 id="readme-9-what-should-you-do-in-the-simulator-before-reading-the-mechanism">9. What should you do in the simulator before reading the mechanism?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four experiments, under a minute each. Each one is a stage
+of the mechanism you are about to read, so doing them first means the
+mechanism explains something you have already watched.</p>
+</blockquote>
+<p><strong>→ <a href="https://claude.ai/code/artifact/bfde5919-ecab-45e9-a03a-e4c468e36d47" target="_blank" rel="noopener">https://claude.ai/code/artifact/bfde5919-ecab-45e9-a03a-e4c468e36d47</a></strong>
+(also <code>visualization.html</code> in this folder; it works offline)</p>
+<p>The page lays out exactly the diagram above. Asha is on the left. The service
+is in the middle, with its routing table and mailboxes visible as live tables.
+Bilal's two devices are on the right. Packets travel as chips in the lanes
+between them.</p>
+<p><strong>Do these four things, in this order.</strong></p>
+<ol>
+<li>Press <strong>Send a message</strong>, then press <strong>Step</strong> repeatedly. Watch the mailbox
+table gain a row <em>before</em> Asha's tick appears, and lose it only when a
+device acknowledges. Read the sentence in the log at each step.</li>
+<li>Press <strong>Bilal's phone: online</strong> to take him offline, send two messages, and
+watch them pile up in the mailbox while Asha stays at one grey tick. Bring
+him back and watch the catch-up.</li>
+<li>Crash <strong>cs2</strong> from the dropdown while it holds Bilal's connection, then
+send. The routing row turns red and is labelled a lie. Nothing is lost.</li>
+<li>Drag <strong>drop</strong> to 40%, send four messages, then set <strong>drop</strong> back to 0. Now
+do it again with the switch labelled <strong>Mailbox sweeper</strong> turned off. The
+second time, some messages never arrive, on a perfectly healthy network.
+What that switch is and why it has to exist is stage 10 v5 below. For now,
+just note that it changes the outcome.</li>
+</ol>
+<p>Each of the four cards at the bottom asks you to <strong>predict before it runs</strong>.
+Answer first. Being wrong there is the point.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--you-now-have-the-beginner-model">✅ Checkpoint — you now have the BEGINNER MODEL</h3>
+<p>You can explain why a chat app cannot be a normal request/response web app,
+what each tick actually proves, and why the servers hold a queue rather than
+a chat history. <strong>Next:</strong> the delivery path packet by packet, and where the
+obvious version of it quietly loses your messages.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>queue</em>, <em>acknowledgement</em> or
+<em>persistent connection</em>, explain to a friend why Asha's first grey tick tells
+her nothing at all about Bilal.</p>
+<details><summary>A good answer sounds like</summary>
+"The tick came from the post office, not from Bilal. It means a clerk took
+her letter and dropped it in his pigeonhole. Bilal is still on the Tube and
+has not walked in yet. The only person who can tell her Bilal has it is
+Bilal's phone, and it has not said anything at all."
+</details>
+
+</blockquote>
+<h2 id="readme-10-how-does-a-message-actually-get-from-asha-to-bilal">10. How does a message actually get from Asha to Bilal?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> We build the delivery path the way you would really build
+it. Simplest thing first, then let one concrete disaster force the next
+piece. Every strange-looking detail in the final design is the scar of one of
+these.</p>
+</blockquote>
+<p>Eight versions. Each one is a perfectly sensible chat server, and each one is
+killed by a specific thing happening to Asha, Bilal, Meera or Omar. Read them
+in order. The point is not the final design. The point is the sequence of
+funerals that produced it.</p>
+<h3 id="readme-v1--what-happens-when-you-just-write-to-the-socket">v1 — what happens when you just write to the socket?</h3>
+<p>Both phones are connected to the same machine. Meera is the only clerk in the
+building. Asha's message arrives, the server looks up Bilal's socket in a hash
+map, and writes to it. Done.</p>
+<div class="code"><pre><code class="language-java">// v1, roughly
+Socket s = sockets.get(&quot;bilal:phone&quot;);
+s.write(message);
+</code></pre></div>
+<p>This is a completely reasonable chat server. It works up to the number of
+users one machine can hold.</p>
+<p><strong>And it dies the moment you open a second counter.</strong> Asha is connected to
+<code>cs1</code>, which is Meera's counter. Bilal is connected to <code>cs2</code>, which is Omar's.
+Meera looks in <em>her</em> socket map, finds nothing, and concludes Bilal is
+offline. That conclusion is false, and it is false in the worst possible way:
+confidently.</p>
+<p>So the first new piece appears, and it is a <strong>routing table</strong>. Every connect
+writes one row saying <code>bilal:phone → cs2</code>. Every disconnect deletes it.
+Delivery now begins with a lookup, and if the answer is another counter, the
+message is handed across.</p>
+<p>Read the four steps below as Meera's morning. She never touches Bilal. She
+asks where he is, and passes the letter to whoever is standing with him.</p>
+<pre class="mermaid">sequenceDiagram
+    participant CS1 as cs1 (Meera&#x27;s counter)
+    participant REG as routing table
+    participant CS2 as cs2 (Omar&#x27;s counter)
+    participant B as Bilal&#x27;s phone
+    CS1-&gt;&gt;REG: where is bilal:phone?
+    REG--&gt;&gt;CS1: cs2
+    CS1-&gt;&gt;CS2: hand off the message
+    CS2-&gt;&gt;B: push
+</pre>
+<p>Now a fact that surprises everybody, and it is worth sitting with.</p>
+<blockquote>
+<p>This tiny table is the busiest thing in the entire system. The reason is
+counter-intuitive. It is written not when people <em>talk</em> but when people's
+<em>networks change</em>. A phone moving from mobile data to wifi rewrites a row
+without a single message being sent. In the <code>storm</code> experiment in section
+11, 50,000 phones reconnecting produce 50,000 routing writes and only
+150,000 message pushes. The connection churn <em>is</em> the load.</p>
+</blockquote>
+<h3 id="readme-v2--what-do-you-do-when-bilal-is-on-the-tube">v2 — what do you do when Bilal is on the Tube?</h3>
+<p>The lookup returns nothing. Bilal is not at any counter. v1 has exactly one
+option available to it: throw the message away.</p>
+<p>That is obviously unacceptable, so the <strong>mailbox</strong> appears. If the lookup says
+offline, the message waits in a durable per-device queue until that device
+comes back and drains it.</p>
+<p>The pigeonhole wall from section 2 has just been built in software.</p>
+<blockquote>
+<p><strong>🔮 Predict 3:</strong> We now have a mailbox. When should the server write the
+message into it, before or after it tells Asha &quot;stored&quot;? Does the order
+matter?</p>
+<details><summary>Reveal</summary>
+
+<p>It is the whole ballgame. <strong>Write first, acknowledge second.</strong></p>
+<p>Suppose you acknowledge first and the server dies before the write. Asha now
+has a tick for a message that no longer exists anywhere except her own
+screen. She will never retry, because as far as she knows it was accepted.
+The message is lost, silently, and the screen actively lies about it.</p>
+<p>Suppose instead you write first and the server dies before acknowledging.
+Asha simply never gets her tick, so she retries. Because the id was minted
+on her phone, the retry is recognisably the same message. The worst case is
+a duplicate, which Bilal's phone already knows how to throw away.</p>
+<p>If you answered &quot;it does not matter, the window is tiny&quot;, you have found the
+most expensive assumption in messaging. The window is tiny and the system
+runs a billion of them a second.</p>
+<p><strong>The rule: never acknowledge something you have not yet made durable.</strong> In
+the code, <code>Server.onSend</code> does the mailbox writes and only then sends the
+ack, and the comment above it says exactly this.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v3--why-did-ashas-second-tick-turn-out-to-be-a-lie">v3 — why did Asha's second tick turn out to be a lie?</h3>
+<p>v2 pushes to Bilal's socket. Having done so, it deletes the mailbox copy and
+tells Asha &quot;delivered&quot;. Two grey ticks.</p>
+<p>Watch it break. The push goes out. Bilal's phone receives the bytes, and its
+battery dies before it writes anything to storage. Or the app is killed by the
+operating system. Or the phone loses signal mid-write.</p>
+<p>The mailbox copy is already gone. Asha has already been told it was delivered.
+When Bilal charges his phone, the message does not exist anywhere in the
+world.</p>
+<p>So the design grows <strong>two different acknowledgements</strong>, and keeping them apart
+is the difference between an honest screen and a lying one. &quot;The server sent
+it&quot; is not an event worth telling anyone about. The event that matters is the
+receiving device confirming it has the message on its own disk. That
+confirmation is what deletes the mailbox copy, and it is what turns Asha's
+tick into two.</p>
+<p>This is the single line in the whole design that one test exists to protect:
+<code>mailboxCopy_survivesUntilTheDEVICEAcks_notWhenTheServerSends</code>. Kill the phone
+right after the push and the copy is still sitting there.</p>
+<div class="code"><pre><code>PASS  durability: the copy is STILL in the mailbox after the push
+PASS  durability: nothing was deleted on send
+</code></pre></div>
+<h3 id="readme-v4--why-must-the-system-be-willing-to-deliver-twice">v4 — why must the system be willing to deliver twice?</h3>
+<p>Now the acknowledgement itself can be lost. The server pushed. The device
+stored it. The device's ack died on the way back. The server waits, times out,
+and pushes again.</p>
+<p>There is no way out of this. A lost message and a lost acknowledgement look
+identical to the sender. So any system that guarantees delivery <em>must</em> be
+willing to deliver twice. That is <strong>at-least-once</strong>, and it is not a
+compromise. It is the ceiling.</p>
+<p>So exactly-once gets manufactured at the very last step instead. Bilal's phone
+keeps the set of ids it has already accepted. A repeat is dropped before it
+ever reaches the screen, but it is <em>still acknowledged</em>, or the server would
+retry it forever.</p>
+<div class="code"><pre><code class="language-java">// Device.onDeliver -- the load-bearing four lines of the client
+if (!seen.add(m.id())) {          // seen is a Set&lt;String&gt; of accepted ids
+    duplicatesSuppressed++;
+    ackTo(m);                     // ack anyway, or the server retries for ever
+    return;                       // never reaches the screen
+}
+</code></pre></div>
+<p>That works for one reason only. The earlier decision that <strong>the sending device
+mints the id</strong> is what makes it possible. If a server generated the id, every
+retry would look like a brand-new message, and the deduplication set would be
+useless furniture.</p>
+<p>Force every packet to be delivered twice, send ten messages, and count what
+arrives against what Bilal sees.</p>
+<div class="code"><pre><code>messages typed by asha        : 10
+copies that reached the device: 80
+duplicates suppressed by id   : 70
+messages shown to the human   : 10
+</code></pre></div>
+<p>Eighty copies reached the phone. Ten lines appeared. Bilal has no idea any of
+this happened, which is the point.</p>
+<h3 id="readme-v5--why-is-a-message-stuck-on-a-perfectly-healthy-network">v5 — why is a message stuck on a perfectly healthy network?</h3>
+<p>Here is the version we had after v4: mailbox, device acks, retry timers,
+deduplication. It looks complete. It looks like a finished design you could
+draw on a whiteboard and defend.</p>
+<p>Run it on a network dropping 30% of packets, then repair the network
+completely, and this happens.</p>
+<div class="code"><pre><code>PASS  no-sweeper: 4 message(s) stranded even on a now-perfect network
+PASS  no-sweeper: bilal saw only 16/20
+</code></pre></div>
+<p>Four messages out of twenty stuck in a mailbox forever, <em>after</em> the network
+was restored to perfect, with both phones online the whole time. That was a
+real bug in this lab. The test found it. It was not invented to make a point.</p>
+<blockquote>
+<p><strong>🔮 Predict 4:</strong> The retry timer fires every 500ms until the device
+acknowledges. Both phones are online. The network is now perfect. So why is
+anything stuck?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Because the retry timer lives on the wrong machine.</strong></p>
+<p>The push retry is created inside <code>deliverToSocket</code>, on the server that holds
+the recipient's connection. That is Omar's counter, <code>cs2</code>. If the packet
+that dies is the <em>server-to-server hand-off</em>, <code>cs1 → cs2</code>, Meera's counter to Omar's,
+then Omar never learned a push was owed. No timer was ever created, on any
+machine. Meera has moved on. The message is sitting in a mailbox, perfectly
+safe and perfectly invisible.</p>
+<p>If you guessed &quot;the retry backoff got too long&quot;, you were looking at a timer
+that does exist. The bug is a timer that does not. Every retry in the system
+was guarding a hop, and no retry was guarding <em>the thing that actually needs
+delivering</em>.</p>
+</details>
+
+</blockquote>
+<p>So the fix inverts what the design thinks it is doing. <strong>The queue is the
+mechanism; the push is only an optimisation.</strong> Each connection server
+periodically re-scans the mailboxes of every device it currently holds, and
+re-pushes anything still sitting there.</p>
+<div class="code"><pre><code class="language-java">// Server.startSweeper -- the box everyone forgets to draw on the whiteboard
+for (String deviceId : sockets.keySet())
+    for (var e : boxes.box(deviceId))
+        if (!inFlight.contains(key(deviceId, e.msg().id())))
+            deliverToSocket(deviceId, e.msg());     // try again, from the queue
+</code></pre></div>
+<p>Same seed, same 30% loss, sweeper switched on.</p>
+<div class="code"><pre><code>PASS  lossy: all 20 messages eventually arrived (delivered=20/20)
+PASS  lossy: none was shown twice (window=20)
+PASS  lossy: the client had to suppress duplicates (14)
+</code></pre></div>
+<p>This is the most transferable idea in the lab, so it is worth saying without
+any chat vocabulary at all. <strong>Any design whose delivery guarantee depends on a
+message being pushed successfully has a hole in it.</strong> The guarantee has to
+come from durable state that somebody periodically re-examines. Pushes make it
+fast. The scan makes it true.</p>
+<h3 id="readme-v6--nothing-sorts-anything-so-why-is-the-chat-in-order">v6 — nothing sorts anything, so why is the chat in order?</h3>
+<p>Bilal was offline for an hour. He reconnects and twelve messages arrive at
+once, in one burst. What keeps them in order?</p>
+<p>Go and look at the design. There is no sequencer. There is no timestamp
+comparison. There is no reordering buffer. No server sorts anything, anywhere.</p>
+<blockquote>
+<p><strong>🔮 Predict 5:</strong> With no sorting code in the entire system, where does
+per-conversation ordering actually come from?</p>
+<details><summary>Reveal</summary>
+
+<p>From two things, and both of them are free.</p>
+<ol>
+<li>The mailbox is a <strong>FIFO queue</strong>, drained front to back.</li>
+<li>Everything travels over <strong>one connection</strong>, and a TCP connection is a
+byte stream. What is written first arrives first. Nothing can overtake.</li>
+</ol>
+<p>Take away either one and ordering is gone. The lab lets you take away the
+second: <code>java src/Experiments.java ordering</code></p>
+<div class="code"><pre><code>one ordered connection (real TCP): out-of-order arrivals = 0,
+    screen order = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+packets free to overtake       : out-of-order arrivals = 11,
+    screen order = [12, 2, 5, 1, 4, 7, 8, 6, 10, 11, 3, 9]
+</code></pre></div>
+<p>If you guessed &quot;the server sorts by timestamp&quot;, ask whose clock. There is no
+shared clock here, and there does not need to be one.</p>
+<p>This is why a device is <strong>pinned to one connection</strong> rather than having its
+packets load-balanced across servers, which would otherwise be the obvious
+thing to do. The ordering guarantee is a consequence of that pinning.</p>
+</details>
+
+</blockquote>
+<p>Now notice carefully what is <em>not</em> guaranteed. There is no ordering <strong>between</strong>
+different conversations. If Asha and Priya both message Bilal, the relative
+order of the two chats is whatever the mailbox happened to receive.</p>
+<p>Nobody needs it, so nobody pays for it. That refusal is a large part of why
+the system scales.</p>
+<h3 id="readme-v7--is-a-group-message-a-new-feature-or-the-same-loop">v7 — is a group message a new feature, or the same loop?</h3>
+<p>A group message looks like it needs a new concept. A shared conversation
+object that everybody reads from, perhaps. It does not need one.</p>
+<p>Arjun runs a group of 256 people. In the code, his group is the <em>same loop</em> as
+a one-to-one chat, with a longer list.</p>
+<div class="code"><pre><code class="language-java">Set&lt;String&gt; targets = new HashSet&lt;&gt;();
+for (String member : cluster.recipientsOf(m.toUser()))   // one person, or 256
+    targets.addAll(reg.devicesOf(member));
+</code></pre></div>
+<p>One typed message becomes one mailbox copy per recipient device. That is
+<strong>fan-out on write</strong>, and here is what it costs, measured at two group sizes.</p>
+<div class="code"><pre><code>group of   5 : 1 typed message -&gt;   4 mailbox writes,   22 network packets
+group of 256 : 1 typed message -&gt; 255 mailbox writes, 1244 network packets
+</code></pre></div>
+<p><strong>Why not keep one shared copy that everyone reads?</strong> Because every recipient
+needs their own delivery state. Their own position in the queue. Their own
+acknowledgement. Their own offline period. Their own retries. A shared copy
+would have to track all of that per member anyway. You would have rebuilt the
+mailboxes, and added a coordination problem on top.</p>
+<p>The price is real and it is linear. Every message to Arjun's 256-person group
+is 255 writes and 255 delivery state machines, paid on <em>every</em> message.</p>
+<p>That is why group size is capped at all. The cap is a product constraint
+driven purely by fan-out cost. It is also why &quot;broadcast to 100,000 people&quot; is
+a completely different system rather than a bigger group.</p>
+<blockquote>
+<p><strong>🔮 Predict 6:</strong> Every message is end-to-end encrypted, so only the
+recipient devices can read it. Arjun types one line into his group of 256.
+How many separate encryptions must his phone do?</p>
+<details><summary>Reveal</summary>
+
+<p>Naively, 255. One per recipient device, because each device holds different
+keys. That is a phone doing hundreds of public-key operations for one line of
+text, on every line of text.</p>
+<p>Real WhatsApp avoids it with <strong>sender keys</strong>. Arjun's phone generates one
+symmetric key for the group and distributes it once, pairwise-encrypted, so
+255 encryptions happen <em>once</em>. Every later message is encrypted a single
+time with that key. The server still fans out 255 copies of the same
+ciphertext.</p>
+<p>If you answered &quot;one, because the server re-encrypts&quot;, that is the design
+end-to-end encryption exists to forbid. The server has no keys and never
+will.</p>
+<p><em>(This is the publicly documented Signal-protocol group design; I have not
+implemented it here. The lab's <code>ciphertext</code> field is a stand-in.)</em></p>
+</details>
+
+</blockquote>
+<h3 id="readme-v8--bilal-has-a-laptop-too-so-what-does-delivered-even-mean">v8 — Bilal has a laptop too, so what does &quot;delivered&quot; even mean?</h3>
+<p>Bilal has a phone and a laptop. The change is smaller than you would expect,
+because the mailbox was per-device from the very start.</p>
+<div class="code"><pre><code>PASS  multi-device: bilal&#x27;s phone got it
+PASS  multi-device: bilal&#x27;s laptop got it
+PASS  multi-device: asha&#x27;s OWN laptop got a copy too
+PASS  multi-device: 3 mailbox copies were written for 1 typed message
+</code></pre></div>
+<p>Three copies for one typed message. One of them goes back to <em>Asha's own other
+device</em>, which is how her laptop shows the chat she typed on her phone.</p>
+<p>The genuinely hard part here is not delivery. It is <strong>meaning</strong>.</p>
+<p>What should two grey ticks mean when Bilal has a phone, a laptop and a tablet?
+First device to acknowledge? All of them? The phone specifically?</p>
+<p>Every product answers this differently, and every answer is defensible. There
+is no correct one, because the underlying reality is &quot;some subset of his
+devices has it&quot;, and that does not fit into a two-tick screen. In this lab,
+the first device to acknowledge deletes the copy that triggers the receipt.</p>
+<p>End-to-end encryption makes it harder still. Each device has its own key pair,
+so Asha's phone must encrypt for <em>each device</em>. Adding a device becomes a
+key-distribution event, not just a login.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--you-now-have-the-intermediate-model">✅ Checkpoint — you now have the INTERMEDIATE MODEL</h3>
+<p>You can walk a message from a phone to a queue to another phone and back, and
+justify each step by the failure that forced it: routing tables because of
+Omar's counter, mailboxes because of the Tube, device acks because of the
+dead battery, deduplication because of at-least-once, sweepers because of the
+lost hand-off, connection pinning because of ordering.
+<strong>Next:</strong> what happens when whole machines and networks fail, and exactly
+which promises survive.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>idempotent</em>, <em>at-least-once</em> or
+<em>deduplication</em>, explain to a friend why Bilal's phone received eighty copies
+of ten messages and Bilal never noticed.</p>
+<details><summary>A good answer sounds like</summary>
+"The post office cannot tell the difference between a letter that never
+arrived and a receipt that never came back. So when in doubt it sends the
+letter again. Bilal's phone writes down the reference number of every letter
+it opens. When the same number turns up a second time, it says thank you and
+drops it in the bin without showing him."
+</details>
+
+</blockquote>
+<h2 id="readme-11-what-breaks-when-machines-and-networks-fail">11. What breaks when machines and networks fail?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten things go wrong, and you can run every one of them.
+Nine of them lose <em>time</em> and keep the message. Only one loses the message,
+and the system chose that loss on purpose.</p>
+</blockquote>
+<p>Each failure below is a short story about somebody. Asha keeps typing. Bilal
+keeps disappearing. Omar's counter falls over. Dev makes a change that seems
+obviously good. Read the story first, then the one comparison table at the end
+of the section, which lines all ten up side by side.</p>
+<p>Here is how to make each one happen on your own machine.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>The failure, in one line</th>
+  <th>Make it happen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1</td>
+  <td>Bilal's phone is off for a week</td>
+  <td><code>java src/Experiments.java offline</code> · toggle <em>Bilal's phone: online</em></td>
+</tr>
+<tr>
+  <td>F2</td>
+  <td>The counter holding Bilal's line crashes</td>
+  <td><code>java src/Experiments.java crash</code> · <em>Crash cs2</em></td>
+</tr>
+<tr>
+  <td>F3</td>
+  <td>The network splits Asha from Bilal</td>
+  <td><code>java src/Experiments.java partition</code> · <em>Cut the network</em></td>
+</tr>
+<tr>
+  <td>F4</td>
+  <td>Every packet is delivered twice</td>
+  <td><code>java src/Experiments.java dup</code> · <em>duplicate</em> slider to 100%</td>
+</tr>
+<tr>
+  <td>F5</td>
+  <td>A push that nobody remembers to retry</td>
+  <td>the <code>withoutTheSweeper_...</code> test · <em>Mailbox sweeper: off</em> + 40% drop</td>
+</tr>
+<tr>
+  <td>F6</td>
+  <td>Fifty thousand phones reconnect at once</td>
+  <td><code>java src/Experiments.java storm</code></td>
+</tr>
+<tr>
+  <td>F7</td>
+  <td>Asha never hears &quot;stored&quot;</td>
+  <td>the <code>droppedServerAck_...</code> test, 35% drop on the uplink</td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>Arjun's 256-person group during a big match</td>
+  <td><code>java src/Experiments.java group</code></td>
+</tr>
+<tr>
+  <td>F9</td>
+  <td>A mailbox nobody ever collects from</td>
+  <td>the retention rule, discussed below</td>
+</tr>
+<tr>
+  <td>F10</td>
+  <td>Dev &quot;optimises&quot; the connection layer</td>
+  <td><code>java src/Experiments.java ordering</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-f1--what-if-bilal-is-offline-for-a-week">F1 — what if Bilal is offline for a week?</h3>
+<p>Asha sends twelve messages while Bilal's phone is switched off. All twelve
+land in his mailbox. Asha sits at one grey tick on each.</p>
+<p>When he reconnects, the catch-up drains all twelve in order. Each one is
+acknowledged. Each mailbox row is deleted. Asha's ticks all turn to two, in a
+little cascade, seven days late.</p>
+<p>Nothing was lost because the mailbox write happens <em>before</em> the sender is
+acknowledged. &quot;Accepted&quot; and &quot;durable&quot; are the same instant, so there is no
+moment when the message existed only in flight.</p>
+<p>The queue is not infinite, though. WhatsApp publicly states undelivered
+messages are held ~30 days and then dropped. That is a real, user-visible loss
+boundary, chosen deliberately over unbounded storage.</p>
+<h3 id="readme-f2--the-counter-crashed-so-is-the-message-lost">F2 — the counter crashed, so is the message lost?</h3>
+<p>Omar's counter, <code>cs2</code>, is holding Bilal's socket. The machine dies.</p>
+<blockquote>
+<p><strong>🔮 Predict 7:</strong> The routing table still says Bilal is at that counter, and
+the counter no longer exists. Asha sends. Is her message lost, and what does
+her screen say?</p>
+<details><summary>Reveal</summary>
+
+<p>Nothing is lost, and her screen tells the truth: one grey tick, and it stays
+there.</p>
+<p>The reason is the ordering from v2. The mailbox copy was written before the
+ack, and nothing deletes a mailbox copy except a device acknowledgement.
+The hand-off to the dead counter simply evaporates.</p>
+<p>If you answered &quot;lost, because the routing row is wrong&quot;, you spotted the
+real bug and stopped one step early. The routing row <em>is</em> wrong. The design
+survives it by never treating a successful push as the guarantee.</p>
+</details>
+
+</blockquote>
+<p>Here is the run. Read the line marked <code>&lt;-- a lie</code>, then read the last line.</p>
+<div class="code"><pre><code>bilal&#x27;s socket lives on cs1; the registry says so too.
+registry still points at cs1: cs1   &lt;-- a lie
+[   40ms] cs3 stored asha:phone-asha-bilal-1 into 1 mailbox(es)
+[   68ms] LOST (node down) -&gt; cs1
+[   79ms] asha:phone got server-ack   [one grey tick]
+
+bilal saw            : 0 messages
+safe in the mailbox  : 1
+asha&#x27;s tick          : one grey tick   &lt;-- honest
+</code></pre></div>
+<p>What actually broke is subtle. The sockets died with the machine, but the
+<em>routing rows pointing at it did not</em>. For a window of time the table
+confidently returns a dead address, and messages routed there evaporate.</p>
+<p>Why can nobody clean up? Because the routing table is updated by the server
+that owns the session, and a crashed server cannot clean up after itself. Say
+the general form out loud, because it is true far beyond chat: <strong>a distributed
+registry always lags reality by at least one failure-detection interval.</strong></p>
+<p>Production fixes this with leases. Sessions carry a TTL and are refreshed by
+heartbeat, so stale rows expire on their own. That is the identical mechanism
+the <a href="../70-uber-system-design/notes.html#readme">uber-system-design</a> lab uses for a driver's
+position and a ride offer, which is a good sign you are looking at a general
+tool rather than a chat trick. Clients also reconnect aggressively with
+backoff. And the whole design assumes connection servers are disposable, which
+is precisely why they hold no durable state.</p>
+<h3 id="readme-f3--the-network-splits-in-two-so-who-wins">F3 — the network splits in two, so who wins?</h3>
+<p>Asha and Meera's <code>cs1</code> are on one side. Bilal and Omar's <code>cs2</code> are on the
+other. Asha's message is stored and acknowledged, so she gets one grey tick.
+The hand-off across the split is dropped. The message waits.</p>
+<p>When the partition heals, the sweeper re-pushes and the ticks complete.</p>
+<p>Why is this not a disaster? Because this system never needed both sides to
+agree on anything. There is no consensus in the delivery path. No quorum, no
+leader, no commit protocol. Each mailbox has exactly one owner.</p>
+<p>Read it through <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>: during a partition the
+system stays <strong>available</strong> for writes, because Asha can keep sending. What it
+gives up is timeliness, not correctness.</p>
+<p>Compare that to the <a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a> lab, where a
+partition at the wrong moment blocks participants outright. Chat gets an easy
+ride, and the reason is worth naming. The guarantee it needs is &quot;this queue
+eventually empties&quot;, and that is not an agreement between machines.</p>
+<p>The casualty is presence. &quot;Last seen&quot; is wrong on both sides for the duration.</p>
+<h3 id="readme-f4--eighty-copies-arrive-and-ten-lines-appear-how">F4 — eighty copies arrive and ten lines appear. How?</h3>
+<p>Set the duplicate slider to 100%, and Asha's ten messages reach Bilal's phone
+eighty times.</p>
+<p>It happens because a lost acknowledgement is indistinguishable from a lost
+message. Retrying is the only safe response, and duplication is the price of
+that safety.</p>
+<p>Bilal's phone drops ids it has already accepted, and <em>still acknowledges</em>
+them. Skip that ack and the server retries forever, which turns a cosmetic
+problem into a permanent one.</p>
+<p>Nothing is lost, but the work is real. Those seventy extra pushes cost
+bandwidth and battery on a phone somebody is paying for.</p>
+<p>This is the same shape as an idempotent consumer in
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>. The difference is where
+the deduplication set lives. Here it lives on a phone with limited storage, so
+it is bounded: a recent window of ids, not all history. A message duplicated
+<em>after</em> it falls out of that window would show twice, which is why the window
+is generous.</p>
+<h3 id="readme-f5--the-push-nobody-remembered-to-retry">F5 — the push nobody remembered to retry</h3>
+<p>You already met this one as v5: 4 of 20 messages stranded on a healthy
+network.</p>
+<p>The retry timer was created by the receiving server, and the packet that died
+was the one that would have told it to create the timer. After the fix, a
+periodic sweep of every connected device's mailbox finds the strays.</p>
+<p>Before the fix, those four were silently lost while Asha showed one confident
+grey tick. That combination, silent loss plus a confident screen, is the worst pairing in
+the whole lab.</p>
+<p>Every real messaging system has this box under some name. A delivery sweeper.
+A retry scanner. A reconciliation job. If you sketch this design in an
+interview without it, &quot;what if the internal hand-off is lost?&quot; is the question
+that finds the hole.</p>
+<h3 id="readme-f6--fifty-thousand-phones-reconnect-in-the-same-second">F6 — fifty thousand phones reconnect in the same second</h3>
+<p>A data-centre failover, a mobile network blip, or an app update makes a large
+population reconnect simultaneously. Nobody sent a message. Look at where the
+work lands.</p>
+<div class="code"><pre><code>sockets per server (mean)  : 2500
+mailbox reads triggered    : 50000
+catch-up packets pushed    : 300000
+registry writes in 1 second: 50000   &lt;-- the registry, not the mailbox, is the hot spot
+</code></pre></div>
+<p>What breaks is not the message path. It is the <em>session</em> path. Each reconnect
+is a routing-table write plus a mailbox scan.</p>
+<p>It is dangerous because it is self-amplifying. Overloaded servers time out,
+clients reconnect harder, load rises further. Engineers call that a
+<strong>thundering herd</strong>.</p>
+<p>The client-side answer is exponential backoff with jitter. The lab's
+<code>Device.scheduleRetry</code> doubles its delay each attempt for exactly this reason.
+The server-side answer is connection admission control.</p>
+<p>In production, clients spread reconnects over a randomised window. Load
+balancers shed connections rather than accepting them and collapsing. And
+capacity is planned for the reconnect spike, not the steady state. The peak
+that sizes your fleet is a failover, not a busy evening.</p>
+<h3 id="readme-f7--what-if-asha-never-hears-stored">F7 — what if Asha never hears &quot;stored&quot;?</h3>
+<p>Her uplink drops 35% of packets, so the server ack never reaches her. She
+retries with the same id.</p>
+<p>The server appends to the mailbox a second time and pushes again. Bilal's
+phone recognises the id and drops it. Asha's screen is right, Bilal's screen
+is right, and a little storage and bandwidth were burned in between.</p>
+<p>Here is the subtle point. A <em>server-side</em> deduplication check would save that
+work, and real systems do keep a short-lived recent-id set per sender for
+exactly this. It is an optimisation, not a correctness requirement. The
+correctness lives on the phone, and it never moved.</p>
+<h3 id="readme-f8--arjuns-group-during-a-big-match">F8 — Arjun's group during a big match</h3>
+<p><code>group of 256 : 1 typed message -&gt; 255 mailbox writes, 1244 network packets</code></p>
+<p>Nothing breaks correctness-wise. The <em>cost</em> breaks. A busy 256-person group
+generates two orders of magnitude more work than a one-to-one chat, and it
+arrives in bursts, because everybody replies to the same goal.</p>
+<p>The saving grace is that the work is linear and parallel. Each recipient's
+mailbox is independent, so there is no lock and no shared hot row. That is the
+payoff for fan-out on write.</p>
+<p>Production adds group size caps, plus rate limits per sender and per group
+(see <a href="../60-distributed-rate-limiting/notes.html#readme">distributed-rate-limiting</a>). Anything
+broadcast-shaped gets separate treatment, because a &quot;group&quot; of 100,000 is a
+different product with a different design.</p>
+<h3 id="readme-f9--the-letter-nobody-ever-collects">F9 — the letter nobody ever collects</h3>
+<p>A phone is lost, or the app is uninstalled. Its mailbox grows and is never
+drained.</p>
+<p>Time-based expiry ends it. WhatsApp drops undelivered messages after roughly
+30 days, and the sender is simply never upgraded past one grey tick.</p>
+<p>Be honest about what this is. It is the one place the system deliberately
+loses data. The loss is bounded and well understood, and it is what keeps
+storage from being unbounded, which is the trade that makes the whole storage
+layer cheap.</p>
+<h3 id="readme-f10--devs-entirely-reasonable-optimisation">F10 — Dev's entirely reasonable optimisation</h3>
+<p>Dev notices that a device's packets all queue behind one connection. He
+load-balances them across several connections for throughput. Every test
+passes. Nothing errors.</p>
+<div class="code"><pre><code>packets free to overtake : out-of-order arrivals = 11,
+    screen order = [12, 2, 5, 1, 4, 7, 8, 6, 10, 11, 3, 9]
+</code></pre></div>
+<p>Asha's conversation now reads backwards for Bilal.</p>
+<p>Why? Because the ordering guarantee was never implemented anywhere. It was
+inherited from having exactly one ordered stream. Remove the stream and the
+guarantee goes with it, with no error and no test failing unless somebody
+wrote one.</p>
+<p>The lesson generalises, and it is the most quietly useful sentence in this
+lab. <strong>Know which of your guarantees are implemented and which are
+inherited.</strong> Inherited ones are the ones that vanish silently during a
+refactor.</p>
+<h3 id="readme-all-ten-side-by-side">All ten side by side</h3>
+<p>Read the second column first. Nine of these ten rows lose only time.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>What actually broke</th>
+  <th>What still held</th>
+  <th>What was lost meanwhile</th>
+  <th>What production adds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1</td>
+  <td>nothing; Bilal was simply away</td>
+  <td>no loss, no duplicates, order</td>
+  <td>any bound on latency</td>
+  <td>~30 day retention, then a real drop</td>
+</tr>
+<tr>
+  <td>F2</td>
+  <td>sockets died; routing rows survived them</td>
+  <td>durability, no duplicates, order</td>
+  <td>liveness, for the detection window</td>
+  <td>session leases with a TTL, heartbeat refresh</td>
+</tr>
+<tr>
+  <td>F3</td>
+  <td>the hand-off between the two sides</td>
+  <td>everything except promptness</td>
+  <td>delivery latency, presence accuracy</td>
+  <td>regional homing; the sweeper heals it</td>
+</tr>
+<tr>
+  <td>F4</td>
+  <td>the acknowledgement, not the message</td>
+  <td>the exactly-once illusion on screen</td>
+  <td>bandwidth and battery, briefly</td>
+  <td>short-lived server-side recent-id set</td>
+</tr>
+<tr>
+  <td>F5</td>
+  <td>the packet that would have created the timer</td>
+  <td>nothing, before the fix</td>
+  <td>4 of 20 messages, silently</td>
+  <td>a sweeper, under some name, in every real system</td>
+</tr>
+<tr>
+  <td>F6</td>
+  <td>the session path, not the message path</td>
+  <td>every message guarantee</td>
+  <td>server headroom; it self-amplifies</td>
+  <td>backoff with jitter, admission control</td>
+</tr>
+<tr>
+  <td>F7</td>
+  <td>the server ack on Asha's uplink</td>
+  <td>exactly-once on screen</td>
+  <td>a little storage and bandwidth</td>
+  <td>per-sender duplicate suppression</td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>cost, at two orders of magnitude</td>
+  <td>correctness; the work is parallel</td>
+  <td>headroom during bursts</td>
+  <td>group caps and rate limits</td>
+</tr>
+<tr>
+  <td>F9</td>
+  <td>nobody collected the mail</td>
+  <td>the storage budget</td>
+  <td>the message itself, deliberately</td>
+  <td>expiry sweep; sender stays at one tick</td>
+</tr>
+<tr>
+  <td>F10</td>
+  <td>an inherited guarantee, silently</td>
+  <td>durability and deduplication</td>
+  <td>per-conversation ordering</td>
+  <td>pin a device to one ordered connection</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-is-promised-what-is-not-and-what-was-sold-to-get-it">12. What is promised, what is not, and what was sold to get it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five rules hold the whole thing up. Each one buys a
+promise, and each promise was paid for by giving something else away. This
+section is the receipt.</p>
+</blockquote>
+<h3 id="readme-which-five-rules-hold-everything-up">Which five rules hold everything up?</h3>
+<p>These are the invariants. Break any one of them and something Asha can see
+goes wrong. Rung 6 of the exercises plants a bug behind each of the first
+four, so you can watch it happen.</p>
+<ol>
+<li><strong>Nothing is acknowledged before it is durable.</strong> The mailbox write comes
+first, then the server ack. So a tick never over-promises.</li>
+<li><strong>Nothing is deleted before the recipient device confirms it.</strong> So any
+crash between push and confirmation costs a retry, never a message.</li>
+<li><strong>Message identity belongs to the sending device.</strong> So a retry is provably
+the same message, which is the only thing that makes deduplication possible
+at all.</li>
+<li><strong>A device accepts each id at most once.</strong> So at-least-once transport
+becomes an exactly-once experience.</li>
+<li><strong>A device's messages travel over exactly one ordered connection, drained
+from a FIFO queue.</strong> So per-conversation order arrives free, with no code.</li>
+</ol>
+<h3 id="readme-what-is-asha-actually-guaranteed">What is Asha actually guaranteed?</h3>
+<p>Every device that is registered will <strong>eventually</strong> receive the message, as
+long as it reconnects within the retention window. However many times the
+network delivers, <strong>no duplicate is ever shown to a human</strong>. Each device sees
+its <strong>conversations in order</strong>. Each tick on Asha's screen means something
+specific and is never reached early, which is what makes her feedback honest.
+And during a partition the system stays <strong>available</strong> for accepting and
+queueing messages.</p>
+<h3 id="readme-what-is-deliberately-not-guaranteed">What is deliberately not guaranteed?</h3>
+<p>There is no bound on delivery latency, and there cannot be, because Bilal's
+phone may simply be off.</p>
+<p>There is no ordering across different conversations. Nobody needs it, so it
+was never paid for.</p>
+<p>There is no single global order of all messages. No such clock exists and no
+such need exists. Contrast <a href="../39-paxos/notes.html#readme">paxos</a>, where agreeing an order <em>is</em>
+the entire problem.</p>
+<p>There is no server-side history. Once delivered, the service has nothing. Lose
+your phone without a backup and the messages are gone. That is a product
+promise, not a bug.</p>
+<p>There is no delivery after the retention window closes at roughly 30 days.</p>
+<p>There is no exactly-once at the transport layer. Only at the screen.</p>
+<p>And presence is not accurate. &quot;Last seen&quot; and &quot;online&quot; are best-effort, and
+during a partition they are simply wrong.</p>
+<h3 id="readme-what-was-traded-away-and-what-did-it-buy">What was traded away, and what did it buy?</h3>
+<p>Read the right-hand column as the reason somebody agreed to the left-hand one.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Given up</th>
+  <th>Bought</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Server-side chat history</td>
+  <td>A tiny storage footprint, and a strong privacy claim</td>
+</tr>
+<tr>
+  <td>Global ordering</td>
+  <td>No coordination in the delivery path at all — no consensus, no leader</td>
+</tr>
+<tr>
+  <td>Bounded latency</td>
+  <td>Correctness under arbitrary offline periods</td>
+</tr>
+<tr>
+  <td>Transport-level exactly-once</td>
+  <td>A guarantee a network can actually keep</td>
+</tr>
+<tr>
+  <td>Unbounded queues</td>
+  <td>Predictable storage, at the cost of a real 30-day loss boundary</td>
+</tr>
+<tr>
+  <td>Cheap huge groups</td>
+  <td>Independent per-recipient delivery state</td>
+</tr>
+</tbody>
+</table></div>
+<p>Here is the through-line, and it is the sentence to remember from the whole
+lab. This system is fast and enormous precisely because it <strong>refuses to agree
+on anything</strong>.</p>
+<p>Every mailbox has one owner. Every message has one identity, chosen at the
+edge, on a phone. No two machines ever have to reach a decision together.</p>
+<p>Compare the coordination cost you measured in
+<a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a> and <a href="../39-paxos/notes.html#readme">paxos</a>. Chat is
+the design you get when you successfully <em>avoid</em> needing them.</p>
+<h2 id="readme-13-which-lines-of-code-carry-the-design">13. Which lines of code carry the design?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nine small files, no dependencies, no build tool. Four
+places in them are load-bearing, and everything else is scaffolding around
+those four.</p>
+</blockquote>
+<p>Everything runs with no dependencies and no build tool. <code>java src/Tests.java</code>
+compiles the directory in place, on JDK 25.</p>
+<p>Read the right-hand column for what each file is really for.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Msg.java is in the lab folder on your laptop"><code>src/Msg.java</code></span></td>
+  <td>the message; note <code>id</code> is minted by the device and the payload is called <code>ciphertext</code> on purpose</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Net.java is in the lab folder on your laptop"><code>src/Net.java</code></span></td>
+  <td>a deterministic event-driven fake network: drop, duplicate, delay, partition, kill — every fault in the lab funnels through <code>Net.send</code></td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Registry.java is in the lab folder on your laptop"><code>src/Registry.java</code></span></td>
+  <td>the routing table, plus <code>leaveStaleEntriesFor</code> — the crash that leaves lies behind</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/MailboxStore.java is in the lab folder on your laptop"><code>src/MailboxStore.java</code></span></td>
+  <td>per-device durable FIFO queues</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Server.java is in the lab folder on your laptop"><code>src/Server.java</code></span></td>
+  <td>connection server: fan-out, push, retry, the sweeper, ack handling</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Device.java is in the lab folder on your laptop"><code>src/Device.java</code></span></td>
+  <td>the phone: id minting, deduplication, acks, ticks, backoff</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Cluster.java is in the lab folder on your laptop"><code>src/Cluster.java</code></span></td>
+  <td>wiring, groups, stats</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Tests.java is in the lab folder on your laptop"><code>src/Tests.java</code></span></td>
+  <td>31 scenario checks, readable as documentation</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Experiments.java is in the lab folder on your laptop"><code>src/Experiments.java</code></span></td>
+  <td>nine runnable failure experiments</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-four-places-would-you-defend-in-review">Which four places would you defend in review?</h3>
+<p>All four are commented in the source with the invariant they enforce.</p>
+<p><code>Server.onSend</code> does the mailbox writes and <em>then</em> the sender ack. Reversing
+those two lines makes Asha's ticks lie, which is invariant 1.</p>
+<p><code>Server.onDeviceAck</code> is the only place a mailbox row is ever deleted, and it
+is driven by the <em>device</em>, not by a successful send. That is invariant 2.</p>
+<p><code>Device.onDeliver</code> holds <code>if (!seen.add(m.id()))</code> and then acknowledges
+anyway. Three lines on Bilal's phone that convert at-least-once into
+exactly-once, which is invariant 4.</p>
+<p><code>Server.startSweeper</code> is the periodic re-scan. It is the difference between
+<code>16/20</code> and <code>20/20</code> under packet loss, and it is the box nobody draws.</p>
+<p>What the code deliberately does <strong>not</strong> have: real sockets, real threads, real
+persistence, encryption, authentication, media, presence, or a real database.
+Each of those is named in section 15 with what production does instead.</p>
+<h2 id="readme-14-what-do-the-nine-experiments-show">14. What do the nine experiments show?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nine commands. Answer the question in the third column
+before you run each one, because being wrong is where the learning is.</p>
+</blockquote>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java            # lists all nine
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Command</th>
+  <th>Predict before running</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><code>trace</code></td>
+  <td>How many network packets does one message and its read receipt cost, end to end?</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>offline</code></td>
+  <td>While Bilal is away, what does Asha see, and where do the messages live?</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>crash</code></td>
+  <td>The routing row still points at the dead server. Is the message lost?</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>partition</code></td>
+  <td>Which side can still make progress, and what does Asha's screen say?</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>dup</code></td>
+  <td>Every packet is delivered twice. How many lines appear on screen?</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>group</code></td>
+  <td>One message to 256 people — how many mailbox writes? How many packets?</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>ordering</code></td>
+  <td>Nothing sorts anything. What actually keeps a burst in order?</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>storm</code></td>
+  <td>50,000 phones reconnect at once. Which subsystem is the hot spot?</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>capacity</code></td>
+  <td>At 100 billion messages a day, is this a storage problem or a connection problem?</td>
+</tr>
+</tbody>
+</table></div>
+<p>Answers, with the numbers, are in the sections above and in
+<a href="notes.html#solutions">SOLUTIONS.md</a>.</p>
+<p>Here is experiment 1 worked through. Read the timestamps down the left, and
+watch how much of the elapsed time is Asha waiting for news about somebody
+else's phone.</p>
+<div class="code"><pre><code>[    0ms] asha:phone connected to cs3 (registry updated)
+[    0ms] bilal:phone connected to cs1 (registry updated)
+--- send ---
+[   40ms] cs3 stored asha:phone-asha-bilal-1 into 1 mailbox(es)
+[   79ms] asha:phone got server-ack   [one grey tick]
+[  115ms] bilal:phone SHOWED message to the user
+[  146ms] cs1 got device-ack -&gt; mailbox copy deleted
+[  209ms] asha:phone -&gt; two grey ticks (device has it)
+--- bilal opens the chat ---
+[  916ms] asha:phone -&gt; two blue ticks (human read it)
+
+packets: sent=10 delivered=10 dropped=0 dup=0
+mailbox: appends=1 deletes=1 stillQueued=0
+</code></pre></div>
+<p>Ten packets for one &quot;on my way&quot; and its receipts. The mailbox row existed for
+106 milliseconds. That row is the entire storage cost of a delivered message,
+and it is why section 15 opens by telling you this is not a storage problem.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--you-now-have-the-engineering-model">✅ Checkpoint — you now have the ENGINEERING MODEL</h3>
+<p>You can name the invariants, say which guarantees survive each failure, and
+run every one of them. <strong>Next:</strong> the numbers, what real WhatsApp does that
+this toy does not, and how to say all of this in an interview.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>invariant</em>, <em>durable</em> or <em>sweeper</em>,
+explain to a friend why this design never has to make two computers agree on
+anything.</p>
+<details><summary>A good answer sounds like</summary>
+"Every pigeonhole belongs to exactly one phone, and only that phone can empty
+it. The reference number on the letter was written by the person who sent it,
+so nobody has to decide whose number wins. There is nothing for two clerks to
+argue about, so there is never a vote."
+</details>
+
+</blockquote>
+<h2 id="readme-15-what-does-the-real-thing-do-that-this-toy-does-not">15. What does the real thing do that this toy does not?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Do the arithmetic first, because it tells you which
+problem you are actually solving. Then meet the seven things the toy is
+missing, the largest of which is that phones cannot stay connected at all.</p>
+</blockquote>
+<h3 id="readme-151-what-do-the-numbers-say-before-you-draw-a-single-box">15.1 What do the numbers say before you draw a single box?</h3>
+<p>Run it and read the last three lines hardest.</p>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java capacity
+</code></pre></div>
+<div class="code"><pre><code>users                                : 2,000,000,000
+messages/day                         : 100,000,000,000
+average messages/second              : 1,157,407
+peak (x3)                            : 3,472,221/s
+concurrently connected (1 in 4)      : 500,000,000
+connection servers @ 1,000,000 sockets  : 500
+undelivered queue, 1% of a day&#x27;s mail: 200 GB
+</code></pre></div>
+<blockquote>
+<p><strong>🔮 Predict 8:</strong> Half a billion phones online at once, and 100 billion
+messages a day. Which layer do you build first: the one that stores the
+messages, or the one that holds the connections?</p>
+<details><summary>Reveal</summary>
+
+<p>The connections, and it is not close.</p>
+<p>The pending queue is 200 GB. That would fit on one reasonably large machine.
+The 500,000,000 open connections would not fit on ten thousand.</p>
+<p><strong>This is a connection problem wearing the costume of a database problem.</strong>
+The storage layer is small because you throw everything away as soon as it
+is delivered.</p>
+<p>If you answered &quot;storage, at 100 billion a day&quot;, you priced the messages
+that arrive rather than the ones still waiting. A design that opens with &quot;we
+shard the messages table across 500 nodes&quot; has already misread the question,
+and that is a genuinely common way to lose this interview.</p>
+</details>
+
+</blockquote>
+<p>Two derived numbers are worth having ready before anyone asks.</p>
+<p>The first is <strong>1.2M messages/second average, and around 3.5M at peak</strong>. But
+the fan-out multiplier matters more than the message count. With groups,
+<em>deliveries</em> per second are several times higher than <em>messages</em> per second.</p>
+<p>The second is that <strong>the reconnect rate sizes your fleet, not the message
+rate</strong>. Phones change networks constantly. A data-centre failover reconnects a
+whole region at once, which is experiment 8.</p>
+<p>Where these figures come from, and which of them are assumptions rather than
+published facts, is set out in section 19.</p>
+<h3 id="readme-152-how-does-each-toy-piece-become-a-real-one">15.2 How does each toy piece become a real one?</h3>
+<p>Read the middle column as the honest implementation, and the right-hand one as
+what a company operating at this size actually did.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>This lab</th>
+  <th>Real implementation</th>
+  <th>Production reality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Net</code> event loop</td>
+  <td>real TCP sockets with epoll/kqueue</td>
+  <td>see <a href="../03-io-multiplexing/notes.html#readme">io-multiplexing</a> — this is that lab, applied</td>
+</tr>
+<tr>
+  <td><code>Server</code> object</td>
+  <td>a connection server process holding ~1M sockets</td>
+  <td>WhatsApp famously ran these on FreeBSD in <strong>Erlang</strong>, a runtime built for millions of cheap concurrent processes; reported ~1–2M connections per box</td>
+</tr>
+<tr>
+  <td>custom <code>Packet</code> types</td>
+  <td>a compact binary protocol</td>
+  <td>WhatsApp began from <strong>XMPP</strong> (via ejabberd) and evolved a compressed binary variant often called <em>FunXMPP</em>; the wire format is not the interesting part</td>
+</tr>
+<tr>
+  <td><code>Registry</code> HashMap</td>
+  <td>a replicated in-memory session store with leases</td>
+  <td>Redis-like or purpose-built; every row is a lease refreshed by heartbeat, so crashes self-heal (<a href="../13-redis/notes.html#readme">redis</a>)</td>
+</tr>
+<tr>
+  <td><code>MailboxStore</code> HashMap</td>
+  <td>a write-heavy, delete-heavy durable store</td>
+  <td>WhatsApp used Erlang's <strong>Mnesia</strong>; the workload shape (append, read once, delete, short lifetime) is a poor fit for a B-tree and a decent fit for an LSM — though the delete rate makes tombstones a real operational concern (<a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a>)</td>
+</tr>
+<tr>
+  <td><code>Cluster.homeFor</code> = hash</td>
+  <td>a load balancer + client reconnect logic</td>
+  <td>which device lands on which server changes constantly, which is exactly why the registry exists rather than a formula</td>
+</tr>
+<tr>
+  <td>plaintext <code>ciphertext</code> field</td>
+  <td>the <strong>Signal protocol</strong></td>
+  <td>E2E since 2016, with sender keys for groups</td>
+</tr>
+<tr>
+  <td>always-connected phones</td>
+  <td><strong>push notifications</strong></td>
+  <td>see 15.3 — the biggest single omission</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-153-what-does-this-toy-get-most-wrong">15.3 What does this toy get most wrong?</h3>
+<p>Everything above assumes Bilal's phone holds an open connection. On iOS, an
+app in the background <strong>cannot</strong>. The operating system suspends it, and the
+socket dies.</p>
+<p>So there is a whole extra hop. When a message arrives for a device with no
+live connection, the service sends a small notification through <strong>APNs</strong>
+(Apple) or <strong>FCM</strong> (Google). That is a single system-level connection the
+operating system maintains on behalf of every app. It wakes the app, the app
+reconnects, and <em>then</em> the mailbox drains exactly as in this lab.</p>
+<p>Three consequences are worth knowing.</p>
+<p>There is now a delivery path outside your control, with its own retries, rate
+limits and failure modes. You cannot debug it and you cannot page anyone about
+it.</p>
+<p>With end-to-end encryption the notification cannot contain the message text,
+because the server does not have it. The phone must wake up and fetch.</p>
+<p>And it changes what &quot;delivered&quot; means. On iOS a message may be sitting in a
+mailbox while the phone is perfectly online, just suspended.</p>
+<h3 id="readme-154-what-else-did-the-toy-leave-out">15.4 What else did the toy leave out?</h3>
+<p>Eleven things, and each one is a lab of its own. Read the right-hand column
+for what a real system puts there instead.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted here</th>
+  <th>What production does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Persistence</strong></td>
+  <td>mailboxes are a <code>HashMap</code>; real ones are on disk, replicated, and fsynced before the sender ack</td>
+</tr>
+<tr>
+  <td><strong>Authentication</strong></td>
+  <td>phone-number registration, device identity keys, session establishment</td>
+</tr>
+<tr>
+  <td><strong>End-to-end encryption</strong></td>
+  <td>Signal protocol; per-device sessions; sender keys for groups; key-change notifications</td>
+</tr>
+<tr>
+  <td><strong>Media</strong></td>
+  <td>photos and videos never travel the message path: the client encrypts the blob, uploads it to a separate store, and sends a small pointer + key. Media is a CDN problem, not a messaging problem</td>
+</tr>
+<tr>
+  <td><strong>Presence / typing</strong></td>
+  <td>ephemeral, best-effort, never queued and never durable — the opposite policy from messages, deliberately</td>
+</tr>
+<tr>
+  <td><strong>Voice &amp; video calls</strong></td>
+  <td>a completely separate path (peer-to-peer where possible, relayed otherwise); the messaging system is used only for signalling</td>
+</tr>
+<tr>
+  <td><strong>Backpressure</strong></td>
+  <td>a slow phone must not force a server to buffer without limit; real servers bound per-connection queues and shed</td>
+</tr>
+<tr>
+  <td><strong>Sharding of the queue store</strong></td>
+  <td>by device id, typically consistent hashing — this lab uses a plain modulo, which is exactly the bug <a href="../35-consistent-hashing/notes.html#readme">consistent-hashing</a> measures: 100→101 machines moves 99% of keys when 1% had to move</td>
+</tr>
+<tr>
+  <td><strong>Multi-datacentre</strong></td>
+  <td>users are homed near their region; mailboxes are regional; cross-region delivery is an extra hop and the main source of tail latency</td>
+</tr>
+<tr>
+  <td><strong>Retention &amp; deletion</strong></td>
+  <td>~30 day queue TTL; delete-for-everyone; disappearing messages</td>
+</tr>
+<tr>
+  <td><strong>Abuse, spam, rate limits</strong></td>
+  <td>per-sender and per-group limits (<a href="../60-distributed-rate-limiting/notes.html#readme">distributed-rate-limiting</a>)</td>
+</tr>
+<tr>
+  <td><strong>Backups</strong></td>
+  <td>the reason your history survives a lost phone is a <em>user-controlled cloud backup</em>, not the service</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-155-what-does-ben-watch-when-he-is-on-call">15.5 What does Ben watch when he is on call?</h3>
+<p>Ben carries the pager. He does not watch &quot;messages per second&quot;, because that
+number is almost never the first thing to move. He watches these six.</p>
+<p><strong>Concurrent connections per server, and the reconnect rate.</strong> A rising
+reconnect rate is the earliest signal of nearly every incident.</p>
+<p><strong>Mailbox depth, and more importantly the <em>age</em> of the oldest undelivered
+message.</strong> Depth is normal, because people are offline. Age climbing for
+<em>online</em> devices means delivery is broken.</p>
+<p><strong>Sweeper backlog</strong>, meaning how much work the periodic re-scan is finding. It
+should be near zero. If the sweeper is delivering a lot, pushes are failing.</p>
+<p><strong>Ack latency at the 99th percentile</strong>, from push to device ack, split by
+region.</p>
+<p><strong>Stale-session rate</strong>, meaning routing rows pointing at servers that no
+longer hold the socket. Spikes here mean failure detection is lagging.</p>
+<p><strong>Fan-out amplification</strong>, meaning deliveries per message. A sudden rise means
+group traffic is shifting and the capacity arithmetic changes.</p>
+<p>The pager Ben least wants to receive reads <em>&quot;undelivered age p99 rising,
+connection count flat&quot;</em>. Flat connections rule out a mass disconnect. Rising
+age with users online means delivery itself is stuck. That is the F5 shape,
+and Ben should go and look at the sweeper first.</p>
+<h3 id="readme-156-why-does-slack-look-nothing-like-this">15.6 Why does Slack look nothing like this?</h3>
+<p>One question separates all of these products: <strong>does the server keep your
+history?</strong> Everything else follows from the answer.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>System</th>
+  <th>Server keeps history?</th>
+  <th>Consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>WhatsApp</strong></td>
+  <td>No — deleted on delivery</td>
+  <td>Tiny storage; history tied to the device; strong privacy story; new device starts empty unless you restore a backup</td>
+</tr>
+<tr>
+  <td><strong>Signal</strong></td>
+  <td>No, and even less metadata</td>
+  <td>Same shape, stricter</td>
+</tr>
+<tr>
+  <td><strong>Messenger / Instagram DM</strong></td>
+  <td>Yes</td>
+  <td>Search, multi-device sync and web login are easy; storage and privacy costs are large</td>
+</tr>
+<tr>
+  <td><strong>Slack / Teams</strong></td>
+  <td>Yes, as the product</td>
+  <td>The message store <em>is</em> the value; search and retention are first-class; scale is per-workspace, not global</td>
+</tr>
+<tr>
+  <td><strong>Discord</strong></td>
+  <td>Yes, channel-shaped</td>
+  <td>Fan-out on <strong>read</strong> for big channels — thousands of readers pull from one shared log rather than each getting a copy. The opposite choice to chat's fan-out on write, and correct for their shape</td>
+</tr>
+</tbody>
+</table></div>
+<p>That last row deserves a pause. Fan-out on write versus read is not a right
+answer. It is a function of the ratio between recipients and readers.</p>
+<h3 id="readme-157-how-would-you-answer-this-in-an-interview">15.7 How would you answer this in an interview?</h3>
+<p>Dev has 45 minutes and a whiteboard. Here is the structure, which follows this
+lab exactly.</p>
+<p><strong>Requirements (5 min).</strong> One-to-one and group text. Delivery and read
+receipts. Offline delivery. Multi-device. Then ask explicitly: <em>do we store
+history server-side?</em> Get that answered early, because it changes everything.
+Non-functional: billions of users, low latency when online, never lose or
+duplicate, ordering per conversation.</p>
+<p><strong>Capacity (5 min).</strong> Do the arithmetic from 15.1 out loud and land the
+punch line: <strong>connection-bound, not storage-bound</strong>.</p>
+<p><strong>High-level design (10 min).</strong> Persistent connections, then connection
+servers, then the routing table, then per-device mailboxes, then acks. Draw
+the nine-step diagram from section 8.</p>
+<p><strong>The delivery walk (10 min).</strong> Sender-minted ids. Store before ack. Delete
+on device ack. At-least-once plus device deduplication. Ticks meaning exactly
+three different things.</p>
+<p><strong>Deep dives (10 min).</strong> Pick from: group fan-out and its cost;
+multi-device and what &quot;delivered&quot; means; the sweeper and why push alone is not
+a guarantee; ordering as an inherited property of one connection; reconnect
+storms.</p>
+<p><strong>Failure and operations (5 min).</strong> Server crash and stale sessions.
+Partition. Queue TTL. What Ben watches.</p>
+<p>Three things make an answer stand out, and all three are in this lab. Saying
+<strong>store before you acknowledge</strong>, and explaining why. Volunteering that <strong>the
+push is not the guarantee, the queue is</strong>. And being precise that <strong>one grey
+tick says nothing about the recipient</strong>.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--you-now-have-the-production-model">✅ Checkpoint — you now have the PRODUCTION MODEL</h3>
+<p>You can size the fleet, name what the toy is missing, say what an on-call
+engineer watches, and defend the design for 45 minutes at a whiteboard.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>capacity</em>, <em>fleet</em> or <em>fan-out</em>,
+explain this to a friend. Why is the first thing you build the part that
+holds the phones, rather than the part that stores the messages?</p>
+<details><summary>A good answer sounds like</summary>
+"All the letters still waiting would fit in one cupboard, because each one is
+thrown away the second it is collected. But half a billion people are
+standing at the counter at the same time, and no building holds that many
+counters. So the hard part is the counters, not the cupboard."
+</details>
+
+</blockquote>
+<h2 id="readme-16-where-do-you-practise-this">16. Where do you practise this?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, easiest first. The first four you can answer
+from this page. The last four are the ones an interviewer would actually
+ask.</p>
+</blockquote>
+<p><a href="notes.html#exercises">EXERCISES.md</a> runs from &quot;explain it in your own words&quot; to
+&quot;design it for three datacentres&quot;. Rung 1 asks you to explain Asha's ticks to
+somebody non-technical. Rung 3 makes you predict what Bilal sees before you run
+the experiment. Attempt each rung before opening <a href="notes.html#solutions">SOLUTIONS.md</a>.</p>
+<p>Rungs 7 and 8 are design discussions, not single answers. The solution file
+argues a position there rather than handing you one.</p>
+<h2 id="readme-17-what-does-this-connect-to-and-where-do-you-go-next">17. What does this connect to, and where do you go next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab is five earlier labs assembled into a product.
+The two it points forward to are the shared-log model it deliberately is not,
+and the wake-up path it pretends does not exist.</p>
+</blockquote>
+<p>Read the diagram top to bottom. Everything above the middle box you have
+already done. Everything below it is a lab this one has earned you.</p>
+<pre class="mermaid">flowchart TD
+    CP[&quot;communication-protocols&lt;br&gt;done&quot;] --&gt; WA
+    IO[&quot;io-multiplexing&lt;br&gt;done&quot;] --&gt; WA
+    TO[&quot;transactional-outbox&lt;br&gt;done&quot;] --&gt; WA
+    CAP[&quot;cap-theorem&lt;br&gt;done&quot;] --&gt; WA
+    CH[&quot;consistent-hashing&lt;br&gt;done&quot;] --&gt; WA
+    WA[&quot;WhatsApp&lt;br&gt;high-level design&quot;]
+    WA -.- UB[&quot;uber-system-design · done&lt;br&gt;sibling: the other&lt;br&gt;&#x27;moving parts&#x27; design&quot;]
+    WA --&gt; KAFKA[&quot;kafka&quot;]
+    WA --&gt; PN[&quot;push-notifications&quot;]
+    WA --&gt; E2E[&quot;end-to-end-encryption /&lt;br&gt;signal-protocol&quot;]
+    WA --&gt; LB[&quot;load-balancing&quot;]
+    WA --&gt; NF[&quot;news-feed-design&lt;br&gt;fan-out on read&quot;]
+</pre>
+<h3 id="readme-what-did-this-lab-build-on">What did this lab build on?</h3>
+<p><a href="../02-communication-protocols/notes.html#readme">communication-protocols</a> gave you push versus
+pull, WebSocket and framing. This lab is that one choice made into a product.</p>
+<p><a href="../03-io-multiplexing/notes.html#readme">io-multiplexing</a> explained how one box holds a million
+idle sockets, which is the only reason section 15's arithmetic works.</p>
+<p><a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> is the mailbox, under a
+different name, with the phone playing the idempotent consumer.</p>
+<p><a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> gave you the partition reading in F3, and why
+chat gets such an easy ride.</p>
+<p><a href="../11-caching/notes.html#readme">caching</a> explains the routing table, which is a cache of a
+fact that is only briefly true.</p>
+<p><a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a> is the write-then-delete workload shape
+of the mailbox store, and <a href="../14-tls/notes.html#readme">tls</a> is where you learned transport
+encryption from end-to-end encryption.</p>
+<p><a href="../60-distributed-rate-limiting/notes.html#readme">distributed-rate-limiting</a> is what stands
+between Arjun's group and abuse, and
+<a href="../35-consistent-hashing/notes.html#readme">consistent-hashing</a> is how a device id maps to a
+shard of the queue store, and why plain modulo is the wrong answer.</p>
+<p>Finally <a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a> and
+<a href="../39-paxos/notes.html#readme">paxos</a> are the coordination this design proudly avoids.</p>
+<h3 id="readme-which-lab-is-this-ones-sibling">Which lab is this one's sibling?</h3>
+<p><a href="../70-uber-system-design/notes.html#readme">uber-system-design</a>. Read them together, because
+they are the same genre with opposite hard parts.</p>
+<p>Uber's problem is <em>claiming</em> a single moving resource before anyone else does,
+so its core is a compare-and-set and a lease with a deadline. This lab's
+problem is <em>never losing</em> a message aimed at somebody who is not there, so its
+core is a durable queue and an acknowledgement.</p>
+<p>Both end up at at-least-once plus an idempotent receiver. Both hit the same
+hot-key shape. Both put payment on a saga pivot. The techniques rhyme; the
+pressure does not.</p>
+<h3 id="readme-what-is-this-commonly-confused-with">What is this commonly confused with?</h3>
+<p>A <strong>message queue</strong> such as Kafka or RabbitMQ. A mailbox is a queue, but a
+consumer in Kafka reads at its own offset from a <em>shared</em> log. Here every
+recipient gets a private copy, and the copy is destroyed on delivery.</p>
+<p><strong>Push notifications.</strong> That is the operating-system wake-up path, not the
+delivery system. It tells a phone to come and get its mail. It does not carry
+the mail.</p>
+<p><strong>News-feed or timeline fan-out.</strong> Same word, opposite default. Feeds usually
+fan out on <em>read</em> for popular accounts, because readers vastly outnumber
+writes. Chat fans out on write because each recipient needs private delivery
+state.</p>
+<p><strong>Presence.</strong> A separate, deliberately unreliable subsystem. Never queue it.</p>
+<h3 id="readme-what-should-you-learn-next">What should you learn next?</h3>
+<div class="code"><pre><code>/learn kafka                   # the shared-log model this design deliberately isn&#x27;t
+/learn push-notifications      # APNs/FCM: the missing half of mobile delivery
+/learn load-balancing          # how a device picks a connection server
+/learn news-feed-design        # fan-out on read, the mirror image of this lab
+/learn end-to-end-encryption   # the sealed box: Signal protocol and sender keys
+</code></pre></div>
+<h2 id="readme-18-glossary--which-word-meant-what">18. Glossary — which word meant what?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Twenty-five words, grouped the way you met them. If a word
+here still feels like a definition rather than a thing that happened, go back
+to the section named in the last column.</p>
+</blockquote>
+<p>Five small tables, grouped the way the ideas arrived. The last column says
+where in this lab you met the thing.</p>
+<h3 id="readme-the-connection-layer">The connection layer</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Met in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Polling</strong></td>
+  <td>the receiver repeatedly asks &quot;anything new?&quot; — simple, and hopeless at scale</td>
+  <td>3</td>
+</tr>
+<tr>
+  <td><strong>Persistent connection</strong></td>
+  <td>one long-lived connection held open so the <em>server</em> can speak first</td>
+  <td>6, 7</td>
+</tr>
+<tr>
+  <td><strong>Connection server</strong></td>
+  <td>a machine whose job is holding a huge number of open connections; stores nothing durable</td>
+  <td>7, Meera and Omar's counters</td>
+</tr>
+<tr>
+  <td><strong>Routing table / session registry</strong></td>
+  <td>device → which connection server currently holds its socket; tiny, volatile, extremely hot</td>
+  <td>10 v1</td>
+</tr>
+<tr>
+  <td><strong>Session</strong></td>
+  <td>the fact that a specific device is connected right now, usually held as a lease with a TTL</td>
+  <td>11 F2</td>
+</tr>
+<tr>
+  <td><strong>Stale session row</strong></td>
+  <td>a routing entry pointing at a server that no longer holds the socket — a lie the system must survive</td>
+  <td>11 F2</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-the-queue-and-the-receipts">The queue and the receipts</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Met in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Mailbox</strong></td>
+  <td>a durable FIFO queue, one per device, of messages accepted but not yet confirmed</td>
+  <td>2, 10 v2</td>
+</tr>
+<tr>
+  <td><strong>Server ack</strong></td>
+  <td>&quot;the service has stored it&quot; — causes one grey tick</td>
+  <td>7, 10 v2</td>
+</tr>
+<tr>
+  <td><strong>Device ack</strong></td>
+  <td>&quot;the recipient's device has it on disk&quot; — deletes the mailbox copy, causes two grey ticks</td>
+  <td>10 v3</td>
+</tr>
+<tr>
+  <td><strong>Read receipt</strong></td>
+  <td>&quot;a human opened the chat&quot; — blue ticks</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td><strong>Catch-up / drain</strong></td>
+  <td>replaying a device's whole mailbox when it reconnects</td>
+  <td>11 F1</td>
+</tr>
+<tr>
+  <td><strong>Retention window</strong></td>
+  <td>how long an undelivered message is kept before being dropped (~30 days)</td>
+  <td>11 F9</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-getting-it-exactly-once">Getting it exactly once</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Met in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>At-least-once</strong></td>
+  <td>retry until acknowledged, therefore possibly deliver twice; the best a network can promise</td>
+  <td>10 v4</td>
+</tr>
+<tr>
+  <td><strong>Deduplication</strong></td>
+  <td>the receiver drops ids it has already accepted, turning at-least-once into exactly-once on screen</td>
+  <td>10 v4</td>
+</tr>
+<tr>
+  <td><strong>Sender-minted id</strong></td>
+  <td>the message id is created by the sending device, which is what makes a retry recognisable</td>
+  <td>10 v4, 12</td>
+</tr>
+<tr>
+  <td><strong>Delivery sweeper</strong></td>
+  <td>a periodic re-scan of mailboxes that re-pushes anything still queued; the actual delivery guarantee</td>
+  <td>10 v5, 11 F5</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-copies-and-crowds">Copies and crowds</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Met in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Fan-out on write</strong></td>
+  <td>one stored copy per recipient device, written at send time</td>
+  <td>10 v7</td>
+</tr>
+<tr>
+  <td><strong>Fan-out on read</strong></td>
+  <td>one shared copy that readers pull from — the opposite choice, right for feeds and big channels</td>
+  <td>15.6</td>
+</tr>
+<tr>
+  <td><strong>Thundering herd / reconnect storm</strong></td>
+  <td>a large population reconnecting simultaneously, self-amplifying under load</td>
+  <td>11 F6</td>
+</tr>
+<tr>
+  <td><strong>Exponential backoff</strong></td>
+  <td>doubling the retry delay so clients do not synchronise into a storm</td>
+  <td>11 F6</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-secrecy-presence-and-devices">Secrecy, presence and devices</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Met in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Presence</strong></td>
+  <td>online / last-seen state; ephemeral and best-effort by design</td>
+  <td>11 F3, 15.4</td>
+</tr>
+<tr>
+  <td><strong>End-to-end encryption</strong></td>
+  <td>only the endpoint devices can read the content; servers route ciphertext</td>
+  <td>7, 10 v7</td>
+</tr>
+<tr>
+  <td><strong>Transport encryption (TLS)</strong></td>
+  <td>protects each hop; the server still sees plaintext — a different guarantee</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td><strong>Sender key</strong></td>
+  <td>one symmetric group key distributed once, so group messages are encrypted once rather than per recipient</td>
+  <td>10 v7</td>
+</tr>
+<tr>
+  <td><strong>Multi-device</strong></td>
+  <td>one user, several devices, each with its own mailbox, keys and acknowledgements</td>
+  <td>10 v8</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-19-about-this-lab--how-was-it-built-and-where-do-its-numbers-come-from">19. About this lab — how was it built, and where do its numbers come from?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A chat app looks like the simplest thing in the world:
+you type, they read. It is one of the hardest system design problems there
+is, and this lab builds the delivery system from nothing, breaking each
+version until the real design is the only thing left standing.</p>
+</blockquote>
+<h3 id="readme-how-do-you-run-everything-in-this-folder">How do you run everything in this folder?</h3>
+<div class="code"><pre><code class="language-bash">java src/Tests.java                        # 31 scenario checks
+java src/Experiments.java                  # list the failure experiments
+java src/Experiments.java trace offline crash partition dup group ordering storm capacity
+open visualization.html                    # or the published link below
+</code></pre></div>
+<p><strong>Interactive simulator:</strong> <a href="https://claude.ai/code/artifact/bfde5919-ecab-45e9-a03a-e4c468e36d47" target="_blank" rel="noopener">https://claude.ai/code/artifact/bfde5919-ecab-45e9-a03a-e4c468e36d47</a></p>
+<h3 id="readme-which-numbers-are-facts-and-which-are-my-assumptions">Which numbers are facts, and which are my assumptions?</h3>
+<p>Section 15.1's capacity table mixes both, so here is the split. Never quote a
+number from the right-hand column as a published figure.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Figure</th>
+  <th>Value</th>
+  <th>Where it comes from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Users</td>
+  <td>2,000,000,000</td>
+  <td>WhatsApp's own public statement, around 2020; since reported higher</td>
+</tr>
+<tr>
+  <td>Messages per day</td>
+  <td>100,000,000,000</td>
+  <td>WhatsApp's own public statement, around 2020</td>
+</tr>
+<tr>
+  <td>Share online at once</td>
+  <td>1 in 4</td>
+  <td>my assumption, stated so you can argue with it</td>
+</tr>
+<tr>
+  <td>Peak multiplier</td>
+  <td>3×</td>
+  <td>my assumption, stated so you can argue with it</td>
+</tr>
+<tr>
+  <td>Sockets per box</td>
+  <td>1,000,000</td>
+  <td>WhatsApp's published engineering talks on their FreeBSD/Erlang servers; I have not measured it</td>
+</tr>
+<tr>
+  <td>Retention window</td>
+  <td>~30 days</td>
+  <td>WhatsApp's public statement about undelivered messages</td>
+</tr>
+</tbody>
+</table></div>
+<p>The Signal-protocol sender-key design in section 10 v7 is publicly documented,
+but it is not implemented here. The lab's <code>ciphertext</code> field is a stand-in for
+a real encrypted payload.</p>
+<p>Everything else comes from the deterministic simulator in <code>src/</code>, run with a
+fixed seed. That covers packet counts, mailbox writes, tick timings and the
+4-of-20 stranded messages. Re-run any of it and you will get the same numbers.</p>
+<h3 id="readme-who-is-in-the-cast-and-what-are-they-really">Who is in the cast, and what are they really?</h3>
+<p>The story names are not decoration. Each one is a component you will draw on a
+whiteboard one day.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Name</th>
+  <th>In the story</th>
+  <th>In the design</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Asha</td>
+  <td>sends &quot;on my way&quot; from outside a restaurant</td>
+  <td>the sending device: mints ids, retries, shows ticks</td>
+</tr>
+<tr>
+  <td>Bilal</td>
+  <td>on the Tube, then on wifi, with a phone and a laptop</td>
+  <td>two receiving devices, each with its own mailbox</td>
+</tr>
+<tr>
+  <td>Meera</td>
+  <td>the clerk at the counter Asha hands letters to</td>
+  <td>connection server <code>cs1</code> / <code>cs3</code></td>
+</tr>
+<tr>
+  <td>Omar</td>
+  <td>the clerk holding Bilal's open line</td>
+  <td>connection server <code>cs2</code></td>
+</tr>
+<tr>
+  <td>Priya</td>
+  <td>also messages Bilal, from a different chat</td>
+  <td>the second conversation, which has no ordering with the first</td>
+</tr>
+<tr>
+  <td>Arjun</td>
+  <td>runs the 256-person group</td>
+  <td>the fan-out multiplier</td>
+</tr>
+<tr>
+  <td>Ben</td>
+  <td>carries the pager</td>
+  <td>the on-call engineer of section 15.5</td>
+</tr>
+<tr>
+  <td>Dev</td>
+  <td>load-balances a device across connections</td>
+  <td>the refactor that removes an inherited guarantee, F10</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-is-deliberately-not-in-the-code">What is deliberately not in the code?</h3>
+<p>No real sockets, no real threads, no real persistence, no encryption, no
+authentication, no media, no presence, and no real database. Section 15 names
+what production puts in each of those places.</p>
+<p>The point of the simulator is that every fault is deterministic and every
+number is reproducible. A real socket would give you neither.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--whatsapp-high-level-design">Exercises — WhatsApp high-level design</h1>
+<p>Eight rungs, easiest first. Attempt each before opening
+<a href="notes.html#solutions">SOLUTIONS.md</a>. Rungs 7 and 8 are design discussions — there is
+no single correct output, and the solution file argues a position rather than
+giving an answer.</p>
+<p>Everything runs with no build tool:</p>
+<div class="code"><pre><code class="language-bash">java src/Tests.java                 # 31 scenario checks
+java src/Experiments.java &lt;name&gt;    # trace offline crash partition dup group ordering storm capacity
+open visualization.html
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p>No notation, no diagrams. Say these out loud or write them in a few sentences.</p>
+<p><strong>1.1</strong> Why can a chat app for two billion people not be built the way you would
+build a normal web API? Answer in terms of what the <em>recipient's</em> phone is doing.</p>
+<p><strong>1.2</strong> Explain the difference between one grey tick and two grey ticks to
+someone non-technical, in a way that is actually true. Then say what neither of
+them tells you.</p>
+<p><strong>1.3</strong> In one sentence each: what is a mailbox, and why is there one per
+<em>device</em> rather than one per person?</p>
+<p><strong>1.4</strong> The system deletes your messages from its servers as soon as they are
+delivered. Name one thing that gets much easier because of this, and one thing
+that becomes impossible.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open the <a href="visualization.html">visualization</a>, press <strong>Send a message</strong>, and
+step through it.</p>
+<p><strong>2.1</strong> At the moment Asha's screen shows one grey tick, how many copies of the
+message exist, and where exactly is each one? (Click the <em>Mailboxes</em> box.)</p>
+<p><strong>2.2</strong> Click <em>cs2</em>. What durable state does a connection server hold? What does
+<code>pushed, awaiting device receipt</code> mean, and when does an entry leave that list?</p>
+<p><strong>2.3</strong> In the routing table, what does the ⚠ <strong>lie</strong> marker mean? Crash a
+server to produce one, and say precisely which fact has become untrue.</p>
+<p><strong>2.4</strong> In <span class="missing" title="Not in the hub: src/Server.java is in the lab folder on your laptop"><code>src/Server.java</code></span>, find the two lines that must
+never be swapped. Why does their order decide whether a tick can lie?</p>
+<p><strong>2.5</strong> In <span class="missing" title="Not in the hub: src/Device.java is in the lab folder on your laptop"><code>src/Device.java</code></span>, find where a message id is
+created. Why does it matter that this line is in <code>Device</code> and not in <code>Server</code>?</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Commit to an answer, then run the command.</p>
+<p><strong>3.1</strong> Bilal is offline. Asha sends five messages. What does her screen show,
+how many mailbox rows exist, and what has Bilal's phone been told?
+<code>java src/Experiments.java offline</code></p>
+<p><strong>3.2</strong> Every packet is delivered exactly twice, and Asha sends ten messages.
+How many copies reach Bilal's device, and how many lines appear on his screen?
+<code>java src/Experiments.java dup</code></p>
+<p><strong>3.3</strong> The connection server holding Bilal's socket crashes <em>before</em> Asha
+sends. Is the message lost? What does Asha's screen show, and for how long?
+<code>java src/Experiments.java crash</code></p>
+<p><strong>3.4</strong> One message to a 256-person group. How many mailbox writes? Now: how
+many <em>encryptions</em> would the sender do, naively — and how does the real design
+avoid it? <code>java src/Experiments.java group</code></p>
+<p><strong>3.5</strong> Twelve messages are delivered in one burst after a reconnect. Nothing in
+the design sorts anything. Will they be in order? Under what change would they
+stop being? <code>java src/Experiments.java ordering</code></p>
+<p><strong>3.6</strong> 50,000 phones reconnect in the same second, having sent no messages at
+all. Which subsystem does the most work? <code>java src/Experiments.java storm</code></p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>Change the code or the switches, predict what breaks, then confirm it — and for
+each, name whether what you lost was <strong>safety</strong> (something wrong happened) or
+<strong>liveness</strong> (nothing wrong happened, but progress stopped).</p>
+<p><strong>4.1</strong> In <span class="missing" title="Not in the hub: src/Tests.java is in the lab folder on your laptop"><code>src/Tests.java</code></span>, remove the
+<code>c.startSweepers(...)</code> line from <code>lossyNetwork_30pctDrop_...</code> and re-run. How
+many of the 20 messages arrive? Explain why a <em>perfect</em> network afterwards does
+not rescue them.</p>
+<p><strong>4.2</strong> In <span class="missing" title="Not in the hub: src/Device.java is in the lab folder on your laptop"><code>src/Device.java</code></span>, change <code>scheduleRetry</code> so the
+delay is a constant 800 ms instead of doubling. Run
+<code>java src/Experiments.java storm</code>. What kind of incident does this make worse,
+and why does the constant delay make it <em>self-amplifying</em>?</p>
+<p><strong>4.3</strong> In the visualization, switch <strong>One ordered connection</strong> off and send a
+burst. Which guarantee disappears? Was that guarantee ever implemented anywhere
+in the code?</p>
+<p><strong>4.4</strong> In <span class="missing" title="Not in the hub: src/Server.java is in the lab folder on your laptop"><code>src/Server.java</code></span>, change the sweeper period from
+1200 ms to 60,000 ms in the test that uses it. What gets worse, what gets
+better, and what would you actually monitor to choose this number in production?</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1 · Server-side duplicate suppression.</strong> Today, when Asha's client retries,
+the server appends the same message to the mailbox again (it is deduplicated
+later, on the phone). Add a small per-sender set of recently seen message ids to
+<code>Server</code>, so a retry that arrives after the message is already stored is
+acknowledged <em>without</em> a second mailbox write and without a second push.</p>
+<p>Constraints: all 31 existing checks must still pass, and the set must be
+bounded — write down what you would bound it by and what breaks if the bound is
+too small.</p>
+<p><strong>5.2 · A &quot;sent to at least one device&quot; receipt.</strong> Bilal has a phone and a
+laptop. Add a third tick level that fires when the <em>first</em> device acknowledges,
+distinct from the level that fires when <em>all</em> of them have. Which one should the
+UI show, and why is there no obviously right answer?</p>
+<p><strong>5.3 · Mailbox expiry.</strong> Implement the 30-day retention rule as a sweep that
+drops entries older than N simulated milliseconds, and add a test proving that
+an expired message is never delivered and that the sender is never upgraded past
+one grey tick.</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p>Three bugs are planted behind flags. Each one disables exactly one invariant
+from stage 12 of the <a href="notes.html#readme-12-what-is-promised-what-is-not-and-what-was-sold-to-get-it">README</a>.</p>
+<div class="code"><pre><code class="language-bash">java src/Tests.java bug=delete-on-push
+java src/Tests.java bug=no-dedup
+java src/Tests.java bug=new-id-on-retry
+</code></pre></div>
+<p>For <strong>each</strong> bug, answer:</p>
+<p><strong>a.</strong> Which checks fail? <strong>b.</strong> Which invariant is violated? <strong>c.</strong> What would
+a <em>user</em> see — describe the visible symptom, not the test output. <strong>d.</strong> Would
+this bug be caught in production by monitoring, or would it be silent?</p>
+<p>Then the harder question: <strong>6.4</strong> — <code>bug=new-id-on-retry</code> makes the client mint
+a fresh id on every retry. It fails only two checks and only under packet loss.
+Explain why a bug that destroys the deduplication guarantee is so hard to see,
+and what that tells you about testing distributed systems on healthy networks.</p>
+<hr />
+<h2 id="exercises-rung-7--handle-a-failure-the-system-does-not-currently-survive">Rung 7 — Handle a failure the system does not currently survive</h2>
+<p><strong>7.1 · The sender's own device dies mid-send.</strong> Asha types a message, her phone
+sends it, and the phone dies before the server ack arrives. When she gets a new
+phone and restores from a backup, what should happen to that message? What state
+must be persisted on the device, and where, for the answer to be &quot;it is sent
+exactly once&quot;?</p>
+<p><strong>7.2 · A connection server that is alive but wedged.</strong> It holds sockets, its
+heartbeat still refreshes its routing rows, but it has stopped pushing. Nothing
+in this lab detects that: the sweeper runs <em>on that server</em>. Design the
+detection. What signal proves the difference between &quot;these users are quiet&quot; and
+&quot;this server is not delivering&quot;? What do you do once you are sure — and what is
+the risk of being wrong?</p>
+<p><strong>7.3 · A device that acknowledges but cannot store.</strong> The phone's storage is
+full. It acknowledges, the mailbox copy is deleted, and the message is gone.
+What must change in the protocol so the acknowledgement means what it claims?</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p>Full production prompts. Aim for a structure like stage 15.7: requirements,
+capacity, high-level design, the one or two deep dives that matter, failure
+modes, what you monitor.</p>
+<p><strong>8.1 · Three datacentres, 80 ms apart.</strong> Users are homed to their nearest
+region. Design cross-region delivery. Which parts of this lab's design survive
+unchanged, which must change, and where does the extra latency land? What
+happens to a user who flies from one region to another, and to a group whose
+members span all three?</p>
+<p><strong>8.2 · Add server-side message history</strong>, as Messenger has and WhatsApp does
+not. Walk through what changes: storage volume at 100 billion messages/day,
+the encryption consequences, what becomes possible for the user, and what the
+company can no longer truthfully claim. Then argue, in three sentences, for or
+against.</p>
+<p><strong>8.3 · Broadcast channels: one sender, one million subscribers.</strong> Explain
+concretely why the fan-out-on-write design in this lab is the wrong answer, and
+design the right one. Where does your design put the copy, and what does a
+subscriber's reconnect look like?</p>
+<p><strong>8.4 · A payments-style twist</strong> — connecting to
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> and <a href="../47-saga/notes.html#readme">saga</a>: a message
+must be delivered <em>and</em> trigger a money movement, and neither may happen without
+the other. Where would you put the outbox? What is the pivot step? Why is
+&quot;deliver the message, then call the payment service&quot; wrong?</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--whatsapp-high-level-design">Solutions — WhatsApp high-level design</h1>
+<p>Attempt <a href="notes.html#exercises">EXERCISES.md</a> first. Rungs 7–8 are worked discussions,
+not answers.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Because in a normal web API, information only moves when the <em>client</em>
+asks. The recipient's phone is asleep, on a bad network, or with no signal at
+all for most of the day — so if the only way it learns about a message is by
+asking, it must ask constantly. Two billion phones asking every two seconds is
+a billion requests per second, virtually all of which answer &quot;nothing&quot;, and the
+asking itself drains the battery. The fix is to invert the direction: the phone
+opens one connection and the <em>server</em> speaks first.</p>
+<p><strong>1.2</strong> One grey tick: <em>&quot;the service has your message and will keep trying.&quot;</em>
+Two grey ticks: <em>&quot;their phone actually has it.&quot;</em> Neither tells you the person
+has looked at it — that is the blue ticks — and neither tells you the person is
+holding the phone. Also worth saying: one grey tick says nothing at all about
+the recipient, not even whether their account is reachable. It is a statement
+about your message reaching the post office.</p>
+<p><strong>1.3</strong> A mailbox is a durable queue holding messages that have been accepted
+from a sender but not yet confirmed by the recipient. It is per device because
+delivery state is per device: Bilal's phone and laptop go offline at different
+times, acknowledge separately, and must each end up with a copy. One queue per
+person could not express &quot;the laptop has it, the phone does not&quot;.</p>
+<p><strong>1.4</strong> Easier: storage is tiny (a few hundred GB of pending messages for the
+whole world, rather than exabytes of history), and the company can truthfully
+say it does not hold your conversations. Impossible: server-side search, and
+getting your history onto a new phone without your own backup — which is why
+that restore flow exists and why it is the user's problem.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Three copies. Asha's own phone (her local chat), the mailbox row for
+<code>bilal:phone</code>, and the mailbox row for <code>bilal:laptop</code>. Zero copies exist on any
+connection server — they hold sockets, not messages.</p>
+<p><strong>2.2</strong> None. That is the entire point: a connection server can be killed at any
+moment because losing it loses only sockets, which clients re-establish.
+<code>pushed, awaiting device receipt</code> is the in-memory list of pushes that have not
+yet been acknowledged; an entry leaves it when the device acknowledges, or when
+the device disconnects (at which point the push is dead and the mailbox row is
+what saves the message).</p>
+<p><strong>2.3</strong> It means the routing table says a device's connection lives on a server
+that no longer holds it. The untrue fact is specifically <em>&quot;that socket is on
+that machine&quot;</em> — the device row itself is not wrong about who the user is, and
+the message is not lost. Only the delivery <em>route</em> is wrong.</p>
+<p><strong>2.4</strong> In <code>Server.onSend</code>: the loop that appends to each mailbox, and the
+<code>net.send(... onServerAck ...)</code> line. If you acknowledge first and the server
+dies before writing, Asha holds a tick for a message that exists nowhere, and
+she will never retry because she believes it was accepted. Store first and the
+worst case is a duplicate, which the phone already knows how to discard.</p>
+<p><strong>2.5</strong> <code>Device.send</code> builds <code>String id = deviceId + &quot;-&quot; + convId + &quot;-&quot; + seq</code>.
+It has to be on the device because retries originate there. If a server minted
+the id, every retry would arrive looking like a brand-new message, the
+recipient's deduplication set would never match, and every lost acknowledgement
+would become a duplicate on screen.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> One grey tick on all five; five mailbox rows for <code>bilal:phone</code>; Bilal's
+phone has been told nothing at all — it is not connected, so there is nothing to
+tell. On reconnect all five drain in order and the ticks become two.</p>
+<p><strong>3.2</strong> 80 copies reached the device, 10 lines appeared. (More than 20 because
+duplicated acknowledgements cause further redeliveries, which are duplicated in
+turn — the duplication compounds along the path.) The screen is unaffected.</p>
+<p><strong>3.3</strong> Not lost. Asha reaches one grey tick and stays there. The message sits
+in the mailbox; the push is routed at the dead server and evaporates. It stays
+that way until the stale session expires and Bilal's phone reconnects somewhere
+else — seconds to tens of seconds in production, however long you like in the
+simulation.</p>
+<p><strong>3.4</strong> 255 mailbox writes. Naively 255 encryptions <em>per message</em>, because with
+end-to-end encryption each recipient device needs its own ciphertext. The real
+design uses a <strong>sender key</strong>: one symmetric group key, distributed once (255
+pairwise encryptions, once), after which each message is encrypted a single time
+and the server fans out 255 copies of identical ciphertext.</p>
+<p><strong>3.5</strong> Yes, in order — and nothing sorts them. The order comes from the mailbox
+being FIFO and everything being delivered over one ordered connection. Turn
+<code>orderedLinks</code> off (or, in production, load-balance a device's packets across
+several connections) and the order is gone:
+<code>[12, 2, 5, 1, 4, 7, 8, 6, 10, 11, 3, 9]</code>.</p>
+<p><strong>3.6</strong> The routing table. 50,000 session writes and 50,000 mailbox scans, with
+zero messages sent. Connection churn, not message volume, is what sizes this
+system.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> 16 of 20; 4 strand permanently. The perfect network does not help
+because the retry timer that would have re-pushed them was never created: it is
+created by the server that <em>receives</em> the hand-off, and the hand-off packet is
+the one that died. <strong>Safety is intact</strong> (nothing wrong was shown to anyone);
+<strong>liveness is lost</strong>, permanently, for those four messages — which is the worst
+kind of liveness failure, because it never recovers on its own.</p>
+<p><strong>4.2</strong> It makes a reconnect storm worse and turns it into an outage. With a
+constant delay, every client that failed at the same moment retries at the same
+moment, forever — the load arrives as a synchronised spike rather than
+spreading out. Overload causes timeouts, timeouts cause retries, and the spike
+repeats on a fixed period. Doubling the delay (and, in production, adding
+random jitter) breaks the synchronisation. Note the failure is not in the
+messaging logic at all; it is in the <em>timing</em> of a recovery path.</p>
+<p><strong>4.3</strong> Per-conversation ordering. And no — it was never implemented anywhere.
+It was inherited from the transport. That is the general lesson: an inherited
+guarantee has no code and no test protecting it, so it disappears silently
+during a refactor that looks like a pure optimisation.</p>
+<p><strong>4.4</strong> Longer period: less background work, but the recovery time for a lost
+push goes from ~1 second to ~1 minute, which shows up as messages that arrive
+suspiciously late for online users. Shorter: faster recovery, more constant
+scanning of mailboxes that are almost always empty. What to monitor to choose
+it: <strong>the age of the oldest undelivered message for devices that are currently
+online</strong>, and <strong>how many deliveries the sweeper is responsible for</strong>. If the
+sweeper is delivering a meaningful share of traffic, pushes are failing and the
+period is masking a different problem.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> Keep <code>Map&lt;String senderDevice, Set&lt;String&gt; recentIds&gt;</code> on the server,
+and in <code>onSend</code>, if the id is already present, send the server ack and return
+without appending or pushing. All 31 checks still pass because the phone's
+deduplication was never the thing being tested — this only removes wasted work.</p>
+<p>Bound it by <strong>time</strong>, not by count: a sliding window comfortably longer than
+the client's maximum retry horizon (the lab retries up to 8 times with backoff
+capped at 5 s, so tens of seconds). Bounding by count is dangerous because a
+burst from one sender can evict ids that are still live. If the bound is too
+small, a late retry gets treated as a new message: a second mailbox write and a
+second push — not a correctness failure, because the phone still deduplicates,
+but exactly the work you added this for.</p>
+<p>The important framing: this is an <strong>optimisation</strong>, and it must never become
+the thing correctness depends on. Correctness lives on the receiving device.</p>
+<p><strong>5.2</strong> Add level 1.5 (&quot;first device has it&quot;) alongside level 2 (&quot;all devices
+have it&quot;). There is no right answer for what to show because the underlying
+truth — <em>some subset of their devices has this</em> — does not fit a two-state UI.
+Showing &quot;first device&quot; over-promises (it may be a laptop they never look at);
+showing &quot;all devices&quot; under-promises and can <em>never</em> complete if they own a
+device that is switched off in a drawer, which is a worse failure because it
+looks like the message never arrived. Most products choose first-device, i.e.
+they choose to over-promise, because a stuck tick generates far more support
+complaints than an optimistic one.</p>
+<p><strong>5.3</strong> The test that matters is the negative one: after expiry, assert the
+device receives nothing <em>and</em> the sender's tick is still 1. Note what you have
+just encoded — the only place in this system where data is deliberately
+destroyed. Also note that the sender is never told; there is no &quot;expired&quot; tick,
+and adding one would leak whether the recipient's phone has been off, which is
+a privacy decision disguised as a UI decision.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<h3 id="solutions-bugdelete-on-push--4-checks-fail"><code>bug=delete-on-push</code> — 4 checks fail</h3>
+<p>Fails <code>durability: the copy is STILL in the mailbox after the push</code>,
+<code>durability: nothing was deleted on send</code>, and both <code>two grey ticks</code> checks.
+Violates <strong>invariant 2</strong>: nothing is deleted before the recipient device
+confirms it.</p>
+<p><strong>What a user sees:</strong> messages that vanish. Specifically, a message that was
+pushed while the recipient's phone was dying or losing signal is gone forever —
+and the sender is stuck at one grey tick, so from their side it looks like the
+recipient is merely offline. It is silent data loss dressed as an offline user.</p>
+<p><strong>Caught by monitoring?</strong> Barely. Delivery <em>rates</em> look normal. The signal
+would be a rising gap between &quot;pushes&quot; and &quot;device acks&quot;, which is exactly the
+kind of derived metric nobody has until after the incident.</p>
+<h3 id="solutions-bugno-dedup--6-checks-fail"><code>bug=no-dedup</code> — 6 checks fail</h3>
+<p>Violates <strong>invariant 4</strong>: a device accepts each id at most once. Notice the
+duplicate count reaches 34 and 30 messages appear where 20 were sent.</p>
+<p><strong>What a user sees:</strong> the same message two, three, five times in a row — worse
+on a bad network, which is exactly when users are least tolerant. This is the
+one bug here that is loudly visible.</p>
+<p><strong>Caught by monitoring?</strong> No, but caught instantly by users, which is a
+different and much more expensive detector.</p>
+<h3 id="solutions-bugnew-id-on-retry--2-checks-fail-only-under-packet-loss"><code>bug=new-id-on-retry</code> — 2 checks fail, only under packet loss</h3>
+<p>Violates <strong>invariant 3</strong>: message identity belongs to the sender. Every retry
+becomes a new message, so deduplication has nothing to match on.</p>
+<p><strong>What a user sees:</strong> occasional doubled messages, only on flaky networks.</p>
+<p><strong>6.4 — why it is so hard to see.</strong> On a healthy network there are no retries,
+so the bug never executes. It has no effect at all until the network is bad, and
+then its effect is probabilistic. Every test on a reliable network passes; every
+manual QA pass on office wifi passes; it ships, and the bug reports come from
+users on 2G in places the team never tested — described as &quot;sometimes messages
+double&quot;, which is unreproducible by definition.</p>
+<p>The lesson: <strong>for distributed systems, the network is an input, not an
+environment.</strong> If packet loss, duplication, delay and partition are not
+parameters your tests set on purpose, then an entire class of bugs is invisible
+to your whole test suite. That is why <code>Net</code> in this lab has <code>dropRate</code>,
+<code>dupRate</code> and <code>partition</code> as first-class knobs and why every fault funnels
+through one function.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-a-new-failure-discussion">Rung 7 — Handle a new failure (discussion)</h2>
+<p><strong>7.1 · Sender's device dies mid-send.</strong> The message must be persisted on the
+device <em>before</em> it is put on the wire — an outbox on the phone, with the id
+already minted. On restore, the client replays unacknowledged outbox entries
+with their original ids, and the server-side or device-side deduplication makes
+the replay harmless. Note this is the <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>
+pattern with the phone as the database: the local write and the network send
+must not be a dual write, so the local write wins and the send is a retry loop
+over it. If the backup does not include the outbox, the message is genuinely
+lost and no protocol change can help — which is a good illustration that
+&quot;exactly once&quot; always bottoms out in somebody's durable write.</p>
+<p><strong>7.2 · Alive but wedged.</strong> The trap is that the sweeper runs on the suspect
+server, so every self-report comes from the thing that is broken. You need a
+signal from <em>outside</em> it. Two that work:</p>
+<ul>
+<li><strong>Mailbox age, computed by the store, not the server.</strong> The mailbox layer
+knows the age of the oldest undelivered entry per device, and it knows which
+server holds each device's session. Old entries concentrated on one server,
+for devices whose sessions are being refreshed (so they are online), is the
+signature. &quot;Quiet users&quot; do not produce old entries, because quiet users have
+<em>empty</em> mailboxes — that is the distinction you are looking for.</li>
+<li><strong>Acknowledgement latency per server</strong>, from the sender side. Deliveries
+routed through the wedged server stop producing receipts while others do not.</li>
+</ul>
+<p>Response: stop routing new sessions to it, then force-disconnect its sockets so
+clients reconnect elsewhere. <strong>Risk of being wrong:</strong> you have just caused a
+reconnect storm for 1M users (failure F6) on a healthy server. So the action
+should be rate-limited and staged — drain slowly, and never let automation drain
+more than a small fraction of the fleet at once, because the failure mode of the
+detector is correlated across servers.</p>
+<p><strong>7.3 · Acknowledges but cannot store.</strong> The acknowledgement must be sent
+<em>after</em> the device's own durable write completes, not on receipt — which means
+the client's storage failure has to be a real error path, not an exception
+swallowed on a background thread. Then a full disk produces no acknowledgement,
+the server keeps the mailbox copy, the sender stays at one grey tick, and the
+user gets a &quot;storage full&quot; prompt. The general principle is the same one that
+governs the server side: <strong>acknowledge what you have made durable, never what
+you have merely received.</strong> The bug in the wild is almost always an
+acknowledgement wired to the wrong event.</p>
+<hr />
+<h2 id="solutions-rung-8--design-discussion">Rung 8 — Design (discussion)</h2>
+<p><strong>8.1 · Three datacentres, 80 ms apart.</strong> What survives unchanged: sender-minted
+ids, per-device mailboxes, store-before-ack, delete-on-device-ack, device
+deduplication, and the sweeper. None of them require any two machines to agree.</p>
+<p>What must change: the routing table becomes global-ish. A device's session lives
+in one region, and a sender in another region needs to find it. Two workable
+designs: (a) <strong>home region per user</strong> — every user's mailbox and session live in
+their home region, and cross-region sends are one extra hop to that region;
+(b) <strong>replicated session directory</strong> — each region has a copy, accepting that it
+is stale, and cross-region routing tolerates the stale answer by falling back to
+the mailbox and the sweeper, which it already does.</p>
+<p>(a) is simpler and is what the extra latency should buy: sends within a region
+are unaffected, cross-region sends pay ~80 ms once. Put the mailbox in the
+<em>recipient's</em> home region, not the sender's — the mailbox is read repeatedly by
+the recipient's connection server and written once by the sender.</p>
+<p>The traveller: their device reconnects in a new region, the session row now
+points at a server far from their mailbox, and every delivery pays the crossing.
+Fix by re-homing lazily after the move persists (do not re-home on a single
+reconnect, or a flight becomes a storage migration). The group spanning three
+regions: fan-out happens once, into 256 mailboxes spread across three regions;
+the sending region does three batched cross-region writes rather than 256
+individual ones — batching per region is the optimisation that matters.</p>
+<p><strong>8.2 · Add server-side history.</strong> Storage: at 100 B messages/day and ~200 bytes
+each, ~20 TB/day, ~7 PB/year, before replication, indexes and media — three to
+four orders of magnitude more than the ~200 GB of pending messages. That is not
+an incremental change; it is a different company with a different cost
+structure.</p>
+<p>Encryption: end-to-end encryption and server-side history are not compatible in
+any useful way. You can store ciphertext, but then search, moderation, and
+multi-device restore need the keys — so in practice history means the server
+holds plaintext, or holds keys, which is the same thing. Meta's own products
+split exactly along this line, and that is not a coincidence.</p>
+<p>What the user gains: real search, instant history on a new device, no backup
+dance, web login that works. What the company can no longer say: that it cannot
+read your messages, and that a subpoena would produce nothing.</p>
+<p>The three-sentence argument (against, for this product): WhatsApp's entire
+differentiation is the claim that it cannot read your messages, and that claim
+is a <em>structural</em> one — it is true because the data is not there, not because of
+a policy. Adding history converts a structural guarantee into a promise, and
+promises can be changed by a future management team or compelled by a court.
+The user-facing gain is real but is addressable at the edge with device-side
+search and better backup, which is the strictly better trade.</p>
+<p><strong>8.3 · One million subscribers.</strong> Fan-out on write is wrong because it is a
+million durable writes and a million delivery state machines for one post,
+paid every time, and 99% of subscribers may never open it. The ratio is
+inverted from chat: readers vastly outnumber writes.</p>
+<p>The right shape is fan-out on <strong>read</strong>: store the post <em>once</em> in an append-only
+per-channel log, and have subscribers pull from an offset. A reconnecting
+subscriber sends its last-seen position and gets everything after it — no
+per-subscriber queue exists at all. Delivery state moves from the server (a
+million queues) to the client (one integer). Push becomes a lightweight
+notification &quot;channel X has new posts&quot;, not a copy of the content.</p>
+<p>Read the shape carefully: this is the Kafka consumer-offset
+model, and it is exactly what Discord does for large channels. Note the honest
+cost: you lose per-recipient delivery receipts, because there is nothing
+tracking each recipient any more. That is the trade, and for a broadcast channel
+nobody wants per-subscriber read receipts anyway.</p>
+<p><strong>8.4 · Message plus money.</strong> &quot;Deliver the message, then call the payment
+service&quot; is wrong because it is a dual write across two systems with no shared
+transaction: the message can be delivered and the payment lost, or the payment
+made and the message never delivered, and a crash between them leaves no record
+of the intent.</p>
+<p>Put an <strong>outbox in the payment service's own database</strong>, in the same local
+transaction that records the payment intent. The relay then publishes an event
+that (a) moves the money and (b) causes the chat message to be sent. The chat
+message is the <em>last</em>, non-critical step; the money movement is the <strong>pivot</strong> —
+the step after which the saga can no longer be cancelled, only compensated.</p>
+<p>Ordering matters and is counter-intuitive: send the message <em>after</em> the money
+moves, never before. A message saying &quot;£50 sent&quot; that is followed by a failed
+payment is a customer-support incident; a payment that succeeds a second before
+its notification is invisible. And because chat delivery is at-least-once, the
+message must be idempotent at the receiver — which it already is, via the
+sender-minted id. See <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> and
+<a href="../47-saga/notes.html#readme">saga</a>.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../68-mongodb/notes.html"><small>← Lab 68</small>mongodb</a><a href="../70-uber-system-design/notes.html" style="text-align:right"><small>Lab 70 →</small>uber-system-design</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-is-the-easiest-looking-app-in-the-world-one-of-the-hardest-to-build">1. Why is the easiest-looking app in the world one of the hardest to build?</a><a href="#readme-2-where-does-ashas-message-physically-go">2. Where does Asha&#x27;s message physically go?</a><a href="#readme-3-what-would-any-web-developer-build-first">3. What would any web developer build first?</a><a href="#readme-4-what-breaks-and-which-break-is-the-deep-one">4. What breaks, and which break is the deep one?</a><a href="#readme-5-what-exactly-must-this-system-promise">5. What exactly must this system promise?</a><a href="#readme-6-what-is-the-invention-in-two-sentences">6. What is the invention, in two sentences?</a><a href="#readme-7-what-do-engineers-call-the-things-you-have-already-met">7. What do engineers call the things you have already met?</a><a href="#readme-8-which-two-pictures-should-you-carry-and-where-do-they-disagree">8. Which two pictures should you carry, and where do they disagree?</a><a href="#readme-9-what-should-you-do-in-the-simulator-before-reading-the-mechanism">9. What should you do in the simulator before reading the mechanism?</a><a href="#readme-10-how-does-a-message-actually-get-from-asha-to-bilal">10. How does a message actually get from Asha to Bilal?</a><a href="#readme-11-what-breaks-when-machines-and-networks-fail">11. What breaks when machines and networks fail?</a><a href="#readme-12-what-is-promised-what-is-not-and-what-was-sold-to-get-it">12. What is promised, what is not, and what was sold to get it?</a><a href="#readme-13-which-lines-of-code-carry-the-design">13. Which lines of code carry the design?</a><a href="#readme-14-what-do-the-nine-experiments-show">14. What do the nine experiments show?</a><a href="#readme-15-what-does-the-real-thing-do-that-this-toy-does-not">15. What does the real thing do that this toy does not?</a><a href="#readme-16-where-do-you-practise-this">16. Where do you practise this?</a><a href="#readme-17-what-does-this-connect-to-and-where-do-you-go-next">17. What does this connect to, and where do you go next?</a><a href="#readme-18-glossary--which-word-meant-what">18. Glossary — which word meant what?</a><a href="#readme-19-about-this-lab--how-was-it-built-and-where-do-its-numbers-come-from">19. About this lab — how was it built, and where do its numbers come from?</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

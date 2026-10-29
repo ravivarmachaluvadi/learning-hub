@@ -1,0 +1,3114 @@
+<!doctype html>
+<html lang="en" data-hub-lab="04-database-landscape">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>4. database-landscape</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 4 of 71 · Stage 1</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 4 · The Ground Floor</p><article id="readme"><h1 id="readme-the-database-landscape--how-to-choose-a-data-store-and-when-to-say-no">The Database Landscape — how to choose a data store, and when to say no</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Meera ran a bookshop with one big notebook and wrote every
+event into it in the order it happened. That worked until customers started
+asking four different kinds of question, and three of them meant reading the
+whole notebook. So she kept four books instead of one, each arranged the way
+one question wanted. Every database on earth is one of Meera's books: it
+arranges bytes so its favourite question is nearly free, and quietly makes
+the other questions expensive. This lab teaches you to name the question
+first, pick the book second, and know which book must never hold the truth.</p>
+</blockquote>
+<p>The trainer is <a href="visualization.html"><code>visualization.html</code></a>: eight scenarios to
+diagnose before the answer shows. Three runnable proofs live in <code>experiments/</code>.
+What is in the folder, how the numbers were made, and where this lab sits among
+your others are all in <a href="#readme-19-about-this-lab">section 19</a> at the end.</p>
+<hr />
+<h1 id="readme-beginner-model">BEGINNER MODEL</h1>
+<h2 id="readme-1-why-are-there-fifty-kinds-of-database">1. Why are there fifty kinds of database?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The cloud console offers you a bewildering menu, and the
+pick you make is the hardest thing in the whole system to undo. The menu is
+not fifty random products. It is about a dozen ideas, and each one exists for
+a reason you can learn in an afternoon.</p>
+</blockquote>
+<p>Open any cloud console and read the storage menu. Relational. Key-value.
+Document. Wide-column. Graph. Time-series. Search. Warehouse. Lake. Streaming.
+Vector. Eleven words, and each one hides several products.</p>
+<p>Teams routinely pick wrong. That would be forgivable if it were cheap. It is
+not, and the reason is specific.</p>
+<p><strong>A database choice is the hardest decision in a system to reverse.</strong> Code can
+be refactored in an afternoon. Migrating a terabyte of live data between stores
+with different data models is a multi-month project with downtime risk. So a
+team that picks a store because it is trendy, or because it is the one they
+already know, ends up in one of two places. They fight their database every
+day. Or they rebuild on a new one under pressure.</p>
+<p>Now the good news. The menu is not fifty unrelated things. It is <strong>about a
+dozen categories</strong>, and each category exists for one clear reason. By the end
+of this document you will look at a workload and name the category it wants.
+Just as importantly, you will name the categories that would quietly ruin you.</p>
+<p>We get there through one shop and one company. Meera runs the shop. Chaptr is
+what the shop became when it went online, and Priya, Dev, Asha, Omar and Ben
+are the people who keep it alive. Arjun is the customer they keep arguing
+about. Everything in this lab happens to those seven.</p>
+<h2 id="readme-2-what-breaks-in-meeras-one-big-notebook">2. What breaks in Meera's one big notebook?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Meera writes everything into one book, in date order. Four
+different questions arrive. Three of them force her to read the whole book,
+because the book is arranged for the fourth.</p>
+</blockquote>
+<p>Meera runs a corner bookshop and keeps <strong>one big ledger book</strong>. Every event
+goes in it, one line after another. Sold two novels to Arjun. Received a box
+from the distributor. Priya asked for &quot;that blue book about trains&quot;. Noted that
+Arjun likes mysteries.</p>
+<p>One notebook. Perfectly fine. Then the shop grows, and four different
+<em>questions</em> start hitting the same notebook.</p>
+<p>The first is her accountant's. <em>&quot;How much money did we make in March?&quot;</em> Meera
+flips through <strong>every page</strong>, picking out just the amounts, adding as she goes.
+One question, an hour of flipping.</p>
+<p>The second is a customer at the counter. <em>&quot;Do we have 'The Blue Train' in
+stock?&quot;</em> Now she flips <strong>backwards</strong>, looking for the last time that title was
+bought or sold. Another whole flip-through.</p>
+<p>The third is Priya's. <em>&quot;Which books mention trains?&quot;</em> The ledger is ordered by
+<strong>date</strong>, not by topic. There is no way to answer it without reading everything
+she has ever written.</p>
+<p>The fourth is about Arjun. <em>&quot;He liked these mysteries — what should I
+recommend?&quot;</em> Meera would have to trace from Arjun, to the books he bought, to
+<em>other customers</em> who bought those books, to what <em>they</em> bought. Hopping like
+that through a date-ordered notebook is torture.</p>
+<p>Notice what is actually happening here. The notebook is not &quot;too small&quot;. It is
+<strong>shaped wrong for three of the four questions</strong>. Each question wants the
+information physically arranged a different way.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Meera buys a second, much bigger notebook and hires an
+assistant to help her flip. Which of the four questions gets better?</p>
+<details><summary>Reveal</summary>
+Only the second one, and only a little, because two people can flip in
+parallel. If you guessed "all of them, twice as fast", you are thinking about
+*how much* work there is. The problem is *what shape* the work is. Question 1
+still reads every page to find the amounts. Question 3 still has no path from
+a word to a book. Question 4 still has no thread from a person to a person.
+More notebook does not create an arrangement that was never there.
+</details>
+
+</blockquote>
+<p>Here is what each question actually wants on the page:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Meera's question</th>
+  <th>What it wants the paper to look like</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>How much did we make in March?</td>
+  <td>just the amounts, all together</td>
+</tr>
+<tr>
+  <td>Is 'The Blue Train' in stock?</td>
+  <td>one row per title, kept current</td>
+</tr>
+<tr>
+  <td>Which books mention trains?</td>
+  <td>a word-to-books index, like the back of a textbook</td>
+</tr>
+<tr>
+  <td>What should Arjun read next?</td>
+  <td>threads connecting people to books to people</td>
+</tr>
+</tbody>
+</table></div>
+<p>Real shopkeepers solved this centuries ago. They keep <strong>several books</strong>. A
+daily ledger, append-only, which is the truth. A stock register, one line per
+title, updated in place. A subject index card box. And a &quot;regulars&quot; notebook
+with each customer's tastes.</p>
+<p>Same information. Arranged four ways, because it is <em>asked</em> four ways.</p>
+<p>Hold on to that sentence. It is the entire topic.</p>
+<p>Here is how far this lab goes, and what you can do after each layer:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner</strong></td>
+  <td>1–9</td>
+  <td>say why several categories of database have to exist</td>
+</tr>
+<tr>
+  <td><strong>Intermediate</strong></td>
+  <td>10</td>
+  <td>name every category, its physical trick, and when to walk away</td>
+</tr>
+<tr>
+  <td><strong>Engineering</strong></td>
+  <td>11–14</td>
+  <td>reason about the failures and guarantees, and run the proofs</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>15</td>
+  <td>read a real company's data architecture box by box</td>
+</tr>
+</tbody>
+</table></div>
+<p>Zero database internals are assumed. You only need to have written an app that
+reads and writes data somewhere.</p>
+<h2 id="readme-3-why-is-one-database-just-make-it-bigger-the-right-first-move">3. Why is &quot;one database, just make it bigger&quot; the right first move?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Meera's shop went online as Chaptr, and everything went
+into one relational database. That was not a mistake. It is the correct
+opening move, and it survives longer than most people expect.</p>
+</blockquote>
+<p>Back to software. Meera's shop became <strong>Chaptr</strong>, an online bookstore, and
+Priya and Dev built it. Like almost every sensible startup, they put everything
+in one relational database: PostgreSQL. Users, books, orders, page views,
+search, everything. Tables, foreign keys, transactions.</p>
+<p>To be clear, and this matters more than anything else in the section: <strong>this is
+the right starting move</strong>, not a mistake. One store. One backup. One thing to
+learn. Transactions keep money-related data correct for free.</p>
+<p>Chaptr grows. Things get slow. Priya reaches for the plan every team tries
+first, in this order:</p>
+<ul>
+<li>Slow query? <strong>Add an index.</strong></li>
+<li>Still slow? <strong>Buy a bigger server.</strong></li>
+<li>Still slow? <strong>Add read replicas</strong>, which are copies of the database that
+serve reads.</li>
+</ul>
+<p>This works for a surprisingly long time. Years, sometimes. A single well-tuned
+PostgreSQL box comfortably handles tens of thousands of queries per second.
+Most apps never outgrow it, which is why &quot;just use Postgres&quot; is genuinely good
+default advice rather than laziness.</p>
+<p>But Chaptr keeps growing. And growth does not send <em>more of the same</em> queries.
+It sends <strong>new shapes of query</strong>.</p>
+<h2 id="readme-4-how-does-one-database-die-four-different-ways">4. How does one database die four different ways?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Chaptr's single database had four bad years in one year.
+Each incident is one of Meera's four questions arriving in software. No
+bigger server fixes any of them, because the problem is the arrangement of
+the data and not the amount of hardware under it.</p>
+</blockquote>
+<p>Four incidents, four people, one diagnosis. Watch which of Meera's questions
+each one is.</p>
+<p><strong>Incident 1 — the dashboard that ate the database.</strong> This is Meera's question
+1, the totals. Asha runs finance, and she wants a dashboard: revenue per day,
+per category, per region, over two years. That query touches 40 million order
+rows. PostgreSQL stores data <strong>row by row</strong>, so each order's id, user, book,
+price, address and timestamp sit together on disk. To sum just the <code>price</code>
+column, the database must read <em>entire rows</em>. It drags the addresses and
+timestamps through memory only to throw them away. Asha's dashboard takes 4
+minutes, and while it runs, checkout queries queue behind it. Analytics is
+literally slowing down shopping. An index does not help. An index finds <em>few</em>
+rows fast; this query wants <em>all</em> rows.</p>
+<p><strong>Incident 2 — search that is not search.</strong> This is question 3, the topics.
+Omar owns the search box. Users type &quot;blue train mystery&quot; into it, and the
+first implementation is <code>WHERE title LIKE '%blue%train%'</code>. That has two
+problems, and only one of them is speed. It scans every row, because a <code>LIKE</code>
+pattern with a leading <code>%</code> cannot use a normal index. And it is <em>wrong</em>. It
+will not find &quot;The Blue Locomotive&quot;. It will not rank the best match first. It
+will not tolerate the typo &quot;mistery&quot;. Relational databases match values. Users
+want <strong>relevance over language</strong>. Different job entirely.</p>
+<p><strong>Incident 3 — the counter that melted.</strong> This one is a new shape, tiny hot
+writes, and it is Dev's. He ships &quot;👀 231 people viewed this book today&quot;. Every
+page view is now an UPDATE to a counter row. Popular books take hundreds of
+updates a second, all fighting to lock the <em>same row</em>, each waiting for the
+previous transaction to finish. The database is doing everything correctly. It
+is applying full transactional ceremony to a number nobody needs to be exact.
+That is correctness Chaptr does not need, at a price it cannot pay.</p>
+<p><strong>Incident 4 — the recommendation query from hell.</strong> Question 4, the threads,
+and it is about Arjun. &quot;Readers who bought this also bought…&quot; is, in SQL, a
+join from orders to orders to orders. Three hops means joining the
+40-million-row orders table to itself three times. Each hop multiplies the
+work. Priya measures six-second response times. The data is a <strong>web of
+connections</strong>, and tables answer web-shaped questions by rebuilding the web
+from scratch on every single query.</p>
+<p>Read the four incidents side by side. The last column is the one that matters:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Incident</th>
+  <th>Whose</th>
+  <th>Meera's question</th>
+  <th>Why the row layout loses</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1. Dashboard</td>
+  <td>Asha</td>
+  <td>totals</td>
+  <td>reads whole rows to sum one column</td>
+</tr>
+<tr>
+  <td>2. Search box</td>
+  <td>Omar</td>
+  <td>topics</td>
+  <td>no path from a word to the books holding it</td>
+</tr>
+<tr>
+  <td>3. View counter</td>
+  <td>Dev</td>
+  <td>a new one, hot writes</td>
+  <td>full transaction ceremony on one contended row</td>
+</tr>
+<tr>
+  <td>4. Recommendations</td>
+  <td>Priya, about Arjun</td>
+  <td>threads</td>
+  <td>rebuilds the web of links on every query</td>
+</tr>
+</tbody>
+</table></div>
+<p>One diagnosis covers all four: <strong>the query shapes changed, and the storage
+layout did not.</strong> PostgreSQL was never wrong. It is <em>shaped</em> for question 2,
+which is find or update one order by id, and it still does that beautifully. It
+was handed questions 1, 3 and 4.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> the team's first instinct is &quot;PostgreSQL can't handle our
+scale — let's migrate everything to something webscale.&quot; Is Chaptr's problem
+<em>scale</em>?</p>
+<details><summary>Reveal</summary>
+No — and this misdiagnosis is the most expensive mistake in the field. The
+order workload, which has question 2's shape, is fine; Postgres handles it
+easily. The problem is that *other-shaped* workloads landed on a store shaped
+for question 2's find-one-record-fast shape. Migrating
+*everything* to, say, Cassandra would fix incident 3, leave 1 and 4 broken,
+and *break checkout*, which needs transactions Cassandra doesn't offer.
+The fix is not one better database. It is one database *per dominant query shape*.
+</details>
+
+</blockquote>
+<h2 id="readme-5-what-does-chaptr-actually-need">5. What does Chaptr actually need?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two promises. Arrange the data the way each question asks
+for it, and still keep exactly one copy that is definitely true.</p>
+</blockquote>
+<p>Say it in plain words first, then read it twice:</p>
+<blockquote>
+<p><strong>For each workload, data must be physically arranged the way that workload
+asks for it</strong> — while keeping exactly <strong>one</strong> authoritative copy of the
+truth, so the many arrangements can disagree only briefly and can always be
+rebuilt.</p>
+</blockquote>
+<p>Both halves are load-bearing, and they pull in opposite directions.</p>
+<p>The first half says <em>you will run more than one kind of store</em>. Meera's four
+books, in software.</p>
+<p>The second half says <em>they cannot all be equally trusted</em>. One of them owns the
+truth. The rest are copies, arranged for speed, and a copy that disagrees with
+the truth is simply wrong.</p>
+<p>The whole discipline of choosing databases is the pursuit of those two
+guarantees at once.</p>
+<h2 id="readme-6-what-is-the-one-idea-underneath-all-of-it">6. What is the one idea underneath all of it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A database is not a general tool. It is a bet on one
+question, paid for by making the other questions cost more.</p>
+</blockquote>
+<p>Here it is, and everything after this section is a footnote to it:</p>
+<blockquote>
+<p><strong>Every database is an opinionated bet on one access pattern.</strong> It arranges
+bytes on disk so that <em>its</em> favorite question is nearly free — and pays for
+that by making other questions expensive. Choosing a database is therefore
+not &quot;which is best?&quot; but <strong>&quot;whose bet matches the question I ask most?&quot;</strong></p>
+</blockquote>
+<p>There is a corollary, and it comes straight from the second half of section 5.
+Use several stores. Appoint exactly one of them the source of truth. Treat all
+the rest as disposable copies you could delete and rebuild tonight.</p>
+<p>The industry name for running several stores this way is <strong>polyglot
+persistence</strong>, and the next section defines it properly.</p>
+<h2 id="readme-7-what-do-professionals-call-what-you-just-watched">7. What do professionals call what you just watched?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You have now felt every problem these words name. Here are
+the words, each one attached to the moment in Chaptr's year where you met it.</p>
+</blockquote>
+<p>Asha's dashboard and Priya's checkout are the two poles of this whole subject,
+and the trade has a name for each.</p>
+<p>The checkout is <strong>OLTP</strong>, online transaction processing. In plain terms it is
+the shop-counter workload: many small, fast reads and writes of individual
+records, right now, correctly. Precisely, it is a high volume of short
+transactions, each touching few rows, needing low latency and strong
+correctness. Chaptr's checkout is the example. Read one cart, insert one order,
+decrement one stock count, 30 ms, and it must never double-charge. The term
+exists to separate this workload from analytics, because the two want opposite
+storage layouts. The transactions and locking you watched melt down in incident
+3 are OLTP machinery, working exactly as designed.</p>
+<p>Asha's dashboard is <strong>OLAP</strong>, online analytical processing. Plainly, it is the
+back-office workload: big questions over history. Precisely, it is a low volume
+of long queries, scanning millions of rows, aggregating a few columns, with
+latency in seconds and slightly stale data being fine. Revenue per category per
+month over two years is the example. Incident 1 <em>is</em> the OLTP and OLAP
+collision, because one store cannot be laid out for both. Section 10 shows you
+the row-versus-column layouts that make it physical.</p>
+<p>The word for what distinguishes them is <strong>access pattern</strong>, also called query
+shape. Plainly, it is the <em>kind</em> of question you ask, and how often. Precisely,
+it is the distribution of operations across point lookup, range scan, full
+scan, traversal and aggregation, plus the read/write ratio, the latency budget
+and the consistency need. Meera's four questions are four access patterns. The
+term matters because it is the input to every database decision you will ever
+make. Compare &quot;get order by id, 5000×/sec, under 10 ms, must be current&quot; with
+&quot;sum revenue, 10×/day, under 30 s, yesterday's data fine&quot;. Those two sentences
+choose two different products.</p>
+<p>An <strong>index</strong> is the card box at the back of the textbook: a shortcut from a
+value to where it lives. Precisely, it is an auxiliary structure, usually a
+B-tree, mapping a key to a row location, making point lookups cost O(log n)
+instead of a full scan. Every index also slows writes slightly, because each
+write must update it too. It is the first tool everyone reaches for. Incidents
+1 and 2 showed you its limits: indexes accelerate <em>selective</em> lookups, not
+scan-everything queries and not match-the-language queries.</p>
+<p>Now the distinction the whole architecture hangs on. A <strong>source of truth</strong> is
+the master ledger. <strong>Derived data</strong> is every copy made from it. Precisely, the
+source of truth is the one store whose loss is unrecoverable and whose value is
+definitionally correct; every other store holds transformations of it that may
+lag and can be rebuilt from it. Chaptr's Postgres orders table is truth. The
+search index Omar builds and the analytics warehouse Asha queries are derived.
+The distinction exists because the moment you run two stores they <em>will</em>
+disagree, and this rule decides who wins. Your CQRS lab already taught you the
+same shape: read models are exactly derived data, and its &quot;consistency window&quot;
+is the lag between truth and its copies.</p>
+<p><strong>Denormalization</strong> is writing the same fact in several places so each reader
+finds it already arranged for them. Precisely, it is deliberately duplicating
+data to eliminate query-time joins and aggregation, trading write complexity
+and storage for read speed. Storing the author's <em>name</em>, not just the id,
+inside every order record is the small version. NoSQL stores do not do joins,
+so denormalization is how they answer join-shaped questions at all.</p>
+<p>And <strong>polyglot persistence</strong> is the name of the destination this document walks
+toward: several kinds of store in one system, each doing what it is shaped for.
+Precisely, it is an architecture with one source-of-truth store per data
+domain, plus derived stores per access pattern, connected by a synchronization
+mechanism that section 15 builds.</p>
+<p>Five smaller words appear from here on, so meet them now:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>What it means</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>schema-on-write</td>
+  <td>the store enforces structure when data goes <em>in</em></td>
+  <td>Postgres, section 3</td>
+</tr>
+<tr>
+  <td>schema-on-read</td>
+  <td>structure is applied when data comes <em>out</em></td>
+  <td>documents and lakes, section 10</td>
+</tr>
+<tr>
+  <td>throughput</td>
+  <td>operations per second</td>
+  <td>Dev's counter, incident 3</td>
+</tr>
+<tr>
+  <td>latency</td>
+  <td>time for one operation</td>
+  <td>Asha's 4-minute dashboard, incident 1</td>
+</tr>
+<tr>
+  <td>hot key / hot partition</td>
+  <td>one item taking a wildly outsized share of traffic</td>
+  <td>incident 3's counter row</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Asha asks for her dashboard to be &quot;real-time, like checkout&quot;.
+Which of the two words above is she actually asking Priya to break?</p>
+<details><summary>Reveal</summary>
+Latency, on a workload built for throughput. If you guessed "throughput", you
+have them the right way round but the wrong way up: a warehouse already moves
+enormous volume per second; what it does not do is answer one question in ten
+milliseconds. OLAP buys scan speed by giving up freshness and point-read
+latency. Asking for both, in one store, is asking one layout to be two
+layouts. Section 11's failure F6 is a team that tried it.
+</details>
+
+</blockquote>
+<blockquote>
+<p><strong>Checkpoint — BEGINNER to INTERMEDIATE.</strong> You can now explain <em>why</em> multiple
+database categories exist, because query shapes differ and layout must match
+the shape, and you can use the vocabulary of the trade. Next come the actual
+physical tricks: the handful of data arrangements every database on earth is
+built from.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>OLTP</em>, <em>OLAP</em> or <em>access pattern</em>,
+explain to a friend why Asha's dashboard made Arjun's checkout slow.</p>
+<details><summary>A good answer sounds like</summary>
+"The shop keeps one book, written in the order things happened. Asha's
+question needs every page read from the start, and while someone is reading
+every page, nobody else can get to the counter. It isn't that the book is
+full. It's that her question and his question want the paper laid out two
+different ways, and there's only one book."
+</details>
+
+</blockquote>
+<h2 id="readme-8-which-two-pictures-should-you-carry">8. Which two pictures should you carry?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Keep a simple picture and a precise one. The simple one is
+Meera's shelf of books. The precise one is that every database is four
+choices, and a category is just a bundle of those four that keeps recurring.</p>
+</blockquote>
+<p><strong>The simple picture: Meera's shelf.</strong> One shop, several specialized books. The
+<em>daily ledger</em> is append-only and holds the truth. The <em>stock register</em> has one
+row per item and is updated in place. The <em>subject index cards</em> map a word to
+books. The <em>regulars notebook</em> holds webs of taste. The <em>monthly totals sheet</em>
+is just numbers, pre-added. A new question shape means a new book. Every
+evening, Meera copies from the ledger into the other books.</p>
+<p><strong>The precise picture: four choices.</strong> Every store you will ever meet is a
+bundle of four decisions. The names in the middle column, B-tree and LSM and
+inverted index and their friends, are section 10's subject. You only need the
+<em>shape</em> of this table for now. Each name is taught properly before it is used
+for anything.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Choice</th>
+  <th>The options</th>
+  <th>Decides</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Storage layout</strong></td>
+  <td>rows together / columns together / append-only log / key→value slots</td>
+  <td>which query shape is nearly free</td>
+</tr>
+<tr>
+  <td><strong>Index structure</strong></td>
+  <td>B-tree / LSM-tree / hash / inverted index / graph adjacency / vector index</td>
+  <td>how lookups and writes cost</td>
+</tr>
+<tr>
+  <td><strong>Distribution model</strong></td>
+  <td>single node / replicas / partitioned (sharded) across nodes</td>
+  <td>scale ceiling and failure behavior</td>
+</tr>
+<tr>
+  <td><strong>Consistency contract</strong></td>
+  <td>ACID transactions ↔ eventual consistency (your CAP lab: CP ↔ AP)</td>
+  <td>what the app may assume</td>
+</tr>
+</tbody>
+</table></div>
+<p>Categories are just recurring bundles of those four. &quot;Relational OLTP&quot; is rows
+plus B-tree plus usually a single writer plus ACID. &quot;Wide-column&quot; is
+rows-by-partition plus LSM plus heavy partitioning plus eventual or tunable
+consistency. Learn the four axes and no product page will confuse you again.</p>
+<p>Now hold the two pictures against each other. Meera's books first:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Meera's shop</th>
+  <th>Engineering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The daily ledger</td>
+  <td>source of truth (append-only log / OLTP store)</td>
+</tr>
+<tr>
+  <td>Stock register</td>
+  <td>OLTP table, updated in place</td>
+</tr>
+<tr>
+  <td>Subject index cards</td>
+  <td>search engine's inverted index</td>
+</tr>
+<tr>
+  <td>Regulars notebook</td>
+  <td>graph database</td>
+</tr>
+<tr>
+  <td>Monthly totals sheet</td>
+  <td>OLAP warehouse / materialized aggregate</td>
+</tr>
+</tbody>
+</table></div>
+<p>And then Meera's habits, which map onto the parts engineers find hardest:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What Meera does</th>
+  <th>Engineering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Meera's evening copying</td>
+  <td>CDC / outbox relay / ETL pipeline (§15)</td>
+</tr>
+<tr>
+  <td>&quot;Which book do I trust if they disagree?&quot; — the ledger</td>
+  <td>derived stores rebuilt from truth</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the story lies to you.</strong> Every analogy in this workspace ends this way,
+because an analogy you cannot see through starts making decisions for you. Four
+lies, and the engineering truth that replaces each:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The lie</th>
+  <th>The truth</th>
+  <th>Where it bites</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Meera copies once a day and nobody minds</td>
+  <td>derived stores lag by <em>seconds</em>, and users do mind</td>
+  <td>read-your-own-writes, failure F3</td>
+</tr>
+<tr>
+  <td>Meera never crashes mid-copy</td>
+  <td>systems crash between two writes, every day</td>
+  <td>the dual-write trap, failure F2</td>
+</tr>
+<tr>
+  <td>Meera's books can't disagree with themselves</td>
+  <td>one partitioned store can show two values for one key</td>
+  <td>your CAP lab, category ④</td>
+</tr>
+<tr>
+  <td>One person owns all the books</td>
+  <td>different teams own different stores</td>
+  <td>the truth contract is organizational too</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read the first row twice. Read-your-own-writes problems, which your CQRS lab
+already made you feel, are real engineering rather than bookkeeping. The second
+row is why the sync mechanism needs the outbox and CDC machinery you learned,
+instead of a nightly cron and hope. The fourth row is the one nobody puts on
+the architecture diagram, and it is the one that decides whether the diagram
+survives contact with the org chart.</p>
+<h2 id="readme-9-what-does-the-whole-landscape-look-like-on-one-page">9. What does the whole landscape look like on one page?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One question at the top, a dozen answers underneath. This
+is the territory the rest of the document walks through, organized by the
+question each category answers best.</p>
+</blockquote>
+<p>Do not memorize the map below. By the end of section 10 you will be able to
+redraw it from scratch, because you will know <em>why</em> each branch exists. Meera's
+four questions are in there, and so is each of Chaptr's four incidents.</p>
+<pre class="mermaid">flowchart TD
+    Q[What is your dominant query shape?] --&gt; A[&quot;Find/update ONE record by key,&lt;br/&gt;correctly, fast&quot;]
+    Q --&gt; B[&quot;Scan MILLIONS of rows,&lt;br/&gt;aggregate a few columns&quot;]
+    Q --&gt; C[&quot;Match human language,&lt;br/&gt;rank by relevance&quot;]
+    Q --&gt; D[&quot;Follow connections&lt;br/&gt;hop by hop&quot;]
+    Q --&gt; E[&quot;Append events forever,&lt;br/&gt;replay in order&quot;]
+    Q --&gt; F[&quot;Numbers over time,&lt;br/&gt;recent = hot, old = compressed&quot;]
+    Q --&gt; G[&quot;Find items SIMILAR&lt;br/&gt;to this one&quot;]
+
+    A --&gt; A1[&quot;Relational OLTP&lt;br/&gt;(PostgreSQL, MySQL)&quot;]
+    A --&gt; A2[&quot;Key-value&lt;br/&gt;(Redis, DynamoDB)&quot;]
+    A --&gt; A3[&quot;Document&lt;br/&gt;(MongoDB)&quot;]
+    A --&gt; A4[&quot;Wide-column&lt;br/&gt;(Cassandra)&quot;]
+    A --&gt; A5[&quot;Distributed SQL&lt;br/&gt;(Spanner, CockroachDB)&quot;]
+    B --&gt; B1[&quot;Columnar warehouse&lt;br/&gt;(BigQuery, Snowflake, ClickHouse)&quot;]
+    B --&gt; B2[&quot;Data lake / lakehouse&lt;br/&gt;(S3 + Parquet, Iceberg)&quot;]
+    C --&gt; C1[&quot;Search engine&lt;br/&gt;(Elasticsearch, OpenSearch)&quot;]
+    D --&gt; D1[&quot;Graph DB&lt;br/&gt;(Neo4j, Neptune)&quot;]
+    E --&gt; E1[&quot;Streaming log&lt;br/&gt;(Kafka, Pulsar)&quot;]
+    F --&gt; F1[&quot;Time-series DB&lt;br/&gt;(TimescaleDB, InfluxDB, Prometheus)&quot;]
+    G --&gt; G1[&quot;Vector store&lt;br/&gt;(pgvector, Pinecone, Milvus)&quot;]
+</pre>
+<p>The second thing to look at is the interactive explorer,
+<a href="visualization.html"><code>visualization.html</code></a> in this lab folder. It gives Priya
+eight real-world scenarios to diagnose <em>before</em> seeing the answer. It also has
+a workload questionnaire that walks this same decision tree visibly. And it has
+two animations of the physical layouts you are about to meet: a
+row-versus-column scan, and a B-tree-versus-LSM write path. It is best used
+<strong>after</strong> reading section 10, as practice rather than as instruction.</p>
+<hr />
+<h1 id="readme-intermediate-model">INTERMEDIATE MODEL</h1>
+<h2 id="readme-10-what-are-the-seven-tricks-and-who-bets-on-which">10. What are the seven tricks, and who bets on which?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Databases look like fifty products. Under the floorboards
+there are about seven ways to arrange bytes so that one kind of question
+becomes cheap. Learn the seven, and every product is just &quot;which tricks,
+bundled how&quot;.</p>
+</blockquote>
+<p>Priya's mistake, before this section, was shopping by product name. After it
+she shops by trick. Learn the tricks first; the catalogue that follows is then
+almost boring, which is the point.</p>
+<h3 id="readme-101-what-are-the-seven-physical-tricks">10.1 What are the seven physical tricks?</h3>
+<p><strong>Trick 1, the hash table.</strong> Take the key, scramble it into a number, and jump
+straight to that slot. In code that is <code>hash(&quot;user:42&quot;) % number_of_slots</code>. No
+walking, no comparing, no ordering. One jump to read, one jump to write, and
+engineers write that cost as O(1), meaning it does not grow as the data grows.</p>
+<p>The price of trick 1 is that there <strong>is</strong> no ordering. Ask for &quot;all users
+between 40 and 50&quot;, or for &quot;all keys starting with <code>user:</code>&quot;, and the store has
+nothing better than checking everything. Redis, Memcached, and DynamoDB's
+partition routing all run on this trick.</p>
+<p><strong>Trick 2, the B-tree.</strong> Keep the rows <strong>sorted by key</strong>, in fixed-size pages
+of typically 8 KB. Arrange those pages as a tree so wide and so shallow that a
+billion rows sit three or four levels deep. A point lookup walks three or four pages
+and stops. A range scan, such as &quot;orders from March&quot;, finds the start and then
+reads <em>neighbours in order</em>, which the hash table simply could not do. Writes
+update pages <strong>in place</strong>.</p>
+<p>The price of trick 2 shows up under write pressure. A write to a random key
+touches a random page. At high write rates that becomes scattered disk I/O, and
+page locks start contending, which is exactly what melted Dev's counter in
+incident 3. PostgreSQL, MySQL, SQL Server and Oracle are B-tree stores, and so
+is almost every secondary index anywhere.</p>
+<p><strong>Trick 3, the LSM-tree</strong>, short for Log-Structured Merge tree. Never update in
+place. Always append. A write lands in an in-memory sorted buffer. When that
+buffer fills, it is flushed to disk as one immutable sorted file. A background
+process called <em>compaction</em> then merges those files, discarding values that
+were overwritten. Every byte written to disk is written <strong>sequentially</strong>,
+which is the fastest thing storage hardware does, so write throughput is
+enormous.</p>
+<p>The price of trick 3 lands on reads. One read may have to consult the memory
+buffer plus several files on disk, so reads are slower and much less
+predictable than a B-tree's. Compaction also burns background I/O forever.
+<strong>The B-tree and LSM fork is the single most important internals fact in this
+document:</strong> B-tree is read-optimized, LSM is write-optimized. Cassandra, HBase,
+RocksDB, LevelDB and ScyllaDB run on it, as do the storage engines inside many
+newer systems.</p>
+<p><strong>Trick 4, the columnar layout.</strong> A row store keeps
+<code>[order1: id,user,price,date][order2: id,user,price,date]…</code> on disk. A column
+store keeps <code>[all ids][all users][all prices][all dates]</code> instead. Now
+<code>SUM(price)</code> reads <em>only the price bytes</em>. On a 40-column table that is roughly
+one fortieth of the data, and it is the direct cure for Asha's incident 1.
+There is a bonus. A column holds similar values, so it compresses brutally
+well. A million dates from the same year, run-length-encoded, almost vanish.
+Compression of 10–20× is ordinary, and it shrinks the scan again.</p>
+<p>The price of trick 4 is the exact opposite bet from a B-tree. Fetching or
+updating <strong>one whole row</strong> now touches every column file. Columnar stores are
+therefore batch-loaded rather than transactionally updated. BigQuery,
+Snowflake, Redshift, ClickHouse, DuckDB and the Parquet file format all take
+this bet.</p>
+<p><strong>Trick 5, the inverted index.</strong> This is the index at the back of a textbook.
+Split every document into terms, so &quot;The Blue Train&quot; becomes <code>blue</code> and
+<code>train</code>, and for each term keep the list of documents containing it. The query
+&quot;blue train&quot; is then an intersection of two lists, which takes milliseconds
+over millions of documents. Then each hit is <em>scored</em> for relevance: rarer
+words weigh more, and how often a term appears matters. Analyzers add stemming,
+turning <code>running</code> into <code>run</code>, and fuzzy matching, turning &quot;mistery&quot; into
+&quot;mystery&quot;. This is the cure for Omar's incident 2.</p>
+<p>The price of trick 5 is freshness. The index is expensive to update in place,
+so search engines rebuild index segments in the background. Documents become
+searchable <em>seconds</em> after being written rather than instantly, which the trade
+calls near-real-time rather than real-time. It is also why search engines make
+poor primary stores, a point section 11 turns into a war story. Elasticsearch,
+OpenSearch, Solr and Lucene, the library inside all three, are the names here.</p>
+<p><strong>Trick 6, adjacency.</strong> Store each record with <strong>direct references</strong> to its
+neighbours, a layout the trade calls <em>index-free adjacency</em>. Now &quot;friends of
+friends of Arjun&quot; is pointer-following, and the cost is proportional to the
+<em>neighbourhood you touch</em> rather than to the size of the table. In SQL every
+hop is a join that searches an index over ALL edges. In a graph store, hop
+three costs the same as hop one. This is the cure for Priya's incident 4.</p>
+<p>The price of trick 6 is distribution. A pointer-chasing layout partitions
+poorly across machines, because a graph has no clean lines to cut along, so
+graph stores scale awkwardly. Queries that are not traversals, such as &quot;all
+users named Priya&quot;, still need ordinary indexes. Neo4j, Amazon Neptune and
+Memgraph are the products.</p>
+<p><strong>Trick 7, the append-only log.</strong> Records are only ever <strong>appended</strong>. Each
+reader keeps its own position, called an offset, and replays forward at its own
+pace. Writes and reads are sequential, which is maximal disk throughput. Many
+independent readers do not disturb the writer or each other. The past is never
+destroyed, so any reader can start from zero and rebuild. You already know this
+trick: it is your event-sourcing lab's event store, industrialized.</p>
+<p>The price of trick 7 is that a log answers &quot;what happened, in order&quot; and
+nothing else. There are no lookups and no queries. You <em>derive</em> queryable
+stores from it. Kafka, Pulsar and Kinesis are the products, and the write-ahead
+log hiding inside every database above is the same idea.</p>
+<p><strong>Half-trick 8, the vector index.</strong> An embedding is an array of floats that
+represents meaning, and similar meanings land near each other in that space. A
+vector index, chiefly HNSW, is a navigable graph of neighbours that finds
+approximate nearest neighbours without comparing against every vector. It
+trades exactness for speed: results are about 99% right, deliberately.
+pgvector, Pinecone, Milvus and Weaviate run on it, and it gets a proper entry
+in the catalogue below.</p>
+<p>Now read all eight together. The two middle columns are the whole subject:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Trick</th>
+  <th>How it arranges bytes</th>
+  <th>Nearly free</th>
+  <th>Expensive</th>
+  <th>Powers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1. Hash table</td>
+  <td>key scrambled to a slot</td>
+  <td>one-key get and set</td>
+  <td>ranges, prefixes, ordering</td>
+  <td>Redis, Memcached, DynamoDB routing</td>
+</tr>
+<tr>
+  <td>2. B-tree</td>
+  <td>sorted 8 KB pages, wide and shallow</td>
+  <td>point lookup, range scan</td>
+  <td>random-key write storms, row locks</td>
+  <td>PostgreSQL, MySQL, SQL Server, Oracle</td>
+</tr>
+<tr>
+  <td>3. LSM-tree</td>
+  <td>append, flush, compact in background</td>
+  <td>huge sequential write rates</td>
+  <td>reads across many files, compaction I/O</td>
+  <td>Cassandra, HBase, RocksDB, LevelDB, ScyllaDB</td>
+</tr>
+<tr>
+  <td>4. Columnar</td>
+  <td>each column stored contiguously</td>
+  <td>scans and aggregates over few columns</td>
+  <td>fetching or updating one whole row</td>
+  <td>BigQuery, Snowflake, Redshift, ClickHouse, DuckDB</td>
+</tr>
+<tr>
+  <td>5. Inverted index</td>
+  <td>term → list of documents</td>
+  <td>word match, ranking, typo tolerance</td>
+  <td>in-place updates; instant visibility</td>
+  <td>Elasticsearch, OpenSearch, Solr, Lucene</td>
+</tr>
+<tr>
+  <td>6. Adjacency</td>
+  <td>node → its edges, as pointers</td>
+  <td>multi-hop traversal</td>
+  <td>spreading the graph over machines</td>
+  <td>Neo4j, Neptune, Memgraph</td>
+</tr>
+<tr>
+  <td>7. Append-only log</td>
+  <td>ordered immutable history</td>
+  <td>append, replay, many readers</td>
+  <td>any query that is not &quot;read forward&quot;</td>
+  <td>Kafka, Pulsar, Kinesis, every WAL</td>
+</tr>
+<tr>
+  <td>8. Vector index</td>
+  <td>neighbourhood graph over embeddings</td>
+  <td>&quot;most similar to this&quot;</td>
+  <td>exactness, and any keyword match</td>
+  <td>pgvector, Pinecone, Milvus, Weaviate</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Cassandra (LSM, trick 3) advertises stunning write throughput.
+A teammate proposes it for Chaptr's <em>order</em> system &quot;because writes matter most
+when checkout traffic spikes&quot;. What did they miss?</p>
+<details><summary>Reveal</summary>
+Two things. First, checkout isn't write-heavy in the relevant sense — thousands of
+writes/sec is nothing; Postgres does that easily. LSM's advantage matters at
+*hundreds of thousands* of writes/sec. Second, checkout's actual hard requirement
+is the one Cassandra sacrificed: multi-row ACID transactions (decrement stock +
+insert order + record payment, atomically). They'd trade a guarantee they need
+for throughput they don't. The lesson generalizes: **pick by the requirement that
+is hardest, not the benchmark that is flashiest.**
+</details>
+
+</blockquote>
+<h3 id="readme-102-which-store-makes-which-bet">10.2 Which store makes which bet?</h3>
+<p>Thirteen store families follow, in eight clusters. Each cluster opens with the
+question its members are shaped to answer, because that is how you will
+actually choose. Every family carries a circled number, ① through ⑭, which the
+rest of the document uses as shorthand. Two comparison tables at the end of the
+section put all thirteen side by side.</p>
+<h4 id="readme-who-answers-find-or-change-one-record-right-now-correctly">Who answers &quot;find or change one record, right now, correctly&quot;?</h4>
+<p>This is Meera's question 2, and it is the largest cluster because it is the
+most common question in software. Five families answer it, and they differ in
+what they are willing to give up.</p>
+<p><strong>① Relational OLTP — PostgreSQL, MySQL, SQL Server, Oracle.</strong> No incident
+forced this one. It is the store Chaptr <em>rightly started with</em>, and it keeps
+the checkout, orders and users workload forever. The bet is rows together on
+disk, so fetching one order gets the whole order, plus B-trees for keys and
+indexes, plus <strong>ACID transactions</strong> across many rows and tables, plus
+schema-on-write, plus joins. Joins mean data lives in one place, which the
+trade calls normalized, and still answers combined questions. The usual
+deployment is one writer node with read replicas.</p>
+<p>Priya reaches for ① when entities relate to each other and correctness matters:
+orders, payments, inventory, bookings, and anything where &quot;read two things,
+decide, write two things&quot; must be atomic. There is a second and less obvious
+reason. Reach for it <strong>when you don't know your query patterns yet</strong>. SQL's
+flexibility, any WHERE and any join and ad-hoc questions, is the best hedge
+against an unknown future. That is why &quot;default to Postgres until a specific
+incident forces otherwise&quot; is professional advice rather than laziness. Real
+users: basically every company on earth for the transactional core, with Stripe
+on MySQL, and Instagram and Robinhood on Postgres.</p>
+<p>Priya walks away from ① in three situations. First, when a single machine's
+write capacity is genuinely exceeded, at roughly tens of thousands of sustained
+writes per second. Replicas scale <em>reads</em> only, and sharding relational data
+yourself is a famous tar pit, so that pushes her to ⑤ or ⑨. Second, when the
+workload is analytical scans, which is ⑥. Third, when the data is genuinely
+schema-free or the access is pure key to blob, which is ② or ③. Its consistency
+posture is CP-leaning single-writer ACID, and its replicas introduce the one
+eventual-consistency leak most teams meet first, replica lag.</p>
+<p><strong>② Key-value stores and caches — Redis, Memcached, DynamoDB.</strong> Dev's melted
+counter is the loud story here. There is a quieter one alongside it: every page
+load hits the database for the same book details, thousands of times a minute.
+The bet is trick 1, the hash table. The store knows <em>nothing</em> about your value,
+which is an opaque blob behind a key. In exchange you get sub-millisecond get
+and set, and, because keys hash independently, near-perfect horizontal scaling.
+Two families share that one bet. In-memory caches such as Redis and Memcached
+give microsecond reads, and data may be evicted or lost. Durable key-value
+stores such as DynamoDB and Riak are disk-backed and replicated, and still
+key-only.</p>
+<p>Dev reaches for ② when access is <em>by exact key, at high volume</em>. Sessions, so
+<code>session:abc123</code> maps to who is logged in. Caching query results in front of
+store ①, in the read-through shape: check the cache, and on a miss read the
+database and fill the cache. Counters and rate limiters, where Redis <code>INCR</code> is
+atomic and lock-free and is incident 3's actual cure. Leaderboards, on Redis
+sorted sets. Feature flags. DynamoDB specifically earns its place when you need
+key-value at <em>any</em> scale with SLAs and zero operations work, which is why
+Amazon's own cart runs on it.</p>
+<p>Dev walks away from ② the moment a query wants anything other than the key.
+&quot;All sessions for user 42&quot; is unanswerable, because the store cannot see inside
+values. Multi-key transactions are another exit. And the third exit is the
+dangerous one: <strong>when you are tempted to make a cache the only copy of data you
+cannot lose.</strong> A restarted Redis is empty, and section 11 opens with that war
+story. DynamoDB has its own corollary: you must know your access patterns <em>up
+front</em>, because changing them later means re-modeling the table, which is
+precisely why &quot;unknown future queries&quot; was a reason to <em>stay</em> relational. On
+posture, a single-node Redis is trivially consistent, but only because it is
+one machine; DynamoDB is AP by default with eventually-consistent reads, and
+offers opt-in strongly-consistent reads at double cost.</p>
+<p><strong>③ Document stores — MongoDB, Couchbase, Firestore.</strong> Chaptr's product
+catalogue is the story. Books, e-books, audiobooks and box sets each have
+different fields. Does this one have a narrator? A file size? A number of
+volumes? In Postgres that becomes 60 nullable columns, or a dozen sparse
+side-tables, and every product page load joins six tables to assemble one
+product. The bet is to store each record as a <strong>self-contained JSON document</strong>,
+the whole product, nested, retrieved by key in one read, with no joins to
+reassemble it. This is denormalization institutionalized. Unlike ②, the store
+<em>can</em> see inside, so you may index and query any field. It is schema-on-read:
+two documents in one collection may differ in shape, and the writer decides,
+per document.</p>
+<p>Omar reaches for ③ when records are naturally self-contained things that are
+read whole. Product catalogues are the canonical use, because each seller's
+item has different attributes. User profiles, CMS content, and IoT payloads
+that vary by device are the others. The trigger is that each record's shape
+varies enough that a fixed schema fights you. Real users: eBay's catalogue and
+Forbes' CMS, both on MongoDB.</p>
+<p>Omar walks away from ③ in three cases. First, when the entities are
+<em>many-to-many relational</em>, such as orders referencing users referencing
+addresses. Documents then force him into one of two bad choices. Either he
+embeds copies, which must be updated everywhere, so &quot;user changed address&quot; now
+touches every order document. Or he simulates joins in application code, badly.
+Second, when cross-document ACID becomes routine. MongoDB does have
+multi-document transactions now, but if you use them constantly, your data is
+telling you it is relational. Third, when documents grow without bound. An
+<code>orders: [...]</code> array inside the user document eventually hits the 16 MB
+document cap, and it rewrites the whole document on every append. That is
+failure F5 in section 11. One honesty note belongs here: Postgres's JSONB gives you
+indexed documents inside a relational store, and for mixed workloads one store
+① with JSONB columns often beats running ① and ③ together. Posture:
+single-document atomicity always, primary-replica with eventual reads if you
+read from secondaries, tunable per query.</p>
+<p><strong>④ Wide-column stores — Cassandra, ScyllaDB, HBase, Bigtable.</strong> Chaptr
+launches a reading app that reports each reader's page position every 10
+seconds. A million readers means about 100 000 writes per second, forever,
+spread worldwide, and the <em>only</em> query is &quot;positions for reader X, most recent
+first&quot;. Postgres's B-trees choke on that random-write firehose. The bet is
+trick 3, the LSM tree, for the firehose, plus aggressive partitioning. Rows are
+grouped by a <strong>partition key</strong>, so reader X's data lives together on one set of
+nodes, sorted by a clustering key such as timestamp. Partitions are spread
+across dozens of nodes in a hash ring, and every node accepts writes, so there
+is no single writer to bottleneck. Replication is masterless: writes go to N
+replicas, with read and write quorum knobs per query.</p>
+<p>There is a catch that shocks relational people. <strong>You design tables from your
+queries, not your entities.</strong> One query shape per table, with data duplicated
+across tables at write time. There is no join and no ad-hoc query. The schema
+<em>is</em> the query plan.</p>
+<p>Ben reaches for ④ when the workload is write-heavy, key-partitioned, with
+queries known in advance, at serious scale, with multi-datacenter and
+no-single-point-of-failure requirements. Messaging history is the flagship
+case, and Discord stores trillions of messages on ScyllaDB. Activity feeds and
+device telemetry follow. Netflix's viewing history runs on Cassandra, and Apple
+runs hundreds of thousands of Cassandra nodes.</p>
+<p>Ben walks away from ④ when queries are ad-hoc or still evolving, because every
+new question means a new table and a backfill. He walks away when data volume
+is under a few terabytes, or writes are under about 10 000 per second. Postgres
+does that without the operational bill. Cassandra clusters need real care:
+compaction tuning, repair schedules, the lot. He walks away when
+transactions or strong consistency are the default requirement. And he walks
+away when the partition key would produce hot or unbounded partitions, which is
+section 11's celebrity problem. Posture: ④ is the textbook AP system straight
+from your CAP lab, available under partition, with tunable quorums where R plus
+W greater than N buys per-query strong reads, and last-write-wins conflict
+resolution by default.</p>
+<p><strong>⑤ Distributed SQL, also called NewSQL — Spanner, CockroachDB, YugabyteDB,
+TiDB, Vitess.</strong> Chaptr goes global. Orders must survive a <em>region</em> failure, and
+write volume finally, genuinely exceeds one Postgres box. But checkout still
+needs real transactions. Category ① cannot scale writes. Category ④ will not do
+transactions. For decades the answer was &quot;pick your poison&quot;.</p>
+<p>The bet is to keep SQL, schema and ACID, and to shard data automatically across
+nodes while running <strong>consensus per shard</strong>. That consensus is Raft or Paxos:
+your paxos lab, productized, where every write is a quorum decision, so any
+node can fail and the shard keeps a consistent leader. Cross-shard transactions
+layer two-phase commit <em>on top of</em> per-shard consensus. Your two-phase-commit
+lab's blocking problem is solved by making each participant itself a
+fault-tolerant quorum, which is exactly the fix that lab hinted at. Spanner
+adds globally synchronized clocks, from GPS and atomic clocks, to give
+lock-free consistent reads across continents.</p>
+<p>Meera reaches for ⑤ when she needs relational semantics at a scale or
+availability level one machine cannot give. Global financial ledgers.
+Multi-region inventory. Any system where &quot;Postgres, but it survives a region
+and scales writes&quot; is the actual specification. Google's own AdWords
+billing runs on Spanner, which exists because sharded MySQL had become
+unbearable; DoorDash and Netflix keep metadata on CockroachDB.</p>
+<p>Meera walks away from ⑤ when one region and one box's write volume suffice,
+which is <em>most businesses</em>, because the costs are real. Every write crosses the
+network for quorum, so the latency floor is milliseconds rather than
+microseconds. Cross-shard joins and transactions cost more than local ones.
+Operations, or bills, are heavier. This category is a destination you <em>earn</em>
+through measured limits, never a starting point. Posture: CP by construction,
+so under partition the minority side refuses writes, which is your CAP lab's
+&quot;the majority keeps working&quot; made into a product.</p>
+<h4 id="readme-who-answers-add-up-a-column-across-millions-of-rows">Who answers &quot;add up a column across millions of rows&quot;?</h4>
+<p>This is Meera's question 1, Asha's dashboard, and two families answer it at two
+very different price points.</p>
+<p><strong>⑥ Columnar warehouses, the OLAP shelf — BigQuery, Snowflake, Redshift,
+ClickHouse, DuckDB.</strong> Incident 1 is the story: the 4-minute dashboard that
+queued up checkouts. The bet is trick 4, columnar layout with compression, plus
+massively parallel execution that splits a big scan across many workers, plus
+one more thing the cloud generation added: <strong>storage and compute separation</strong>.
+Data lives in object storage. Compute spins up per query. You pay per scan on
+BigQuery, or per warehouse-second on Snowflake. Data is loaded in batches or
+streams <em>from</em> other systems, and queried with full SQL, big and read-only.</p>
+<p>Asha reaches for ⑥ for analytics, full stop: dashboards, BI, &quot;revenue by
+category by month over two years&quot;, machine-learning feature backfills, and
+anything scanning millions or billions of rows for aggregates. The pattern is
+always the same. The OLTP stores, ① through ④, hold the live truth. A pipeline,
+which section 15 builds, copies changes into the warehouse. Analysts then
+hammer the warehouse where they cannot hurt production. Two variants are worth
+naming. ClickHouse is the pick when you need <em>sub-second</em> analytics inside a
+product, which is how Cloudflare's dashboards work. DuckDB is the pick when the
+data fits one machine: it is &quot;SQLite for analytics&quot;, a library rather than a
+server, and you will run it in this lab's experiments.</p>
+<p>Asha walks away from ⑥ the moment the workload is operational: point lookups
+such as &quot;order 12345&quot;, single-row updates, or thousands of small queries per
+second. Columnar layout makes each of those touch every column file. Warehouses
+also often charge <em>per data scanned</em>, so an app hammering BigQuery with point
+lookups is slow <strong>and</strong> ruinously expensive. A warehouse is never the source of
+truth, and never sits behind an end-user request path, with the deliberate
+ClickHouse-style exception noted above. Posture: consistency is not the
+interesting axis here, because data is minutes to hours stale by design. The
+honest contract is &quot;answers about <em>up to</em> time T, fast&quot;, and consumers must
+know T.</p>
+<p><strong>⑪ Object storage, data lakes and lakehouses — S3, GCS or ADLS, plus Parquet,
+plus Iceberg, Delta or Hudi.</strong> Chaptr's machine-learning team wants
+<em>everything, forever, raw</em>: clickstreams, images, logs, six years of order
+snapshots. The warehouse ⑥ is structured and priced for curated tables, not for
+petabytes of maybe-useful-someday. The bet here is three layers that took the
+industry a decade to stack.</p>
+<p>The bottom layer is <strong>object storage</strong>, meaning S3 or GCS: infinitely scalable
+key-to-blob-file storage at around $0.02 per GB-month, with eleven nines of
+durability and no compute attached. It is the cheapest durable bytes money
+buys. The middle layer is the <strong>data lake</strong>: files in object storage in an open
+columnar format, namely Parquet. Parquet is trick 4 as a <em>file format</em>, so any
+engine such as Spark, Trino or DuckDB can query those files in place. But bare files
+have no transactions. Two writers corrupt each other, and readers see
+half-written data, which is how the industry got the phrase &quot;the data swamp&quot;.
+The top layer is the <strong>lakehouse</strong>, meaning Iceberg, Delta Lake or Hudi. It is
+a <em>table format</em>: a metadata layer over those files that adds ACID commits,
+schema evolution and time travel. It makes the lake behave like warehouse
+tables while every engine keeps direct file access and storage stays at $0.02
+per GB. Industry consensus is converging here, and warehouses like Snowflake
+and BigQuery now read Iceberg natively.</p>
+<p>Omar reaches for ⑪ when data is raw, varied and huge, and its future uses are
+unknown. Training corpora go here. So does the cheap long-term layer beneath
+the warehouse. So does sharing one copy of data across many engines instead of
+keeping N copies. Also reach for plain object storage for what it plainly is:
+the correct home for <strong>files</strong>, meaning images, PDFs and backups. Put the <em>URL</em> in your database,
+never megabyte blobs in Postgres rows.</p>
+<p>Omar walks away from ⑪ when he needs low-latency serving, because lake queries
+take seconds to minutes and nothing user-facing reads a lake directly. He walks
+away for small structured data that a warehouse or Postgres handles, because a
+lakehouse's Spark-sized toolchain is a heavy tax. And he walks away from using
+it as a system of record for <em>transactional</em> workloads. Posture: object stores
+are now strongly consistent per object, which S3 has been since 2020, and table
+formats add snapshot-isolation commits per table.</p>
+<h4 id="readme-who-answers-match-the-words-a-human-typed">Who answers &quot;match the words a human typed&quot;?</h4>
+<p>This is Meera's question 3, Omar's search box, and two families split it
+between matching <em>words</em> and matching <em>meaning</em>.</p>
+<p><strong>⑦ Search engines — Elasticsearch, OpenSearch, Solr, Algolia, Typesense,
+Meilisearch.</strong> Incident 2 is the story: <code>LIKE '%blue%train%'</code> is not search.
+The bet is trick 5, the inverted index, wrapped in a relevance-scoring pipeline
+that tokenizes, normalizes, stems, scores and ranks. Add typo tolerance. Add
+faceting, so the sidebar can say &quot;Fiction (1 203) | Mystery (410)…&quot;. Add
+highlighting. Add aggregations fast enough that Elasticsearch doubles as a
+log-analytics engine, which is the ELK stack: logs in, Kibana dashboards out,
+and likely where you have already met it.</p>
+<p>Omar reaches for ⑦ when humans type words and expect the <em>best</em> matches ranked:
+product search in the Amazon style, site search, log search that greps
+terabytes in milliseconds, and autocomplete. Real users include Wikipedia, the
+lineage behind GitHub code search, and Uber on Elasticsearch, with Stripe's
+dashboard search in the Typesense and Algolia class.</p>
+<p>Omar walks away from ⑦ when matching is <em>exact and structured</em>. &quot;Orders over
+₹500 this week&quot; is SQL's job, and a search engine adds operations for nothing.
+He also walks away, hard, from the temptation to treat it as a primary store.
+It is the canonical <strong>derived</strong> store: near-real-time rather than immediate
+visibility of writes, historically weak durability guarantees, and mappings
+that periodically need a full reindex. One rule keeps you safe here. <strong>You must
+always be able to delete the search index and rebuild it from the source of
+truth.</strong> If you cannot, you have mis-assigned truth, and section 11 shows what
+that costs. Posture: eventually consistent by design, with a refresh interval
+of about 1 s, which is your CQRS lab's consistency window made into a product.</p>
+<p><strong>⑫ Vector stores — pgvector, Pinecone, Milvus, Weaviate, Qdrant.</strong> Chaptr adds
+&quot;books like this one&quot;, and semantic search, so that &quot;cozy mystery on a train&quot;
+finds <em>The Blue Locomotive</em> even though no word matches. A model turns each
+book description into an <strong>embedding</strong>, an array of about 1000 floats where
+similar meaning lands nearby in space. The query is now &quot;nearest neighbours of
+this point&quot;, and neither B-trees nor inverted indexes nor hashes can answer it,
+because exact nearest-neighbour search in 1000 dimensions means comparing
+against <em>every</em> vector.</p>
+<p>The bet is approximate nearest-neighbour indexing, chiefly HNSW, a multi-layer
+&quot;skip-list of neighbourhoods&quot; graph. It finds about 99% of the true nearest
+neighbours in milliseconds by accepting that missing about 1% is fine for
+similarity, which is half-trick 8. Metadata filtering rides along, so you can
+ask for &quot;similar AND in stock&quot;.</p>
+<p>Omar reaches for ⑫ for semantic and similarity retrieval. The flagship case is
+RAG for LLM apps, where relevant documents are fetched to stuff into a prompt,
+and it was 2023-25's defining workload. Recommendation retrieval, image and
+audio similarity, and near-duplicate detection follow. The pragmatic guidance
+mirrors ⑧'s below. <strong>Start with pgvector</strong>, an extension that keeps vectors next to your
+relational data with joins and transactions. Move to a dedicated vector
+database such as Pinecone or Milvus when vectors are your <em>primary</em> workload at
+hundreds-of-millions scale. Most production RAG stacks, Notion AI among them,
+started on pgvector.</p>
+<p>Omar walks away from ⑫ for exact keyword and filter queries, where a <em>hybrid</em>
+of ⑦ and ⑫ usually beats either alone, fusing BM25 keyword scores with vector
+similarity. He walks away for tiny corpora under 100k vectors, where a
+brute-force scan is fast, exact and index-free. And he walks away from treating
+it as truth, because embeddings are <em>derived twice over</em>, from the documents
+and through a particular model version, so re-embedding on a model upgrade
+means a full rebuild. The delete-and-rebuild rule of ⑦ applies here doubly.
+Posture: derived-store semantics, where freshness equals your re-embedding
+pipeline's lag, and approximate by <em>contract</em>, making it the only category here
+whose reads are deliberately not exact.</p>
+<h4 id="readme-who-answers-follow-the-connections">Who answers &quot;follow the connections&quot;?</h4>
+<p><strong>⑨ Graph databases — Neo4j, Amazon Neptune, Memgraph.</strong> This is Meera's
+question 4 and Priya's incident 4: the three-self-joins recommendation query
+about Arjun. The bet is trick 6, index-free adjacency, plus a query language
+shaped like the traversal itself. In Cypher, &quot;readers who bought what Arjun
+bought also bought this&quot; is written
+<code>(arjun)-[:BOUGHT]-&gt;(b)&lt;-[:BOUGHT]-(other)-[:BOUGHT]-&gt;(rec)</code>. Compare that line
+to the SQL it replaces. Hop cost is independent of dataset size.</p>
+<p>Priya reaches for ⑨ when <em>the connections are the data</em> and the queries are
+multi-hop or variable-depth. Fraud rings are the killer app: accounts sharing
+devices sharing cards, which is how bank anti-fraud units work. Then
+recommendations, knowledge graphs, dependency and impact analysis, network
+topology, and permissions inheritance. Real users include LinkedIn's graph,
+which is custom-built, NASA's lessons-learned knowledge graph on Neo4j, and
+most large banks' fraud units.</p>
+<p>Priya walks away from ⑨ when she has relationships but her queries are only
+ever one or two fixed hops, because SQL joins handle that fine. &quot;Our data has
+relationships!&quot; describes <em>every</em> dataset, so the honest test is narrower: <em>do
+you ask variable-depth or three-plus-hop questions, often?</em> She walks away when
+queries are aggregations over everyone, because graph databases are poor at
+OLAP. And she walks away when she needs extreme write scale, because
+partitioning a graph across machines is an unsolved-in-general problem, which
+is ④'s bet running the other way. Posture: Neo4j is single-writer ACID, so
+CP-ish with causal clusters, and graph stores generally choose consistency and
+pay for it in scale-out.</p>
+<h4 id="readme-who-answers-numbers-over-time">Who answers &quot;numbers over time&quot;?</h4>
+<p><strong>⑧ Time-series databases — TimescaleDB, InfluxDB, Prometheus, QuestDB.</strong>
+Chaptr now runs 200 services, and Ben wants CPU, latency and request-rate
+metrics every 15 seconds, plus &quot;p99 latency, per service, last 30 days&quot;.
+Metrics are a firehose with a peculiar shape. They are always appended and
+never updated. They are always queried by time window. Recent data is hot, and
+old data is only ever read as aggregates.</p>
+<p>The bet is to exploit that shape ruthlessly. Partition by time, so dropping a
+whole month means deleting one partition, instantly, instead of a million-row
+DELETE. Compress brutally, using delta-of-delta encoding on timestamps because
+&quot;every 15 s&quot; is nearly constant, and Gorilla-style float compression, together
+worth 10–20×. <strong>Downsample</strong> old data automatically: keep raw for 7 days,
+1-minute averages for 90, hourly forever. And make time-window aggregation the
+fast path. Prometheus adds the <em>pull</em> model, scraping your services, and is the
+de-facto standard for infrastructure metrics.</p>
+<p>Ben reaches for ⑧ for metrics, IoT sensor data, financial ticks, and anything
+whose primary key is really <em>(thing, timestamp)</em> and whose queries are windows
+and rollups. TimescaleDB is the pragmatic pick when this is one workload among
+many, because it is a Postgres extension, so metrics sit next to relational
+data with full SQL.</p>
+<p>Ben walks away from ⑧ when data is not time-keyed, or gets updated after the
+fact, or the volume is modest. A plain Postgres table with a timestamp index
+handles millions of rows fine; the specialized machinery pays off at billions.
+And he never stores <em>business truth</em>, such as orders, in a store configured to
+downsample and expire, because retention policies delete data <em>by design</em>.
+Posture: typically single-writer or per-series-partitioned, and consistency is
+rarely the pressure point here. Ingestion throughput and retention are.</p>
+<h4 id="readme-who-answers-what-happened-in-order">Who answers &quot;what happened, in order&quot;?</h4>
+<p><strong>⑩ Streaming logs and message queues — Kafka, Pulsar, Kinesis, and RabbitMQ,
+SQS.</strong> By now Chaptr's one truth, Postgres, feeds <em>five</em> derived stores: search
+⑦, warehouse ⑥, cache ②, metrics ⑧ and recommendations ⑨. Wiring five
+point-to-point pipelines means ten integrations, each lossy in its own way. The
+fix is the one your outbox lab already taught you: publish every change
+<strong>once</strong>, to a place every consumer can read at its own pace.</p>
+<p>The bet is trick 7, the append-only log, partitioned for scale, which is
+Kafka's design. Producers append. Each consumer keeps its own offset. History
+is retained for days, or forever with compaction, so a <em>new</em> consumer, such as
+next year's warehouse, replays from zero and catches up. This is a <strong>data
+source</strong>, not a database. It holds the flow of facts, and its query language is
+&quot;read forward from an offset&quot;.</p>
+<p>One distinction here prevents endless confusion, and it is the difference
+between a queue and a log. A <strong>queue</strong>, meaning RabbitMQ or SQS, hands each
+message to <em>one</em> worker and then it is gone. It is for <em>jobs</em>: send this email,
+resize this image. The message is a task to consume. A <strong>log</strong>, meaning Kafka,
+is durable history that <em>many</em> readers replay independently. It is for <em>facts</em>:
+order 123 was placed. The message is an event to remember. A job goes to a
+queue. A fact carrying data between systems goes to a log. Teams using Kafka as
+a mere job queue, and teams using RabbitMQ as an event backbone, both suffer.</p>
+<p>Priya reaches for ⑩ when one truth must feed N systems, where CDC from the
+primary database into Kafka, which is your outbox lab's relay industrialized,
+is <em>the</em> standard pattern. Then event-driven microservices. Then stream
+processing, such as fraud scoring on the purchase stream in flight with Kafka
+Streams or Flink. Then buffering firehoses in front of slower stores. LinkedIn
+built Kafka and runs about 7 trillion messages a day; Uber and every bank's
+integration backbone followed.</p>
+<p>Priya walks away from ⑩ when she needs to <em>query</em>. &quot;What is the current state
+of order 123?&quot; is unanswerable by a log, which can only replay; state lives in
+stores derived from it. She walks away for request-and-response RPC between two
+services, because that is an API call, and putting Kafka in the middle adds
+latency and an operations estate for nothing. And she walks away at tiny scale,
+where two services and one database want the plain outbox pattern you already
+know, with no Kafka cluster required. Posture: ordered <em>within a partition</em>,
+at-least-once by default, so your outbox lab's idempotent-consumer rule applies
+verbatim, with exactly-once available only inside Kafka's own transactional
+boundaries.</p>
+<h4 id="readme-who-answers-and-can-we-do-this-with-no-server-at-all">Who answers &quot;and can we do this with no server at all&quot;?</h4>
+<p><strong>⑬ Embedded databases — SQLite, RocksDB, DuckDB.</strong> This is not a Chaptr
+incident but a change of <em>setting</em>. Chaptr ships a mobile app that needs a
+local offline store, and its edge service needs a key-value store <em>inside the
+process</em>, with no network hop. The bet is that the database is a <strong>library in
+your process</strong> rather than a server: no network, no operations, one file or
+directory of state. The same tricks, embedded. SQLite is a B-tree relational
+store, so ① in a library. RocksDB is an LSM key-value store, which <em>is</em> the
+storage engine under many big systems. DuckDB is columnar OLAP, so ⑥ in a
+library.</p>
+<p>Dev reaches for ⑬ for on-device storage, where SQLite is on every phone on
+earth and is the most deployed database in existence. Also for local-first
+apps, CLI tools and test fixtures. Also for single-user analytics on files,
+where DuckDB querying Parquet on a laptop replaces a Spark cluster
+embarrassingly often. And also as the storage engine inside a system you are
+building yourself.</p>
+<p>Dev walks away from ⑬ when many <em>processes or machines</em> must share mutable
+state, because embedded means single-machine. SQLite specifically serializes
+writers, allowing one writer at a time, which is fine for an app and fatal for
+a busy web backend. He walks away when he needs managed durability or
+replication, which is what servers buy you. One footnote cousin exists: &quot;NewSQL
+at the edge&quot;, where Turso and libSQL replicate SQLite, which is niche but real.
+Posture: single-node ACID, and SQLite is fully ACID, trivially consistent
+because there is nothing distributed to disagree.</p>
+<h4 id="readme-what-else-is-on-the-specialist-shelf">What else is on the specialist shelf?</h4>
+<p><strong>⑭ The specialist shelf.</strong> Five more families exist that you should recognize
+without reaching for.</p>
+<p>Ledger databases, meaning Amazon QLDB and immudb, are append-only tables with
+cryptographic hash-chaining, so history is <em>provably</em> untampered. They serve
+audit and compliance niches. QLDB itself is being retired, and that carries its
+own lesson: niche categories carry vendor risk, and Postgres plus append-only
+discipline plus hash chains often suffices.</p>
+<p>Geospatial, meaning PostGIS, answers &quot;points or shapes near X&quot; using
+R-tree-family spatial indexes. It is overwhelmingly used as the PostGIS
+extension to Postgres, which is the &quot;extension over new store&quot; pattern you have
+now seen three times: for time-series ⑧, for vectors ⑫, and here for geo.
+Internalize that pattern. It is the single best operations-saver in this
+document.</p>
+<p>Multi-model stores, meaning ArangoDB, Cosmos DB and OrientDB, speak several
+models in one product, mixing document, graph and key-value. They are tempting
+on paper, because &quot;one store for everything!&quot; sounds like the end of this whole
+problem. In practice each model is rarely best-in-class, and Cosmos DB's real
+pitch is Azure-managed global distribution rather than multi-modelness.
+Evaluate per workload as if each model were a separate product.</p>
+<p>Hierarchical and mainframe stores, meaning IBM IMS, plus object databases, are
+pre-relational history. IMS still clears a shocking share of card transactions.
+Know they exist. The relational model largely replaced them for good reasons,
+chief among them ad-hoc queries.</p>
+<p>In-memory data grids, meaning Hazelcast and Ignite, are partitioned RAM caches
+with compute attached, sitting in a niche between ② and ⑤.</p>
+<p>Now the two comparison tables. The first is what each family buys you:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Family</th>
+  <th>The bet, in one line</th>
+  <th>Reach for it when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>①</td>
+  <td>Relational OLTP</td>
+  <td>rows + B-tree + ACID + joins</td>
+  <td>entities relate and correctness matters; queries still unknown</td>
+</tr>
+<tr>
+  <td>②</td>
+  <td>Key-value / cache</td>
+  <td>trick 1: opaque blob behind a key</td>
+  <td>access by exact key at high volume</td>
+</tr>
+<tr>
+  <td>③</td>
+  <td>Document</td>
+  <td>one self-contained JSON record, read whole</td>
+  <td>records are bounded things whose shape varies</td>
+</tr>
+<tr>
+  <td>④</td>
+  <td>Wide-column</td>
+  <td>trick 3 + partition key + masterless writes</td>
+  <td>write firehose, known queries, multi-datacenter</td>
+</tr>
+<tr>
+  <td>⑤</td>
+  <td>Distributed SQL</td>
+  <td>SQL and ACID, sharded, consensus per shard</td>
+  <td>relational semantics past one box or one region</td>
+</tr>
+<tr>
+  <td>⑥</td>
+  <td>Columnar warehouse</td>
+  <td>trick 4 + parallel scan + storage/compute split</td>
+  <td>dashboards, BI, aggregates over billions of rows</td>
+</tr>
+<tr>
+  <td>⑦</td>
+  <td>Search engine</td>
+  <td>trick 5 + scoring, stemming, facets</td>
+  <td>humans type words and want the best match ranked</td>
+</tr>
+<tr>
+  <td>⑧</td>
+  <td>Time-series</td>
+  <td>time partitions + heavy compression + downsampling</td>
+  <td>metrics, ticks, sensors keyed by (thing, timestamp)</td>
+</tr>
+<tr>
+  <td>⑨</td>
+  <td>Graph</td>
+  <td>trick 6: nodes point at their edges</td>
+  <td>three-plus-hop or variable-depth traversals, often</td>
+</tr>
+<tr>
+  <td>⑩</td>
+  <td>Log / queue</td>
+  <td>trick 7: append once, many readers replay</td>
+  <td>one truth must feed N systems</td>
+</tr>
+<tr>
+  <td>⑪</td>
+  <td>Lake / lakehouse</td>
+  <td>cheap object bytes + Parquet + a table format</td>
+  <td>raw, varied, huge data with unknown future uses</td>
+</tr>
+<tr>
+  <td>⑫</td>
+  <td>Vector</td>
+  <td>half-trick 8: approximate nearest neighbours</td>
+  <td>similarity and semantic retrieval, RAG</td>
+</tr>
+<tr>
+  <td>⑬</td>
+  <td>Embedded</td>
+  <td>the database as a library in your process</td>
+  <td>on-device, local-first, single-user analytics</td>
+</tr>
+</tbody>
+</table></div>
+<p>The second table is the one to read twice. Every regret in section 11 is
+somebody who skipped it:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Family</th>
+  <th>Walk away when</th>
+  <th>Consistency posture</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>①</td>
+  <td>Relational OLTP</td>
+  <td>writes exceed one box; scans dominate; data is key-to-blob</td>
+  <td>single-writer ACID, CP-leaning; replica lag is the first leak</td>
+</tr>
+<tr>
+  <td>②</td>
+  <td>Key-value / cache</td>
+  <td>you query anything but the key; multi-key transactions; it becomes the only copy</td>
+  <td>Redis is one machine; DynamoDB AP with opt-in strong reads</td>
+</tr>
+<tr>
+  <td>③</td>
+  <td>Document</td>
+  <td>many-to-many entities; routine cross-document ACID; unbounded arrays</td>
+  <td>atomic per document; eventual on secondary reads</td>
+</tr>
+<tr>
+  <td>④</td>
+  <td>Wide-column</td>
+  <td>ad-hoc queries; under a few TB; strong consistency by default; skewed keys</td>
+  <td>AP, tunable quorums, last-write-wins</td>
+</tr>
+<tr>
+  <td>⑤</td>
+  <td>Distributed SQL</td>
+  <td>one region and one box suffice; you cannot pay the quorum latency</td>
+  <td>CP by construction; the minority refuses writes</td>
+</tr>
+<tr>
+  <td>⑥</td>
+  <td>Columnar warehouse</td>
+  <td>point lookups, row updates, per-request queries</td>
+  <td>stale by design; contract is &quot;up to time T&quot;</td>
+</tr>
+<tr>
+  <td>⑦</td>
+  <td>Search engine</td>
+  <td>exact structured matching; anyone calls it truth</td>
+  <td>eventually consistent, refresh about 1 s</td>
+</tr>
+<tr>
+  <td>⑧</td>
+  <td>Time-series</td>
+  <td>not time-keyed; updated after the fact; modest volume; business truth</td>
+  <td>single-writer or per-series; throughput is the pressure</td>
+</tr>
+<tr>
+  <td>⑨</td>
+  <td>Graph</td>
+  <td>one or two fixed hops; aggregations over everyone; extreme write scale</td>
+  <td>single-writer ACID; pays in scale-out</td>
+</tr>
+<tr>
+  <td>⑩</td>
+  <td>Log / queue</td>
+  <td>you need to query state; plain RPC; two services and one database</td>
+  <td>ordered per partition, at-least-once</td>
+</tr>
+<tr>
+  <td>⑪</td>
+  <td>Lake / lakehouse</td>
+  <td>low-latency serving; small structured data; transactional truth</td>
+  <td>strongly consistent per object; snapshot commits per table</td>
+</tr>
+<tr>
+  <td>⑫</td>
+  <td>Vector</td>
+  <td>exact keyword filters; under 100k vectors; treating it as truth</td>
+  <td>derived; approximate by contract</td>
+</tr>
+<tr>
+  <td>⑬</td>
+  <td>Embedded</td>
+  <td>many processes share mutable state; you need managed replication</td>
+  <td>single-node ACID</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Omar wants one search box that does two jobs. It must find
+books with the word <em>train</em> in the title. It must also find books that simply
+<em>feel</em> like the one you are looking at. Is that one bet or two?</p>
+<details><summary>Reveal</summary>
+Two bets, always. ⑦ matches words and ⑫ matches meaning, and neither one does
+the other's job: a vector index will miss an exact title match that shares no
+meaning with the query, and an inverted index will never connect "cozy
+mystery on a train" to *The Blue Locomotive*. Production search fuses both
+score lists, which is why the glossary calls it hybrid search. If you
+answered "one store", you may still be right about the *server*: pgvector
+keeps vectors next to a full-text index inside one Postgres, which is one
+marriage instead of two. One server, two indexes, two bets.
+</details>
+
+</blockquote>
+<blockquote>
+<p><strong>Checkpoint — INTERMEDIATE to ENGINEERING.</strong> You can now name every major
+category, the physical trick under it, and its walk-away conditions. What is
+left is what separates senior engineers: how these stores <em>fail</em>, what they
+actually guarantee, and how a real company wires ten of them together without
+lying to itself about consistency.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without naming a single product, explain to Meera why
+Chaptr will end up running six stores rather than one, and how she will know
+which one to believe on a Monday morning when two of them disagree.</p>
+<details><summary>A good answer sounds like</summary>
+"Each of your books is arranged for one question, and arranging for one
+question makes the others slower. So we keep several. But only the daily
+ledger is the shop's memory. Every other book is copied out of it, and if a
+copy disagrees, the copy is wrong. We can burn any copy and write it again
+from the ledger. We can never burn the ledger."
+</details>
+
+</blockquote>
+<hr />
+<h1 id="readme-engineering-model">ENGINEERING MODEL</h1>
+<h2 id="readme-11-how-does-each-choice-go-wrong-in-production">11. How does each choice go wrong in production?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Happy-path knowledge picks databases. Failure knowledge
+keeps them running. Seven recurring disasters follow, and the first three are
+about the <em>gaps between</em> stores rather than any store's own quirks.</p>
+</blockquote>
+<p>Ben carries the pager at Chaptr. Every scenario below is a real, recurring
+industry incident pattern, and Ben has been woken by most of them. Read the
+first three most carefully. They are polyglot persistence's own failure modes,
+and they matter more than any single product's oddities.</p>
+<p><strong>F1 — The cache that became the truth.</strong> Priya's team caches data in Redis
+&quot;temporarily&quot;. Months pass. Some values now exist <em>only</em> in Redis: shopping
+carts, draft posts. Then Redis restarts.</p>
+<p>What Ben sees is that every cart in the company empties at 14:32. There is no
+error and no corruption. An in-memory store's contract is &quot;may forget
+anything&quot;, through eviction, restart or failover, and the team silently
+promoted a derived store to a source of truth without giving it a truth store's
+durability. The response is that the data is simply gone and you apologize.
+Redis behaved exactly as documented; the guarantee held. What was lost was
+Chaptr's data, because section 5's truth-and-derived boundary was crossed
+without anyone noticing.</p>
+<p>In production the rule is mechanical. For every store, ask: <strong>if this vanished
+right now, could we rebuild it from something else?</strong> If the answer is no, it
+is a truth store, and it must have a truth store's durability, or that data
+must move out. Redis <em>can</em> persist, with AOF, and Chaptr's cart belongs in
+Postgres or DynamoDB.</p>
+<p><strong>F2 — The stale derived store, and the dual-write trap.</strong> The app writes
+Postgres, then writes Elasticsearch. Two separate calls. One day the
+Elasticsearch call fails after the database has already committed, because of a
+deploy, a timeout, or a crash between the two. That is your outbox lab's
+<em>dual-write problem</em>, verbatim.</p>
+<p>What Ben sees is nothing, and that is the danger. A product exists, is
+purchasable, and search cannot find it. Nobody notices for weeks, because
+nothing <em>errors</em>. The cause is simple and unfixable by effort: two independent
+writes cannot be atomic. The response has two halves. Run a periodic full
+reconciliation that compares truth against the index and repairs the differences.
+And fix the pipe, so changes are published via CDC or outbox into Kafka and
+then into the indexer, which section 15 draws. A search index fed by a
+replayable stream is not a best-effort second write. Postgres's truth survived
+intact here; what was lost was the <em>completeness</em> of the derived view, silently.
+In production, teams monitor <strong>lag</strong> and <strong>drift</strong>, meaning the count of
+mismatches, between truth and each derived store, as first-class alerts.</p>
+<p><strong>F3 — Read-your-own-writes, across two stores.</strong> Arjun edits his profile,
+which writes Postgres. The page reloads from the search-backed listing, which
+is Elasticsearch, 1–2 s behind. His edit appears not to have taken. So he edits
+again. Now Ben has either a confused customer or a duplicate record.</p>
+<p>The cause is that every derived store is behind truth by its consistency
+window, which is the number your CQRS lab taught you to name. The response is
+to route <em>the author's own next read</em> to the truth store, or to apply the write
+optimistically in the UI, which is standard CQRS medicine. Eventual convergence
+survives; the system is not broken. What was lost is the illusion of one
+database, and that illusion is precisely what polyglot systems must engineer
+deliberately, per flow, in the places where it matters.</p>
+<p><strong>F4 — The hot partition, which Cassandra and DynamoDB people call the
+celebrity problem.</strong> Chaptr partitions its reading-position table by
+<code>book_id</code>. A celebrity posts about one book. That book's partition now takes
+100× the traffic of any node's fair share.</p>
+<p>What Ben sees is maddening: the cluster is 95% idle, and timeouts are spiking.
+One node is melting while its peers watch. The cause is that partitioning
+distributes <em>keys</em>, not <em>load</em>, and a skewed key defeats it. This is incident
+3's hot-row problem, reborn at cluster scale. The response is to redesign the
+key, perhaps to <code>book_id + hour</code>, or to a shard suffix such as <code>book_id#1..8</code>
+that is fanned out at read time. Note what kind of fix that is. It is a
+<em>data-model</em> change requiring a rewrite and a backfill, not a configuration
+toggle, and that is exactly why category ④ insisted queries be known up front.
+The cluster's other partitions were fine throughout; what was lost was the
+latency target on the hot key.</p>
+<p>F4 has a production sibling, the <strong>unbounded partition</strong>. Use <code>user_id</code> as the
+key for an append-forever stream and one partition grows to gigabytes, at which
+point repairs and compactions choke. The fix is again key design, usually
+time-bucketing. Cassandra also punishes delete-heavy workloads, because deletes
+write <em>tombstones</em>, which are markers that must be scanned until compaction
+purges them. That is why queues-on-Cassandra is a notorious anti-pattern.</p>
+<p><strong>F5 — The unbounded document.</strong> A MongoDB user document embeds an
+<code>orders: [...]</code> array. A loyal customer reaches thousands of orders.</p>
+<p>What Ben sees has a cruel shape: the busiest customers get the slowest pages,
+because every read and write now moves megabytes. At 16 MB, writes start
+failing outright. The cause is that embedding bets a document stays small and
+is read whole, and unbounded growth breaks the bet. The response is to model
+the relationship as separate documents, with an orders collection referencing
+the user, which is relational modeling inside a document store. The general law
+is worth memorizing. <strong>Document stores fit data that arrives and is read as a
+bounded unit; anything that grows without limit is a stream or a table, not a
+field.</strong></p>
+<p><strong>F6 — The warehouse on the request path.</strong> Someone says &quot;BigQuery is fast,
+let's serve the seller dashboard's live widget from it&quot;, and ships a
+per-page-load query.</p>
+<p>What Ben sees is a p95 in seconds, because warehouses optimize throughput
+rather than latency, and some of them queue queries. He also sees a five-figure
+monthly bill, because scan-priced engines charge per query even when each
+result is one number. The cause is being on the wrong side of the OLTP and OLAP split, which
+makes this the mirror image of incident 1. The response is to precompute
+aggregates into a serving store, such as Postgres, Redis or ClickHouse, on a
+schedule or a stream, so the request path reads a precomputed answer. The rule:
+<strong>end-user requests read stores shaped for point reads, and warehouses feed
+those stores, never browsers.</strong></p>
+<p><strong>F7 — Replica lag inside one database.</strong> This is the classic. Postgres plus
+read replicas; a replica falls minutes behind under load; reads routed to it
+serve stale data, and a customer &quot;loses&quot; the order they just placed.</p>
+<p>The cause is worth stating starkly, because it surprises people. Even category
+① becomes eventually consistent the moment reads leave the writer. CAP-lab
+thinking applies <em>within</em> one product. The response is to route read-after-write
+traffic to the primary, monitor replication lag, and treat replicas as what
+they are: the first derived store most teams ever run.</p>
+<p>Read the seven together. The fourth column is the one that tells you whether to
+panic:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Failure</th>
+  <th>What Ben sees at 3 a.m.</th>
+  <th>Why it happens</th>
+  <th>What survived</th>
+  <th>The fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1 cache became truth</td>
+  <td>every cart empties at 14:32</td>
+  <td>a store that may forget was made the only copy</td>
+  <td>Redis's own contract</td>
+  <td>give it truth-store durability, or move the data</td>
+</tr>
+<tr>
+  <td>F2 stale derived store</td>
+  <td>nothing; search silently misses products</td>
+  <td>two independent writes cannot be atomic</td>
+  <td>Postgres truth</td>
+  <td>one write plus CDC/outbox, plus reconciliation</td>
+</tr>
+<tr>
+  <td>F3 read-your-own-writes</td>
+  <td>&quot;my edit didn't take&quot;; duplicate records</td>
+  <td>the derived store's consistency window</td>
+  <td>eventual convergence</td>
+  <td>route the author's next read to truth</td>
+</tr>
+<tr>
+  <td>F4 hot partition</td>
+  <td>cluster 95% idle, timeouts spiking</td>
+  <td>partitioning spreads keys, not load</td>
+  <td>every other partition</td>
+  <td>redesign the key; rewrite and backfill</td>
+</tr>
+<tr>
+  <td>F5 unbounded document</td>
+  <td>best customers get slowest pages; writes fail at 16 MB</td>
+  <td>embedding bets the document stays small</td>
+  <td>the rest of the collection</td>
+  <td>separate documents, referenced</td>
+</tr>
+<tr>
+  <td>F6 warehouse on request path</td>
+  <td>p95 in seconds; five-figure bill</td>
+  <td>OLTP request served by an OLAP layout</td>
+  <td>the warehouse's own speed at scans</td>
+  <td>precompute into a serving store</td>
+</tr>
+<tr>
+  <td>F7 replica lag</td>
+  <td>order placed, then missing on reload</td>
+  <td>reads left the writer</td>
+  <td>the primary's correctness</td>
+  <td>read-after-write goes to the primary</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> F2's team says &quot;fine, we'll write Elasticsearch <em>first</em>, then
+Postgres — search can never miss a product then.&quot; What breaks instead?</p>
+<details><summary>Reveal</summary>
+Ghost products: ES write succeeds, Postgres write fails → search returns items
+that don't exist (can't be bought — arguably worse than invisible ones). The
+dual-write problem is orderless: *any* two independent writes can diverge in
+either direction. The only fixes are one write + derived replication (outbox/CDC)
+or reconciliation — never write ordering. You proved this in the outbox lab;
+here it is wearing a search costume.
+</details>
+
+</blockquote>
+<h2 id="readme-12-what-is-actually-guaranteed-and-what-was-traded-away">12. What is actually guaranteed, and what was traded away?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three laws survive any technology churn, and then every
+category has a receipt: what it bought, what it explicitly did not buy, and
+what it spent to get there.</p>
+</blockquote>
+<p>Pull the whole lesson into invariants. Three system-level laws first. These
+outlive every product name in this document.</p>
+<p><strong>Law 1 — one source of truth per fact.</strong> Every fact has exactly one store
+whose value is definitionally correct. Every other copy is derived, may lag,
+and must be rebuildable <em>from the truth alone</em>. That is the delete-and-rebuild
+test you met in ⑦ and ⑫. A fact with two truth stores will eventually have two
+values and no arbiter, which is F1's cart and F2's drift.</p>
+<p><strong>Law 2 — every derived store has a consistency window, and someone must know
+its size.</strong> The lag from truth to a derived store is a <em>contract term</em>, not an
+implementation detail. Search may be 2 s behind. The warehouse may be 15 min
+behind. The machine-learning embeddings may be a day behind. Failures F2, F3
+and F7 are all one sentence: nobody knew the window, or nobody monitored it.</p>
+<p><strong>Law 3 — cross-store operations are at-least-once, so consumers must be
+idempotent.</strong> The sync fabric, whether outbox, CDC or Kafka, redelivers on
+retry. Your outbox lab's rule now governs the whole architecture rather than
+one pipeline.</p>
+<p>Now the per-category receipt. Read the third column twice:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Category</th>
+  <th>Guarantees</th>
+  <th>Explicitly does NOT guarantee</th>
+  <th>Traded away for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>① Relational OLTP</td>
+  <td>multi-row ACID; ad-hoc SQL</td>
+  <td>write scale beyond one node; fast full-scans</td>
+  <td>flexibility &amp; correctness over scale</td>
+</tr>
+<tr>
+  <td>② KV / cache</td>
+  <td>O(1) by key; (cache) microsecond reads</td>
+  <td>queries inside values; (cache) durability</td>
+  <td>speed over queryability</td>
+</tr>
+<tr>
+  <td>③ Document</td>
+  <td>atomic single document; flexible shape</td>
+  <td>cheap cross-document relations</td>
+  <td>read-whole speed over relational integrity</td>
+</tr>
+<tr>
+  <td>④ Wide-column</td>
+  <td>massive write throughput; no SPOF; tunable quorums</td>
+  <td>joins; ad-hoc queries; default strong consistency</td>
+  <td>availability &amp; scale over flexibility (AP)</td>
+</tr>
+<tr>
+  <td>⑤ Distributed SQL</td>
+  <td>ACID + SQL across nodes/regions (CP)</td>
+  <td>microsecond writes; single-box simplicity</td>
+  <td>latency &amp; ops over both prior compromises</td>
+</tr>
+<tr>
+  <td>⑥ Warehouse</td>
+  <td>fast scans over billions of rows</td>
+  <td>freshness; cheap point reads</td>
+  <td>latency &amp; freshness over scan cost</td>
+</tr>
+<tr>
+  <td>⑦ Search</td>
+  <td>relevance ranking; typo tolerance</td>
+  <td>immediate visibility; being a safe truth store</td>
+  <td>exactness &amp; freshness over language handling</td>
+</tr>
+<tr>
+  <td>⑧ Time-series</td>
+  <td>ingest rate; window queries; cheap retention</td>
+  <td>updates; non-time queries; keeping everything raw forever</td>
+  <td>generality over the time-shaped fast path</td>
+</tr>
+<tr>
+  <td>⑨ Graph</td>
+  <td>hop cost ∝ neighborhood</td>
+  <td>scan/aggregate speed; easy horizontal scale</td>
+  <td>scale-out over traversal speed</td>
+</tr>
+<tr>
+  <td>⑩ Log/stream</td>
+  <td>ordered durable replayable history (per partition)</td>
+  <td>queryability; exactly-once across systems</td>
+  <td>queryability over being the universal feed</td>
+</tr>
+<tr>
+  <td>⑪ Lake(house)</td>
+  <td>cheapest durable bytes; open format; (lakehouse) table ACID</td>
+  <td>latency; serving traffic</td>
+  <td>speed over cost &amp; openness</td>
+</tr>
+<tr>
+  <td>⑫ Vector</td>
+  <td>fast semantic similarity</td>
+  <td>exact results (deliberately ~99%)</td>
+  <td>exactness over similarity speed</td>
+</tr>
+<tr>
+  <td>⑬ Embedded</td>
+  <td>zero-ops in-process ACID</td>
+  <td>multi-machine sharing</td>
+  <td>distribution over simplicity</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>A database's &quot;does NOT guarantee&quot; list is its real datasheet.</strong> Every failure
+in section 11 was somebody who did not read it.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Meera asks whether Chaptr could buy its way out of Law 2 by
+spending more on hardware, so the derived stores never lag. Can it?</p>
+<details><summary>Reveal</summary>
+No. Money shrinks the window; it cannot close it. A derived store is fed by a
+write that happens *after* the truth store's write, so there is always an
+interval in which the two disagree. Faster machines make that interval
+milliseconds instead of seconds, which is genuinely worth buying — but the
+interval is a property of having two stores, not of having slow ones. If you
+guessed "yes, with enough replicas", you have described making the window
+smaller *and* adding more places for it to open. The only real escape is to
+read truth for the flows that cannot tolerate the window, which is F3's fix.
+</details>
+
+</blockquote>
+<blockquote>
+<p><strong>Checkpoint — ENGINEERING model complete.</strong> You can name the categories,
+their physical bets, their failure modes and their guarantee receipts. Two
+things remain. Touch the mechanism with your own hands, in sections 13 and
+14. Then see how a real company assembles and operates the whole picture, in
+section 15.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>idempotent</em> or <em>consistency
+window</em>, explain to Dev why the search index is allowed to be wrong for two
+seconds but never allowed to be the only place a product exists.</p>
+<details><summary>A good answer sounds like</summary>
+"Being two seconds behind is fine because we can always look at the real
+record and see what it should have been. That's the whole deal: the copy is
+allowed to be late because it can be corrected from the original. If the
+original doesn't exist, being late turns into being wrong forever, and there
+is nothing left to correct it from."
+</details>
+
+</blockquote>
+<h2 id="readme-13-which-claims-can-you-run-yourself">13. Which claims can you run yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three small Java programs prove the load-bearing claims of
+section 10 on your own laptop, with no servers, using a row store and a
+column store side by side.</p>
+</blockquote>
+<p>This lab's code is deliberately tiny, and Dev kept it that way on purpose. The
+<em>tricks</em> are what matter, and the tricks are demonstrable in plain Java plus
+H2, which is a row store, plus DuckDB, which is a column store. Both are JDBC
+jars already sitting in <code>../lib/</code>, so there is no build tool and nothing to
+install.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Script</th>
+  <th>Proves</th>
+  <th>From §10</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>experiments/Exp1IndexVsScan.java</code></td>
+  <td>an index makes <em>selective</em> lookups ~350× faster but does nothing for aggregate scans</td>
+  <td>trick 2's promise and its limit (incident 1)</td>
+</tr>
+<tr>
+  <td><code>experiments/Exp2InvertedIndex.java</code></td>
+  <td><code>LIKE '%word%'</code> degrades linearly; an inverted index answers in microseconds from the same data</td>
+  <td>trick 5 (incident 2)</td>
+</tr>
+<tr>
+  <td><code>experiments/Exp3RowVsColumn.java</code></td>
+  <td>the identical SQL aggregate runs orders of magnitude faster on columnar DuckDB than row-store H2 — and the point read reverses the verdict</td>
+  <td>trick 4 (incident 1's cure)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The load-bearing lines are commented with the invariant they demonstrate. Run
+them yourself in section 14. Predicted-then-observed beats read-and-believed.</p>
+<h2 id="readme-14-what-happens-when-you-predict-first-then-run">14. What happens when you predict first, then run?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three experiments, each with a fork you should guess
+before the machine answers. The third one contains the entire document in two
+table rows.</p>
+</blockquote>
+<p>Do what Dev did and commit to a guess before each run. Set up once, by moving
+into the lab folder with <code>cd ~/Documents/Learning/04-database-landscape</code>. There
+is nothing to install, because the H2 and DuckDB JDBC jars already live in
+<code>../lib/</code>, and every
+experiment is a single Java source file that the <code>java</code> launcher compiles and
+runs in one step. The <code>--enable-native-access=ALL-UNNAMED</code> flag only silences a
+JDK 25 warning from DuckDB's native library.</p>
+<p><strong>Experiment 1 — the index's power and its boundary.</strong> The table has 1M rows.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> (a) <code>WHERE id = 500000</code> without an index, against the same
+query with one — how much faster? (b) <code>SUM(price)</code> over all rows: does the
+index help at all?</p>
+<details><summary>Reveal</summary>
+(a) roughly 350×, because a B-tree walks about three pages instead of
+scanning a million rows. (b) within noise of identical. The aggregate must
+visit every row regardless. If you guessed the index would help both, you are
+holding the most common wrong model in the field: indexes accelerate
+*selectivity*, never *volume*. That asymmetry **is** incident 1.
+</details>
+
+</blockquote>
+<p>Run it:</p>
+<div class="code"><pre><code>java --enable-native-access=ALL-UNNAMED -cp ../lib/duckdb_jdbc.jar:../lib/h2.jar experiments/Exp1IndexVsScan.java
+</code></pre></div>
+<p><strong>Experiment 2 — why search engines exist.</strong> 200k short documents, one column
+of text.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <code>LIKE '%locomotive%'</code> against a dictionary-of-sets inverted
+index built from the same rows — guess the gap. Then the second question:
+which of the two finds &quot;Blue Locomotive&quot; when the user types &quot;locomotiv&quot;?</p>
+<details><summary>Reveal</summary>
+The gap is enormous, because `LIKE` scans every row on every query, in tens
+or hundreds of milliseconds and growing linearly with the data, while the
+inverted index intersects two small sets in microseconds. On the typo, the
+answer surprises people: plain `LIKE` finds it by substring luck, and the
+exact-term inverted index does not. If you guessed the index wins both, you
+have found where *relevance machinery* attaches. Speed lives in the index;
+quality lives in the analyzer bolted onto it. A real engine such as Lucene is
+this dictionary, made persistent, compressed, scored and sharded.
+</details>
+
+</blockquote>
+<p>Run it:</p>
+<div class="code"><pre><code>java --enable-native-access=ALL-UNNAMED -cp ../lib/duckdb_jdbc.jar:../lib/h2.jar experiments/Exp2InvertedIndex.java
+</code></pre></div>
+<p><strong>Experiment 3 — row store against column store, same SQL, same data.</strong> A
+5M-row orders table, in H2 and in DuckDB.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <code>SELECT category, SUM(price) ... GROUP BY</code> in each store. Then
+the reverse bet: fetch <em>one whole row</em> by id. Which store wins which?</p>
+<details><summary>Reveal</summary>
+The aggregate is dramatically faster columnar, because DuckDB reads two
+columns' bytes, vectorized and compressed, rather than eight columns × 5M
+rows. The single-row fetch reverses it, because H2 reads one B-tree page
+while DuckDB reassembles a row from every column's segment. If you predicted
+one store would win both, that is the belief this whole document exists to
+break. **Neither store wins both — that is the entire document in one
+experiment.**
+</details>
+
+</blockquote>
+<p>Run it:</p>
+<div class="code"><pre><code>java --enable-native-access=ALL-UNNAMED -cp ../lib/duckdb_jdbc.jar:../lib/h2.jar experiments/Exp3RowVsColumn.java
+</code></pre></div>
+<p>Here are the figures those runs produced, with the last column saying what each
+number actually means:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Experiment</th>
+  <th>Query</th>
+  <th>Result</th>
+  <th>What the number means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><code>WHERE id = 500000</code>, no index vs index</td>
+  <td>~350× faster with the index</td>
+  <td>trick 2 buys <em>selectivity</em></td>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>SUM(price)</code> over all rows, no index vs index</td>
+  <td>no meaningful change</td>
+  <td>trick 2 buys nothing on <em>volume</em></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>LIKE '%locomotive%'</code> vs inverted index</td>
+  <td>microseconds instead of tens of ms</td>
+  <td>trick 5's whole reason to exist</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>SELECT category, SUM(price) ... GROUP BY</code></td>
+  <td>566× faster in DuckDB</td>
+  <td>trick 4 reads 2 columns, not 8 × 5M rows</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>fetch one whole row by id</td>
+  <td>57.8× faster in H2</td>
+  <td>trick 2 reads one page; columnar reassembles</td>
+</tr>
+</tbody>
+</table></div>
+<p>Full timings, run-to-run spread and the exact machine are recorded in
+<code>experiments/RESULTS.md</code> and repeated in section 19. Compare yours against
+them; the ratios are what should match, not the absolute times.</p>
+<hr />
+<h1 id="readme-production-model">PRODUCTION MODEL</h1>
+<h2 id="readme-15-what-does-chaptr-look-like-when-the-dust-settles">15. What does Chaptr look like when the dust settles?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One truth store, several derived stores fed by one change
+stream, and a set of numbers Ben watches. Every box below was earned by an
+incident you have already read.</p>
+</blockquote>
+<p>Here is the architecture Priya, Dev, Asha, Omar and Ben end up with. Nothing in
+it is decoration:</p>
+<pre class="mermaid">flowchart TD
+    subgraph Request path - milliseconds
+        APP[App servers] --&gt; PG[(PostgreSQL&lt;br/&gt;truth: users, orders,&lt;br/&gt;inventory, catalog+JSONB)]
+        APP --&gt; RD[(Redis&lt;br/&gt;cache, sessions,&lt;br/&gt;counters)]
+        APP --&gt; ES[(Elasticsearch&lt;br/&gt;product &amp; log search)]
+        APP --&gt; VS[(pgvector&lt;br/&gt;similar books, RAG)]
+    end
+    subgraph Sync fabric - seconds
+        PG -- outbox/CDC --&gt; KF[[Kafka&lt;br/&gt;the change stream]]
+        KF --&gt; ES
+        KF --&gt; VS
+        KF --&gt; WH
+        KF --&gt; RD
+    end
+    subgraph Analytics path - minutes to hours
+        WH[(BigQuery/Snowflake&lt;br/&gt;dashboards, BI)]
+        LK[(S3 + Iceberg lakehouse&lt;br/&gt;raw history, ML training)]
+        KF --&gt; LK
+        LK --&gt; WH
+    end
+    PROM[(Prometheus/Timescale&lt;br/&gt;metrics)] -.observes everything.-&gt; APP
+</pre>
+<p>Note what did <strong>not</strong> happen. Chaptr never &quot;migrated off Postgres&quot;. Postgres
+stayed truth for the transactional core, and specialized stores grew <em>around</em>
+it, each fed from the change stream. That is the mature shape of most
+successful systems, and it is the opposite of the instinct in section 4's
+prediction.</p>
+<p><strong>The sync fabric is the hard part.</strong> Boxes are easy. The arrows are
+engineering.</p>
+<ul>
+<li><strong>CDC</strong>, meaning change data capture, tails the truth database's write-ahead
+log with a tool such as Debezium and publishes every row change to Kafka.
+That is your outbox lab's relay at infrastructure grade. Use the outbox
+pattern instead where you need <em>intent</em> events rather than row differences.</li>
+<li><strong>ETL and ELT</strong> are the batch pipelines, using Airflow or dbt, that load the
+warehouse and the lake. The modern default is ELT: load raw first, then
+transform with SQL inside the warehouse.</li>
+<li>Everything downstream is at-least-once, so every consumer must be idempotent.
+That is Law 3, and it is not optional.</li>
+</ul>
+<p>Ben watches a different number for each store. This table is his dashboard:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Store</th>
+  <th>What Ben watches</th>
+  <th>Why that number</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Postgres</td>
+  <td>replication lag, connection saturation, bloat and vacuum, slow-query log</td>
+  <td>lag is F7; the rest is the truth store's health</td>
+</tr>
+<tr>
+  <td>Redis</td>
+  <td>memory and eviction rate, hit ratio</td>
+  <td>evictions on a store someone treats as truth means F1 is brewing</td>
+</tr>
+<tr>
+  <td>Cassandra</td>
+  <td>compaction backlog, tombstone warnings, partition-size p99, repair schedule</td>
+  <td>every one of these is F4 arriving early</td>
+</tr>
+<tr>
+  <td>Elasticsearch</td>
+  <td>indexing lag against truth, heap pressure, segment merges</td>
+  <td>indexing lag is the consistency window, measured</td>
+</tr>
+<tr>
+  <td>Kafka</td>
+  <td><strong>consumer group lag</strong></td>
+  <td>the single most-watched number in event-driven shops: it <em>is</em> every consistency window</td>
+</tr>
+<tr>
+  <td>Warehouse</td>
+  <td>cost per query, pipeline freshness SLA</td>
+  <td>F6 shows up in the bill before it shows up in latency</td>
+</tr>
+<tr>
+  <td>Everything</td>
+  <td>drift reconciliation job results</td>
+  <td>the only detector for F2, which is otherwise silent</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Managed or self-hosted, and what a store really costs.</strong> Default to managed:
+RDS or Aurora, MemoryDB, MSK, OpenSearch Service, Snowflake or BigQuery. The
+operations list above is the reason. Self-host only with a team that <em>wants</em>
+that job, and ClickHouse and Kafka are the common self-hosting exceptions,
+usually for cost at scale.</p>
+<p>Then count the total cost of every store you add. Infrastructure. A sync
+pipeline. Monitoring. An on-call rotation that understands it. Upgrade toil,
+forever. <strong>A store you add is a marriage, not a download.</strong></p>
+<p>That sentence is the deep reason behind the extension pattern from ⑭.
+Timescale, PostGIS and pgvector each add a <em>capability</em> without adding a
+<em>marriage</em>. It is also the reason behind the professional default: new stores
+enter by measured incident, never by conference-talk enthusiasm.</p>
+<p><strong>What this lab's toy view leaves out</strong>, so the bridge to real systems stays
+honest:</p>
+<ul>
+<li>Security and access control per store, which is wildly uneven across
+categories.</li>
+<li>Schema migration mechanics.</li>
+<li>Backup and restore drills, because a backup untested is a hope rather than a
+backup.</li>
+<li>Multi-region topologies, which differ per store.</li>
+<li>Data governance and lineage: who may see which column where. GDPR's &quot;delete
+user 42 <em>everywhere</em>&quot; is genuinely hard in polyglot systems, and it ties back
+to your event-sourcing lab's crypto-shredding.</li>
+<li>Capacity planning.</li>
+<li>The political dimension. Every arrow in that diagram crosses a team boundary,
+and Conway's law bites harder than CAP in practice.</li>
+</ul>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Chaptr's Kafka consumer group lag for the search indexer
+climbs steadily from 2 seconds to 40 minutes over an afternoon, with no
+errors anywhere. Which failure from section 11 is Ben now living in, and what
+will customers notice first?</p>
+<details><summary>Reveal</summary>
+F3, read-your-own-writes, arriving before F2. Nothing is lost and nothing has
+drifted permanently, because the log still holds every change; the indexer is
+just behind. Customers notice that edits "don't take" and that new products
+are missing from search, and sellers will re-publish items, creating
+duplicates. If you said F2, you named the right family but the wrong
+mechanism: F2 is a write that never arrives, and this is a write that arrives
+late. That is why lag and drift are two separate alerts.
+</details>
+
+</blockquote>
+<blockquote>
+<p><strong>Checkpoint — PRODUCTION model reached.</strong> You can read a company's data
+architecture diagram and, for every box, say why it is there, what feeds it,
+what it must not be trusted for, and what its on-call engineer watches.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Meera is looking at that diagram for the first time and asks
+why there are seven boxes when she used to run a shop with four books.
+Answer her in her own vocabulary.</p>
+<details><summary>A good answer sounds like</summary>
+"It's the same shelf, with three more books, because software asks three
+questions your shop never did: what does this text mean, what is similar to
+this, and how is every machine feeling right now. The ledger is still the
+ledger — that's the Postgres box. The arrow in the middle is your evening
+copying, except it runs every second and never forgets where it stopped."
+</details>
+
+</blockquote>
+<h2 id="readme-16-can-you-climb-the-eight-rungs">16. Can you climb the eight rungs?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs of exercises, from &quot;explain it with no jargon&quot;
+through diagnosis drills to two full system designs. Do the diagnosis drills
+before you look at any answer.</p>
+</blockquote>
+<p>Eight rungs wait in <a href="notes.html#exercises"><code>EXERCISES.md</code></a>, and each rung stands on the
+one below it. Rung 1 asks you to explain the whole idea to a new teammate with
+zero jargon, using Meera's ledger if it helps. Rungs 3 to 5 are runnable, so
+the machine checks you rather than an answer key. Rung 6 hands you five shipped
+designs that each page somebody at 3 a.m., and asks you to name the failure.
+Rung 8 is two full designs, including a food-delivery platform across 12
+cities.</p>
+<p>Worked answers live in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. The diagnosis drills
+mirror the visualization's scenario cards, so do those <em>before</em> peeking at
+either answer.</p>
+<h2 id="readme-17-where-does-this-lab-sit-and-what-comes-next">17. Where does this lab sit, and what comes next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six labs fed into this one, and this one opens six more.
+Five commonly confused pairs are worth settling before you leave.</p>
+</blockquote>
+<p>Everything you already knew showed up here wearing a new costume. Here is the
+map, with the arrows labelled by what each earlier lab contributed:</p>
+<pre class="mermaid">flowchart TD
+    subgraph Prerequisites you already hold
+        CAP[cap-theorem ✅]
+        OB[transactional-outbox ✅]
+        CQ[cqrs ✅]
+        ESRC[event-sourcing ✅]
+        PX[paxos ✅]
+        TPC[two-phase-commit ✅]
+    end
+    DL[THIS LAB:&lt;br/&gt;database-landscape]
+    CAP --&gt;|CP/AP posture of every category| DL
+    OB --&gt;|the sync fabric| DL
+    CQ --&gt;|derived stores = read models| DL
+    ESRC --&gt;|the log as truth| DL
+    PX --&gt;|consensus inside ⑤| DL
+    TPC --&gt;|cross-shard commits in ⑤| DL
+    DL --&gt; BT[btree-and-lsm?&lt;br/&gt;the two trees, hands-on]
+    DL --&gt; KA[kafka?&lt;br/&gt;the log, in depth]
+    DL --&gt; CH[consistent-hashing?&lt;br/&gt;how ②④ place keys]
+    DL --&gt; CDC[change-data-capture?&lt;br/&gt;the arrows of §15]
+    DL --&gt; DM[data-modeling-nosql?&lt;br/&gt;query-first design of ④]
+    DL --&gt; IDX[database-indexing?&lt;br/&gt;beyond one B-tree]
+</pre>
+<p>Five pairs get confused constantly. Settle them now, and read the third column
+for where each half appeared:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The pair</th>
+  <th>How they differ</th>
+  <th>Where you met them</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Document vs relational-with-JSONB</td>
+  <td>same query surface; they differ in whether relational integrity stays available when you need it, and JSONB keeps it</td>
+  <td>③, and ①'s honesty note</td>
+</tr>
+<tr>
+  <td>Wide-column vs columnar warehouse</td>
+  <td>despite the names, opposites: ④ is OLTP-ish write scale on LSM and partitions, ⑥ is OLAP scan speed on trick 4</td>
+  <td>④ and ⑥</td>
+</tr>
+<tr>
+  <td>Search vs vector</td>
+  <td>an inverted index matches <em>words</em>; a vector index matches <em>meaning</em>; production search increasingly fuses both</td>
+  <td>⑦ and ⑫</td>
+</tr>
+<tr>
+  <td>Queue vs log</td>
+  <td>a job disappears when it is done; a fact is history that many readers replay</td>
+  <td>⑩'s distinction</td>
+</tr>
+<tr>
+  <td>Data lake vs warehouse</td>
+  <td>open files, cheap, schema-on-read, slow, against curated tables, priced, schema-on-write, fast — and the lakehouse is their merger</td>
+  <td>⑪ and ⑥</td>
+</tr>
+</tbody>
+</table></div>
+<p>Ready-to-type next steps start with <code>/learn btree-and-lsm</code>, the fork under
+everything and Chaptr's own recommended next lab. Then <code>/learn kafka</code>,
+<code>/learn consistent-hashing</code>, <code>/learn change-data-capture</code>, and
+<code>/learn database-indexing</code>.</p>
+<h2 id="readme-18-glossary--what-does-each-word-mean">18. Glossary — what does each word mean?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every term in this document, grouped by the part of the
+story where you earned it, with the section that introduced it.</p>
+</blockquote>
+<h3 id="readme-which-words-describe-the-workload">Which words describe the workload?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>OLTP</td>
+  <td>shop-counter workload: many small fast correct reads/writes of single records</td>
+  <td>§7, Priya's checkout</td>
+</tr>
+<tr>
+  <td>OLAP</td>
+  <td>back-office workload: few big scans aggregating history</td>
+  <td>§7, Asha's dashboard</td>
+</tr>
+<tr>
+  <td>access pattern / query shape</td>
+  <td>what kind of question you ask, how often, how fast, how fresh</td>
+  <td>§7, Meera's four questions</td>
+</tr>
+<tr>
+  <td>index</td>
+  <td>shortcut structure from a value to where its rows live; speeds selective lookups, taxes writes</td>
+  <td>§7, and experiment 1</td>
+</tr>
+<tr>
+  <td>throughput / latency</td>
+  <td>operations per second / time for one operation</td>
+  <td>§7, incidents 3 and 1</td>
+</tr>
+<tr>
+  <td>schema-on-write / schema-on-read</td>
+  <td>structure enforced going in (relational) vs applied coming out (document, lake)</td>
+  <td>§7, then ③ and ⑪</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-words-name-the-physical-tricks">Which words name the physical tricks?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>hash table (trick 1)</td>
+  <td>key → slot in one jump; O(1); no ordering</td>
+  <td>§10.1, powering ②</td>
+</tr>
+<tr>
+  <td>B-tree (trick 2)</td>
+  <td>sorted pages, wide shallow tree; point + range reads; in-place writes</td>
+  <td>§10.1, powering ①</td>
+</tr>
+<tr>
+  <td>page</td>
+  <td>fixed-size disk block (~8 KB) databases read/write as a unit</td>
+  <td>§10.1, trick 2</td>
+</tr>
+<tr>
+  <td>LSM-tree (trick 3)</td>
+  <td>append-only sorted files merged in background; huge write throughput, costlier reads</td>
+  <td>§10.1, powering ④</td>
+</tr>
+<tr>
+  <td>compaction</td>
+  <td>LSM background merging of files, discarding overwritten/deleted values</td>
+  <td>§10.1, and Ben's dashboard in §15</td>
+</tr>
+<tr>
+  <td>columnar layout (trick 4)</td>
+  <td>each column stored contiguously; scans read only needed columns; compresses hugely</td>
+  <td>§10.1, powering ⑥</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-words-belong-to-search-and-meaning">Which words belong to search and meaning?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>inverted index (trick 5)</td>
+  <td>word → list of containing documents; the back-of-book index</td>
+  <td>§10.1, powering ⑦</td>
+</tr>
+<tr>
+  <td>tokenize / stem / analyzer</td>
+  <td>split text into terms / reduce to root form / the pipeline doing both</td>
+  <td>§10.1, trick 5</td>
+</tr>
+<tr>
+  <td>relevance scoring</td>
+  <td>ranking hits by match quality (rarity, frequency), not just matching</td>
+  <td>§10.1, trick 5</td>
+</tr>
+<tr>
+  <td>embedding</td>
+  <td>array of floats encoding meaning; similar things land nearby</td>
+  <td>⑫, and half-trick 8</td>
+</tr>
+<tr>
+  <td>ANN / HNSW (trick 8)</td>
+  <td>approximate nearest-neighbor search / the graph index doing it</td>
+  <td>§10.1, powering ⑫</td>
+</tr>
+<tr>
+  <td>hybrid search</td>
+  <td>fusing keyword (inverted) and semantic (vector) rankings</td>
+  <td>⑫'s walk-away note</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-words-describe-connections-and-history">Which words describe connections and history?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>index-free adjacency (trick 6)</td>
+  <td>nodes physically point at neighbors; hop cost ∝ neighborhood</td>
+  <td>§10.1, powering ⑨</td>
+</tr>
+<tr>
+  <td>append-only log (trick 7)</td>
+  <td>ordered immutable history; readers replay from their own offset</td>
+  <td>§10.1, powering ⑩</td>
+</tr>
+<tr>
+  <td>offset</td>
+  <td>a reader's bookmark position in a log</td>
+  <td>§10.1, trick 7</td>
+</tr>
+<tr>
+  <td>queue vs log</td>
+  <td>a job consumed once and gone vs a fact kept for many readers to replay</td>
+  <td>⑩'s distinction</td>
+</tr>
+<tr>
+  <td>write-ahead log</td>
+  <td>the internal append-only log every serious database recovers from</td>
+  <td>§10.1, trick 7's footnote</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-words-describe-spreading-data-over-machines">Which words describe spreading data over machines?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>sharding</td>
+  <td>splitting data across machines by key</td>
+  <td>①'s walk-away, then ⑤</td>
+</tr>
+<tr>
+  <td>partition key / clustering key</td>
+  <td>which node group a row lives on / sort order within the partition</td>
+  <td>④'s bet</td>
+</tr>
+<tr>
+  <td>masterless</td>
+  <td>every node accepts writes; no single leader (Cassandra)</td>
+  <td>④'s bet</td>
+</tr>
+<tr>
+  <td>hot key / hot partition</td>
+  <td>one key or partition receiving outsized traffic and melting its owner</td>
+  <td>§7, then failure F4</td>
+</tr>
+<tr>
+  <td>tombstone</td>
+  <td>delete-marker an LSM store must carry until compaction purges it</td>
+  <td>F4's sibling</td>
+</tr>
+<tr>
+  <td>read replica / replica lag</td>
+  <td>read-only copy of a database / how far behind truth it runs</td>
+  <td>§3, then failure F7</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-words-describe-truth-and-its-copies">Which words describe truth and its copies?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>source of truth</td>
+  <td>the one store whose value is definitionally correct and whose loss is unrecoverable</td>
+  <td>§7, and Law 1</td>
+</tr>
+<tr>
+  <td>derived data</td>
+  <td>any copy/transformation of truth; may lag; must be rebuildable</td>
+  <td>§7, and Law 1</td>
+</tr>
+<tr>
+  <td>denormalization</td>
+  <td>duplicating data on purpose so reads find it pre-arranged</td>
+  <td>§7, institutionalized in ③</td>
+</tr>
+<tr>
+  <td>polyglot persistence</td>
+  <td>one system, several store kinds, each matched to a workload</td>
+  <td>§7, drawn in §15</td>
+</tr>
+<tr>
+  <td>consistency window</td>
+  <td>how far a derived store lags truth; a contract term, not a detail</td>
+  <td>Law 2, and failures F2, F3, F7</td>
+</tr>
+<tr>
+  <td>drift / reconciliation</td>
+  <td>truth and a derived store disagreeing / the job that finds and repairs it</td>
+  <td>F2, and Ben's dashboard</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-words-keep-the-copies-in-step">Which words keep the copies in step?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>CDC</td>
+  <td>change data capture: tailing a database's log to publish every change</td>
+  <td>§15's sync fabric</td>
+</tr>
+<tr>
+  <td>ETL / ELT</td>
+  <td>pipelines loading analytics stores; modern default transforms <em>after</em> loading</td>
+  <td>§15's sync fabric</td>
+</tr>
+<tr>
+  <td>idempotent consumer</td>
+  <td>processing a redelivered message twice changes nothing (your outbox rule)</td>
+  <td>Law 3</td>
+</tr>
+<tr>
+  <td>ACID</td>
+  <td>atomic-consistent-isolated-durable transactions</td>
+  <td>①'s bet</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-words-belong-to-the-analytics-shelf">Which words belong to the analytics shelf?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>object storage</td>
+  <td>infinitely scalable, cheap key→file storage (S3); no compute attached</td>
+  <td>⑪'s bottom layer</td>
+</tr>
+<tr>
+  <td>Parquet</td>
+  <td>open columnar <em>file</em> format — trick 4 as a file</td>
+  <td>⑪'s middle layer</td>
+</tr>
+<tr>
+  <td>data lake / lakehouse</td>
+  <td>raw files in object storage / + a table format adding ACID and schema</td>
+  <td>⑪</td>
+</tr>
+<tr>
+  <td>table format (Iceberg, Delta)</td>
+  <td>metadata layer making lake files behave like transactional tables</td>
+  <td>⑪'s top layer</td>
+</tr>
+<tr>
+  <td>time travel</td>
+  <td>querying a lakehouse table as of a past snapshot</td>
+  <td>⑪'s top layer</td>
+</tr>
+<tr>
+  <td>storage/compute separation</td>
+  <td>data in object storage, query engines spun up independently</td>
+  <td>⑥'s bet</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-words-describe-caches-files-and-endings">Which words describe caches, files and endings?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>cache-aside / read-through</td>
+  <td>check cache → on miss read truth and fill cache</td>
+  <td>②'s reach-for list</td>
+</tr>
+<tr>
+  <td>cache stampede</td>
+  <td>a popular key expires and thousands of requests hit truth at once</td>
+  <td>exercise rung 7.2</td>
+</tr>
+<tr>
+  <td>downsampling / retention</td>
+  <td>replacing old raw data with aggregates / how long data is kept at all</td>
+  <td>⑧'s bet</td>
+</tr>
+<tr>
+  <td>embedded database</td>
+  <td>database as an in-process library, not a server (SQLite)</td>
+  <td>⑬</td>
+</tr>
+<tr>
+  <td>RAG</td>
+  <td>retrieval-augmented generation: fetch similar documents to ground an LLM</td>
+  <td>⑫'s reach-for list</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<p>Everything in this section is about the lab itself rather than about databases.
+It sits at the end so that Meera, Priya, Dev, Asha, Omar, Ben and Arjun never
+have to stop mid-story while the document explains itself.</p>
+<h3 id="readme-what-kind-of-lab-is-this">What kind of lab is this?</h3>
+<p>It is a survey and decision-skill lab. There is no protocol to implement here.
+The skill being trained is <em>workload reasoning</em>: looking at a problem and
+knowing which kind of store fits, which kinds will hurt, and why.</p>
+<h3 id="readme-what-is-in-the-folder">What is in the folder?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document: the story, the catalogue, the anti-patterns</td>
+</tr>
+<tr>
+  <td><code>experiments/</code></td>
+  <td>runnable proofs that storage layout decides speed (H2 + DuckDB + plain Java)</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>interactive decision explorer with predict-then-reveal scenarios</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code> / <code>SOLUTIONS.md</code></td>
+  <td>the eight rungs and their worked answers</td>
+</tr>
+</tbody>
+</table></div>
+<p>The visualization was also published as an artifact. The workspace's lab notes
+carry no artifact URL for it, so the copy to open is
+<a href="visualization.html"><code>visualization.html</code></a> in this folder.</p>
+<h3 id="readme-what-did-you-need-before-starting">What did you need before starting?</h3>
+<p>Zero database-internals knowledge is assumed. You only need to have written an
+app that reads and writes data somewhere.</p>
+<p>Four labs feed this one directly. <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> supplies
+the CP-versus-AP posture that appears in every category above.
+<a href="../51-cqrs/notes.html#readme">cqrs</a> supplies read models, which are exactly derived stores.
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> supplies the mechanism that
+keeps stores in sync. <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a> supplies the
+append-only log as a source of truth.</p>
+<p>The four depth layers are Beginner in §1–9, Intermediate in §10, Engineering in
+§11–14 and Production in §15. Each transition carries a checkpoint saying what
+you can do at that point, and a Say-it-back prompt.</p>
+<h3 id="readme-how-were-the-numbers-made">How were the numbers made?</h3>
+<p>Every figure quoted in sections 13 and 14 came from the three programs in
+<code>experiments/</code>, and the full run is recorded in <code>experiments/RESULTS.md</code>. That
+file was produced on 2026-08-28 on an Intel Core i9 Mac, on JDK 25, with DuckDB
+JDBC 1.5.5.1 and H2 2.4.240. Re-run them and compare; the ratios are what
+should match, not the absolute times.</p>
+<p>Here are the recorded timings behind every ratio in this document:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Experiment</th>
+  <th>Measurement</th>
+  <th>Recorded figure</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1, 1M rows in H2</td>
+  <td>one user's orders, no index</td>
+  <td>69.1 ms</td>
+  <td>a full scan of a million rows</td>
+</tr>
+<tr>
+  <td>1</td>
+  <td>the same query with a B-tree index</td>
+  <td>0.195 ms</td>
+  <td>about 354× faster; a three-page walk</td>
+</tr>
+<tr>
+  <td>1</td>
+  <td><code>SUM(price)</code>, no index vs with index</td>
+  <td>301.4 ms vs 240.9 ms</td>
+  <td>1.25×, which is no help at all</td>
+</tr>
+<tr>
+  <td>2, 200k titles</td>
+  <td><code>LIKE '%blue%locomotive%'</code></td>
+  <td>42.0 ms per query</td>
+  <td>scans everything, every time</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>inverted index, exact terms</td>
+  <td>0.000146 ms per query</td>
+  <td>288,088× faster; index build cost 331 ms, paid once</td>
+</tr>
+<tr>
+  <td>3, 5M rows × 8 columns</td>
+  <td>GROUP BY aggregate over 2 of 8 columns</td>
+  <td>1,787.0 ms in H2 vs 3.2 ms in DuckDB</td>
+  <td>columnar wins by 566×</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>fetch one whole row by id</td>
+  <td>12.9 µs in H2 vs 745.7 µs in DuckDB</td>
+  <td>the row store wins by 57.8×</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two honesty notes about that table. Across eight runs the experiment-1 lookup
+speedup landed between 293× and 366×. Its aggregate ratio wandered between
+0.82× and 1.25×, falling on <em>both</em> sides of 1. That is precisely the point:
+the index is irrelevant to a query that must visit every row. Across five runs
+the columnar speedup landed between 505× and 625×, and the row-store advantage
+between 45.9× and 68.4×. Both engines hold all 5M rows in RAM, so the only
+thing separating those two rows of the table is the <em>layout</em>.</p>
+<p>One trap is worth flagging for anyone re-running experiment 3. H2 has two
+result caches, <code>QUERY_CACHE_SIZE</code> and <code>OPTIMIZE_REUSE_RESULTS</code>. Both are
+switched off in this lab's connection URLs. Leave either on, and repeated runs
+of the aggregate return a memoised answer in about 0.1 ms. The row store then
+appears to <em>win</em> the scan, and you have measured a cache rather than a storage
+layout.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--the-eight-rung-ladder">Exercises — the eight-rung ladder</h1>
+<p>Work top to bottom; each rung uses the one below it. Attempt before opening
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Rungs 3–5 are runnable — check yourself against
+the machine, not the answer key.</p>
+<hr />
+<h2 id="exercises-rung-1--explain-no-notation-allowed">Rung 1 — Explain (no notation allowed)</h2>
+<p><strong>1.1</strong> Explain to a new teammate, in under five sentences and zero jargon, why
+a company ends up running six kinds of database when &quot;one really good one&quot;
+sounds so much simpler.</p>
+<p><strong>1.2</strong> Explain the difference between a <em>source of truth</em> and a <em>derived
+store</em>, and why the distinction — not any product choice — is what keeps a
+polyglot system sane.</p>
+<p><strong>1.3</strong> A friend says &quot;NoSQL databases are faster than SQL databases.&quot; Using
+Meera's ledger (or any story of your own), explain what's wrong with the
+sentence and what the true statement underneath it is.</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> In the visualization's <em>Under the hood</em> tab, Machine A, run the
+<code>SUM(price)</code> query. Which cells light up on the column-store side, and what do
+the pale-green cells represent at any moment?</p>
+<p><strong>2.2</strong> In Machine B with random keys, after 32 writes: how many <em>places</em> must
+an LSM read check, and which on-page elements show you that number's parts?</p>
+<p><strong>2.3</strong> For each, name the §10 physical trick powering it: (a) Kafka retaining
+a week of order events; (b) Elasticsearch surviving the typo &quot;mistery&quot;;
+(c) BigQuery summing 2 years of revenue in 3 s; (d) Redis <code>INCR</code> at 500/s;
+(e) Neo4j's 5-hop fraud query; (f) Cassandra absorbing 100k writes/s.</p>
+<h2 id="exercises-rung-3--predict-commit-before-running">Rung 3 — Predict (commit before running)</h2>
+<p><strong>3.1</strong> Before running <code>exp1</code>: the table has 1M rows. Predict the <em>ratio</em>
+(not ms) between the un-indexed and indexed user lookup, and whether the
+<code>SUM(price)</code> time will change after the index exists. Then:
+<code>java --enable-native-access=ALL-UNNAMED -cp ../lib/duckdb_jdbc.jar:../lib/h2.jar experiments/Exp1IndexVsScan.java</code></p>
+<p><strong>3.2</strong> Before running <code>exp3</code>: predict which query the <em>row</em> store wins, which
+the <em>column</em> store wins, and by roughly what order of magnitude. Then run it.
+Compare with <code>experiments/RESULTS.md</code>.</p>
+<p><strong>3.3</strong> In Machine B, switch keys to <strong>Sequential</strong> and predict: do the
+B-tree's seeks stay ~28, halve, or collapse? Why would an auto-increment
+primary key change a database's write behavior? Run it.</p>
+<p><strong>3.4</strong> Chaptr adds &quot;orders in the last 15 minutes, newest first&quot; served on
+every admin page load, 50×/s. Predict which category serves it — and why it is
+<em>not</em> the warehouse, even though it's an aggregate-flavored question.</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Edit <code>exp3</code> so the analytic query is <code>SELECT SUM(price), SUM(qty), AVG(ts), COUNT(note) ... </code> — touching 4 of 8 columns instead of 2. Predict how
+the columnar speedup changes, then measure. What does this tell you about wide
+<code>SELECT *</code> queries on a warehouse?</p>
+<p><strong>4.2</strong> Edit <code>exp1</code> to create the index as <code>(user_id, price)</code> (a <em>covering</em>
+index for the lookup query). Re-run. Does the lookup improve further? Does
+<code>SUM(price)</code> improve now? Explain both observations with trick 2.</p>
+<p><strong>4.3</strong> In Machine B's model (<code>computeWriteState</code>), the memtable flushes at 8
+keys and compaction fires at 4 runs. What would flushing at 2 / compacting at
+2 do to (a) sequential blocks written and (b) places a read must check? Which
+real Cassandra pain does this knob-fiddling reproduce?</p>
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> Extend <code>exp2</code>: add <em>ranking</em>. Score each hit by how many of the query
+terms it contains (2 beats 1), and return the top 5 in order. Verify: a title
+containing both &quot;blue&quot; and &quot;locomotive&quot; must outrank titles with only one.</p>
+<p><strong>5.2</strong> Extend <code>exp2</code> further: implement a 3-gram fuzzy fallback — when a term
+matches nothing, split it into 3-letter chunks (&quot;mistery&quot; → mis/ist/ste/ter/
+ery) and rank indexed terms by shared chunks. Verify it finds &quot;mystery&quot; from
+&quot;mistery&quot; — you've just rebuilt the idea behind Elasticsearch fuzziness.</p>
+<h2 id="exercises-rung-6--debug-spot-the-architecture-bug">Rung 6 — Debug (spot the architecture bug)</h2>
+<p>Each mini-design below ships and later pages someone at 3 a.m. Name the
+failure (README §11's F1–F7 where it applies), the mechanism, and the fix.</p>
+<p><strong>6.1</strong> &quot;We write every new product to Postgres and then, in the same request
+handler, to Elasticsearch. Both calls have retries, so they can't diverge.&quot;</p>
+<p><strong>6.2</strong> &quot;Cart contents live in Redis with a 30-day TTL — it's blazing fast and
+carts are temporary anyway.&quot;</p>
+<p><strong>6.3</strong> &quot;Our seller dashboard queries Snowflake directly on page load; it's
+only ~40 queries a minute.&quot;</p>
+<p><strong>6.4</strong> &quot;We store each rider's full trip history as an array inside their
+MongoDB user document — one read gets everything.&quot;</p>
+<p><strong>6.5</strong> &quot;Partition key for our IoT table is <code>device_type</code>. We have 9 device
+types and 2 million devices.&quot;</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> Chaptr's Elasticsearch cluster loses an index beyond repair at peak
+hour. Design the recovery path that should already exist: what makes the index
+rebuildable, what serves search during the rebuild, and what monitoring would
+have caught the slow corruption earlier?</p>
+<p><strong>7.2</strong> The Redis cache in front of the product catalog dies. The database
+now takes 100% of read traffic and browns out — the <em>cache stampede / thundering
+herd</em> problem. Design the three layers of defense (in the cache, in the app,
+in the database) that let the system degrade instead of collapse.</p>
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1</strong> Design the data layer for a food-delivery platform in 12 cities:
+orders (must be correct), courier GPS pings every 3 s (~30k/s), restaurant
+search (&quot;thai near me, open now&quot;), a live ops dashboard (&quot;orders/min per city,
+last hour&quot;), monthly finance reports, and &quot;restaurants you might like&quot;.
+For every store: category, why, what feeds it, its consistency window, and the
+one misuse of it you'd veto in review.</p>
+<p><strong>8.2</strong> You inherit a startup whose single Postgres now takes 40k writes/s of
+clickstream events (growing 10%/month), and the CTO says &quot;migrate everything
+to Cassandra.&quot; Write the counter-proposal: what actually moves, what stays,
+what the migration sequence is, and which numbers you'd measure to justify
+each step.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<p>Attempt each exercise first — especially rungs 3–5, where the machine itself
+is the answer key. Rungs 7–8 are worked design discussions, not single correct
+outputs; treat them as one strong answer to argue with.</p>
+<hr />
+<h2 id="solutions-rung-1">Rung 1</h2>
+<p><strong>1.1</strong> (One good version.) Different questions want data physically arranged
+in different ways: finding one order wants related things stored together;
+adding up two years of revenue wants just the numbers stored together; search
+wants a word-to-items index; recommendations want connections stored as
+connections. One arrangement can't be all of these at once, so each heavy
+question-shape eventually gets its own store, all copied from one authoritative
+source. The skill isn't knowing fifty products — it's recognizing the shape of
+the question.</p>
+<p><strong>1.2</strong> The source of truth is the one store whose value <em>defines</em> correct —
+if it burns down, the data is simply gone, so it gets the durability, backups,
+and transactions. Every other store (cache, search index, warehouse) is a
+copy arranged for speed: allowed to lag, expected to be deletable and
+rebuildable from truth. The discipline matters because two stores <em>will</em>
+disagree — the truth/derived contract is what decides who wins, and every §11
+disaster (F1, F2) is that contract being crossed silently.</p>
+<p><strong>1.3</strong> &quot;Faster&quot; at <em>what</em>? Meera's subject-index cards are enormously faster
+than her ledger at &quot;which books mention trains&quot; — and useless for &quot;how much
+did we earn in March&quot;. Every store is faster than every other store at the
+question it's arranged for and slower at the rest. The true sentence: <em>each
+database is faster for the access pattern it bet on</em>. exp3 shows one engine
+&quot;winning&quot; by 566× and <em>losing</em> by 57.8× on the same data, depending only on
+the query.</p>
+<h2 id="solutions-rung-2">Rung 2</h2>
+<p><strong>2.1</strong> Only the <strong>price strip's</strong> cells light up (the query names one
+column); the other seven strips never get touched. Pale green = cells already
+read — the running total of I/O spent so far.</p>
+<p><strong>2.2</strong> <strong>5 places</strong>: the memtable plus (after compaction) 1 on-disk run —
+the number is shown as &quot;places a read must check&quot;, and its parts are the
+dashed memtable box + each run box. (Mid-run, before compaction, it can be as
+high as 1 + 3.)</p>
+<p><strong>2.3</strong> (a) append-only log (trick 7); (b) inverted index <em>plus analyzer
+machinery</em> (trick 5); (c) columnar layout + compression (trick 4);
+(d) hash table with atomic increment (trick 1); (e) index-free adjacency
+(trick 6); (f) LSM-tree + partitioning (trick 3).</p>
+<h2 id="solutions-rung-3">Rung 3</h2>
+<p><strong>3.1</strong> Measured here: <strong>354×</strong> for the lookup (anything from hundreds to
+thousands is a right prediction — the point is orders of magnitude, from full
+scan to ~3 B-tree page reads); <code>SUM(price)</code> was <strong>1.25×</strong>, and wanders between
+0.82× and 1.25× from run to run — i.e. unchanged, since it must visit every
+row regardless of any index.</p>
+<p><strong>3.2</strong> Column store wins the aggregate (566× here); row store wins the
+single-row fetch (57.8× here). Right order of magnitude ≈ right answer.</p>
+<p><strong>3.3</strong> They <strong>collapse to 8</strong> — exactly one seek per page, because ordered
+keys fill a page completely before moving on. That is why auto-increment (or
+time-ordered UUIDv7) primary keys are standard advice: they turn every insert
+into the B-tree's cheap case, while random UUIDv4 keys turn every insert into
+a random page touch.</p>
+<p><strong>3.4</strong> A <strong>time-window point-ish query at high frequency on fresh data</strong> —
+that's an OLTP-side read (Postgres with an index on <code>created_at</code>, or Redis if
+it must be microseconds), <em>not</em> the warehouse: F6 applies (latency in seconds,
+scan pricing, staleness of minutes-to-hours — &quot;last 15 minutes&quot; would be
+missing its most important rows).</p>
+<h2 id="solutions-rung-4">Rung 4</h2>
+<p><strong>4.1</strong> The speedup shrinks — the columnar advantage is proportional to
+(columns in table) / (columns touched), so 4-of-8 roughly halves the gap
+vs 2-of-8, and <code>SELECT *</code> erases it entirely (plus compression benefits).
+Warehouse lesson: <strong>narrow queries are the whole point</strong>; <code>SELECT *</code> on a
+scan-priced engine is paying for the row-store experience at columnar prices.</p>
+<p><strong>4.2</strong> Lookup: marginally better at best (it was already a B-tree walk; now
+the price rides along, saving the table visit). <code>SUM(price)</code> over <em>all</em> rows:
+in H2 it may now use the smaller index structure to scan, which helps
+some — but it remains a visit-everything O(n) scan, not a jump. Both
+observations are trick 2: B-trees change <em>where</em> you read, never <em>how much</em>
+a full-scan must read.</p>
+<p><strong>4.3</strong> (a) More, smaller sequential blocks and far more compaction passes —
+total write work (write amplification) rises; (b) oscillates but averages
+lower per read. This is real Cassandra/RocksDB <strong>compaction tuning</strong>: the
+knobs trade write amplification against read amplification against space —
+the on-call symptom being &quot;compaction backlog grows and p99 reads spike.&quot;</p>
+<h2 id="solutions-rung-5">Rung 5</h2>
+<p><strong>5.1</strong> Core of a working answer (replacing the plain intersection):</p>
+<div class="code"><pre><code class="language-java">static List&lt;Map.Entry&lt;Integer, Integer&gt;&gt; rankedQuery(
+        Map&lt;String, Set&lt;Integer&gt;&gt; inverted, int k, String... terms) {
+    Map&lt;Integer, Integer&gt; scores = new HashMap&lt;&gt;();
+    for (String t : terms)
+        for (int docId : inverted.getOrDefault(t, Set.of()))  // each matched term = 1 point
+            scores.merge(docId, 1, Integer::sum);
+    return scores.entrySet().stream()                         // 2-term hits outrank 1-term hits
+            .sorted(Map.Entry.&lt;Integer, Integer&gt;comparingByValue().reversed())
+            .limit(k).toList();
+}
+</code></pre></div>
+<p>Verify: <code>rankedQuery(inverted, 5, &quot;blue&quot;, &quot;locomotive&quot;).get(0)</code> is doc 123456 with score 2,
+ahead of every score-1 title. (Real BM25 also weights rare terms higher and
+normalizes by document length — same skeleton, better arithmetic.)</p>
+<p><strong>5.2</strong> Sketch: build a <code>Map&lt;String, Set&lt;String&gt;&gt; grams</code> mapping each 3-gram to
+the terms containing it (from <code>sortedTerms</code>); on a miss, split the query term
+into 3-grams, count overlaps per candidate term, take the best-overlap term(s)
+and re-run the normal term query. &quot;mistery&quot; and &quot;mystery&quot; share <code>ste/ter/ery</code>
+(3 of 5 grams) — comfortably the top candidate. That overlap-counting is the
+essence of Elasticsearch's ngram/fuzzy machinery.</p>
+<h2 id="solutions-rung-6">Rung 6</h2>
+<p><strong>6.1</strong> <strong>F2 — dual-write.</strong> Retries don't help the case where the process
+dies <em>between</em> the two writes (or the second keeps failing past retry
+budget): the writes aren't atomic and can't be made so from the handler. Fix:
+write Postgres only; Elasticsearch is fed from the change stream
+(outbox/CDC → Kafka → indexer), plus periodic drift reconciliation.</p>
+<p><strong>6.2</strong> <strong>F1 — a cache quietly promoted to truth.</strong> TTL is irrelevant; the
+failure is eviction under memory pressure, restart, or failover — carts
+vanish mid-purchase, revenue-impacting. Fix: carts are truth → durable store
+(Postgres/DynamoDB); Redis may <em>cache</em> them.</p>
+<p><strong>6.3</strong> <strong>F6 — warehouse on the request path.</strong> 40/min is enough: seconds of
+latency per page load, and on per-scan pricing each dashboard view costs real
+money. Fix: scheduled/streamed aggregation into a serving table (Postgres or
+ClickHouse); the page reads the precomputed answer.</p>
+<p><strong>6.4</strong> <strong>F5 — unbounded document.</strong> Frequent riders make the biggest, slowest
+documents; every append rewrites the array; the 16 MB cap eventually rejects
+writes for the <em>best customers first</em>. Fix: trips as their own collection (or
+a relational table) keyed by rider + time.</p>
+<p><strong>6.5</strong> <strong>F4 — hot/unbounded partition.</strong> Nine partition-key values means at
+most nine partitions doing all the work — 2M devices funneled through 9 keys,
+each partition unbounded and enormous. Fix: partition by <code>device_id</code> (2M
+well-spread keys), bucketed by time if per-device history is long.</p>
+<h2 id="solutions-rung-7">Rung 7</h2>
+<p><strong>7.1</strong> Working answer in three parts. <em>Rebuildability:</em> truth lives in
+Postgres; the indexer is a Kafka consumer of the CDC stream, so a full rebuild
+is &quot;create new index, replay the product topic from offset 0, flip the alias&quot;
+— aliases make the flip atomic, and the rebuild is a <strong>drill you've run</strong>, not
+a hope. <em>During:</em> degrade explicitly — serve category browse + Postgres
+full-text (or a &quot;search is limited&quot; banner) rather than 500s; feature-flag
+the search box's fancy features. <em>Earlier detection:</em> drift job comparing
+truth counts vs index counts per category; indexing-lag alert; slow rise in
+mapping errors. The deep answer: <strong>because the index was never truth, this is
+an inconvenience, not a disaster</strong> — the design decision was made months
+before the outage.</p>
+<p><strong>7.2</strong> <em>In the cache:</em> stagger TTLs with jitter (no synchronized expiry);
+consider soft-TTL/serve-stale-while-revalidate. <em>In the app:</em> request
+coalescing / singleflight — one loader per missing key per instance, others
+wait; circuit-break to a degraded page rather than hammering. <em>In the
+database:</em> connection-pool caps and statement timeouts so 100% cache-miss
+traffic queues and sheds instead of toppling the primary; read replicas absorb
+what they can. Result: p95 degrades for minutes; nothing falls over. (This trio
+is asked, in some form, in most senior system-design interviews.)</p>
+<h2 id="solutions-rung-8">Rung 8</h2>
+<p><strong>8.1</strong> One defensible architecture (yours may differ — grade on <em>reasons</em>):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Workload</th>
+  <th>Store</th>
+  <th>Why / fed by</th>
+  <th>Window</th>
+  <th>Veto in review</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Orders, payments, restaurants, couriers</td>
+  <td><strong>PostgreSQL</strong> (truth)</td>
+  <td>multi-row ACID; evolving queries; one region per city is fine</td>
+  <td>0</td>
+  <td>any team caching order state in Redis and reading it back as truth</td>
+</tr>
+<tr>
+  <td>Courier GPS 30k writes/s</td>
+  <td><strong>Cassandra/Scylla</strong> (or DynamoDB) — partition <code>courier_id</code> + day-bucket, cluster by ts</td>
+  <td>LSM firehose, one known query (&quot;courier X recent track&quot;)</td>
+  <td>seconds</td>
+  <td>ad-hoc queries on it; use the stream/warehouse instead</td>
+</tr>
+<tr>
+  <td>Live courier positions (&quot;nearest now&quot;)</td>
+  <td><strong>Redis</strong> geo sets, TTL ~30 s</td>
+  <td>ephemeral by nature — perfect cache-class data</td>
+  <td>seconds; loss harmless</td>
+  <td>anyone persisting it — it's derived from pings</td>
+</tr>
+<tr>
+  <td>Restaurant search</td>
+  <td><strong>Elasticsearch</strong> (geo + text + &quot;open now&quot; filter)</td>
+  <td>fed by CDC from Postgres</td>
+  <td>~2 s</td>
+  <td>writing to ES from request handlers (F2)</td>
+</tr>
+<tr>
+  <td>Ops dashboard (orders/min/city, last hour)</td>
+  <td><strong>ClickHouse</strong> (or Timescale)</td>
+  <td>user-facing sub-second aggregates over fresh events, fed from Kafka</td>
+  <td>~seconds</td>
+  <td>pointing it at the warehouse (F6-in-reverse: too stale)</td>
+</tr>
+<tr>
+  <td>Finance monthly</td>
+  <td><strong>BigQuery/Snowflake</strong></td>
+  <td>big scans, hourly staleness fine; ELT from Kafka/lake</td>
+  <td>hours</td>
+  <td>request-path reads</td>
+</tr>
+<tr>
+  <td>&quot;You might like&quot;</td>
+  <td><strong>pgvector</strong> in the truth Postgres</td>
+  <td>12 cities ≠ 100M vectors; joins with &quot;open now&quot;</td>
+  <td>re-embed cadence</td>
+  <td>a dedicated vector cluster on day one</td>
+</tr>
+<tr>
+  <td>The connective tissue</td>
+  <td><strong>Kafka</strong> + outbox/CDC</td>
+  <td>one change stream feeds all derived stores; future consumers replay</td>
+  <td>—</td>
+  <td>request/response calls disguised as events</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>8.2</strong> Counter-proposal shape: the clickstream — append-only, loss-tolerant,
+query-known — is the <em>only</em> workload outgrowing Postgres, and it isn't even a
+database workload: it's a <strong>stream</strong>. Move <em>it</em>: events → Kafka (buffering,
+fan-out), landing in a lakehouse (cheap history) and ClickHouse (product
+analytics). Orders/users/payments — transactional, modest volume — <em>stay</em> in
+Postgres, which instantly loses 90%+ of its write load. &quot;Migrate everything to
+Cassandra&quot; fails the requirement audit twice: checkout loses its transactions,
+analytics loses ad-hoc queries — Cassandra fits neither retained workload.
+Sequence: (1) double-write clickstream to Kafka behind a flag <em>(acceptable
+here only because click events are loss-tolerant; for money you'd outbox)</em>;
+(2) backfill history into the lake; (3) cut ingestion over; (4) delete the
+clickstream tables and watch Postgres p99 fall. Numbers that justify each
+step: writes/s split by table (proves what's actually hot), p99 latency and
+replication lag before/after, cost per month of the new pipeline vs the next
+Postgres instance size, consumer lag once live. Success criterion stated up
+front: checkout p99 back under X ms with clickstream growth decoupled from the
+OLTP box.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../03-io-multiplexing/notes.html"><small>← Lab 3</small>io-multiplexing</a><a href="../05-btree-and-lsm/notes.html" style="text-align:right"><small>Lab 5 →</small>btree-and-lsm</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-are-there-fifty-kinds-of-database">1. Why are there fifty kinds of database?</a><a href="#readme-2-what-breaks-in-meeras-one-big-notebook">2. What breaks in Meera&#x27;s one big notebook?</a><a href="#readme-3-why-is-one-database-just-make-it-bigger-the-right-first-move">3. Why is &quot;one database, just make it bigger&quot; the right first move?</a><a href="#readme-4-how-does-one-database-die-four-different-ways">4. How does one database die four different ways?</a><a href="#readme-5-what-does-chaptr-actually-need">5. What does Chaptr actually need?</a><a href="#readme-6-what-is-the-one-idea-underneath-all-of-it">6. What is the one idea underneath all of it?</a><a href="#readme-7-what-do-professionals-call-what-you-just-watched">7. What do professionals call what you just watched?</a><a href="#readme-8-which-two-pictures-should-you-carry">8. Which two pictures should you carry?</a><a href="#readme-9-what-does-the-whole-landscape-look-like-on-one-page">9. What does the whole landscape look like on one page?</a><a href="#readme-10-what-are-the-seven-tricks-and-who-bets-on-which">10. What are the seven tricks, and who bets on which?</a><a href="#readme-11-how-does-each-choice-go-wrong-in-production">11. How does each choice go wrong in production?</a><a href="#readme-12-what-is-actually-guaranteed-and-what-was-traded-away">12. What is actually guaranteed, and what was traded away?</a><a href="#readme-13-which-claims-can-you-run-yourself">13. Which claims can you run yourself?</a><a href="#readme-14-what-happens-when-you-predict-first-then-run">14. What happens when you predict first, then run?</a><a href="#readme-15-what-does-chaptr-look-like-when-the-dust-settles">15. What does Chaptr look like when the dust settles?</a><a href="#readme-16-can-you-climb-the-eight-rungs">16. Can you climb the eight rungs?</a><a href="#readme-17-where-does-this-lab-sit-and-what-comes-next">17. Where does this lab sit, and what comes next?</a><a href="#readme-18-glossary--what-does-each-word-mean">18. Glossary — what does each word mean?</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a><h2>More in this lab</h2><a href="experiments/RESULTS.html">experiments\RESULTS</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

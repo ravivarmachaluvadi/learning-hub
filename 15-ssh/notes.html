@@ -1,0 +1,2624 @@
+<!doctype html>
+<html lang="en" data-hub-lab="15-ssh">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>15. ssh</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 15 of 71 · Stage 2</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 15 · One Machine, Done Right</p><article id="readme"><h1 id="readme-ssh--how-two-strangers-on-a-hostile-network-end-up-trusting-each-other">SSH — how two strangers on a hostile network end up trusting each other</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Alice in Delhi must send one order to Arjun's warehouse in
+Chennai, and every courier on the road is a stranger. Omar is one of them, and
+he is happy to open the envelope, or to answer in Arjun's name and never
+deliver it. Locking the box is easy, and on its own it fixes nothing, because
+Omar can run the lock trick twice, once with each end, and sit in the middle
+reading everything. So SSH gives Arjun a permanent name badge that he signs
+with, and Alice gets exactly one way to judge that badge: she wrote it down the
+first time, and she holds him to it forever. Same cryptography as TLS, opposite
+answer on identity — your own memory of last time, instead of a notary's word.</p>
+</blockquote>
+<p>Watch that decision happen in <a href="visualization.html"><code>visualization.html</code></a>,
+published as <a href="https://claude.ai/code/artifact/f8828744-6598-405c-a6c8-cb33b5fb55ce" target="_blank" rel="noopener">The Host Key Decision</a>.
+What this lab is made of, and where it sits among your other labs, is in
+<a href="#readme-19-about-this-lab">section 19</a> at the end.</p>
+<hr />
+<h1 id="readme-beginner-model">BEGINNER MODEL</h1>
+<h2 id="readme-1-why-does-anyone-need-to-solve-this-at-all">1. Why does anyone need to solve this at all?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You type commands on a computer that is far away. The words
+travel through machines other people own. Any one of those people can read
+what you type, change it, or answer you instead of the computer you meant.</p>
+</blockquote>
+<p>You have a computer in a data centre and you are sitting in a café. You need to
+type commands on it. The words you type, and the results that come back, travel
+through the café's wifi. Then through the café's internet provider. Then through
+several networks you have never heard of, and finally the data centre's network.</p>
+<p>Every one of those is a machine owned by somebody else.</p>
+<p>Before this problem was solved, the standard tool was <code>telnet</code>. It sent
+everything as ordinary readable text. Your password was ordinary readable text.
+Anyone running a network anywhere on that path could read it, save it, and use
+it later. In 1995 a researcher at a Finnish university found exactly that
+happening on his own network. He wrote SSH in response.</p>
+<p>Here is why the stakes are higher than they look. SSH is the tool by which
+humans and deployment pipelines get administrative control of servers. If it
+fails, the attacker does not get to read one message. The attacker gets to
+<em>become you</em> on the machine.</p>
+<p>Hold on to that. The failure is not a leak. The failure is a handover.</p>
+<h2 id="readme-2-what-can-go-wrong-between-alice-and-arjun">2. What can go wrong between Alice and Arjun?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Alice sends an order to a warehouse she has never visited,
+through four couriers she has never met. Three different things can go wrong,
+and each one needs a completely different fix.</p>
+</blockquote>
+<p>Alice is in Delhi. She needs to send instructions to a warehouse in Chennai that
+only she is allowed to give: <em>ship the gold</em>. The manager there is Arjun. She
+has never visited the warehouse and has never met him.</p>
+<p>She writes a letter and hands it to a courier. The courier passes it to another
+courier, who passes it to a van driver, who passes it to a local runner. Four
+strangers hold the letter. One of them is Omar.</p>
+<p>Three separate things can go wrong. It is worth keeping them apart, because the
+rest of this lab is about how differently each one is solved.</p>
+<ol>
+<li><strong>Somebody reads it.</strong> Omar opens the envelope and learns the instruction.</li>
+<li><strong>Somebody changes it.</strong> Omar rewrites &quot;ship the gold to warehouse 4&quot; as
+&quot;ship the gold to my house&quot;.</li>
+<li><strong>Somebody impersonates the warehouse.</strong> Omar never delivers the letter at
+all. He writes back on warehouse letterhead saying <em>received, send more</em>.
+Alice is now in a conversation with a stranger and does not know it.</li>
+</ol>
+<p>Read that list again and notice the shape. The first two are about the <em>letter</em>.
+The third is about the <em>person</em>. That is the split the whole lab turns on.</p>
+<p>Four people carry this story from here to the end. Here they are, with what each
+one stands for once the story becomes software.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In the story</th>
+  <th>Who they are</th>
+  <th>In SSH</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Alice</strong></td>
+  <td>in Delhi, sends the order, has never met the warehouse</td>
+  <td>your laptop, the client</td>
+</tr>
+<tr>
+  <td><strong>Arjun</strong></td>
+  <td>runs the warehouse in Chennai, receives the order</td>
+  <td>the server, <code>prod-db.example.com</code></td>
+</tr>
+<tr>
+  <td><strong>Omar</strong></td>
+  <td>a courier on the road, will open or answer letters</td>
+  <td>the machine in the middle, the interceptor</td>
+</tr>
+<tr>
+  <td><strong>Eve</strong></td>
+  <td>sits by the road and keeps a copy of everything</td>
+  <td>a passive recorder, who never speaks</td>
+</tr>
+</tbody>
+</table></div>
+<p>Five more people join later. Asha takes the on-call pager in section 11. Meera
+rebuilds servers, Ben runs a shared build box, and Dev owns a build pipeline. In
+section 15, Priya has three thousand machines to look after.</p>
+<p>Here is how far this lab goes, and what you can do at each stopping point. Stop
+at any checkpoint and you still have something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner</strong></td>
+  <td>1–9</td>
+  <td>say why encryption alone is worthless here, and what a host key is</td>
+</tr>
+<tr>
+  <td><strong>Intermediate</strong></td>
+  <td>10</td>
+  <td>walk the handshake message by message, and name what each step stops</td>
+</tr>
+<tr>
+  <td><strong>Engineering</strong></td>
+  <td>11–14</td>
+  <td>diagnose eight failures, and say which guarantee each one bends</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>15</td>
+  <td>reason about certificates, agents, bastions and what to monitor</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-does-a-locked-box-fix-it">3. Does a locked box fix it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Alice puts the letter in a box with a padlock. That stops
+Omar reading it and stops him changing it. It does not tell her who is holding
+the other key.</p>
+</blockquote>
+<p>The obvious fix. Alice puts the letter in a box with a padlock. Couriers carry
+the box. Nobody can read or change what is inside.</p>
+<p>This kills problems 1 and 2 completely. In software it is also a solved matter.
+Encryption is mature, fast and free.</p>
+<p>But it raises an immediate question. A padlock needs a key, and Arjun needs that
+key in order to open the box. Alice has never met him, so she cannot hand him
+one. Sending the key inside the box is obviously absurd.</p>
+<p>There is a real mathematical answer to this, and you already met it in the
+<a href="../14-tls/notes.html#readme">tls</a> lab. Engineers call it <strong>key exchange</strong>. Alice and Arjun can
+shout numbers at each other in public, in front of everybody, and each end up
+holding the same secret number that nobody listening can work out.</p>
+<p>Eve, sitting by the road with her notebook, hears both numbers and still cannot
+compute the secret. That is not a trick of obscurity. It is arithmetic.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Alice and Arjun do a public key exchange, agree a secret, and
+encrypt everything from then on. Which of the three problems above are now
+solved?</p>
+<details><summary>Reveal</summary>
+
+<p>Problems 1 and 2 are solved — <em>with respect to whoever she exchanged keys
+with</em>. Problem 3 is completely untouched, and the encryption actively makes it
+harder to notice, because everything now looks secure. If you said &quot;all three&quot;,
+you are assuming the person on the other end of the exchange is Arjun. Nothing
+in the exchange said so. Section 4 shows what that costs.</p>
+</details>
+
+</blockquote>
+<p>Experiment 2 in <code>SshLab.java</code> runs this exchange for real. Alice's public half
+goes out, Arjun's public half comes back, and the two secrets match. Eve tries
+the same move with her own keypair and lands somewhere else entirely.</p>
+<div class="code"><pre><code>  client -&gt; server   Q_C = abcba80117346e15a4ef1c14...  (public, 32 bytes)
+  server -&gt; client   Q_S = 38616f604b3fceb81982d4f4...  (public, 32 bytes)
+
+  client computes K = 0187c3d014652de8bbb86c00888c233a...
+  server computes K = 0187c3d014652de8bbb86c00888c233a...
+  same secret?      true
+
+  Eve saw Q_C and Q_S. She has no private half, so the best she can do
+  is bring her own keypair and compute a secret with it:
+    Eve computes    K = 9f086da1ac7f4f966389579c086abbbc...
+    matches theirs?   false   &lt;- she is locked out
+</code></pre></div>
+<p>Three labels in that output will follow you through the rest of the lab. Alice's
+throwaway public half is written <code>Q_C</code>. Arjun's is <code>Q_S</code>. The secret both sides
+end up holding, which never travels, is <code>K</code>. Section 10 gives them a proper
+table; for now, read them as &quot;her half&quot;, &quot;his half&quot;, and &quot;the secret&quot;.</p>
+<h2 id="readme-4-what-does-omar-do-about-the-locked-box">4. What does Omar do about the locked box?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> He does the clever key exchange twice. Once with Alice
+while pretending to be Arjun, once with Arjun while pretending to be Alice.
+Both ends see a perfectly healthy encrypted conversation.</p>
+</blockquote>
+<p>Here is what a courier does about that clever key exchange.</p>
+<p>He does it twice.</p>
+<p>Omar runs one key exchange with Alice, pretending to be the warehouse. He runs
+another with Arjun, pretending to be Alice. Now he holds two secrets. One he
+shares with Alice, one he shares with Arjun. Every message Alice sends, he
+unlocks, reads, re-locks, and forwards.</p>
+<p>Both ends see a perfectly healthy encrypted conversation. There is no error, no
+warning, and no delay. Experiment 3 does exactly this. In the code the
+interceptor is called Mallory, which is the traditional name for a courier who
+edits letters rather than merely reading them.</p>
+<div class="code"><pre><code>  client encrypts and sends: 36a622e35c38fd1441ffcc598bbc0cb4d074dc8e...
+  Mallory decrypts it as:    &quot;cat /home/ravi/.aws/credentials&quot;   &lt;-- plaintext
+  Mallory re-encrypts to the server, which reads: &quot;cat /home/ravi/.aws/credentials&quot;
+</code></pre></div>
+<p>Stare at the middle line. That is your cloud credentials file, in plain text, on
+a stranger's screen, during a session your terminal reports as encrypted.</p>
+<p>The deeper problem is now visible. Encryption answers &quot;can anyone else read
+this?&quot;. It never answers &quot;who am I talking to?&quot;. Those are two separate
+questions, and only the second one is hard.</p>
+<h2 id="readme-5-what-do-we-actually-need">5. What do we actually need?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three things, and they are independent. Alice must know
+which machine answered. Arjun must know which person is asking. And a key
+stolen next year must not open this year's recordings.</p>
+</blockquote>
+<p>Stated plainly, we need three things. Engineers would call this list the real
+requirement. Watch how each one lands on a different character.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Need</th>
+  <th>In the story</th>
+  <th>Engineers say</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Alice knows which machine she reached, before she sends anything useful</td>
+  <td>&quot;it is Arjun's warehouse, not Omar's shed&quot;</td>
+  <td><strong>host authentication</strong></td>
+</tr>
+<tr>
+  <td>Arjun knows which person is asking, and the proof works nowhere else</td>
+  <td>&quot;this really is Alice, and her note is useless in another warehouse&quot;</td>
+  <td><strong>user authentication</strong></td>
+</tr>
+<tr>
+  <td>A key stolen next year cannot open a recording made this year</td>
+  <td>&quot;Eve's notebook stays gibberish forever&quot;</td>
+  <td><strong>forward secrecy</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The first one is what this whole lab circles around. The other two turn out to
+have clean answers once the first is settled.</p>
+<p>Notice which of Alice's three worries from section 2 has now been renamed. The
+courier who answers in Arjun's name is worry 3, and it is the one that took a
+new mechanism rather than a bigger padlock.</p>
+<h2 id="readme-6-what-is-the-key-idea">6. What is the key idea?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Give every machine a permanent name badge that it uses only
+to sign, never to lock anything. Then let the client decide whether that badge
+is the right one by remembering what it saw last time.</p>
+</blockquote>
+<p>Two sentences carry SSH.</p>
+<blockquote>
+<p>Give every server a long-lived key pair that stays with the machine for its
+whole life. Use it not to encrypt anything, but only to <strong>sign</strong> a summary of
+the key exchange that just happened. That signature proves the machine holding
+the key is the same machine you exchanged secrets with.</p>
+</blockquote>
+<p>In the story: Arjun has a signet ring that never leaves the warehouse. He does
+not lock the box with it. He presses it into wax on a note that says &quot;the
+numbers we just shouted at each other were mine&quot;. Omar, standing in the middle,
+shouted different numbers to each side. His wax will not match either.</p>
+<p>And then the part that makes SSH different from everything else:</p>
+<blockquote>
+<p>Have the client decide whether that long-lived key is the right one <strong>by
+remembering what it saw last time</strong>.</p>
+</blockquote>
+<p>No certificate authority. No third party. Alice's only source of truth is her
+own past.</p>
+<p>That is the sentence to hold against the TLS lab. Nikhil asked Asha the notary
+whether the seal was genuine, and Asha had vouched for the bank in advance.
+Alice asks nobody. She opens her own address book and compares.</p>
+<h2 id="readme-7-what-do-engineers-call-the-things-alice-just-met">7. What do engineers call the things Alice just met?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six words carry this entire lab. Every one of them names
+something that already happened to Alice, Arjun or Omar. Learn these properly
+and the rest is detail.</p>
+</blockquote>
+<p>Six terms, each earned where the story earned it. The two tables at the end of
+the section map every word back to the moment it happened.</p>
+<h3 id="readme-what-is-the-machines-permanent-name-badge">What is the machine's permanent name badge?</h3>
+<p>Arjun's signet ring is a <strong>host key</strong>: a key pair generated once when a machine
+is built. The private half lives in <code>/etc/ssh/ssh_host_ed25519_key</code> and never
+leaves the machine. The public half sits beside it in the matching <code>.pub</code> file,
+and is handed to anyone who connects. The private half is used only to sign.</p>
+<p>The word <em>host</em> is doing real work. Both halves of SSH's identity story use keys
+that look identical, and they answer opposite questions. The host key answers
+&quot;which machine is this?&quot;. Your own user key answers &quot;which person is this?&quot;.
+Confusing those two is the single most common source of SSH confusion.</p>
+<p>In TLS this role is played by the server's certificate. But a certificate comes
+with a <em>vouching signature from someone else</em>. A host key comes with nothing at
+all. It is naked. Everything in the rest of this lab is a consequence of that
+one difference.</p>
+<h3 id="readme-how-do-you-compare-a-key-by-eye">How do you compare a key by eye?</h3>
+<p>You cannot. A public key is 68 characters of base64, and nobody compares that
+correctly by eye at 2am. So SSH prints a short nickname instead, and calls it a
+<strong>fingerprint</strong>: the SHA-256 hash of the public key blob, base64-encoded, 43
+characters long. Here is one, and it is the badge of the server used all through
+this lab.</p>
+<p><code>SHA256:xhd1+pkCJTaolmvmKbOu7AEklrDjGapafL4tD5XUav0</code></p>
+<p>The crucial property is that a fingerprint is not a <em>separate</em> identity. It is
+computed from nothing but the key itself. Comparing fingerprints is therefore
+exactly as strong as comparing keys, which is why every human procedure in SSH
+is written in terms of fingerprints. Experiment 1 proves it by building a key in
+Java, writing it out, and asking the real <code>ssh-keygen</code> binary what it thinks:</p>
+<div class="code"><pre><code>  ours          SHA256:vtqVBIOAz5W7fEY6IG5XgFLoRyXoTpZbtqGy348sVgo
+  ssh-keygen    SHA256:vtqVBIOAz5W7fEY6IG5XgFLoRyXoTpZbtqGy348sVgo
+  MATCH: true
+</code></pre></div>
+<h3 id="readme-where-does-alice-keep-what-she-remembers">Where does Alice keep what she remembers?</h3>
+<p>In one small address book on her own desk. Engineers call it <code>known_hosts</code>, and
+it lives at <code>~/.ssh/known_hosts</code> on your laptop. One line per host: the host name
+and port, the key type, and the full public key. Here is one real line, written
+by scenario 1 of <code>ssh-real.sh</code>:</p>
+<div class="code"><pre><code>[127.0.0.1]:2222 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIApxgo5ltUSdqOJIG8HCQcERm93FRWOPKsI2CpDkwhWA
+</code></pre></div>
+<p>The term exists because that file is the <em>entire</em> trust policy of SSH. There is
+nothing else. No list of authorities, no online check, no second opinion. When
+people say &quot;SSH is decentralised&quot;, this file is what they mean.</p>
+<p>It plays the role that TLS's trust store played for Nikhil, with one enormous
+difference. A trust store is filled in advance, by someone else, with
+authorities. This address book is filled by you, as you go, with individual
+machines you have actually spoken to.</p>
+<h3 id="readme-what-happens-the-very-first-time">What happens the very first time?</h3>
+<p>Nothing protects it. That is the honest answer, and the term for it is <strong>trust on
+first use</strong>, usually shortened to TOFU. In plain words it says: <em>I have no idea
+who you are, so I will assume you are who you claim, write it down, and hold you
+to it forever.</em></p>
+<p>Technically it is the policy of accepting an unknown host key without checking
+anything, recording it, and refusing any future key that differs. The name is
+deliberately honest about where the protection starts. It starts at the
+<em>second</em> use. The first use is unprotected, and no amount of cryptography
+changes that.</p>
+<p>This is precisely the problem certificate authorities exist to solve, and
+precisely the complexity SSH refuses to take on by default. Experiment 4 runs
+the same three connections twice. Once where the first connection was honest,
+once where Omar was already on the wire. The second run is the one worth staring
+at, because SSH behaves identically in both.</p>
+<h3 id="readme-who-is-on-arjuns-guest-list">Who is on Arjun's guest list?</h3>
+<p>A file on his side of the wire, called <code>authorized_keys</code>. It lives at
+<code>~/.ssh/authorized_keys</code> in the <em>target user's</em> home directory on the <em>server</em>.
+One public key per line. Being in this file is what &quot;having access&quot; means.</p>
+<p>The name marks the direction, and the direction is what people get wrong. Your
+address book is on your laptop and lists servers. The guest list is on the
+server and lists people. They are mirror images and they are constantly
+confused.</p>
+<p>Get it wrong and you see <code>Permission denied (publickey)</code>. So does a completely
+different mistake, made entirely on your own laptop, when your <em>private</em> key
+file has permissions other users could read. Scenarios 5 and 6 of <code>ssh-real.sh</code>
+produce both messages, and section 11 shows how to tell them apart in under a
+minute.</p>
+<h3 id="readme-what-makes-alices-proof-useless-anywhere-else">What makes Alice's proof useless anywhere else?</h3>
+<p>A serial number for this one conversation. Engineers call it the <strong>session
+identifier</strong>, and it is the exchange hash <code>H</code> from the first key exchange: a
+SHA-256 over both sides' public values and the shared secret. It is unique per
+connection, because the throwaway keys are fresh every time.</p>
+<p>The term exists because of what the number is used for. When Alice proves who
+she is, she signs the session identifier <em>along with</em> her username. That binds
+her proof to this one connection. A hostile warehouse cannot take her signature
+and walk into a different warehouse with it. Experiment 5 removes the binding
+and runs the replay:</p>
+<div class="code"><pre><code>--- design v1: sign only &#x27;I am ravi, let me in&#x27; ---
+  prod accepts the replayed signature? true   &lt;-- she is in
+--- design v2: sign the session id too (this is what SSH does) ---
+  prod accepts the replayed signature? false  &lt;-- refused
+  a genuine login to prod still works?  true
+</code></pre></div>
+<h3 id="readme-which-words-carry-over-and-which-are-still-coming">Which words carry over, and which are still coming?</h3>
+<p>Four words come straight from the TLS lab and need no re-teaching here: <em>key
+exchange</em>, <em>ephemeral</em>, <em>forward secrecy</em>, <em>handshake</em>. Use them unchanged.</p>
+<p>Seven more arrive later, each at the moment the story needs it: <em>channel</em>,
+<em>agent</em>, <em>agent forwarding</em>, <em>port forwarding</em>, <em>bastion</em>, <em>SSH certificate</em> and
+<em>principal</em>. Do not go looking for them now. Section 18 has all of them in one
+place once you have met them.</p>
+<h3 id="readme-where-did-each-of-the-six-words-happen">Where did each of the six words happen?</h3>
+<p>Two small maps back to the story. The machine's identity first.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Engineers say</th>
+  <th>In Alice's story</th>
+  <th>Concrete in this lab</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Host key</td>
+  <td>Arjun's signet ring, never leaves the warehouse</td>
+  <td><code>/etc/ssh/ssh_host_ed25519_key</code> on the server</td>
+  <td>this section</td>
+</tr>
+<tr>
+  <td>Fingerprint</td>
+  <td>a short nickname you can read down a phone line</td>
+  <td><code>SHA256:xhd1+pkCJTaolmvmKbOu7AEklrDjGapafL4tD5XUav0</code></td>
+  <td>experiment 1</td>
+</tr>
+<tr>
+  <td><code>known_hosts</code></td>
+  <td>Alice's own address book of warehouses she has met</td>
+  <td><code>[127.0.0.1]:2222 ssh-ed25519 AAAAC3…</code></td>
+  <td><code>ssh-real.sh</code> scenario 1</td>
+</tr>
+<tr>
+  <td>Trust on first use</td>
+  <td>the very first letter, sent on faith</td>
+  <td>the <code>yes/no</code> prompt</td>
+  <td>experiment 4</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then the person's identity.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Engineers say</th>
+  <th>In Alice's story</th>
+  <th>Concrete in this lab</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>authorized_keys</code></td>
+  <td>the guest list on the warehouse door</td>
+  <td>one public key per line, on the server</td>
+  <td><code>ssh-real.sh</code> scenarios 5 and 6</td>
+</tr>
+<tr>
+  <td>Session identifier</td>
+  <td>a serial number stamped on this one conversation</td>
+  <td>the exchange hash <code>H</code></td>
+  <td>experiment 5</td>
+</tr>
+<tr>
+  <td>Public-key authentication</td>
+  <td>Alice signs a note only she could sign</td>
+  <td><code>Auth.blob</code>, section 13</td>
+  <td>section 10</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-what-two-pictures-should-you-keep-in-your-head">8. What two pictures should you keep in your head?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The simple picture is recognising a voice on the phone. The
+engineering picture is three layers stacked in one connection, each refusing to
+start until the one below it worked. The story lies to you in four places.</p>
+</blockquote>
+<h3 id="readme-what-does-recognising-a-voice-on-the-phone-get-you">What does recognising a voice on the phone get you?</h3>
+<p>You ring a colleague's desk phone. Someone picks up. You have never met them in
+person, but you have spoken to them a dozen times, and you <strong>recognise the
+voice</strong>. No third party told you it was them. Your own ear did, out of your own
+memory.</p>
+<p>Then, because the request is sensitive, they ask you a question only you could
+answer. And they ask a <em>different</em> question every time, so a recording of last
+week's call is worthless to anyone who kept one.</p>
+<p>Those two moves are the whole protocol. Recognising the voice is the host key
+check. The different question every time is the session identifier inside your
+signature.</p>
+<h3 id="readme-what-does-the-engineering-picture-look-like">What does the engineering picture look like?</h3>
+<p>SSH is three layers stacked inside one TCP connection. Read the diagram bottom
+to top, because that is the order they run in.</p>
+<pre class="mermaid">flowchart TB
+  subgraph conn[&quot;3 · Connection layer — what you actually do&quot;]
+    C1[&quot;shell session&quot;]:::l3
+    C2[&quot;port forward&quot;]:::l3
+    C3[&quot;file transfer (sftp)&quot;]:::l3
+  end
+  subgraph auth[&quot;2 · Authentication layer — which PERSON&quot;]
+    A1[&quot;client signs: session id + username + its public key&quot;]:::l2
+    A2[&quot;server checks authorized_keys, then the signature&quot;]:::l2
+  end
+  subgraph trans[&quot;1 · Transport layer — which MACHINE, and privacy&quot;]
+    T1[&quot;ephemeral key exchange → shared secret&quot;]:::l1
+    T2[&quot;server signs the exchange hash with its host key&quot;]:::l1
+    T3[&quot;client checks that key against known_hosts&quot;]:::l1
+  end
+  trans --&gt; auth --&gt; conn
+  classDef l1 fill:#e8f2ef,stroke:#0B7A63,color:#12312a
+  classDef l2 fill:#fbeedb,stroke:#A96206,color:#3a2a10
+  classDef l3 fill:#eef1f6,stroke:#5b6b7d,color:#1d2733
+</pre>
+<p>Each layer refuses to start until the one below it succeeded. That ordering is a
+security property, not an implementation detail. <strong>Your username and your key
+are never offered until the machine has been identified.</strong> Alice does not say a
+word about herself until she is sure it is Arjun on the line.</p>
+<h3 id="readme-how-do-the-two-pictures-line-up">How do the two pictures line up?</h3>
+<p>Two small maps. The machine's side first: everything about recognising Arjun.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>On the phone</th>
+  <th>In SSH</th>
+  <th>Where it lives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>their voice</td>
+  <td>the host key</td>
+  <td><code>/etc/ssh/ssh_host_ed25519_key</code> on the server</td>
+</tr>
+<tr>
+  <td>your memory of the voice</td>
+  <td><code>known_hosts</code></td>
+  <td><code>~/.ssh/known_hosts</code> on your laptop</td>
+</tr>
+<tr>
+  <td>the very first call, before you knew the voice</td>
+  <td>trust on first use</td>
+  <td>the <code>yes/no</code> prompt</td>
+</tr>
+<tr>
+  <td>&quot;that doesn't sound like you&quot;</td>
+  <td><code>REMOTE HOST IDENTIFICATION HAS CHANGED</code></td>
+  <td>the client aborts</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then the person's side: everything about proving you are Alice.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>On the phone</th>
+  <th>In SSH</th>
+  <th>Where it lives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the question only you can answer</td>
+  <td>public-key authentication</td>
+  <td>your private key signs</td>
+</tr>
+<tr>
+  <td>a different question every call</td>
+  <td>the session identifier in the signature</td>
+  <td>RFC 4252 §7</td>
+</tr>
+<tr>
+  <td>the guest list of who may give orders</td>
+  <td><code>authorized_keys</code></td>
+  <td>the server, per user</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Omar records one whole SSH session of Alice's, byte for byte,
+and replays every packet at Arjun's server tomorrow. Does he get a shell?</em></p>
+<details><summary>Reveal</summary>
+
+<p>No, and the reason is in the second table. Every connection starts with a
+fresh key exchange, so tomorrow's session identifier is a different number.
+Alice's recorded signature covers yesterday's number and verifies against
+nothing today. If you said &quot;yes, it is the same bytes&quot;, you are picturing a
+password, which <em>is</em> replayable. That is one of the reasons SSH prefers keys.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-where-does-the-phone-story-lie-to-you">Where does the phone story lie to you?</h3>
+<p>Four places, and each one matters.</p>
+<p><em>A voice can be imitated; a key cannot be guessed.</em> Key comparison is exact and
+binary. Forty-three characters either match or they do not. There is no &quot;sounds
+about right&quot;, and no bad line, and no cold. This makes SSH <strong>stronger</strong> than the
+analogy suggests.</p>
+<p><em>You cannot phone the front desk to check a voice, but you can check a
+fingerprint out of band.</em> Alice can read the fingerprint off the server build
+ticket, or the cloud console, or a colleague's screen. This is the one move that
+closes the hole in trust on first use, and the phone story hides it completely.</p>
+<p><em>Recognising a voice is passive; the address book is a file you can edit.</em> You
+can delete the entry, which throws the protection away. That is exactly what
+people do when the alarm fires, and scenario 4 of <code>ssh-real.sh</code> walks through it.</p>
+<p><em>The phone call has one conversation; an SSH connection carries many.</em> The single
+connection multiplexes independent <strong>channels</strong>: your shell, a file copy, and
+three port forwards at once, all under one handshake.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-beginner-model">✅ Checkpoint — end of the beginner model</h3>
+<p>You can now say what SSH is for, why encryption alone does not achieve it,
+what a host key is, and why one file on your laptop is the whole trust
+decision. That is enough to reason about the warning messages you will see.</p>
+<p>Next, in section 10: how the handshake actually runs, message by message, with
+real values — and the two places where the first design a smart person would
+write turns out to be broken.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>host key</em>, <em>fingerprint</em> or
+<em>known_hosts</em>, explain to a friend why Alice's encrypted conversation can be
+perfectly secure and completely worthless at the same time.</p>
+<details><summary>A good answer sounds like</summary>
+"The lock works. It just locks the box to whoever is holding the other key,
+and nothing in the locking told her who that is. Omar answered instead of the
+warehouse, so she locked the box to Omar and he opened it happily."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-9-can-you-watch-the-decision-happen">9. Can you watch the decision happen?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three switches, eight endings. Set who is on the wire, what
+Alice remembers, and what she does at the prompt. One combination is fully
+encrypted, warning-free, and completely compromised.</p>
+</blockquote>
+<p><strong><a href="https://claude.ai/code/artifact/f8828744-6598-405c-a6c8-cb33b5fb55ce" target="_blank" rel="noopener">▶ The Host Key Decision</a></strong></p>
+<p>Do this before reading section 10. Three controls, and every combination has a
+different ending:</p>
+<ul>
+<li><strong>who is on the wire</strong> — Arjun's real server, or Omar intercepting</li>
+<li><strong>what Alice remembers</strong> — nothing, Arjun's real key, or Omar's key</li>
+<li><strong>what Alice does at the prompt</strong> — type <code>yes</code>, or check the fingerprint first</li>
+</ul>
+<p>Press the three story buttons in order. The third one, <em>&quot;the one nobody
+notices&quot;</em>, is the point of the whole page: a fully encrypted, warning-free,
+completely compromised session. Then fill in all eight rows of the table at the
+bottom.</p>
+<p>While you play, watch the <em>step</em> at which each run dies. You will notice that
+every successful defence happens before authentication starts. Alice never
+sends her name to Omar. That is section 8's layering, drawn.</p>
+<hr />
+<h1 id="readme-intermediate-model">INTERMEDIATE MODEL</h1>
+<h2 id="readme-10-what-does-the-handshake-actually-do-message-by-message">10. What does the handshake actually do, message by message?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Both sides say hello, agree algorithms, throw one public
+value each across the wire, and derive a shared secret. Then the server signs a
+summary with its permanent badge, the client checks that badge against its
+address book, and only then does anyone mention a username.</p>
+</blockquote>
+<p>Here is the whole handshake. Read it once for shape. The three subsections after
+it explain why three of these steps are not what you would have designed.</p>
+<pre class="mermaid">sequenceDiagram
+    participant C as Your laptop
+    participant S as prod-db.example.com
+    Note over C,S: nothing is secret or verified yet
+    C-&gt;&gt;S: TCP connect, then &quot;SSH-2.0-OpenSSH_9.8&quot;
+    S-&gt;&gt;C: &quot;SSH-2.0-OpenSSH_9.8&quot;
+    C-&gt;&gt;S: which ciphers, key exchanges, key types I support
+    S-&gt;&gt;C: same, and we pick the best common one
+    C-&gt;&gt;S: Q_C — a throwaway public value, made for this connection only
+    S-&gt;&gt;C: Q_S, its host public key K_S, and sig(H) using the host private key
+    Note over C: K = agree(my private, Q_S) · H = hash(Q_C, Q_S, K)
+    Note over C: DECISION: is K_S the key known_hosts remembers?
+    Note over C,S: session id := H · six keys derived · encryption on
+    C-&gt;&gt;S: I am &quot;ravi&quot;, here is my public key — may I try it?
+    S-&gt;&gt;C: that key is in authorized_keys, go ahead
+    C-&gt;&gt;S: sign(session id ‖ &quot;ravi&quot; ‖ my public key ‖ …)
+    S-&gt;&gt;C: signature valid — you are in
+    C-&gt;&gt;S: open a channel: &quot;session&quot; → pty → shell
+</pre>
+<p>Five short labels do all the work in that diagram. Read this table before you
+read the diagram a second time, because the third column is the only one that
+matters for understanding.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Symbol</th>
+  <th>In words</th>
+  <th>In the story</th>
+  <th>Travels?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Q_C</code></td>
+  <td>the client's throwaway public half, new every connection</td>
+  <td>Alice's number, shouted in public</td>
+  <td>yes, in the clear</td>
+</tr>
+<tr>
+  <td><code>Q_S</code></td>
+  <td>the server's throwaway public half, new every connection</td>
+  <td>Arjun's number, shouted back</td>
+  <td>yes, in the clear</td>
+</tr>
+<tr>
+  <td><code>K</code></td>
+  <td>the shared secret both sides compute and neither sends</td>
+  <td>the number only they can work out</td>
+  <td>never</td>
+</tr>
+<tr>
+  <td><code>K_S</code></td>
+  <td>the server's permanent public host key</td>
+  <td>Arjun's signet ring, shown to everyone</td>
+  <td>yes, every connection</td>
+</tr>
+<tr>
+  <td><code>H</code></td>
+  <td>the exchange hash: a hash over both halves and the secret</td>
+  <td>the serial number of this conversation</td>
+  <td>never sent; both sides compute it</td>
+</tr>
+</tbody>
+</table></div>
+<p>Those five, from one real run. They differ every run, because the throwaway keys
+are new each time.</p>
+<div class="code"><pre><code>Q_C  = abcba80117346e15a4ef1c14…       32 bytes, public, discarded at logout
+Q_S  = 38616f604b3fceb81982d4f4…       32 bytes, public, discarded at logout
+K    = 0187c3d014652de8bbb86c00…       identical on both sides, never sent
+K_S  = SHA256:xhd1+pkCJTaolmvmKbOu7AEklrDjGapafL4tD5XUav0   (the host key)
+H    = the session id for this connection
+</code></pre></div>
+<p>One more surprise. Six keys come out of that one secret, not one.</p>
+<div class="code"><pre><code>key &#x27;C&#x27;  9b4165ffd0cd85aa378c7dca…   (encryption key, client to server)
+key &#x27;D&#x27;  51b24ebb3904b67b52004e9d…   (encryption key, server to client)
+key &#x27;E&#x27;  95288e9101b9bc5480889e46…   (integrity key, client to server)
+key &#x27;F&#x27;  4eda4ac3e8b9e41c928f1602…   (integrity key, server to client)
+</code></pre></div>
+<p>Each direction gets its own encryption key and its own integrity key. So a key
+captured for one purpose is useless for the others. Alice's outbound orders and
+Arjun's inbound replies are locked with different locks.</p>
+<h3 id="readme-refinement-1--why-does-the-host-key-only-sign-and-never-encrypt">Refinement 1 — why does the host key only sign, and never encrypt?</h3>
+<p>The version you would write first is simpler and looks obviously correct. The
+server has a long-lived key pair. The client generates a random session key,
+encrypts it with the server's public key, and sends it. One round trip, and only
+the server can decrypt it. This was genuinely how SSH-1 worked.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Eve records this encrypted traffic today and cannot read it. A
+year later the server is decommissioned badly and its private host key leaks.
+What can she read now?</p>
+<details><summary>Reveal</summary>
+
+<p>Everything. Every session she ever recorded, going back years. The session key
+was encrypted <em>to</em> the host key, so the host key unlocks it — and the host key
+is the one key on the machine that never changes. If you said &quot;only sessions
+from after the leak&quot;, you are thinking of a key that rotates. This one does
+not. Experiment 6 does this for real and prints the recovered command.</p>
+</details>
+
+</blockquote>
+<div class="code"><pre><code>=== one year later: the server is compromised and its private host
+    key is stolen. Eve opens her archive. ===
+design A: unwraps the session key 13ed4c52a0bf7d537aa3084f...
+          and reads: &quot;psql -h prod -c &#x27;select * from payments limit 1&#x27;&quot;
+design B: the host key never touched the session key. The two
+          ephemeral private halves were discarded at the end of the
+          connection and exist nowhere. Eve holds 76 bytes of noise.
+</code></pre></div>
+<p>So SSH does it the other way. The session key is agreed by a fresh, throwaway
+key exchange. The host key is used <em>only to sign the transcript</em>. It proves
+identity and unlocks nothing. That is why Arjun's signet ring can sit in the
+warehouse for a decade without becoming a liability for last year's letters. You
+met this property as <strong>forward secrecy</strong> in the TLS lab. The mechanism here is
+identical.</p>
+<h3 id="readme-refinement-2--why-does-your-signature-cover-the-session-identifier">Refinement 2 — why does your signature cover the session identifier?</h3>
+<p>Again the simple version first. Alice signs &quot;I am ravi, here is my public key&quot;.
+The server checks the signature against its guest list. Clean.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Alice logs into a shared build box that Ben administers. What
+can that box's root user do with the signature she just sent it?</p>
+<details><summary>Reveal</summary>
+
+<p>Take it, connect to the production database server, and present her signature
+as their own. It is a valid signature by Alice's key over the words &quot;I am
+ravi&quot; — and those words are true no matter which server reads them. If you
+said &quot;nothing, the key never moved&quot;, you are right that the key never moved,
+and it did not need to. The <em>proof</em> moved.</p>
+</details>
+
+</blockquote>
+<p>So the signed blob starts with the session identifier. That value came out of
+<em>this</em> connection's key exchange, and an attacker cannot reproduce it on a
+different connection. Experiment 5, quoted back in section 7, runs both designs.
+The replay succeeds against v1 and fails against v2, while an honest login still
+works.</p>
+<p>This is why it is safe to <code>ssh</code> from your laptop into a machine you do not fully
+trust. The machine learns nothing it can reuse.</p>
+<h3 id="readme-refinement-3--why-is-there-a-prompt-at-all">Refinement 3 — why is there a prompt at all?</h3>
+<p>The third simple version is the one that feels airtight. The server signs the
+transcript, the client checks the signature, done. It is cryptographically
+valid.</p>
+<p>Experiment 3 shows what that buys you:</p>
+<div class="code"><pre><code>  So Mallory signs with a host key of her OWN. That signature is
+  mathematically valid:
+    verify(Mallory host key, H_as_client_saw_it) = true   &lt;- valid!
+</code></pre></div>
+<p>The problem is not the signature. <strong>It is that no signature can tell you which
+key was supposed to sign.</strong> Something outside the connection has to answer that
+question. TLS's answer was a certificate authority you trusted in advance.
+SSH's default answer is your own address book — and on the very first
+connection, that file is empty, so it asks you.</p>
+<p>Trust on first use therefore protects connection two onwards. Connection one is
+protected only if a human compares the fingerprint against something that did
+not come down the wire. Section 15 shows how production environments remove the
+prompt entirely.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-intermediate-model">✅ Checkpoint — end of the intermediate model</h3>
+<p>You can now walk the handshake message by message, say what each message is
+for, and explain why three of its details exist by naming the attack each one
+stops.</p>
+<p>Next, in sections 11 to 14: what happens when things go wrong. Every failure
+created, watched, and tied to the guarantee it bends.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> In two sentences, say why Alice's laptop must decide about
+Arjun's badge <em>before</em> it says the word &quot;ravi&quot;, and what would be lost if it
+decided afterwards.</p>
+<details><summary>A good answer sounds like</summary>
+"If she checked afterwards, she would have already told Omar her username and
+handed him a signed note. The check comes first so that a wrong answer costs
+her nothing except the connection."
+</details>
+
+</blockquote>
+<hr />
+<h1 id="readme-engineering-model">ENGINEERING MODEL</h1>
+<h2 id="readme-11-what-are-the-eight-ways-it-fails-and-how-do-you-tell-them-apart">11. What are the eight ways it fails, and how do you tell them apart?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three failures are about Arjun's badge, two produce the
+identical error message from opposite ends of the wire, and three are about
+Alice's own key leaking. Two of the eight are silent, and those are the
+dangerous ones.</p>
+</blockquote>
+<p>You can stage every one of these. <code>./ssh-real.sh</code> runs them against a real
+<code>sshd</code>, and the visualization lets you watch the first three. Asha is on call
+this week, so each story is told as what lands on her screen.</p>
+<h3 id="readme-f1--what-if-the-badge-is-not-the-one-alice-remembers">F1 — what if the badge is not the one Alice remembers?</h3>
+<p>Scenario 3 of <code>ssh-real.sh</code> restarts the server with a different host key. Asha
+connects and gets the loudest banner in all of SSH:
+<code>REMOTE HOST IDENTIFICATION HAS CHANGED</code>.</p>
+<p>What happened underneath is one comparison failing. The key the server offered
+is not the key in <code>known_hosts</code>. Three quite different things produce that.
+Somebody is intercepting. Or the server was rebuilt. Or Asha is hitting a
+different machine behind the same load-balanced name.</p>
+<p>The client aborts immediately, before sending her username or offering her key.
+Her credentials are untouched; nothing usable reached the other end. What she
+loses is availability. She cannot log in until a human decides what happened.</p>
+<p>In real life this is overwhelmingly a rebuild, which is exactly why the alarm
+gets ignored. Meera rebuilt that box on Tuesday. The correct move is still to
+fetch the expected fingerprint from somewhere that is not the wire, and compare
+it before touching <code>known_hosts</code>. Three places usually have it: the cloud
+console's instance screen, the build pipeline log, and a colleague who already
+knows.</p>
+<h3 id="readme-f2--does-the-alarm-mean-asha-is-under-attack">F2 — does the alarm mean Asha is under attack?</h3>
+<p>Set the visualization's wire to <em>the real server</em> and the memory to <em>the
+attacker's key</em>. Identical banner, opposite cause.</p>
+<p>This is the one to think about slowly. The alarm says the key changed. It does
+not and cannot say that anyone is attacking. Asha, reasoning &quot;the warning
+appeared, so I am being attacked&quot;, has the logic backwards. Her colleague,
+reasoning &quot;it is always a rebuild&quot;, will eventually be wrong once. Both are
+guessing where the protocol handed them a question.</p>
+<h3 id="readme-f3--what-if-the-very-first-connection-was-the-intercepted-one">F3 — what if the very first connection was the intercepted one?</h3>
+<p>In the visualization, set <em>someone intercepting</em> plus <em>nothing remembered</em> plus
+<em>type yes blindly</em>. Alice is now fully compromised and her screen is perfectly
+clean.</p>
+<p>There is no response to give, because SSH performed correctly. It had nothing to
+check against. What was lost is everything, silently.</p>
+<p>And it gets worse in a way that catches people. Alice's laptop has now pinned
+Omar's key. When Omar goes away, the <em>honest</em> server looks wrong, and she gets
+the F1 banner about the machine that was never the problem. This is precisely
+why SSH certificates exist, and section 15 is about them.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> The next two failures produce the <em>identical</em> client message:
+<code>Permission denied (publickey)</code>. One is caused entirely on your laptop, the
+other entirely on the server. Before reading on — what single piece of evidence
+would let you tell them apart in under a minute?</p>
+<details><summary>Reveal</summary>
+
+<p>A key fingerprint, seen in two places. Run <code>ssh-keygen -lf ~/.ssh/id_ed25519.pub</code>
+to get yours, then look for it in the server's log. If it appears there, your
+key travelled and the server rejected it → <code>authorized_keys</code>. If it does not,
+your client never sent it → a local problem, usually permissions. With no
+server access, <code>ssh -v</code> and the line <code>Offering public key</code> answers the same
+question from your side. If you said &quot;read the error text&quot;, the error text is
+byte-identical in both cases; that is the whole trap.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-f4--why-does-permission-denied-sometimes-mean-alices-own-laptop">F4 — why does <code>Permission denied</code> sometimes mean Alice's own laptop?</h3>
+<p>Scenario 5 of <code>ssh-real.sh</code> runs <code>chmod 644</code> on the private key file. Here is
+what Asha sees:</p>
+<div class="code"><pre><code>Permissions 0644 for &#x27;…/id_ravi&#x27; are too open.
+This private key will be ignored.
+ravi@127.0.0.1: Permission denied (publickey,keyboard-interactive).
+</code></pre></div>
+<p>The client is refusing to use a key that other users on your own machine could
+read. It never offered it. So the server never saw a key at all and answered the
+only way it could.</p>
+<p>The trap is in the last line. It blames authentication, and people go and edit
+<code>authorized_keys</code> on the server. The cause is three lines higher, on the laptop.
+The server was never involved.</p>
+<p>There is a twin of this bug on the server side, called <code>StrictModes</code>. <code>sshd</code>
+refuses to read <code>authorized_keys</code> when the home directory or the <code>.ssh</code> folder
+is group-writable, and it logs that it did. Same class of mistake, other end of
+the wire.</p>
+<h3 id="readme-f5--and-why-does-the-same-message-sometimes-mean-arjuns-guest-list">F5 — and why does the same message sometimes mean Arjun's guest list?</h3>
+<p>Scenario 6 empties <code>authorized_keys</code>. The client message is <em>identical</em> to F4,
+word for word. The difference lives in the server log:</p>
+<div class="code"><pre><code>Failed publickey for ravi from 127.0.0.1 port 59417 ssh2: ED25519 SHA256:vAX2lrlLwqgjAWsFb/TmngpKvc8eh8hpBUannuOmD/U
+</code></pre></div>
+<p>Compare that fingerprint with <code>ssh-keygen -lf ~/.ssh/id_ed25519.pub</code>. If it
+appears in the server log at all, the key reached the server and the server said
+no. The problem is <code>authorized_keys</code>. If nothing appears, the key never left the
+laptop, and the problem is local. Without access to the server log, run <code>ssh -v</code>
+and look for <code>Offering public key</code>.</p>
+<p>That one diagnostic separates the two most common SSH failures on earth, and it
+takes about forty seconds.</p>
+<h3 id="readme-f6--what-does-a-stolen-private-key-cost">F6 — what does a stolen private key cost?</h3>
+<p>Copy <code>id_ravi</code> to another machine and use it. It works instantly. A private key
+with no passphrase is a bearer token: whoever holds it is Alice.</p>
+<p>There is no response, because there is nothing to detect. The login is genuine
+by every measure SSH has. Nothing survives.</p>
+<p>This is why passphrases exist, and why they are made bearable by <code>ssh-agent</code>. An
+agent is a process that holds your unlocked key in memory and signs on request,
+so you type the passphrase once per day rather than once per connection. It is
+also why hardware-backed keys (<code>ed25519-sk</code>, Secure Enclave) are strictly
+better, since the key physically cannot be copied. And it is the strongest
+argument for short-lived certificates over long-lived keys.</p>
+<h3 id="readme-f7--what-does-alice-hand-over-with-ssh--a">F7 — what does Alice hand over with <code>ssh -A</code>?</h3>
+<p>She runs <code>ssh -A</code> into Ben's shared build box, because it is convenient. That
+flag exposes a unix socket on Ben's box that signs anything on request, for as
+long as her session lasts.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Alice's private key never leaves her laptop during that
+session. So what exactly does the box's root user get?</em></p>
+<details><summary>Reveal</summary>
+
+<p>Everything the key grants, for the duration. The agent's whole protocol is
+&quot;sign this blob&quot;, and it has no way to ask what the blob is <em>for</em>. Root on
+that box can ask it to sign a login to production, and it will. If you said
+&quot;nothing, the key stayed home&quot;, you are protecting the wrong asset. The key is
+intact. The <em>authority</em> was lent out.</p>
+</details>
+
+</blockquote>
+<p>The fix is <code>ProxyJump</code>, written <code>ssh -J bastion target</code>. A <strong>bastion</strong>, or jump
+host, is the one machine reachable from outside, through which all access to a
+private network is funnelled. <code>ProxyJump</code> tunnels a <em>new, separate</em> connection
+through it. The bastion carries Alice's encrypted traffic without ever being
+able to use her key.</p>
+<h3 id="readme-f8--what-leaks-even-though-everything-is-encrypted">F8 — what leaks even though everything is encrypted?</h3>
+<p>Experiment 7 answers this, and the answer surprises people. Ciphertext lengths
+vary with command length. Interactive shells send one packet per keystroke.</p>
+<div class="code"><pre><code>    &quot;ls&quot;                                   -&gt; ciphertext  30 bytes
+    &quot;sudo systemctl restart payments-api&quot;  -&gt; ciphertext  63 bytes
+</code></pre></div>
+<p>Eve, who never speaks and only keeps copies, learns the shape of everything
+Alice types. Command lengths, password lengths, and typing rhythm all survive
+encryption. Song, Wagner and Tian published keystroke-timing attacks on exactly
+this at USENIX in 2001.</p>
+<p>The content itself is safe. It is the <em>metadata</em> that leaks. In production this
+is a real reason to prefer key authentication over typing passwords into an
+interactive session, where each keystroke becomes its own packet.</p>
+<h3 id="readme-the-eight-side-by-side">The eight side by side</h3>
+<p>First, how to produce each one and who owns the fix. Read the fourth column top
+to bottom: two rows say &quot;nothing&quot;, and those are the failures that end careers.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Failure</th>
+  <th>See it yourself</th>
+  <th>What you see</th>
+  <th>Who owns the fix</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1</td>
+  <td>Host key changed</td>
+  <td><code>ssh-real.sh</code> scenario 3</td>
+  <td><code>REMOTE HOST IDENTIFICATION HAS CHANGED</code></td>
+  <td>a human, after checking out of band</td>
+</tr>
+<tr>
+  <td>F2</td>
+  <td>Alarm on an innocent server</td>
+  <td>visualization: real wire, wrong memory</td>
+  <td>the identical banner</td>
+  <td>whoever rebuilt the box</td>
+</tr>
+<tr>
+  <td>F3</td>
+  <td>Intercepted on connection one</td>
+  <td>visualization: interceptor, empty memory, <code>yes</code></td>
+  <td>nothing; a clean session</td>
+  <td>the design, not the operator</td>
+</tr>
+<tr>
+  <td>F4</td>
+  <td>Key file too open</td>
+  <td><code>ssh-real.sh</code> scenario 5</td>
+  <td><code>Permissions 0644 … too open</code></td>
+  <td>you, on your own laptop</td>
+</tr>
+<tr>
+  <td>F5</td>
+  <td>Key not in <code>authorized_keys</code></td>
+  <td><code>ssh-real.sh</code> scenario 6</td>
+  <td>the same denial, plus a server log line</td>
+  <td>whoever manages the server's list</td>
+</tr>
+<tr>
+  <td>F6</td>
+  <td>Stolen private key</td>
+  <td>copy <code>id_ravi</code> elsewhere</td>
+  <td>nothing; a genuine login</td>
+  <td>passphrases, hardware keys, short lifetimes</td>
+</tr>
+<tr>
+  <td>F7</td>
+  <td>Agent forwarding hijack</td>
+  <td><code>ssh -A</code> into a box with hostile root</td>
+  <td>nothing, until it is used</td>
+  <td>you: switch to <code>ProxyJump</code></td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>Traffic analysis</td>
+  <td>experiment 7</td>
+  <td>30 bytes vs 63 bytes</td>
+  <td>nobody; it is inherent</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then what each failure costs. The middle two columns are the ones to argue about
+in an incident review.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>What stayed intact</th>
+  <th>What was lost</th>
+  <th>What it looks like at 3am</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1</td>
+  <td>your credentials; nothing usable was sent</td>
+  <td>availability, until a human decides</td>
+  <td>a red banner and a blocked deploy</td>
+</tr>
+<tr>
+  <td>F2</td>
+  <td>everything; the protocol was right</td>
+  <td>trust in the alarm itself</td>
+  <td>the same banner, and a shrug</td>
+</tr>
+<tr>
+  <td>F3</td>
+  <td>nothing</td>
+  <td>everything, silently, plus a poisoned address book</td>
+  <td>a clean session, then F1 next week</td>
+</tr>
+<tr>
+  <td>F4</td>
+  <td>both machines; the key was never offered</td>
+  <td>ten minutes, usually spent on the wrong machine</td>
+  <td>an engineer editing the server's list</td>
+</tr>
+<tr>
+  <td>F5</td>
+  <td>the private key</td>
+  <td>access, until the list is fixed</td>
+  <td><code>Failed publickey</code> in <code>journalctl</code></td>
+</tr>
+<tr>
+  <td>F6</td>
+  <td>nothing</td>
+  <td>everything the key grants, permanently</td>
+  <td>a genuine login from a strange country</td>
+</tr>
+<tr>
+  <td>F7</td>
+  <td>the private key itself, which never moves</td>
+  <td>every authority the key carries, for the session</td>
+  <td>nothing at all</td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>the content of every command</td>
+  <td>command lengths, password lengths, typing rhythm</td>
+  <td>a paper from 2001</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-does-ssh-actually-promise-alice-and-what-does-it-not">12. What does SSH actually promise Alice, and what does it not?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> If her address book holds the right key, everything after
+the handshake is private, unforgeable and useless to replay. SSH promises
+nothing at all about whether that key was right in the first place.</p>
+</blockquote>
+<p>Every guarantee below sits on one precondition: <code>known_hosts</code> holds the right
+key for this server. Read that sentence twice. It is the hinge of the whole
+lab.</p>
+<h3 id="readme-what-is-guaranteed-once-the-address-book-is-right">What is guaranteed, once the address book is right?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Guarantee</th>
+  <th>In Alice's words</th>
+  <th>What it means for your code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Privacy and integrity</strong></td>
+  <td>&quot;nobody reads or edits my orders&quot;</td>
+  <td>everything after the handshake is encrypted, and modified packets are detected rather than silently mangled</td>
+</tr>
+<tr>
+  <td><strong>Peer identity</strong></td>
+  <td>&quot;the warehouse holds the ring I remember&quot;</td>
+  <td>the peer holds the private half of the host key you already trusted</td>
+</tr>
+<tr>
+  <td><strong>Forward secrecy</strong></td>
+  <td>&quot;Eve's old notebook stays gibberish&quot;</td>
+  <td>today's stolen host key does not decrypt yesterday's recorded session</td>
+</tr>
+<tr>
+  <td><strong>Non-replayable proof</strong></td>
+  <td>&quot;my signed note works in one warehouse only&quot;</td>
+  <td>your authentication signature is worthless on any other connection</td>
+</tr>
+<tr>
+  <td><strong>Nothing sent too early</strong></td>
+  <td>&quot;she gives her name last, not first&quot;</td>
+  <td>username, key and signature are all withheld until the machine is identified</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-is-explicitly-not-guaranteed">What is explicitly not guaranteed?</h3>
+<p>The first row is the important one. Everything else in SSH is arithmetic. This
+one is trust, and trust is a human decision that happened once, possibly years
+ago, in about one second.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Not promised</th>
+  <th>Why it bites</th>
+  <th>Where you saw it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>That the key in <code>known_hosts</code> is the right one</td>
+  <td>the entire chain rests on it, and by default it rests on somebody typing <code>yes</code></td>
+  <td>section 7, and F3</td>
+</tr>
+<tr>
+  <td>Anything about the first connection</td>
+  <td>unless a human compared the fingerprint against something off the wire</td>
+  <td>F3</td>
+</tr>
+<tr>
+  <td>Metadata privacy</td>
+  <td>sizes and timings leak, whatever the cipher</td>
+  <td>F8</td>
+</tr>
+<tr>
+  <td>Safety against a compromised server</td>
+  <td>if the machine is owned, SSH delivered you correctly to a hostile host</td>
+  <td>refinement 2 keeps your key; your session is gone</td>
+</tr>
+<tr>
+  <td>That an alarm means an attack</td>
+  <td>F1 and F2 produce the same screen from opposite causes</td>
+  <td>F1, F2</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Alice logs into a production box that has already been
+compromised. Which of the five guarantees above still held?</em></p>
+<details><summary>Reveal</summary>
+
+<p>All five. That is the uncomfortable part. SSH promised to deliver her to the
+machine whose key she remembered, privately and unforgeably, and it did
+exactly that. The machine itself being hostile was never on the list. If you
+said &quot;none of them&quot;, you are asking SSH to judge the far end's behaviour. It
+only judges the far end's identity.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-what-was-traded-away-to-get-this">What was traded away to get this?</h3>
+<p>Two things, and both are about size rather than cryptography.</p>
+<p><strong>Scale.</strong> With TLS you trust about 150 authorities and can then check millions
+of servers. With SSH you must acquire trust in <em>every individual machine</em>, one
+at a time. For Alice's three servers this is genuinely simpler than TLS. For
+three thousand ephemeral containers it collapses, which is what section 15 is
+about.</p>
+<p><strong>Revocation.</strong> Removing a line from <code>authorized_keys</code> on 400 machines is 400
+operations. Nothing tells you when one of them was missed.</p>
+<h2 id="readme-13-where-is-the-code-and-which-line-is-load-bearing">13. Where is the code, and which line is load-bearing?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six small Java files, no dependencies, no build tool. Four
+lines in them carry every security property in this lab; the rest is
+bookkeeping.</p>
+</blockquote>
+<p>Run it like this. Nothing you already have is touched; the shell script builds
+its own world from scratch.</p>
+<div class="code"><pre><code class="language-bash">cd ~/Documents/Learning/15-ssh
+java SshLab.java          # the crypto core, 7 experiments
+./ssh-real.sh             # generates throwaway keys, runs a real sshd on 127.0.0.1:2222
+java BrokenAuth.java      # the planted bug, for exercise 6
+</code></pre></div>
+<p>On its first run the shell script makes its own keys, in <code>./lab</code>, with the same
+<code>ssh-keygen</code> you would use by hand. One real server, one impostor, one user key:</p>
+<div class="code"><pre><code class="language-bash">ssh-keygen -q -t ed25519 -f lab/hostkey           -N &#x27;&#x27; -C &#x27;the-real-server&#x27;
+ssh-keygen -q -t ed25519 -f lab/hostkey_impostor  -N &#x27;&#x27; -C &#x27;the-impostor&#x27;
+ssh-keygen -q -t ed25519 -f lab/id_ravi           -N &#x27;&#x27; -C &#x27;ravi@laptop&#x27;
+</code></pre></div>
+<p>Those three keys are the whole cast of scenarios 1 to 6. Arjun's warehouse is
+the first, Omar's shed is the second, and Alice's own key is the third. The
+impostor key is what scenario 3 restarts the server with, and it is why F1
+fires.</p>
+<p>Then the crypto itself. Six files, and none of them is long.</p>
+<div class="code"><pre><code>Wire.java        SSH&#x27;s on-the-wire encoding, key blobs, fingerprints, signing
+Kex.java         key exchange, the exchange hash, key derivation
+Crypto.java      AES-GCM seal/open — the record layer, in two methods
+KnownHosts.java  the entire trust policy, in about ten lines
+Auth.java        the blob a client signs to prove who it is
+SshLab.java      the seven experiments
+</code></pre></div>
+<p>The load-bearing lines, in order of importance.</p>
+<p><strong><code>Auth.blob</code> is the one field that stops replay.</strong> This single line is
+refinement 2, in code:</p>
+<div class="code"><pre><code class="language-java">byte[] head = sessionId == null ? new byte[0] : Wire.string(sessionId);
+</code></pre></div>
+<p>Passing <code>null</code> builds the broken v1 design. Everything else in the method is
+bookkeeping. This line is the security property.</p>
+<p><strong><code>Kex.exchangeHash</code> is why Omar cannot hide.</strong> Both public halves go into the
+hash:</p>
+<div class="code"><pre><code class="language-java">return Wire.sha256(Wire.cat(Wire.string(qc), Wire.string(qs), Wire.string(k)));
+</code></pre></div>
+<p>Omar must present his own public half to Alice. So the number Alice computes
+differs from the number Arjun computes, and Arjun's signature cannot verify
+against Alice's version.</p>
+<p><strong><code>KnownHosts.check</code> is the whole trust decision.</strong> Three branches: unknown (ask
+a human, check nothing), match (proceed silently), mismatch (refuse). There is
+no fourth branch, and there is no third party anywhere in the file. Ten lines
+hold everything TLS spends a certificate chain on.</p>
+<p><strong><code>Kex.ephemeral</code> is forward secrecy in one word.</strong> A fresh key pair per
+connection, discarded at the end. If these were long-lived, experiment 6's
+design B would fail exactly like design A.</p>
+<h2 id="readme-14-what-do-the-experiments-show">14. What do the experiments show?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Seven experiments in Java build the crypto from primitives.
+Eight scenarios drive the real OpenSSH client and server. Every one is framed
+as a question, so commit to an answer before you run it.</p>
+</blockquote>
+<h3 id="readme-what-does-the-crypto-core-show">What does the crypto core show?</h3>
+<p><code>java SshLab.java</code> runs seven experiments with JDK primitives only. The first
+four are about identity.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Question to answer first</th>
+  <th>What you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Is a &quot;key&quot; a special object, or just bytes?</td>
+  <td>Java builds a key; the real <code>ssh-keygen</code> computes the same fingerprint</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Can two strangers agree a secret in public?</td>
+  <td>Identical <code>K</code> on both sides; Eve locked out</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Does encryption tell you who you are talking to?</td>
+  <td>Mallory prints your plaintext</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Does TOFU protect you?</td>
+  <td>Yes — from connection two. Story B is the one to read twice</td>
+</tr>
+</tbody>
+</table></div>
+<p>The last three are about design choices, and each one removes a feature to show
+what it was for.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Question to answer first</th>
+  <th>What you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>5</td>
+  <td>Why does SSH sign the session id?</td>
+  <td>Remove it and watch the replay succeed</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Does a stolen host key expose old sessions?</td>
+  <td>Design A yes, design B no</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>What leaks despite encryption?</td>
+  <td>Command lengths, keystroke counts</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-does-the-real-sshd-show">What does the real <code>sshd</code> show?</h3>
+<p><code>./ssh-real.sh</code> drives the real OpenSSH client and server. It builds a throwaway
+world in <code>./lab</code>, runs <code>sshd</code> on <code>127.0.0.1:2222</code>, and kills it on exit. <strong>It
+never reads or writes your real <code>~/.ssh</code>.</strong> Every command passes explicit
+<code>-F /dev/null</code>, <code>UserKnownHostsFile</code>, and <code>IdentitiesOnly</code>, and the agent socket
+is pinned inside <code>./lab</code>.</p>
+<p>Scenarios 1 to 4 are the trust decision, the same one the visualization draws.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Question to answer first</th>
+  <th>What you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>What does accepting a host key actually write?</td>
+  <td>One line in <code>known_hosts</code>, matching the server's key</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>How do you know the check happened?</td>
+  <td>Silence. No output at all</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>What does the client send once the key is wrong?</td>
+  <td>Nothing — it aborts before authentication</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Does <code>ssh-keygen -R</code> fix the problem?</td>
+  <td>It gets you in — to the impostor</td>
+</tr>
+</tbody>
+</table></div>
+<p>Scenarios 5 to 8 are about the person rather than the machine.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Question to answer first</th>
+  <th>What you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>5</td>
+  <td>Whose fault is <code>Permission denied</code> here?</td>
+  <td>Yours; the key was never used</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>And here?</td>
+  <td>The server's list; read the <code>sshd</code> log</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>How many things can one connection carry?</td>
+  <td>A shell and a port forward at once</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>What does the agent actually hold?</td>
+  <td>A socket that signs on demand</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-does-the-planted-bug-show">What does the planted bug show?</h3>
+<p><code>java BrokenAuth.java</code> is a hand-written SSH-style login with one deliberate
+mistake in it. It passes its happy-path test and lets a total stranger in.
+Exercise 6 asks you to find the line. Scenario 2's answer above is the hint:
+silence is what success looks like, so a check that never runs looks exactly
+like a check that passed.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-engineering-model">✅ Checkpoint — end of the engineering model</h3>
+<p>You can now diagnose SSH failures by mechanism rather than by guessing:
+separate the two <code>Permission denied</code> causes, explain what the host key alarm
+does and does not prove, and say which guarantee each failure bends.</p>
+<p>Next, in section 15: what changes when Alice has three thousand servers
+instead of three.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Asha pages you with <code>REMOTE HOST IDENTIFICATION HAS CHANGED</code>.
+In three sentences, and without using the word <em>attack</em>, tell her what the
+message proves, what it does not, and what to go and look at.</p>
+<details><summary>A good answer sounds like</summary>
+"It proves the key that machine offered is not the key your laptop wrote down
+before. It does not say why they differ, and a rebuild looks exactly like an
+interception. Go and get the fingerprint from the cloud console or the build
+log, compare it to what the server offered, and only then decide whether to
+edit the file."
+</details>
+
+</blockquote>
+<hr />
+<h1 id="readme-production-model">PRODUCTION MODEL</h1>
+<h2 id="readme-15-what-changes-when-alice-has-three-thousand-servers">15. What changes when Alice has three thousand servers?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The cryptography does not change at all. What changes is
+where trust comes from. Priya cannot remember three thousand machines, so she
+stops remembering and starts vouching, with an authority she runs herself.</p>
+</blockquote>
+<h3 id="readme-what-is-the-chain-from-this-lab-to-a-real-fleet">What is the chain from this lab to a real fleet?</h3>
+<p>Three steps, and only the last one is interesting.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Where</th>
+  <th>What holds the trust</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Toy</strong>, this lab</td>
+  <td><code>KnownHosts.java</code></td>
+  <td>one map in memory, one host</td>
+</tr>
+<tr>
+  <td><strong>Real</strong>, your laptop</td>
+  <td><code>~/.ssh/known_hosts</code>, <code>~/.ssh/config</code>, <code>ssh-agent</code></td>
+  <td>the same design, in real files, run by OpenSSH</td>
+</tr>
+<tr>
+  <td><strong>Production</strong>, Priya's fleet</td>
+  <td>a certificate authority she operates</td>
+  <td>the same cryptography, a different source of truth</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read the third column down. The cryptography is identical in all three rows.
+Only the answer to &quot;who says this key is right?&quot; moves.</p>
+<h3 id="readme-what-replaces-trust-on-first-use">What replaces trust on first use?</h3>
+<p>Trust on first use does not survive autoscaling. Priya's servers are created and
+destroyed hourly and named by IP address. So every connection is a first
+connection. Every engineer is trained to type <code>yes</code> reflexively. The protection
+is gone in practice while looking present on paper.</p>
+<p>The fix is to bring back the idea you already know from the TLS lab: <strong>delegate
+trust in advance</strong>. The difference is that the authority is one Priya runs
+herself, not one of the 150 that shipped with the laptop.</p>
+<pre class="mermaid">flowchart TD
+  CA[&quot;Priya&#x27;s SSH&lt;br/&gt;certificate authority&lt;br/&gt;(Vault, Teleport, smallstep)&quot;]:::ca
+  H[&quot;every server&lt;br/&gt;gets a HOST certificate&quot;]:::h
+  U[&quot;every engineer&lt;br/&gt;gets a USER certificate&lt;br/&gt;valid ~8 hours&quot;]:::u
+  L[&quot;Alice&#x27;s laptop trusts&lt;br/&gt;ONE line in known_hosts:&lt;br/&gt;@cert-authority * ssh-ed25519 …&quot;]:::l
+  S[&quot;the server trusts&lt;br/&gt;ONE line in sshd_config:&lt;br/&gt;TrustedUserCAKeys&quot;]:::l
+  CA --&gt; H --&gt; L
+  CA --&gt; U --&gt; S
+  classDef ca fill:#fbeedb,stroke:#A96206,color:#3a2a10
+  classDef h fill:#e8f2ef,stroke:#0B7A63,color:#12312a
+  classDef u fill:#e8f2ef,stroke:#0B7A63,color:#12312a
+  classDef l fill:#eef1f6,stroke:#5b6b7d,color:#1d2733
+</pre>
+<p>Now go back to section 11 and read what this does to four of the eight failures.</p>
+<p><strong>F3 disappears.</strong> Alice's laptop trusts the authority, so a brand-new server is
+checked on the <em>first</em> connection. No prompt, ever. A prompt now means something
+is genuinely wrong, which is what an alarm is supposed to mean.</p>
+<p><strong>F1's false alarms disappear.</strong> Meera rebuilds a box, it gets a new host key
+and a new certificate from the same authority, and it connects silently. Asha's
+pager stays quiet, and the banner goes back to being rare and meaningful.</p>
+<p><strong>F6 shrinks from permanent to hours.</strong> A user certificate expires. A stolen
+laptop key is useless tomorrow morning. Issue certificates after single sign-on
+and you have tied SSH access to your identity provider. Deactivate the account
+and access ends everywhere at once.</p>
+<p><strong>Revocation becomes possible at all.</strong> Priya revokes at the authority, not by
+editing <code>authorized_keys</code> on 400 machines and hoping she missed none.</p>
+<p>A user certificate also carries <strong>principals</strong>, which are the usernames it may
+log in as. It carries a validity window. And it carries extensions saying
+whether port forwarding or agent forwarding are permitted at all. That is
+policy <code>authorized_keys</code> cannot express well.</p>
+<h3 id="readme-which-settings-actually-change-your-day">Which settings actually change your day?</h3>
+<p>Almost everything painful about SSH is fixed by <code>~/.ssh/config</code>, and most
+engineers never write one. Here is a config worth stealing:</p>
+<div class="code"><pre><code>Host prod-*
+  User deploy
+  IdentityFile ~/.ssh/id_ed25519_prod
+  IdentitiesOnly yes          # stop offering every key you own to every server
+  ProxyJump bastion.example.com
+  ControlMaster auto          # reuse one connection for many sessions
+  ControlPath ~/.ssh/cm-%r@%h:%p
+  ControlPersist 10m
+</code></pre></div>
+<p><code>ControlMaster</code> matters more than it looks. It removes the handshake from every
+subsequent connection to the same host, and you already know from the networking
+lab that the handshake is the expensive part.</p>
+<p>Hardening comes next, in rough order of value. <code>PasswordAuthentication no</code>
+removes brute-forcing entirely and is worth more than everything below it. Then
+<code>PermitRootLogin no</code>, then <code>AllowGroups ssh-users</code>, then <code>MaxAuthTries 3</code>.
+Finally, for automation accounts that must never get a shell, forced commands in
+<code>authorized_keys</code>:</p>
+<div class="code"><pre><code>command=&quot;/usr/local/bin/backup-only&quot;,no-port-forwarding,no-agent-forwarding ssh-ed25519 …
+</code></pre></div>
+<h3 id="readme-what-does-asha-actually-read-at-3am">What does Asha actually read at 3am?</h3>
+<p><code>journalctl -u ssh</code>, or <code>/var/log/auth.log</code> on older boxes. Three lines carry
+almost all of the signal.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Log line</th>
+  <th>What it tells Asha</th>
+  <th>When it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Accepted publickey for … SHA256:…</code></td>
+  <td>who got in, and with which key</td>
+  <td>attributing a change to a person</td>
+</tr>
+<tr>
+  <td><code>Failed publickey for …</code></td>
+  <td>the fingerprint that was rejected</td>
+  <td>the F5 diagnostic, straight from the server</td>
+</tr>
+<tr>
+  <td><code>Connection closed by … [preauth]</code></td>
+  <td>somebody gave up before authenticating</td>
+  <td>usually a scanner; the volume is startling and mostly harmless</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Dev's CI pipeline needs to <code>git push</code> over SSH to a host it has
+never contacted. He suggests adding <code>ssh-keyscan github.com &gt;&gt; ~/.ssh/known_hosts</code>
+to the build script. It works, and the build goes green. What did it actually
+establish?</p>
+<details><summary>Reveal</summary>
+
+<p>Nothing. It asked the network &quot;what key should I trust?&quot; and wrote down the
+answer. That is the F3 weakness, automated. It runs fresh on every single
+build, so it never even gets the second-connection protection. Whoever controls
+the pipeline's network path controls the answer. If you said &quot;it pins the key&quot;,
+it pins whatever answered this minute. The fix is to commit the known-good
+fingerprint into the pipeline config, where a change to it is a reviewable
+diff.</p>
+</details>
+
+</blockquote>
+<p>That trap is worth naming out loud, because it is everywhere. <code>ssh-keyscan</code> is
+not a check. It asks the network what to trust, which is the thing trust on
+first use was already weak about, now automated and repeated. Pin the published
+fingerprint in your pipeline config instead.</p>
+<h3 id="readme-what-does-this-lab-deliberately-leave-out">What does this lab deliberately leave out?</h3>
+<p>Five things about the wire itself, which the Java files simplify away.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted here</th>
+  <th>What real SSH does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Packet framing</td>
+  <td>The Binary Packet Protocol: length, padding, payload, MAC — with padding chosen to blur message sizes</td>
+</tr>
+<tr>
+  <td>Algorithm negotiation</td>
+  <td><code>KEXINIT</code> lists on both sides; the chosen names are hashed into <code>H</code>, which is what stops an attacker downgrading you to weak crypto</td>
+</tr>
+<tr>
+  <td>Rekeying</td>
+  <td>New key exchange every ~1 GB or 1 hour (<code>RekeyLimit</code>), bounding how much data one key protects</td>
+</tr>
+<tr>
+  <td>Hashed <code>known_hosts</code></td>
+  <td><code>HashKnownHosts yes</code> stores host names hashed, so stealing the file does not hand over your inventory of servers</td>
+</tr>
+<tr>
+  <td>Privilege separation</td>
+  <td><code>sshd</code> splits into a sandboxed unprivileged process handling pre-auth network data, so a parser bug does not mean instant root</td>
+</tr>
+</tbody>
+</table></div>
+<p>And three about what surrounds it.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted here</th>
+  <th>What real SSH does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Host key rotation</td>
+  <td><code>UpdateHostKeys yes</code> lets a server publish new host keys over the already-trusted connection, so rotation stops causing F1</td>
+</tr>
+<tr>
+  <td>Other auth methods</td>
+  <td>keyboard-interactive, PAM, GSSAPI/Kerberos, FIDO2 (<code>ed25519-sk</code>)</td>
+</tr>
+<tr>
+  <td>Subsystems</td>
+  <td><code>sftp</code>, <code>scp</code>, and <code>rsync -e ssh</code> all ride the connection layer as channels</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-real-implementations-should-you-know">Which real implementations should you know?</h3>
+<p>Four, and they sit at different heights.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Implementation</th>
+  <th>What it is</th>
+  <th>Why you would reach for it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>OpenSSH</strong></td>
+  <td>effectively the standard, on both ends</td>
+  <td>read its <code>-v</code>, <code>-vv</code>, <code>-vvv</code> output; it narrates the whole handshake</td>
+</tr>
+<tr>
+  <td><strong>libssh / Apache MINA SSHD</strong></td>
+  <td>embeddable libraries</td>
+  <td>MINA SSHD is the Java one, for adding SSH or SFTP to a Spring Boot service</td>
+</tr>
+<tr>
+  <td><strong>Teleport / HashiCorp Vault SSH / smallstep</strong></td>
+  <td>the certificate authority layer above</td>
+  <td>this is how Priya's diagram gets built without writing it yourself</td>
+</tr>
+<tr>
+  <td><strong>Tailscale SSH</strong></td>
+  <td>a network identity layer</td>
+  <td>it replaces the trust decision entirely, rather than automating it</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-production-model">✅ Checkpoint — end of the production model</h3>
+<p>You can now explain why trust on first use is right for three servers and
+wrong for three thousand, describe what an SSH certificate authority changes,
+and name the operational controls that matter. You are ready to read RFC
+4251–4254 and <code>man sshd_config</code> without translation.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Explain to a new engineer, in plain words, why Priya's fleet
+stopped showing fingerprint prompts, and why that made the prompts <em>more</em>
+trustworthy rather than less.</p>
+<details><summary>A good answer sounds like</summary>
+"Every machine now carries a signed note from an authority the laptops already
+trust, so a new server is recognised the first time. The prompt used to appear
+constantly, so everyone typed yes without reading. Now it almost never
+appears, which means when it does, something is really wrong."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-16-where-are-the-exercises">16. Where are the exercises?</h2>
+<p>Ready to try this on Alice's behalf? <a href="notes.html#exercises">EXERCISES.md</a> has eight
+rungs, from &quot;explain it in your own words&quot; to &quot;design SSH access for 3,000 hosts
+and 200 engineers&quot;. Answers are in <a href="notes.html#solutions">SOLUTIONS.md</a>; try first.</p>
+<h2 id="readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three labs lead here, and four could follow. The one
+sentence to carry away is that SSH and TLS run the same cryptography and give
+opposite answers about who vouches for identity.</p>
+</blockquote>
+<p>The knowledge map:</p>
+<pre class="mermaid">flowchart TB
+  N[&quot;networking-for-developers&lt;br/&gt;&lt;i&gt;TCP, sockets, timeouts&lt;/i&gt;&quot;]:::done
+  T[&quot;tls&lt;br/&gt;&lt;i&gt;certificate authorities, forward secrecy&lt;/i&gt;&quot;]:::done
+  P[&quot;communication-protocols&quot;]:::done
+  S[&quot;&lt;b&gt;ssh&lt;/b&gt;&lt;br/&gt;&lt;i&gt;host keys, TOFU, user auth&lt;/i&gt;&quot;]:::here
+  C[&quot;public-key-cryptography?&quot;]:::next
+  K[&quot;certificate-management-and-pki?&quot;]:::next
+  Z[&quot;zero-trust-access?&quot;]:::next
+  O[&quot;oauth-and-jwt?&quot;]:::next
+  N --&gt; S
+  T --&gt; S
+  P --&gt; S
+  S --&gt; C
+  S --&gt; K
+  S --&gt; Z
+  S --&gt; O
+  classDef done fill:#e8f2ef,stroke:#0B7A63,color:#12312a
+  classDef here fill:#fbeedb,stroke:#A96206,color:#3a2a10,font-weight:bold
+  classDef next fill:#eef1f6,stroke:#5b6b7d,color:#1d2733,stroke-dasharray:4 3
+</pre>
+<p>Six pairs of words get confused constantly. Here is the one sentence that
+separates each pair, and the section where you watched the difference happen.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Pair</th>
+  <th>The difference</th>
+  <th>Where you saw it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>SSH vs TLS</td>
+  <td>Same cryptography, opposite trust models: TLS asks an authority you trusted in advance, SSH asks your own memory of last time</td>
+  <td>sections 6 and 7</td>
+</tr>
+<tr>
+  <td>Host key vs user key</td>
+  <td>The host key says <em>which machine</em>; your user key says <em>which person</em>. Different files, different directions, same algorithm</td>
+  <td>section 7</td>
+</tr>
+<tr>
+  <td><code>known_hosts</code> vs <code>authorized_keys</code></td>
+  <td><code>known_hosts</code> is on your laptop and lists machines you trust; <code>authorized_keys</code> is on the server and lists people it lets in</td>
+  <td>F4 and F5</td>
+</tr>
+<tr>
+  <td><code>ssh-agent</code> vs a password manager</td>
+  <td>The agent never reveals the key; it signs on request. That is why forwarding it is dangerous and copying it is not the risk you would expect</td>
+  <td>F6 and F7</td>
+</tr>
+<tr>
+  <td>Port forwarding vs a VPN</td>
+  <td>A forward exposes one TCP port through one authenticated connection; a VPN puts you on the network</td>
+  <td>section 8, the channels lie</td>
+</tr>
+<tr>
+  <td><code>ssh-keyscan</code> vs a real check</td>
+  <td><code>ssh-keyscan</code> asks the network what to trust. It is convenience, not security</td>
+  <td>section 15</td>
+</tr>
+</tbody>
+</table></div>
+<p>Next, in the order I would take them.</p>
+<ul>
+<li><code>/learn public-key-cryptography</code> — you have now used signatures, key exchange
+and hashing three labs running without opening any of them. This is the box
+under all three.</li>
+<li><code>/learn certificate-management-and-pki</code> — already flagged by the TLS lab, and
+section 15 makes it twice as relevant: issuance, rotation, revocation, and the
+expiry outage.</li>
+<li><code>/learn zero-trust-access</code> — where section 15 leads: identity-aware proxies,
+short-lived credentials, and why the bastion host is disappearing.</li>
+<li><code>/learn oauth-and-jwt</code> — SSH certificates bind machine access to a human
+identity; OAuth is how that human identity is established in the first place.</li>
+</ul>
+<h2 id="readme-18-glossary--which-words-did-the-story-earn">18. Glossary — which words did the story earn?</h2>
+<p>In order of first appearance. The third column points back at the moment each
+one happened to Alice, Arjun, Omar or Eve.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>In the story</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>key exchange</strong></td>
+  <td>A public conversation that leaves both sides holding the same secret number.</td>
+  <td>Alice and Arjun shouting numbers, section 3</td>
+</tr>
+<tr>
+  <td><strong>host key</strong></td>
+  <td>The server's permanent identity key pair; signs, never encrypts.</td>
+  <td>Arjun's signet ring, section 7</td>
+</tr>
+<tr>
+  <td><strong>fingerprint</strong></td>
+  <td>SHA-256 of a public key, base64 — a short form safe to compare by eye.</td>
+  <td>the 43 characters you can read down a phone line</td>
+</tr>
+<tr>
+  <td><strong><code>known_hosts</code></strong></td>
+  <td>Your laptop's record of which host key belongs to which server name.</td>
+  <td>Alice's own address book</td>
+</tr>
+<tr>
+  <td><strong>trust on first use (TOFU)</strong></td>
+  <td>Accept an unknown key, write it down, refuse any change later. Protects from connection two onward.</td>
+  <td>the very first letter, sent on faith</td>
+</tr>
+<tr>
+  <td><strong><code>authorized_keys</code></strong></td>
+  <td>The list on the server of public keys allowed to log in as a given user.</td>
+  <td>the guest list on the warehouse door</td>
+</tr>
+<tr>
+  <td><strong>public-key authentication</strong></td>
+  <td>Proving identity by signing a challenge, so no secret ever crosses the wire.</td>
+  <td>the question only Alice can answer</td>
+</tr>
+<tr>
+  <td><strong>session identifier</strong></td>
+  <td>The first exchange hash; unique per connection, and signed during login so proofs cannot be replayed.</td>
+  <td>a different question every call, refinement 2</td>
+</tr>
+<tr>
+  <td><strong>exchange hash (<code>H</code>)</strong></td>
+  <td>A hash over both public values and the shared secret; what the host key signs.</td>
+  <td>the serial number of one conversation, section 10</td>
+</tr>
+<tr>
+  <td><strong>ephemeral key</strong></td>
+  <td>A key pair made for one connection and discarded — the source of forward secrecy.</td>
+  <td>the numbers thrown away at logout</td>
+</tr>
+<tr>
+  <td><strong>forward secrecy</strong></td>
+  <td>A stolen long-term key cannot decrypt previously recorded sessions.</td>
+  <td>Eve's archive staying noise, experiment 6</td>
+</tr>
+<tr>
+  <td><strong>AEAD</strong></td>
+  <td>Encryption that also detects tampering, in one operation.</td>
+  <td>the padlock that also shows if the box was opened</td>
+</tr>
+<tr>
+  <td><strong>transport / authentication / connection layer</strong></td>
+  <td>The three layers of SSH: which machine, which person, what you actually do.</td>
+  <td>the stack in section 8</td>
+</tr>
+<tr>
+  <td><strong>channel</strong></td>
+  <td>One independent stream inside a connection — a shell, a forward, a file transfer.</td>
+  <td>where the phone analogy breaks, section 8</td>
+</tr>
+<tr>
+  <td><strong>multiplexing</strong></td>
+  <td>Running many channels over one authenticated connection.</td>
+  <td><code>ssh-real.sh</code> scenario 7</td>
+</tr>
+<tr>
+  <td><strong>port forwarding</strong></td>
+  <td>Carrying a TCP port through the SSH connection (<code>-L</code> local, <code>-R</code> remote, <code>-D</code> SOCKS).</td>
+  <td>scenario 7, a shell and a forward at once</td>
+</tr>
+<tr>
+  <td><strong><code>ssh-agent</code></strong></td>
+  <td>A process holding your unlocked private keys that signs on request but never reveals them.</td>
+  <td>F6, the thing that makes passphrases bearable</td>
+</tr>
+<tr>
+  <td><strong>agent forwarding (<code>-A</code>)</strong></td>
+  <td>Exposing your agent's socket on a remote host — convenient, and equivalent to lending your key to that host's root.</td>
+  <td>F7, on Ben's build box</td>
+</tr>
+<tr>
+  <td><strong><code>ProxyJump</code> (<code>-J</code>)</strong></td>
+  <td>Tunnelling a separate connection through a bastion, without exposing your agent.</td>
+  <td>the fix for F7</td>
+</tr>
+<tr>
+  <td><strong>bastion / jump host</strong></td>
+  <td>The single reachable machine through which access to a private network is funnelled.</td>
+  <td>F7</td>
+</tr>
+<tr>
+  <td><strong><code>StrictModes</code></strong></td>
+  <td>The server's refusal to read <code>authorized_keys</code> when the home directory permissions are too loose.</td>
+  <td>F4's twin, on the server side</td>
+</tr>
+<tr>
+  <td><strong>SSH certificate</strong></td>
+  <td>A host or user key signed by a CA you run, carrying validity, principals and permitted extensions.</td>
+  <td>Priya's authority, section 15</td>
+</tr>
+<tr>
+  <td><strong>principal</strong></td>
+  <td>The identity a user certificate is allowed to log in as.</td>
+  <td>section 15</td>
+</tr>
+<tr>
+  <td><strong><code>ControlMaster</code></strong></td>
+  <td>Reusing one authenticated connection for later sessions, skipping the handshake.</td>
+  <td>the config worth stealing, section 15</td>
+</tr>
+<tr>
+  <td><strong>rekeying</strong></td>
+  <td>Periodically redoing the key exchange to limit how much data one key protects.</td>
+  <td>the omissions table, section 15</td>
+</tr>
+<tr>
+  <td><strong>Binary Packet Protocol</strong></td>
+  <td>SSH's framing: length, padding, payload, MAC.</td>
+  <td>the omissions table, section 15</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<p>What is this lab made of, where do its numbers come from, and what could it not
+stage? Everything about the lab itself lives here, so that Alice's story above
+can run without interruption.</p>
+<p><strong>What it is made of.</strong> This README, plus five runnable pieces.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Interactive</strong></td>
+  <td><a href="https://claude.ai/code/artifact/f8828744-6598-405c-a6c8-cb33b5fb55ce" target="_blank" rel="noopener">The Host Key Decision</a> — put an interceptor on the wire, and watch how your laptop decides whether the machine answering is the one you meant</td>
+</tr>
+<tr>
+  <td><strong>Crypto core</strong></td>
+  <td><code>java SshLab.java</code> — 7 experiments, JDK primitives only</td>
+</tr>
+<tr>
+  <td><strong>The real thing</strong></td>
+  <td><code>./ssh-real.sh</code> — 8 scenarios against a real <code>sshd</code></td>
+</tr>
+<tr>
+  <td><strong>Debug puzzle</strong></td>
+  <td><code>java BrokenAuth.java</code></td>
+</tr>
+<tr>
+  <td><strong>Practice</strong></td>
+  <td><a href="notes.html#exercises">EXERCISES.md</a> · <a href="notes.html#solutions">SOLUTIONS.md</a></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>How to read it.</strong> Top to bottom. It tells one continuous story: a problem
+appears, the obvious fix is tried, it breaks, and the breakage forces the next
+idea. By the end, every strange detail of SSH should feel like the scar of a
+failure you watched happen.</p>
+<p>The four depth layers are marked as headings, and each transition has a
+checkpoint telling you what you can now do.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer heading</th>
+  <th>Sections it covers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>BEGINNER MODEL</code></td>
+  <td>1–9</td>
+</tr>
+<tr>
+  <td><code>INTERMEDIATE MODEL</code></td>
+  <td>10</td>
+</tr>
+<tr>
+  <td><code>ENGINEERING MODEL</code></td>
+  <td>11–14</td>
+</tr>
+<tr>
+  <td><code>PRODUCTION MODEL</code></td>
+  <td>15</td>
+</tr>
+</tbody>
+</table></div>
+<p>Older labs and the exercises call these sections <em>stages</em>. The numbers are the
+same either way, so &quot;stage 15&quot; and &quot;section 15&quot; mean the same thing.</p>
+<p><strong>Where the numbers came from.</strong> Everything runnable here has been run. Where a
+number appears, it came out of a real execution on this machine. The
+fingerprints, the key material, the byte counts and the log lines are all real
+output, not illustrations. Values that depend on the throwaway keys change on
+every run, so treat any specific hex string as one representative run rather
+than a constant.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Figure</th>
+  <th>What it means</th>
+  <th>Where it came from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>32 bytes, twice</td>
+  <td>the size of each side's throwaway public half</td>
+  <td>experiment 2</td>
+</tr>
+<tr>
+  <td>43 characters</td>
+  <td>the length of a SHA-256 fingerprint you compare by eye</td>
+  <td>section 7</td>
+</tr>
+<tr>
+  <td>68 characters</td>
+  <td>the length of the base64 key nobody can compare by eye</td>
+  <td>section 7</td>
+</tr>
+<tr>
+  <td>30 vs 63 bytes</td>
+  <td>ciphertext length for <code>&quot;ls&quot;</code> against a long command, showing what leaks</td>
+  <td>experiment 7</td>
+</tr>
+<tr>
+  <td>76 bytes of noise</td>
+  <td>what Eve holds after stealing a host key, under the real design</td>
+  <td>experiment 6</td>
+</tr>
+<tr>
+  <td>port 59417</td>
+  <td>the client port in one captured <code>Failed publickey</code> log line</td>
+  <td><code>ssh-real.sh</code> scenario 6</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What could not be staged, and where each failure actually runs.</strong> Four of the
+eight are executed by the lab's own code. Two are staged in the visualization,
+because an interceptor between two real machines is not something a script can
+conjure. Two are described only, because both need a second machine with a
+different owner.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Failures</th>
+  <th>How they run here</th>
+  <th>Why not further</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1, F4, F5</td>
+  <td>scenarios 3, 5 and 6 of <code>ssh-real.sh</code>, against a real <code>sshd</code></td>
+  <td>nothing missing; these are the real thing</td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>experiment 7 of <code>SshLab.java</code></td>
+  <td>the leak is in the ciphertext lengths, which the Java core produces</td>
+</tr>
+<tr>
+  <td>F2, F3</td>
+  <td>the visualization, with the wire and the memory set by hand</td>
+  <td>staging a live interceptor needs two machines and a hostile network</td>
+</tr>
+<tr>
+  <td>F6, F7</td>
+  <td>described in section 11, not executed</td>
+  <td>both need a second machine whose root you do not control</td>
+</tr>
+</tbody>
+</table></div>
+<p>The visualization steps through the same messages section 10 draws, and it is
+faithful in ordering and in <em>when</em> each guarantee arrives. It contains no
+algorithm negotiation, no packet framing and no rekeying, which is exactly what
+section 15's two omissions tables list.</p>
+<p><strong>Where this sits relative to what you already know.</strong> You finished the
+<a href="../14-tls/notes.html#readme">tls</a> lab, so you know three things this one leans on. Agreeing a
+secret with a stranger is easy, and knowing <em>who</em> the stranger is, is the hard
+part. TLS solves the hard part by pre-trusting certificate authorities who vouch
+for servers you have never met. And forward secrecy means a stolen key cannot
+decrypt yesterday's recording. SSH faces the identical problem and answers it in
+a completely different way. That difference is the most interesting thing in
+this lab, and it is why the two labs are read back to back.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-ssh--exercises">SSH — Exercises</h1>
+<p>Eight rungs, easiest first. Attempt each before opening
+<a href="notes.html#solutions">SOLUTIONS.md</a>. Rungs 7 and 8 have no single right answer — the
+solution is a worked discussion to compare your reasoning against.</p>
+<p>Setup, once:</p>
+<div class="code"><pre><code class="language-bash">java SshLab.java     # the crypto core, 7 experiments
+./ssh-real.sh        # real sshd on 127.0.0.1:2222, sandboxed to ./lab
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Your colleague says: &quot;SSH is secure because the traffic is encrypted.&quot;
+In your own words, and without using the words <em>host key</em>, <em>fingerprint</em> or
+<em>known_hosts</em>, explain what is incomplete about that sentence. Use the courier
+story or one of your own.</p>
+<p><strong>1.2</strong> Explain, in three sentences, why the very first time you SSH to a new
+server is different from every time after.</p>
+<p><strong>1.3</strong> Two files are constantly confused: <code>known_hosts</code> and <code>authorized_keys</code>.
+Say which machine each lives on, what each lists, and which question each
+answers.</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Run <code>./ssh-real.sh</code>. In scenario 1's output, find (a) the fingerprint
+of the server's host key, (b) the line written to <code>known_hosts</code>, and (c) the
+proof that those two describe the same key.</p>
+<p><strong>2.2</strong> Open the <a href="https://claude.ai/code/artifact/f8828744-6598-405c-a6c8-cb33b5fb55ce" target="_blank" rel="noopener">visualization</a>
+and set it to <em>an interceptor</em> + <em>the real key</em> + <em>type yes blindly</em>. Step
+through. At exactly which step does the connection die, and what had the client
+sent by that point?</p>
+<p><strong>2.3</strong> In <code>SshLab.java</code> experiment 2, six keys are derived from one secret.
+Why does each direction need its own encryption key <em>and</em> its own integrity
+key? What would break if both directions shared one key?</p>
+<p><strong>2.4</strong> Run <code>java SshLab.java</code> twice. Which printed values change between runs
+and which stay the same? What does that tell you about which values are
+per-connection and which are per-machine?</p>
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>For each, write your answer down first, then run the check.</p>
+<p><strong>3.1</strong> <code>known_hosts</code> holds the real key for <code>prod-db</code>. An attacker intercepts.
+Does the attacker learn your username? Your public key? Your signature?
+<em>Check:</em> visualization, <em>an interceptor</em> + <em>the real key</em>.</p>
+<p><strong>3.2</strong> It is your first ever connection to a host, an attacker is intercepting,
+and you type <code>yes</code>. Later the attacker goes away and you connect again to the
+genuine server. What appears on your screen, and about which machine?
+<em>Check:</em> <code>java SshLab.java</code>, experiment 4, story B.</p>
+<p><strong>3.3</strong> You have logged into <code>evil.example.com</code>, a box whose root user is
+hostile. Can its operator use your SSH key to log into <code>prod.example.com</code>
+as you? Answer for SSH as it exists, then for the version where the signature
+does not cover the session identifier.
+<em>Check:</em> experiment 5.</p>
+<p><strong>3.4</strong> An attacker recorded your encrypted sessions all year. Today she steals
+the server's private host key. What can she read? Answer separately for a
+design where the host key encrypts the session key, and for real SSH.
+<em>Check:</em> experiment 6.</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> In <code>Auth.java</code>, <code>blob()</code> takes a <code>sessionId</code> that may be <code>null</code>. Change
+experiment 5 so that <em>both</em> the honest login and the replay use <code>null</code>. Run it.
+Which property is lost — safety or liveness? Can the honest user still log in?</p>
+<p><strong>4.2</strong> In <code>Kex.java</code>, change <code>exchangeHash</code> so it hashes only <code>qc</code> and <code>k</code>,
+dropping the server's public value <code>qs</code>. Re-run experiment 3. Predict first,
+then observe: does the man in the middle now get past the host key check?</p>
+<p>The result is probably not what you expected. Work out <em>why</em> the weakened hash
+still stops her — the answer is about which of the three inputs an interceptor
+cannot possibly make match. Then answer the harder question: if <code>K</code> alone is
+enough to catch an interceptor, what are the exchange hash's other components
+actually protecting against? (Stage 15's omissions table names it.)</p>
+<p><strong>4.3</strong> In <code>ssh-real.sh</code>, change scenario 4 so that instead of deleting the
+<code>known_hosts</code> line, it fetches the impostor's real fingerprint with
+<code>ssh-keygen -lf lab/hostkey_impostor.pub</code> and prints both fingerprints side by
+side before deciding. Which of these two versions of scenario 4 is the correct
+production response, and why is it so rarely what happens?</p>
+<p><strong>4.4</strong> Add <code>PasswordAuthentication yes</code> to the generated <code>sshd_config</code> and
+re-run. What changes in the <code>Permission denied (publickey,...)</code> message, and
+what does that message actually list?</p>
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> <code>KnownHosts.java</code> has three outcomes: unknown, match, mismatch. Add a
+fourth that real OpenSSH has and this file does not: a host key that is known
+but marked <strong>revoked</strong> (OpenSSH's <code>@revoked</code> marker). A revoked key must be
+refused with a <em>different</em> message from a mismatch. Why does that distinction
+matter operationally?</p>
+<p><strong>5.2</strong> Implement <code>Wire.parseAuthorizedKeysLine(String line)</code> that takes a real
+<code>authorized_keys</code> line (<code>ssh-ed25519 AAAAC3... comment</code>) and returns a usable
+<code>PublicKey</code>. Prove it works by reading <code>lab/id_ravi.pub</code> — produced by the real
+<code>ssh-keygen</code> — and printing a fingerprint that matches <code>ssh-keygen -lf</code>.</p>
+<p><strong>5.3</strong> Extend <code>SshLab</code> with an experiment 8 that demonstrates <strong>rekeying</strong>:
+run a key exchange, derive keys, then run a <em>second</em> exchange on the same
+&quot;connection&quot; and show that the session identifier stays fixed at the first <code>H</code>
+while the encryption keys change. Why must the session identifier not change?</p>
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> Run <code>java BrokenAuth.java</code>. It is a hand-written SSH-style login used
+in production for eight months. Answer the five questions in the file's header
+comment. The critical one: exactly one line in <code>Server.authenticate</code> is
+responsible — which, and what question does it answer instead of the one it
+should?</p>
+<p><strong>6.2</strong> A teammate reports: <em>&quot;SSH broke after we rebuilt the box. I ran
+<code>ssh-keygen -R</code> and it works now.&quot;</em> Write the three questions you would ask
+before accepting that this was fine.</p>
+<p><strong>6.3</strong> A CI job fails with <code>Host key verification failed</code>. Someone proposes
+adding <code>-o StrictHostKeyChecking=no</code> to the command. Explain what that flag
+actually does, what it silently gives up, and what to do instead.</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> Your company has 40 servers. Twice a month, one is rebuilt and every
+engineer gets the <code>REMOTE HOST IDENTIFICATION HAS CHANGED</code> banner. They have
+learned to run <code>ssh-keygen -R</code> without thinking. Describe a change that makes
+rebuilds silent <em>without</em> weakening the protection, and say exactly what
+becomes trusted instead of what is trusted today.</p>
+<p><strong>7.2</strong> An engineer's laptop is stolen. It held an unencrypted private key
+authorized on 300 servers. Write the incident response: what is compromised,
+what you do in the first hour, and how long a full remediation takes with
+today's design. Then describe the design under which the same incident is a
+non-event, and say what the residual risk is even then.</p>
+<p><strong>7.3</strong> You must give a CI pipeline the ability to deploy to production over
+SSH, without giving it the ability to open an interactive shell or forward
+ports. Specify the exact <code>authorized_keys</code> line and say what each option
+prevents.</p>
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1</strong> Design SSH access for <strong>3,000 hosts</strong> across three regions, <strong>200
+engineers</strong>, and <strong>50 automated systems</strong>. Hosts are created and destroyed
+hourly by an autoscaler. Requirements: no engineer ever sees a fingerprint
+prompt; access is removed within 5 minutes of someone leaving; every session
+is attributable to a person; a compromised host cannot be used to reach
+others. Cover: what replaces <code>known_hosts</code>, what replaces <code>authorized_keys</code>,
+how credentials are issued and expire, how automated systems differ from
+humans, what you monitor, and what breaks when your issuing service is down.</p>
+<p><strong>8.2</strong> Argue the other side. For which organisations is plain TOFU with
+<code>authorized_keys</code> the <em>correct</em> answer, and at what point does that stop being
+true? Name the specific signal that says &quot;you have outgrown this&quot;.</p>
+<p><strong>8.3</strong> SSH and TLS solve the same identity problem with opposite trust models.
+Design a version of SSH that uses public certificate authorities the way HTTPS
+does. What gets better, what gets worse, and why do you think this is not how
+SSH works?</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-ssh--solutions">SSH — Solutions</h1>
+<p>Try the exercises first. Rungs 7–8 are worked discussions, not single answers.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Encryption puts your message in a locked box that only the person you
+exchanged keys with can open. It says nothing about <em>who that person is</em>. If a
+stranger intercepted the setup and did the key exchange himself, you now have a
+beautifully locked box that only he can open — and it looks exactly like
+success. The hard problem is not hiding the message; it is knowing who is at
+the other end.</p>
+<p><strong>1.2</strong> On the first connection your laptop has never seen this server, so it
+has nothing to compare against and no third party to ask. It shows you a
+fingerprint and asks you to decide. From the second connection onwards it has
+a recorded answer, so it can check automatically and refuse anything different.
+The protection therefore begins at connection two.</p>
+<p><strong>1.3</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th><code>known_hosts</code></th>
+  <th><code>authorized_keys</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>lives on</td>
+  <td>your laptop (client)</td>
+  <td>the server, in the target user's home</td>
+</tr>
+<tr>
+  <td>lists</td>
+  <td>machines and their host keys</td>
+  <td>people and their public keys</td>
+</tr>
+<tr>
+  <td>answers</td>
+  <td>&quot;am I talking to the right machine?&quot;</td>
+  <td>&quot;is this person allowed in as this user?&quot;</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> (a) printed at the top: <code>server host key fingerprint : SHA256:…</code>.
+(b) the single line <code>[127.0.0.1]:2222 ssh-ed25519 AAAAC3Nza…</code>.
+(c) the script runs <code>ssh-keygen -lf lab/known_hosts</code>, which prints the same
+<code>SHA256:…</code> value — the fingerprint is computed <em>from</em> the key, so matching
+fingerprints means matching keys.</p>
+<p><strong>2.2</strong> It dies at <strong>step 5, the host key check</strong> — before authentication
+begins. At that point the client has sent only the SSH version string and its
+throwaway public value <code>Q_C</code>. It has <strong>not</strong> sent your username, offered your
+public key, or signed anything. The attacker gains nothing reusable.</p>
+<p><strong>2.3</strong> Separate keys per direction and per purpose limit what one compromised
+key can do. If both directions shared one key, an attacker who obtained it
+could not merely read — they could forge messages <em>as the server</em> to the
+client. Separating encryption from integrity keys means a flaw that exposes one
+does not automatically grant the other. This is a standard principle: one key,
+one job.</p>
+<p><strong>2.4</strong> Changing every run: the generated key fingerprints, <code>Q_C</code>, <code>Q_S</code>, <code>K</code>,
+all derived keys, session ids, and all ciphertexts. Stable: the <em>structure</em> —
+blob length 51 bytes, key lengths 32 bytes, the six derived key roles, and the
+verdicts (<code>true</code>/<code>false</code>) of every check. Per-connection values are the
+ephemeral ones; a real server's host key would be the stable one, but this lab
+generates a fresh one each run, so nothing here is per-machine. That is worth
+noticing: it is the difference between a lab and a real deployment.</p>
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> No, no, and no. Host key verification happens in the transport layer,
+before the authentication layer starts. The client aborts with
+<code>Host key verification failed</code> having sent only the version string and its
+ephemeral public value. This is the strongest single property in SSH's design:
+identity of the <em>machine</em> is settled before anything about the <em>user</em> is
+disclosed.</p>
+<p><strong>3.2</strong> You get the full <code>REMOTE HOST IDENTIFICATION HAS CHANGED</code> banner —
+pointing at the <strong>genuine server</strong>. Your laptop pinned the attacker's key as
+the truth, so the honest machine is now the one that looks wrong. Experiment 4
+story B prints exactly this. The lesson: TOFU is faithful to whatever you told
+it first, and it cannot distinguish a lie recorded early from a change later.</p>
+<p><strong>3.3</strong> In real SSH: <strong>no</strong>. Your signature covers this connection's session
+identifier, which the operator cannot reproduce on a connection to
+<code>prod.example.com</code>. In the version without it: <strong>yes</strong> — the signature is over
+&quot;I am ravi&quot;, which is equally true anywhere, so it replays. Experiment 5 shows
+<code>true</code> then <code>false</code>.</p>
+<p><strong>3.4</strong> With host-key encryption of the session key: she reads <strong>everything</strong>,
+retroactively, for as long as she has been recording. With real SSH: <strong>nothing
+new</strong> — the session keys came from ephemeral values that were destroyed at
+logout, and the host key was only ever used to sign. She can <em>impersonate the
+server in future</em> connections, which is serious, but the archive stays shut.</p>
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> The honest user still logs in perfectly — so <strong>liveness is unaffected</strong>.
+What is lost is <strong>safety</strong>: the replay now succeeds, so a signature captured by
+any server you touch is usable against any other server that trusts your key.
+Note the shape of this: the system looks completely healthy in testing. Only an
+adversary notices the difference, which is why this class of bug survives code
+review.</p>
+<p><strong>4.2</strong> The interceptor <strong>still fails</strong>. Measured over 200 simulated attempts:</p>
+<div class="code"><pre><code>  H = hash(Q_C, Q_S, K)  -&gt; attacker survived 0 times
+  H = hash(Q_C, K)       -&gt; attacker survived 0 times
+  H = hash(K)            -&gt; attacker survived 0 times
+</code></pre></div>
+<p>The reason is <code>K</code>. An interceptor must run two <em>separate</em> key exchanges, so the
+secret she shares with you is necessarily different from the one she shares with
+the server. Any hash that includes <code>K</code> therefore differs at the two ends, and
+the real server's signature cannot verify against the client's hash. The public
+values are not what catches her.</p>
+<p>So what are the other components for? <strong>Downgrade protection.</strong> The real
+exchange hash also covers both sides' version strings and their full
+<code>KEXINIT</code> algorithm lists. Without that, an interceptor who cannot break the
+exchange could still <em>edit the negotiation</em> on the way past — stripping strong
+ciphers from the list so both ends settle on the weakest option they both
+support, then attacking that. Hashing the negotiation means any such edit
+changes <code>H</code>, and the signature fails. The signature protects the <em>terms</em> of the
+conversation, not only its participants.</p>
+<p><strong>4.3</strong> The fingerprint-comparison version is correct. <code>ssh-keygen -R</code> deletes
+your only evidence and re-runs TOFU, which is <em>exactly</em> the state an attacker
+wants you in. It is rarely what happens because the alarm is nearly always a
+legitimate rebuild, so the reflex is reinforced dozens of times before the one
+occasion it matters — and because obtaining the true fingerprint requires
+leaving the terminal and finding an authoritative source, which is slow at the
+precise moment you are blocked. That asymmetry, not ignorance, is why the
+protection fails in practice — and it is the argument for host certificates
+(stage 15), which remove the alarm from routine rebuilds entirely.</p>
+<p><strong>4.4</strong> The message becomes
+<code>Permission denied (publickey,password,keyboard-interactive)</code>. That
+parenthesised list is the set of authentication methods the <strong>server</strong> is
+willing to accept — it is a useful diagnostic in itself. If <code>publickey</code> is
+absent from it, the server has disabled key authentication and no amount of
+fixing your key will help.</p>
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> Add a revoked set checked <em>before</em> the match branch:</p>
+<div class="code"><pre><code class="language-java">if (revoked.contains(fp))
+    return &quot;!! this host key has been REVOKED. Do not connect. !!&quot;;
+</code></pre></div>
+<p>It matters operationally because the two states demand opposite responses. A
+mismatch means <em>&quot;something changed, go and find out what&quot;</em> — often benign. A
+revoked key means <em>&quot;this key is known to be compromised; a server presenting it
+is either the attacker or still running the bad key&quot;</em> — never benign, and never
+to be resolved by deleting a line. OpenSSH supports this as the <code>@revoked</code>
+marker in <code>known_hosts</code> and, for certificates, <code>RevokedKeys</code>.</p>
+<p><strong>5.2</strong> Split on spaces, base64-decode field 2, then walk the blob: read a
+4-byte length, read that many bytes (<code>&quot;ssh-ed25519&quot;</code>), then the same again for
+the 32 raw key bytes, and hand those to <code>Wire.parseEd25519</code>. The test that it
+is right is that your fingerprint matches <code>ssh-keygen -lf</code> on a key file the
+real <code>ssh-keygen</code> produced — the same cross-check experiment 1 uses in the
+other direction.</p>
+<p><strong>5.3</strong> The session identifier must stay fixed at the first <code>H</code> because it is
+what your authentication signature was bound to. If it changed on rekey, either
+every existing signature would become invalid, or — far worse — the binding
+would become re-negotiable, which reopens the replay hole from experiment 5.
+RFC 4253 is explicit: the session identifier is set once, by the first
+exchange, and never changes for the life of the connection. Encryption keys, by
+contrast, are replaced every rekey; that is the entire point.</p>
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> <strong>Check 2 fails</strong>: a stranger who generated a key five seconds ago is
+admitted as <code>ravi</code>. What she had to possess: nothing. No stolen key, no
+intercepted traffic — just the ability to make a key pair, which anyone can do.</p>
+<p>The line is:</p>
+<div class="code"><pre><code class="language-java">return Wire.verify(offeredKey, expected, signature);
+</code></pre></div>
+<p>It answers <strong>&quot;did the holder of this key sign this message?&quot;</strong> — and the answer
+is honestly yes, because she signed it with the key she just made. The question
+it should answer is <strong>&quot;is this key allowed in?&quot;</strong>. <code>authorizedKeys</code> is consulted
+only via <code>containsKey(user)</code>, which checks the <em>username</em> exists, never the
+key.</p>
+<p>Using experiment 3's sentence: <em>the signature is fine; the key is wrong.</em> The
+code verifies possession flawlessly and never checks authorization — exactly
+the man-in-the-middle failure, moved from the transport layer to the auth layer.</p>
+<p>The fix:</p>
+<div class="code"><pre><code class="language-java">PublicKey allowed = authorizedKeys.get(user);
+if (allowed == null || !allowed.equals(offeredKey)) return false;
+</code></pre></div>
+<p>On a real server the data structure you must consult is
+<code>~/.ssh/authorized_keys</code> in the target user's home directory.</p>
+<p>Would the session id have helped? <strong>No</strong> — and this is the point of the
+question. The session identifier stops a <em>valid</em> proof being reused on a
+different connection. It says nothing about whether the key behind that proof
+was ever authorized. They are two independent checks: <em>is this proof genuine
+and for this connection</em> (signature + session id) and <em>is this key permitted</em>
+(<code>authorized_keys</code>). This code does the first perfectly and skips the second
+entirely.</p>
+<p><strong>6.2</strong> (i) Where did you get the expected fingerprint for the rebuilt box, and
+did it come from somewhere other than the SSH connection itself? (ii) Did
+everyone else get the same new fingerprint you did — or did some colleagues see
+a different one? (iii) Was a rebuild actually scheduled at that time, and does
+the build log show a new host key being generated? Any &quot;no&quot; or &quot;don't know&quot;
+means it was not verified, only silenced.</p>
+<p><strong>6.3</strong> <code>StrictHostKeyChecking=no</code> accepts unknown host keys silently <em>and</em>
+allows connections to hosts whose key has changed. That second half is the
+dangerous one, and it is current behaviour, not a legacy quirk — <code>ssh_config(5)</code>
+on this machine says of <code>no</code>: <em>&quot;ssh will automatically add new host keys to the
+user known hosts files and allow connections to hosts with changed hostkeys to
+proceed, subject to some restrictions.&quot;</em> It gives up host verification
+completely — the CI job will happily talk to anyone who can answer on that
+address. Do instead: commit the expected
+host key into the repo and point <code>UserKnownHostsFile</code> at it, so the pipeline
+verifies against a reviewed constant. If you want the &quot;unknown is fine, changed
+is fatal&quot; behaviour, <code>accept-new</code> is the correct value — never <code>no</code>.</p>
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> Deploy an <strong>SSH host certificate authority</strong>. Each server, at build
+time, gets its freshly generated host key signed by your CA, producing a host
+certificate naming it. Every laptop's <code>known_hosts</code> gets one line:</p>
+<div class="code"><pre><code>@cert-authority *.prod.example.com ssh-ed25519 AAAA…   # the CA&#x27;s public key
+</code></pre></div>
+<p>What is trusted changes from <em>&quot;this specific key, per machine, recorded by me
+at some point&quot;</em> to <em>&quot;any host key the CA has vouched for&quot;</em>. Rebuilds then verify
+silently and correctly on the first connection. Crucially the protection is not
+weakened but strengthened: today an engineer approves an unverified key twice a
+month; afterwards a prompt never appears at all, so if one ever does, it is
+real. The new dependency is the CA private key, which becomes the most
+sensitive secret you own and belongs in an HSM or a hardware token.</p>
+<p><strong>7.2</strong> <em>Compromised:</em> everything that key could reach — 300 servers, with
+whatever privileges the account holds on each, and any further access reachable
+from those hosts. Assume it is being used now.</p>
+<p><em>First hour:</em> remove the key from the central source that generates
+<code>authorized_keys</code> (configuration management, not by hand); push that removal to
+all 300 hosts and record which succeeded; disable the engineer's account in the
+identity provider; check <code>auth.log</code> across the fleet for <code>Accepted publickey</code>
+lines carrying that fingerprint since the theft; look for newly added
+<code>authorized_keys</code> entries, cron jobs and systemd units on any host that shows
+one.</p>
+<p><em>Full remediation:</em> days. The hard part is not the removal, it is proving
+completeness — hosts that were down, hosts outside configuration management,
+keys copied into a container image, keys added to a service account by hand.
+There is no mechanism that tells you when you missed one.</p>
+<p><em>The design where this is a non-event:</em> short-lived <strong>user certificates</strong>. The
+engineer's key alone is useless without a valid certificate, and certificates
+expire in hours. Revoke at the CA, or simply disable the SSO account, and access
+ends fleet-wide within one certificate lifetime. No file on any host is edited.</p>
+<p><em>Residual risk even then:</em> any session already open stays open until killed
+(certificate expiry does not terminate a live connection); anything the attacker
+established during the valid window — an added <code>authorized_keys</code> entry, a
+reverse tunnel, a modified image — survives the certificate expiring. Short
+credentials shrink the window; they do not undo what happened inside it.</p>
+<p><strong>7.3</strong> A forced command with every capability stripped:</p>
+<div class="code"><pre><code>command=&quot;/usr/local/bin/deploy&quot;,restrict ssh-ed25519 AAAA… ci@buildserver
+</code></pre></div>
+<p><code>command=</code> means the server runs <em>that</em> program regardless of what the client
+asked for, so an interactive shell is impossible and the client's requested
+command is available only in <code>$SSH_ORIGINAL_COMMAND</code> for the script to inspect.
+<code>restrict</code> is the modern all-in option: it denies port forwarding, agent
+forwarding, X11 forwarding, PTY allocation and user <code>rc</code> execution, and is
+safer than listing <code>no-port-forwarding,no-agent-forwarding,…</code> by hand because
+it stays correct when OpenSSH adds new capabilities. Add
+<code>from=&quot;10.0.5.0/24&quot;</code> to bind the key to your build network as well.</p>
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1</strong> <em>Sketch of a defensible answer.</em></p>
+<p><strong>Replaces <code>known_hosts</code>:</strong> a host CA. Every instance, in its bootstrap, gets
+its host key signed by the CA with a short-lived host certificate. Laptops trust
+one <code>@cert-authority</code> line per domain. No prompts, ever; autoscaling stops
+mattering.</p>
+<p><strong>Replaces <code>authorized_keys</code>:</strong> user certificates carrying <strong>principals</strong>.
+<code>sshd_config</code> gets <code>TrustedUserCAKeys</code> and
+<code>AuthorizedPrincipalsFile</code>, mapping a principal such as <code>payments-oncall</code> to the
+local account it may assume. Access becomes group membership, not a file edit.</p>
+<p><strong>Issuance:</strong> an engineer authenticates to the identity provider (SSO + MFA),
+receives a certificate valid ~8 hours with principals derived from their current
+groups. Removal within 5 minutes is achieved by deactivating the account so no
+<em>new</em> certificates issue, plus a revocation list distributed to hosts
+(<code>RevokedKeys</code>) for the case where you cannot wait for expiry.</p>
+<p><strong>Automated systems:</strong> never long-lived keys checked into anything. Workloads
+obtain certificates from the same CA using their platform identity (instance
+identity document, Kubernetes service account, OIDC federation), with lifetimes
+in minutes, principals restricted to a purpose-built account, and forced
+commands as in 7.3.</p>
+<p><strong>Attribution:</strong> the certificate's key id carries the human's identity and is
+logged by <code>sshd</code> on every login, so a shared <code>deploy</code> account still produces
+per-person audit lines. Log centrally; alert on any <code>Accepted publickey</code>
+without a certificate (i.e. a raw key still working somewhere).</p>
+<p><strong>Blast radius:</strong> hosts do not hold credentials for other hosts — a compromised
+host yields no reusable key, because it never had one. Agent forwarding is
+denied by certificate extension, so a hostile host cannot borrow an engineer's
+identity; <code>ProxyJump</code> is used instead.</p>
+<p><strong>When the CA is down:</strong> nobody can obtain <em>new</em> certificates, but existing ones
+keep working until they expire — so the outage becomes visible gradually rather
+than instantly, which is the right failure shape. You still need a documented
+break-glass path: a small number of emergency keys in <code>authorized_keys</code> on
+critical hosts, held in a vault, alerting loudly on use. Design it before you
+need it, and test it on a schedule; an untested break-glass path is decoration.</p>
+<p><strong>8.2</strong> Plain TOFU is correct when the number of hosts is small, stable, and
+long-lived, and the number of engineers is small enough that everyone can be
+told a fingerprint out of band — realistically, up to a few dozen hosts and a
+handful of people. Below that scale a CA is more moving parts than it saves,
+and the CA key becomes a new single point of catastrophe you now have to
+protect.</p>
+<p>The signal that you have outgrown it is behavioural, not numerical: <strong>when
+engineers start clearing host-key warnings without investigating</strong>, the
+protection has already stopped working — the file still exists, the checks
+still run, and the humans they depend on have been trained out of the loop.
+Secondary signals: hosts outliving their host keys, <code>ssh-keyscan</code> appearing in
+scripts, or offboarding requiring an edit on more machines than one person can
+verify in an afternoon.</p>
+<p><strong>8.3</strong> <em>What gets better:</em> first-contact security, without you running any
+infrastructure. Any server could be verified on the very first connection, so
+F3 disappears globally rather than per-organisation.</p>
+<p><em>What gets worse:</em> every internal machine would need a publicly-issued
+certificate, which means a public CA must be told the names of your private
+hosts, and names like <code>db-04.internal</code> cannot be issued publicly at all.
+Renewal becomes a fleet-wide operational dependency with a hard expiry — the
+classic PKI outage, now able to lock you out of the very machines you need in
+order to fix it. You would also inherit the entire public CA trust surface:
+roughly 150 organisations, any one of which mis-issuing gets you a valid
+certificate for your own production host.</p>
+<p><em>Why SSH does not work this way:</em> SSH's job is administrative access to
+machines you already own, usually named privately, often unreachable from the
+internet. HTTPS's job is a stranger's browser reaching a public name it has
+never seen. Public CAs solve the second problem, and SSH does not have it — so
+it declines the dependency and keeps trust local, at the cost of the
+first-connection hole. The organisations for whom that hole matters run their
+own CA, which is the same design with the trust anchor moved in-house.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../14-tls/notes.html"><small>← Lab 14</small>tls</a><a href="../16-java-multithreading/notes.html" style="text-align:right"><small>Lab 16 →</small>java-multithreading</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-anyone-need-to-solve-this-at-all">1. Why does anyone need to solve this at all?</a><a href="#readme-2-what-can-go-wrong-between-alice-and-arjun">2. What can go wrong between Alice and Arjun?</a><a href="#readme-3-does-a-locked-box-fix-it">3. Does a locked box fix it?</a><a href="#readme-4-what-does-omar-do-about-the-locked-box">4. What does Omar do about the locked box?</a><a href="#readme-5-what-do-we-actually-need">5. What do we actually need?</a><a href="#readme-6-what-is-the-key-idea">6. What is the key idea?</a><a href="#readme-7-what-do-engineers-call-the-things-alice-just-met">7. What do engineers call the things Alice just met?</a><a href="#readme-8-what-two-pictures-should-you-keep-in-your-head">8. What two pictures should you keep in your head?</a><a href="#readme-9-can-you-watch-the-decision-happen">9. Can you watch the decision happen?</a><a href="#readme-10-what-does-the-handshake-actually-do-message-by-message">10. What does the handshake actually do, message by message?</a><a href="#readme-11-what-are-the-eight-ways-it-fails-and-how-do-you-tell-them-apart">11. What are the eight ways it fails, and how do you tell them apart?</a><a href="#readme-12-what-does-ssh-actually-promise-alice-and-what-does-it-not">12. What does SSH actually promise Alice, and what does it not?</a><a href="#readme-13-where-is-the-code-and-which-line-is-load-bearing">13. Where is the code, and which line is load-bearing?</a><a href="#readme-14-what-do-the-experiments-show">14. What do the experiments show?</a><a href="#readme-15-what-changes-when-alice-has-three-thousand-servers">15. What changes when Alice has three thousand servers?</a><a href="#readme-16-where-are-the-exercises">16. Where are the exercises?</a><a href="#readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</a><a href="#readme-18-glossary--which-words-did-the-story-earn">18. Glossary — which words did the story earn?</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

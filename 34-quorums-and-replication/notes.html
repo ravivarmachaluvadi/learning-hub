@@ -1,0 +1,2797 @@
+<!doctype html>
+<html lang="en" data-hub-lab="34-quorums-and-replication">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>34. quorums-and-replication</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 34 of 71 · Stage 5</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 34 · Copies and Agreement</p><article id="readme"><h1 id="readme-quorums-and-replication">Quorums and replication</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Ana, Ben and Cara each keep a note of when the trip
+leaves. Dev changes the time, but he can only reach some of them, and Elle,
+who asks later, can only reach some of them too. If the group Dev tells and
+the group Elle asks are each big enough, they are forced to share one person,
+and that person has the new time. That counting trick is the whole rule. The
+rest of this lab is the five ways the counting still looks right while the
+answer is wrong.</p>
+</blockquote>
+<p>The simulator for this lab is <a href="visualization.html"><code>visualization.html</code></a>, also
+published at <a href="https://claude.ai/code/artifact/d1e569b2-2338-4c35-9ad0-81417b750086" target="_blank" rel="noopener">https://claude.ai/code/artifact/d1e569b2-2338-4c35-9ad0-81417b750086</a>.
+Run commands, the folder contents and how the numbers were made are in
+<a href="#readme-19-about-this-lab">section 19</a> at the end.</p>
+<hr />
+<h1 id="readme-beginner-model">BEGINNER MODEL</h1>
+<h2 id="readme-1-why-does-keeping-copies-create-a-problem-that-nothing-reports">1. Why does keeping copies create a problem that nothing reports?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One copy of your data can be destroyed. Several copies
+can disagree with each other. The second problem is worse, because no error
+ever tells you it happened.</p>
+</blockquote>
+<p>A machine holding your data will fail. Not &quot;might&quot;. A disk dies, a rack loses
+power, a kernel panics, someone reboots the wrong host. If there is one copy,
+that is the end of the data.</p>
+<p>So you keep several copies on several machines. That solves losing the data.
+It also lets you serve more readers, and it lets you put a copy near your
+users. But it creates a new problem that is much harder to see. <strong>The copies
+can disagree</strong>, and nothing anywhere raises an error when they do.</p>
+<p>What does that look like? A user updates their address, reloads the page, and
+sees the old one. A balance check returns a number that was true four seconds
+ago. No exception is thrown. No alert fires. The logs look perfect.</p>
+<p>One warning before the story starts, about a word you already know.</p>
+<blockquote>
+<p><strong>⚠️ A word you already know, used for something else.</strong>
+In the <a href="../39-paxos/notes.html#readme">paxos</a> lab, <em>quorum</em> meant a <strong>majority</strong>, and it was
+used to make a group of machines <strong>agree</strong> on one value. This lab is about a
+different thing that shares the name: a read/write quorum. It makes two
+groups <strong>overlap</strong>, so that a reader cannot miss a writer. It looks like the
+same idea. It guarantees dramatically less. Keeping them apart is the single
+most valuable thing you can take from this lesson. So the lab avoids the
+word entirely until section 7, where both meanings are put side by side.</p>
+</blockquote>
+<h2 id="readme-2-how-many-friends-must-dev-tell-and-how-many-must-elle-ask">2. How many friends must Dev tell, and how many must Elle ask?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three friends each hold a note of the departure time.
+Dev wants to change it and Elle wants to read it. Neither can reach
+everyone, and a friend with an old note sounds exactly like a friend with
+the new one.</p>
+</blockquote>
+<p>Ana, Ben and Cara are organising a trip. The departure time is written down
+in three places: each of them keeps a note of it. Right now all three notes
+say <strong>2pm</strong>.</p>
+<p>Dev needs to move it to <strong>3pm</strong>. Elle, later, needs to know what time it is.</p>
+<p>Here is the awkward question. The whole lab is the answer to it.</p>
+<p><strong>How many of the three does Dev have to tell, and how many does Elle have to
+ask, for Elle to be certain she gets 3pm?</strong></p>
+<p>Notice what makes this hard. Dev cannot always reach all three; Cara's phone
+is off. Elle cannot always reach all three either. And there is a crueller
+part. <strong>If Elle asks Ben and Ben says &quot;2pm&quot;, Ben is not lying, and Elle has
+no way to tell she has an old answer.</strong> A wrong answer here is
+indistinguishable from a right one.</p>
+<p>Here is how far the lab follows Dev and Elle, and what you can do after each
+layer:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner</strong></td>
+  <td>1–9</td>
+  <td>say why copies disagree, and derive the overlap rule yourself</td>
+</tr>
+<tr>
+  <td><strong>Intermediate</strong></td>
+  <td>10</td>
+  <td>walk a write and a read replica by replica, and name what each knob buys</td>
+</tr>
+<tr>
+  <td><strong>Engineering</strong></td>
+  <td>11–14</td>
+  <td>reason about the five ways the rule stops holding, and measure them</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>15</td>
+  <td>set Cassandra, Kafka, Postgres and MongoDB knobs on purpose, and monitor the right things</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-why-not-just-tell-everybody">3. Why not just tell everybody?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> If Dev tells all three, anyone Elle asks has the new
+time. That is correct. It also means one friend with a dead phone stops
+every change.</p>
+</blockquote>
+<p>The obvious rule: Dev tells all three. Then Elle can ask any one of them, and
+whoever she asks will say 3pm.</p>
+<p>This is genuinely correct. It is also what most people sketch first. It is
+what &quot;just replicate it everywhere&quot; means in practice.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Cara's phone is off for an hour. Under &quot;tell everybody&quot;,
+what happens when Dev tries to change the time?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Nothing can be changed at all.</strong> Dev cannot complete the rule, so the
+update is refused. One person being unreachable has stopped the entire
+system from accepting any change.</p>
+<p>If you said &quot;Dev tells Ana and Ben now and catches Cara later&quot;, you have
+just invented the second attempt. Section 4 is what happens to it.</p>
+<p>And this gets worse, not better, as you add copies for safety. With five
+copies, the chance that at least one is unreachable at any moment is higher
+than with three. <strong>Under &quot;tell everybody&quot;, every copy you add to improve
+durability makes writes less available.</strong> That is the trade this whole lab
+is about, and it appears at the very first step.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-4-why-does-tell-one-pass-it-on-fail-in-the-opposite-direction">4. Why does &quot;tell one, pass it on&quot; fail in the opposite direction?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> If Dev tells only Ana, the change always goes through.
+But Elle may ask Ben, who still says 2pm and has no idea he is wrong. And if
+Ana loses her note, the change never happened.</p>
+</blockquote>
+<p>So &quot;tell everybody&quot; is too fragile. The obvious repair: <strong>Dev tells just one
+person, and they pass it on when they can.</strong></p>
+<p>Now writes always work, because someone is always reachable. But watch Elle.
+Read the diagram top to bottom; it is the order things happen.</p>
+<pre class="mermaid">sequenceDiagram
+    participant D as Dev
+    participant A as Ana&#x27;s note
+    participant B as Ben&#x27;s note
+    participant C as Cara&#x27;s note
+    participant E as Elle
+    D-&gt;&gt;A: it&#x27;s 3pm now
+    Note over B,C: still say 2pm
+    E-&gt;&gt;B: what time is it?
+    B--&gt;&gt;E: 2pm
+    Note over E: Elle is now confidently wrong,&lt;br/&gt;and nothing looked broken
+</pre>
+<p>Two separate things went wrong. They are worth naming apart.</p>
+<p><strong>Elle got an old answer and could not tell.</strong> Ben answered instantly. He
+correctly reported what he knew. There is no error to catch, no timeout, no
+warning.</p>
+<p><strong>And the change is one accident from never having happened.</strong> Only Ana has
+3pm. If Ana loses her note before passing it on, the update Dev believed had
+succeeded simply ceases to exist.</p>
+<p>So the two extremes both fail, in opposite directions. Read the table across:
+each rule is good at one thing and bad at the other.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Rule</th>
+  <th>Writes</th>
+  <th>Reads</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>tell all three</td>
+  <td>fragile: one absent person blocks everything</td>
+  <td>always correct</td>
+</tr>
+<tr>
+  <td>tell one</td>
+  <td>always works</td>
+  <td>can silently be wrong, and the write can vanish</td>
+</tr>
+</tbody>
+</table></div>
+<p>The interesting design is not at either end. It is somewhere in the middle.
+The question is exactly <em>where</em>, and <em>why that point and not another</em>.</p>
+<h2 id="readme-5-what-do-we-actually-need">5. What do we actually need?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Elle must always see Dev's latest change. Neither of
+them may need every friend to be reachable. And when the answer cannot be
+guaranteed, the system should say so instead of guessing.</p>
+</blockquote>
+<p>We want, in this order:</p>
+<ol>
+<li><strong>A later reader must see the last change that was accepted.</strong> Not
+&quot;usually&quot;. Always, or the guarantee is worthless, because you cannot tell
+the good answers from the bad ones.</li>
+<li><strong>Neither writing nor reading may require every copy to be reachable.</strong>
+Otherwise one sleeping machine stops the system.</li>
+<li><strong>When something genuinely cannot be guaranteed, say so</strong>, rather than
+returning a confident wrong answer.</li>
+</ol>
+<p>Requirement 1 and requirement 2 sound like they are in direct conflict. The
+next section is why they are not.</p>
+<h2 id="readme-6-what-is-the-key-idea">6. What is the key idea?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Dev's group and Elle's group only have to be big enough
+that they cannot avoid sharing a person. With three friends, two and two is
+enough, because four different people do not exist.</p>
+</blockquote>
+<p>Dev does not have to tell everybody, and Elle does not have to ask everybody.
+They only have to be sure of one thing: <strong>the group Dev tells and the group
+Elle asks share at least one person.</strong></p>
+<p>Count it. There are 3 friends. If Dev tells 2 of them and Elle asks 2 of
+them, can those groups be completely different? That would need 2 + 2 = 4
+different people, and there are only 3. So no. They <em>must</em> share someone, and
+that someone has the new time.</p>
+<p>That is the entire idea. It is nothing more than the pigeonhole principle:
+four things cannot go into three boxes without two of them sharing a box.</p>
+<p>Now the letters, because the rest of the lab uses them constantly. There are
+three counts in the story, and each gets a letter. Read the middle column
+first; the letter is only a shorthand for it.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The thing in the story</th>
+  <th>In words</th>
+  <th>Letter</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>how many friends keep a note</td>
+  <td>the number of copies</td>
+  <td><code>N</code></td>
+</tr>
+<tr>
+  <td>how many friends Dev tells</td>
+  <td>the number of copies a write must reach before it counts</td>
+  <td><code>W</code> (for <em>write</em>)</td>
+</tr>
+<tr>
+  <td>how many friends Elle asks</td>
+  <td>the number of copies a read must hear from before it answers</td>
+  <td><code>R</code> (for <em>read</em>)</td>
+</tr>
+<tr>
+  <td>Dev's group and Elle's group cannot miss each other</td>
+  <td>tell enough and ask enough that the two groups add up to more than the total</td>
+  <td><code>R + W &gt; N</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>So the rule, in words first: tell W of them, ask R of them, out of N total.
+If R plus W is more than N, the two groups cannot miss each other. As a
+symbol, that is the last row of the table: <code>R + W &gt; N</code>.</p>
+<p>Everything else in this lab is either a consequence of that inequality or one
+of the situations where it stops applying.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Dev is in a hurry and tells only Ana, so W (the number of
+friends told) is 1. How many friends must Elle ask to be certain?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>All three.</strong> If you said two, count again. Elle could ask Ben and Cara,
+and neither of them heard from Dev. One told plus two asked is 3, which is
+not more than 3. Only 1 + 3 clears the bar. Telling fewer people means
+asking more, and only the sum matters.</p>
+</details>
+
+</blockquote>
+<p>Here it is with real people. Dev tells Ana and Ben, so W (the number told) is
+2. Elle can ask any two. Read the right-hand column: it never says no.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Elle asks</th>
+  <th>Does she reach someone Dev told?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Ana, Ben</td>
+  <td>yes: both</td>
+</tr>
+<tr>
+  <td>Ana, Cara</td>
+  <td>yes: Ana</td>
+</tr>
+<tr>
+  <td>Ben, Cara</td>
+  <td>yes: Ben</td>
+</tr>
+</tbody>
+</table></div>
+<p>There is no fourth option. That exhaustive little table <em>is</em> the proof.</p>
+<h2 id="readme-7-what-are-these-things-called-now-that-the-idea-is-yours">7. What are these things called, now that the idea is yours?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every piece of the story has an engineer's name. The
+names arrive here one at a time, each right after the thing it names has
+happened to Ana, Ben, Cara, Dev or Elle.</p>
+</blockquote>
+<h3 id="readme-what-is-one-of-the-copies-called">What is one of the copies called?</h3>
+<p>Ana's note is one copy of the departure time. Engineers call one copy a
+<strong>replica</strong>: a machine holding a full copy of a given piece of data.</p>
+<p>Notice the phrase &quot;a given piece of data&quot;. A replica is per-key, not
+per-cluster. In a 100-machine cluster, each key typically lives on 3 of them.
+The word exists to separate &quot;a machine&quot; from &quot;a copy of this particular
+thing&quot;. The same machine is a replica for some keys and irrelevant for others.</p>
+<p>In this lab's code, the replicas of key <code>k</code> are called <code>n0</code>, <code>n1</code> and <code>n2</code>.
+Read them as Ana, Ben and Cara.</p>
+<p>Which machines hold which keys is the placement problem you solved in
+<a href="../35-consistent-hashing/notes.html#readme">consistent-hashing</a>. &quot;The next N nodes clockwise&quot;
+<em>is</em> the replica set.</p>
+<h3 id="readme-how-many-copies-are-there-and-who-decides">How many copies are there, and who decides?</h3>
+<p>Three friends keep a note. That count is the <strong>replication factor</strong>, written
+<code>N</code>: the number of replicas per key.</p>
+<p>It is chosen once per keyspace, not per request. That makes it different from
+the other two numbers. N is a property of the <em>data</em>. R and W, which come
+next, are properties of each individual <em>request</em>.</p>
+<p>In this lab, <code>N = 3</code>. Cassandra writes it as <code>replication_factor: 3</code>.</p>
+<h3 id="readme-how-many-must-dev-tell-and-how-many-must-elle-ask">How many must Dev tell, and how many must Elle ask?</h3>
+<p>How many friends Dev insists on telling is <code>W</code>. How many friends Elle insists
+on hearing from is <code>R</code>.</p>
+<p>Precisely: W is the number of replica acknowledgements the system needs
+before it reports a write successful. R is the number of replica responses
+it needs before it answers a read. Both are chosen <strong>per request</strong>. That is
+the point. The same data can be read cheaply in one code path and carefully
+in another.</p>
+<p>Why two separate words? Because they buy different things. W buys durability
+and costs write availability. R buys freshness and costs read availability.
+Only their <em>sum</em>, compared with N, decides the overlap.</p>
+<p>The lab's default is <code>W=2, R=2, N=3</code>. Cassandra spells this <code>QUORUM</code>.</p>
+<h3 id="readme-who-does-dev-actually-phone">Who does Dev actually phone?</h3>
+<p>In the real system Dev does not dial Ana, Ben and Cara himself. He rings one
+machine, whichever one happens to answer. That machine forwards the change to
+the replicas, counts who says &quot;got it&quot;, and reports back to Dev. Engineers
+call it the <strong>coordinator</strong>.</p>
+<p>In a leaderless system the coordinator is <em>any</em> node, and it is a different
+one on every request. The word exists to distinguish it from a <strong>leader</strong>. A
+leader is elected and has authority. A coordinator is just whoever picked up
+the phone, and it has none.</p>
+<p>Compare the coordinator in <a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a>. That one
+had authority, and its death blocked everyone. This one has none, so its
+death costs one retry.</p>
+<h3 id="readme-why-does-quorum-mean-two-different-things">Why does &quot;quorum&quot; mean two different things?</h3>
+<p>This is the important entry. In <a href="../39-paxos/notes.html#readme">paxos</a>, a quorum was a
+<strong>majority</strong>, used so that a group of machines could <strong>agree</strong>. Here, a
+quorum is any R or W with <code>R + W &gt; N</code>, used so that a reader and a writer
+<strong>overlap</strong>. Read the table down each column, then compare across.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th><strong>Consensus quorum</strong> (what you learned in <a href="../39-paxos/notes.html#readme">paxos</a>)</th>
+  <th><strong>Read/write quorum</strong> (this lab)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>What it is</td>
+  <td>a <strong>majority</strong> of the nodes</td>
+  <td>any R or W nodes with <code>R + W &gt; N</code></td>
+</tr>
+<tr>
+  <td>What it is for</td>
+  <td>making nodes <strong>agree</strong> on one value and one order</td>
+  <td>making a reader and a writer <strong>overlap</strong></td>
+</tr>
+<tr>
+  <td>Guarantees</td>
+  <td>one decision, globally ordered, never contradicted</td>
+  <td>your read sees the last successful write's value</td>
+</tr>
+<tr>
+  <td>Does NOT guarantee</td>
+  <td>—</td>
+  <td>any ordering between concurrent writes, or that two clients agree on what happened</td>
+</tr>
+<tr>
+  <td>Costs</td>
+  <td>a round of messages per decision, a leader in practice</td>
+  <td>one round, no leader, no agreement at all</td>
+</tr>
+<tr>
+  <td>Where you meet it</td>
+  <td>etcd, ZooKeeper, Raft, Kafka's controller</td>
+  <td>Cassandra, DynamoDB, Riak, Kafka's <code>acks</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The sentence to remember: <em>a consensus quorum decides; a read/write quorum
+merely intersects.</em> Overlap tells you a reader will <em>see</em> a value. It says
+nothing about two writers agreeing which of them won. Section 10 shows that
+gap opening up.</p>
+<p>Why do people confuse them? Because <code>R=2, W=2, N=3</code> and &quot;a majority of 3&quot;
+are both &quot;2 of 3&quot;. At <code>R=3, W=1, N=3</code> they are obviously not the same thing,
+and the overlap rule still holds.</p>
+<h3 id="readme-what-happens-when-elle-notices-ben-is-wrong">What happens when Elle notices Ben is wrong?</h3>
+<p>Elle asks Ana and Ben. Ana says 3pm, Ben says 2pm. Elle now knows Ben is
+behind, so she tells him on the spot. Engineers call this <strong>read repair</strong>:
+when a read finds replicas holding different versions, the coordinator pushes
+the winning version back to the ones that were behind.</p>
+<p>The name says <em>when</em> the fix happens. During a read, paid for by a client
+request, and therefore only for data somebody reads. Section 10.5 puts a
+number on it: after a replica misses 200 keys, reading half of them repairs
+exactly 100.</p>
+<h3 id="readme-who-fixes-the-notes-nobody-asks-about">Who fixes the notes nobody asks about?</h3>
+<p>Some trips are never asked about. Ben's note about one of them stays wrong
+for months. The only cure is for the friends to sit down over coffee and
+compare all their notes. Engineers call that background job <strong>anti-entropy</strong>.</p>
+<p>Replicas periodically exchange compact summaries (Merkle trees in Cassandra
+and Riak) and stream across only what differs. Why does it exist as well as
+read repair? Because read repair cannot fix what nobody reads. And the keys
+nobody reads are exactly the ones whose staleness you find out about at the
+worst moment.</p>
+<h3 id="readme-what-if-dev-leaves-a-message-with-a-neighbour">What if Dev leaves a message with a neighbour?</h3>
+<p>Dev cannot reach Ben or Cara, so he leaves the new time with Ben's neighbour
+and asks her to pass it on. Two engineer's words describe this.</p>
+<p>A <strong>sloppy quorum</strong> counts acknowledgements from nodes outside the key's
+replica set, so the write can succeed during a partition. <strong>Hinted handoff</strong>
+is the neighbour's job: those nodes hold the value as a &quot;hint&quot; and deliver it
+to the real replica when it returns.</p>
+<p>&quot;Sloppy&quot; is a warning label. It is not a quorum. The write set is no longer a
+subset of the replicas a read will ask. So <code>R + W &gt; N</code> becomes arithmetic
+about a set the write never touched. Section 10.4 shows the result: 300 of
+300 writes accepted during a partition, and only 200 of 300 visible to a
+strict read afterwards.</p>
+<h3 id="readme-how-do-you-tell-newer-from-at-the-same-time">How do you tell &quot;newer&quot; from &quot;at the same time&quot;?</h3>
+<p>Suppose Dev and a second organiser both change the time within the same
+minute, and neither heard the other. Neither change is &quot;newer&quot;. They are
+simultaneous, and a single timestamp cannot say that.</p>
+<p>A <strong>version vector</strong> keeps one counter per writer. If one vector contains the
+other, there is a real ordering. If neither contains the other, the writes
+are <strong>concurrent</strong>, and both values are kept as <strong>siblings</strong> for the
+application to merge. <strong>Last-write-wins</strong> skips all this and keeps whichever
+value carries the higher timestamp.</p>
+<p>Why do these words exist? Because a single counter or a timestamp cannot
+express &quot;no ordering exists&quot;. Last-write-wins does not detect conflicts. It
+<em>conceals</em> them by always producing an answer.</p>
+<p>Concretely, using the names the lab's simulator gives its two writers: Ana
+writes with the vector <code>{ana:1}</code> and Ben writes with <code>{ben:1}</code>. Neither
+contains the other, so both survive. Section 10.2 counts it over 1000
+concurrent pairs: last-write-wins silently discarded 1000 writes, and version
+vectors discarded 0.</p>
+<p>The expected-version check in <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a> solved the
+same problem by <em>refusing</em> the second write. Here nobody is in a position to
+refuse, so the conflict is preserved instead.</p>
+<h3 id="readme-what-if-one-friend-is-in-charge">What if one friend is in charge?</h3>
+<p>There is another way to run the trip. Ana takes every change, and Ben and
+Cara copy from her. Engineers call Ana the <strong>leader</strong> and the others
+<strong>followers</strong>. How far behind Ana they run is the <strong>replication lag</strong>.</p>
+<p>In single-leader replication all writes go to the leader, and followers
+apply its change stream. Lag is the backlog of not-yet-applied changes,
+measured in entries, bytes or seconds.</p>
+<p>These words separate this whole family from the leaderless one above. Both
+families answer the same question, &quot;how many copies must have it before I
+say yes?&quot;, with completely different machinery. Section 10.7 shows the shape:
+when the leader accepts 2 writes for every 1 the follower applies, the
+backlog after 300 rounds is 300 and growing.</p>
+<h2 id="readme-8-what-two-pictures-should-you-carry">8. What two pictures should you carry?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Keep the three friends for intuition and the coordinator
+diagram for precision. Then learn the five places where the friends picture
+lies to you.</p>
+</blockquote>
+<h3 id="readme-the-simple-picture-the-three-friends">The simple picture: the three friends</h3>
+<p>Ana, Ben and Cara each keep a note. You tell some of them and ask some of
+them. If the two groups are big enough to be forced to share a person, the
+answer you get is current.</p>
+<h3 id="readme-the-engineers-picture-a-coordinator-and-a-replica-set">The engineer's picture: a coordinator and a replica set</h3>
+<p>Read the diagram top to bottom. Dev's request comes in at the top, fans out
+to all three replicas, and the answer goes back once enough replies have
+arrived.</p>
+<pre class="mermaid">flowchart TD
+    CL[&quot;client&lt;br&gt;carries the version&lt;br&gt;it last read&quot;]
+    CO[&quot;coordinator&lt;br&gt;any node; no authority&lt;br&gt;counts replies&quot;]
+    subgraph RS[&quot;replica set for this key, N = 3&quot;]
+      direction LR
+      R0[&quot;n0 (Ana)&lt;br&gt;value + version&quot;]
+      R1[&quot;n1 (Ben)&lt;br&gt;value + version&quot;]
+      R2[&quot;n2 (Cara)&lt;br&gt;value + version&quot;]
+    end
+    CL -- &quot;put / get&quot; --&gt; CO
+    CO -- &quot;send to all N&quot; --&gt; R0
+    CO --&gt; R1
+    CO --&gt; R2
+    R0 -. &quot;reply&quot; .-&gt; CO
+    R1 -. &quot;reply&quot; .-&gt; CO
+    R2 -. &quot;reply&quot; .-&gt; CO
+    CO -- &quot;answer after W acks&lt;br&gt;or R replies&quot; --&gt; CL
+</pre>
+<p>The two things this picture is trying to make obvious:</p>
+<ol>
+<li><strong>The coordinator sends to all N and waits for only W (or R).</strong> The gap
+between &quot;sent to&quot; and &quot;waited for&quot; is where most of this lab's surprises
+live.</li>
+<li><strong>Nothing in the middle decides anything.</strong> There is no agreement step,
+no commit point, no leader. The correctness comes entirely from set
+arithmetic.</li>
+</ol>
+<h3 id="readme-how-do-the-two-pictures-line-up">How do the two pictures line up?</h3>
+<p>The three numbers first, then the mechanisms.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Three friends</th>
+  <th>Engineering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a friend with a note</td>
+  <td>a replica</td>
+</tr>
+<tr>
+  <td>how many friends have notes</td>
+  <td>replication factor N</td>
+</tr>
+<tr>
+  <td>how many Dev tells</td>
+  <td>W</td>
+</tr>
+<tr>
+  <td>how many Elle asks</td>
+  <td>R</td>
+</tr>
+<tr>
+  <td>the friend in both groups</td>
+  <td>the intersection that carries the newest value</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Three friends</th>
+  <th>Engineering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>&quot;I heard it from Ana&quot;</td>
+  <td>version vector: where a value came from</td>
+</tr>
+<tr>
+  <td>Dev and a second organiser both changing the time</td>
+  <td>concurrent writes</td>
+</tr>
+<tr>
+  <td>leaving word with a neighbour</td>
+  <td>hinted handoff</td>
+</tr>
+<tr>
+  <td>the friends comparing notes over coffee</td>
+  <td>anti-entropy</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-the-story-lie-to-you">Where does the story lie to you?</h3>
+<p>Five places, and each one matters.</p>
+<ol>
+<li><strong>Friends do not half-hear you.</strong> A write that the coordinator reports as
+<em>failed</em> may still have reached some replicas, and there is no rollback.
+Section 10.1 puts the figure at 100%.</li>
+<li><strong>Two people cannot change the time at the exact same instant, but two
+clients can.</strong> When they do, no &quot;later&quot; exists. The overlap rule is silent
+about who wins; it only guarantees you will <em>see</em> something.</li>
+<li><strong>A friend cannot be replaced by a new friend with an empty notebook, and
+a replica can.</strong> A rebuilt or restored replica answers confidently with
+nothing, and it can make up a perfectly valid R.</li>
+<li><strong>Friends who agree to compare notes actually do it.</strong> Replicas only
+converge if something makes them: a read that touches them, or a scheduled
+background comparison that somebody remembered to run.</li>
+<li><strong>Most importantly: the friends are not voting.</strong> No decision is being
+made and no majority is being formed. This is the difference from
+<a href="../39-paxos/notes.html#readme">paxos</a>, and it is why this design cannot give you the ordering
+guarantees consensus does.</li>
+</ol>
+<h2 id="readme-9-where-can-you-move-the-sliders-yourself">9. Where can you move the sliders yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Open the simulator, set the three numbers, and watch a
+write land on some columns and a read touch others. The column that turns
+violet is the whole guarantee.</p>
+</blockquote>
+<p>Open <strong><a href="https://claude.ai/code/artifact/d1e569b2-2338-4c35-9ad0-81417b750086" target="_blank" rel="noopener">https://claude.ai/code/artifact/d1e569b2-2338-4c35-9ad0-81417b750086</a></strong>,
+or <a href="visualization.html"><code>visualization.html</code></a> in this folder, which works
+offline.</p>
+<p>The layout is the diagram from section 8 turned into an instrument. There is
+a <strong>write-set band</strong> across the top, the replicas as columns, and a
+<strong>read-set band</strong> across the bottom. Replicas in the write set turn blue.
+Replicas in the read set turn magenta. Replicas in <strong>both</strong> turn violet. The
+colour is literally the blend, because that overlap is the whole guarantee.</p>
+<p>One naming note before you press anything. The page's two write buttons are
+labelled <strong>Ana writes</strong> and <strong>Ben writes</strong>. On the page, Ana and Ben are the
+two people pressing the button, not two of the note-holders. Section 10.2
+uses the same two names for the same reason.</p>
+<p><strong>Four things to do, in order.</strong> Each is a part of the mechanism in section
+10:</p>
+<ol>
+<li>Leave it at N=3, W=2, R=2. Press <strong>Ana writes</strong>, then <strong>Step</strong> repeatedly.
+Watch the acknowledgement count climb and note the exact step where the
+client is told &quot;success&quot;. Then notice the remaining replicas still get
+written to afterwards. Press <strong>Read</strong> and find the violet column.</li>
+<li>Drag <strong>W</strong> and <strong>R</strong> to 1. The banner at the top flips from green to red
+and tells you why. Kill a replica (double-click it), write, revive it, and
+read. Use <strong>asks first</strong> to point the read at the replica that missed the
+write.</li>
+<li>Press <strong>Ben writes</strong> straight after <strong>Ana writes</strong>, then read. Two values
+come back. Switch <strong>Conflicts</strong> to <em>newest timestamp wins</em> and repeat: one
+value comes back and the other is gone with no record.</li>
+<li>Turn <strong>Sloppy quorum</strong> on, <strong>Cut the network</strong>, write, heal, read. The
+arithmetic at the top still says <code>R + W &gt; N</code>, and the read is stale
+anyway. That is section 10.4, and it is the most important thing on the
+page.</li>
+</ol>
+<p>Each of the four cards at the bottom asks you to <strong>commit to a prediction</strong>
+before it runs. Answer first.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-you-now-have-the-beginner-model">✅ Checkpoint: you now have the beginner model</h3>
+<p>You can explain why copies disagree, derive <code>R + W &gt; N</code> from counting
+alone, and say what each of the three numbers costs you.</p>
+<p><strong>Say it back.</strong> Without using the words <em>quorum</em>, <em>replica</em> or <em>overlap</em>,
+explain to a friend why Dev telling two people and Elle asking two people is
+enough, when there are only three friends.</p>
+<details><summary>A good answer sounds like</summary>
+"There are only three people. Dev's two and Elle's two would need four
+different people to avoid each other, and there aren't four. So at least
+one person is in both groups, and that person heard the new time from Dev."
+</details>
+
+<p>Next: the same idea operation by operation, and the five situations where
+the inequality still holds and the guarantee does not.</p>
+</blockquote>
+<hr />
+<h1 id="readme-intermediate-model">INTERMEDIATE MODEL</h1>
+<h2 id="readme-10-what-does-the-rule-look-like-when-you-run-it-and-when-does-it-stop-applying">10. What does the rule look like when you run it, and when does it stop applying?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> First the counting argument is run four thousand times
+to check that it holds. Then, one at a time, five things happen to Ana, Ben
+and Cara that the counting never mentioned: a half-delivered change, two
+changes at once, a friend who forgot everything, a message left with a
+neighbour, and notes that never get compared.</p>
+</blockquote>
+<h3 id="readme-100-does-the-counting-argument-survive-a-real-run">10.0 Does the counting argument survive a real run?</h3>
+<p>Section 6 argued the overlap rule by counting. Here it is run. Each round of
+the experiment fails each replica independently with 20% probability,
+attempts one write, then does one read from a rotating coordinator. A <strong>stale
+read</strong> is a read that succeeded and returned something older than the newest
+write the client had been <em>told</em> succeeded. Read repair is off, so the raw
+property is what the experiment sees.</p>
+<p>In the story: every round, each of Ana, Ben and Cara has a one-in-five chance
+of not answering. Dev tries to change the time. Then Elle asks. A stale read
+is Elle hearing an old time after Dev was told his change went through.</p>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java overlap
+</code></pre></div>
+<div class="code"><pre><code>N = 3
+   R    W   R+W&gt;N   writes ok   reads ok   STALE READS
+   1    1   false       99.2%      99.2%     784  &lt;-- lost the guarantee
+   2    1   false       99.2%      89.4%     119  &lt;-- lost the guarantee
+   3    1   true        99.2%      50.3%       0
+   1    2   false       89.6%      99.2%     558  &lt;-- lost the guarantee
+   2    2   true        89.6%      89.4%       0
+   3    2   true        89.6%      50.3%       0
+   1    3   true        51.2%      99.2%       0
+   2    3   true        51.2%      89.4%       0
+   3    3   true        51.2%      50.3%       0
+</code></pre></div>
+<p>Three things to read out of that table, in order.</p>
+<p><strong>The boundary is exact.</strong> Every row where <code>R + W &gt; N</code> has <em>zero</em> stale reads
+in 4,000 rounds. Every row where it does not has some. There is no gradient
+at the boundary. The guarantee is on or off.</p>
+<p><strong>&quot;Nearly enough&quot; is a trap, not a compromise.</strong> Look at <code>R=2, W=1</code>: 119
+stale reads out of 4,000, about 3%. That configuration is fast, highly
+available, and correct 97% of the time. That is exactly why it ships. The 3%
+is not a performance problem. It is a correctness problem that will be
+reported as &quot;the site sometimes shows old data&quot;, and it will never appear on
+a developer's laptop.</p>
+<p><strong>The availability columns are the price list.</strong> Read down them. Every step
+toward the guarantee is paid for in availability. The table lets you pick the
+cheapest configuration that still crosses the line. That is why <code>R=W=2</code> at
+<code>N=3</code> is the near-universal default rather than <code>R=W=3</code>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Setting</th>
+  <th>Success rate</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>W=1</code></td>
+  <td>writes succeed 99.2% of the time</td>
+  <td>Dev only needs one friend to answer</td>
+</tr>
+<tr>
+  <td><code>W=3</code></td>
+  <td>writes succeed 51.2% of the time</td>
+  <td>Dev needs all three, and each is away one time in five</td>
+</tr>
+<tr>
+  <td><code>R=1</code></td>
+  <td>reads succeed 99.2% of the time</td>
+  <td>Elle only needs one friend to answer</td>
+</tr>
+<tr>
+  <td><code>R=3</code></td>
+  <td>reads succeed 50.3% of the time</td>
+  <td>Elle needs all three</td>
+</tr>
+</tbody>
+</table></div>
+<p>The <code>N=5</code> half of the same output shows the boundary again with more room to
+manoeuvre. It also shows why bigger N is usually the better answer than
+bigger R and W:</p>
+<div class="code"><pre><code>   R    W   R+W&gt;N   writes ok   reads ok   STALE READS
+   2    2   false       99.5%      99.4%     126  &lt;-- lost the guarantee
+   3    3   true        94.4%      94.0%       0
+   1    5   true        33.9%     100.0%       0
+   5    1   true       100.0%      32.3%       0
+</code></pre></div>
+<p><code>R=3, W=3</code> at <code>N=5</code> gives the same guarantee as <code>R=2, W=2</code> at <code>N=3</code>, while
+tolerating two dead replicas instead of one.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> at <code>N=3, W=2, R=2</code> a write succeeds. Immediately
+afterwards, a <em>different</em> replica dies: one that had acknowledged the write.
+Is the next read still guaranteed to see it?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Yes, but only just, and only because of what R does when it cannot be
+met.</strong> Two replicas had it. One is now dead. So one live replica has it and
+one live replica does not. A read of R=2 must ask both survivors, so it
+reaches the one that has it.</p>
+<p>If you said no, because &quot;one of the two copies is gone&quot;, you counted copies
+instead of counting who Elle must ask. She must ask both survivors, and one
+of them still has the new time.</p>
+<p>Now kill a second replica. Only one is alive, so an R=2 read <strong>cannot be
+answered at all</strong>. This is the good outcome. The system refuses rather than
+answering from the single reachable replica, which might be the one that
+missed the write. Refusing is how it keeps the promise. Availability is what
+you gave up in exchange. It is the same <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> trade
+you have seen before, here with a dial rather than a switch.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-101-can-a-write-fail-and-still-happen">10.1 Can a write fail and still happen?</h3>
+<p>The rule is about <em>successful</em> writes. What about the others?</p>
+<p>Dev's change needs all three friends to say &quot;got it&quot;, so W is 3. Cara is
+slow. She writes 3pm on her note, but her &quot;got it&quot; arrives after the
+coordinator has given up waiting. Dev is told the write <strong>failed</strong>.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> the client got an error. Is the value in the database?</p>
+<details><summary>Reveal</summary>
+
+<p>Yes. <code>java src/Experiments.java partial</code>:</p>
+<div class="code"><pre><code>failed writes that are readable afterwards: 500 / 500  (100%)
+</code></pre></div>
+<p>Every single one. If you said no, because the system said &quot;failed&quot;, you are
+trusting that word to mean &quot;undone&quot;. It only means &quot;not enough
+confirmations arrived&quot;.</p>
+<p>There is no rollback in this design, and there cannot be. The coordinator
+does not know which replicas eventually applied the write, and there is no
+transaction to undo. <strong>&quot;Write failed&quot; means &quot;not enough replicas confirmed&quot;,
+never &quot;nothing happened&quot;.</strong></p>
+<p>The consequences are practical and constant:</p>
+<ul>
+<li>A client that retries after an error may be retrying something that
+already succeeded, so <strong>every write must be idempotent</strong>. It is the same
+discipline as the idempotent consumer in
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>.</li>
+<li>A failed write may become visible later, so &quot;I got an error, therefore
+the old value is still there&quot; is false.</li>
+<li>A read-modify-write built on a failed write is building on sand.</details>
+
+</li>
+</ul>
+</blockquote>
+<h3 id="readme-102-what-happens-when-two-people-write-at-the-same-instant">10.2 What happens when two people write at the same instant?</h3>
+<p>The overlap rule guarantees a reader <em>sees</em> the latest successful write. Now
+have two clients write at the same time, both having read the same earlier
+state.</p>
+<p>In the story, Dev and a second organiser both change the shopping list within
+the same second, and neither heard the other. The simulator and the
+experiment name the two writers Ana and Ben (the two buttons from section 9),
+so those are the names below.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <code>R + W &gt; N</code> holds. Ana writes &quot;book&quot;, Ben writes &quot;milk&quot;,
+both without seeing the other. What should a read return?</p>
+<details><summary>Reveal</summary>
+
+<p>The overlap rule has nothing to say here, and that is the point. It
+guarantees the read set touches the write set. But <em>both</em> writes reached
+overlapping sets, and neither is &quot;the latest&quot; in any meaningful sense.</p>
+<p>If you said &quot;whichever came second&quot;, ask: second by whose clock? There is
+no clock either of them shares, and no ordering exists to discover.</p>
+<p>There are only two honest options, and <code>java src/Experiments.java concurrent</code> counts both over 1,000 pairs:</p>
+<div class="code"><pre><code>last-write-wins   conflicts surfaced to the app:    0   updates silently discarded: 1000
+version vectors   conflicts surfaced to the app: 1000   updates silently discarded:    0
+</code></pre></div>
+</details>
+
+</blockquote>
+<p><strong>Last-write-wins</strong> compares timestamps and keeps the higher one. It requires
+no application code and always converges. It also destroys one of every pair
+of concurrent writes, with no record that they existed. For a &quot;last seen at&quot;
+field that is perfectly fine. For a shopping cart it means a customer's item
+silently vanishes.</p>
+<p><strong>Version vectors</strong> keep one counter per writer, so &quot;newer&quot; and &quot;concurrent&quot;
+are different answers. Concurrent values are returned together as
+<strong>siblings</strong>, and the application merges them. A cart merges by union, a
+counter by addition, a document by whatever its own rules are. Nothing is
+lost. The price is that the application must be written to expect it.</p>
+<p>The version-vector rule is the load-bearing code in <code>Node.write</code>. Read the
+three cases as three answers to &quot;is this newer than what I already hold?&quot;:</p>
+<div class="code"><pre><code class="language-java">switch (v.vv().compare(incoming.vv())) {
+    case AFTER, EQUAL -&gt; { next.add(v); dominated = true; }  // we already have this or better
+    case BEFORE       -&gt; { }                                 // superseded: drop it
+    case CONCURRENT   -&gt; next.add(v);                        // a real conflict: keep both
+}
+</code></pre></div>
+<h4 id="readme-why-is-your-clock-your-conflict-resolver">Why is your clock your conflict resolver?</h4>
+<p>If you chose last-write-wins, the timestamp is not an implementation detail.
+<strong>It is the algorithm.</strong> <code>java src/Experiments.java clockskew</code> puts one
+node's clock 60 seconds fast:</p>
+<div class="code"><pre><code>genuinely-newer writes thrown away: 1000 / 1000
+</code></pre></div>
+<p>In the story: Cara's watch runs a minute fast. Every change that passes
+through Cara gets a later stamp than it deserves, so it beats a genuinely
+newer change stamped by Ana. Every race that node enters, it wins, for as
+long as its clock is ahead. The database reports success throughout. A single
+host with broken NTP becomes a silent data-destruction machine.</p>
+<p>This is why Cassandra lets the <em>client</em> supply the write timestamp when it
+has a better source of ordering. It is the strongest single argument for
+version vectors.</p>
+<blockquote>
+<h3 id="readme--a-bug-this-lab-actually-hit-and-what-it-teaches">🐛 A bug this lab actually hit, and what it teaches</h3>
+<p>The first version of the <code>overlap</code> experiment reported stale reads for
+<em>every</em> configuration, including the ones that cannot have them. The cause:
+it passed an <strong>empty version context</strong> to every write. So every write was
+<code>{cli:1}</code>: identical, and therefore <code>EQUAL</code> to the previous one.
+<code>Node.write</code> correctly treated each new write as one it already had and
+<strong>ignored it</strong>.</p>
+<p>The count was wrong, but the bug is the real lesson. In a version-vector
+store, <strong>a client that writes without carrying forward the version it read
+is not writing &quot;the newest value&quot;. It is writing something the database
+cannot distinguish from a stale retry.</strong> Read-before-write is not a
+performance quirk of Dynamo-style stores. It is how a write acquires its
+place in the order.</p>
+</blockquote>
+<h3 id="readme-103-what-if-a-friend-forgot-everything">10.3 What if a friend forgot everything?</h3>
+<p><code>R + W &gt; N</code> assumes something the arithmetic never states: that the N
+replicas are <strong>the same N replicas</strong>, and that a replica that once had the
+value still has it.</p>
+<p>In the story: Ben loses his notebook and buys a blank one. Cara does the same.
+Elle asks Ben and Cara, R=2 is satisfied, and both say &quot;no idea&quot;. Ana still
+has 3pm, but nobody asked her.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> two of the three replicas have been rebuilt from empty
+disks. Elle's read, with R=2, reaches exactly those two. Does the read fail,
+or does it succeed?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>It succeeds, and it returns nothing.</strong> If you said it fails, you are
+assuming an empty replica refuses to answer. It does not. &quot;I have nothing&quot;
+is an answer, and R counts answers.</p>
+<div class="code"><pre><code>PASS  empty replicas: the read succeeds -- R responses arrived
+PASS  empty replicas: and returns NOTHING, though R + W &gt; N
+</code></pre></div>
+</details>
+
+</blockquote>
+<p>Restore a replica from a two-day-old backup, or rebuild it from an empty disk
+after a hardware swap, and it answers confidently with old data or none at
+all. Two such replicas can satisfy an R=2 read between them.</p>
+<p>The write is not gone. The third replica still has it. But the read never
+asked it, because R was already satisfied. <strong>The overlap argument counts
+replicas, not copies of the data.</strong> A replica that has been reset is a
+replica that lies by omission.</p>
+<p>In production this is why replacing a node is a <em>streaming</em> operation with
+its own state machine. Cassandra calls it <strong>bootstrapping</strong>: a joining
+replica copies its share of the data in before it is allowed to answer reads.
+It is also why &quot;just restore the box from backup and put it back in the ring&quot;
+is a genuinely dangerous instruction.</p>
+<h3 id="readme-104-what-is-a-sloppy-quorum-and-why-is-it-not-a-quorum">10.4 What is a sloppy quorum, and why is it not a quorum?</h3>
+<p>Now the failure that matters most, because it is a <em>feature</em> people enable on
+purpose without reading the small print.</p>
+<p>A partition cuts the coordinator off from two of the three replicas that own
+the key. In the story, Dev can reach Ana but not Ben or Cara. Under the
+strict rule, W=2 cannot be met and the write is refused. That is correct, and
+it is also an outage.</p>
+<p>So Dynamo-style systems offer an escape: accept acknowledgements from <strong>any</strong>
+reachable node, not just the ones that own the key. Dev leaves the new time
+with Ben's neighbour. The write succeeds. The extra nodes hold the value as a
+<em>hint</em> and pass it on later.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <code>N=3, R=2, W=2</code>, so <code>R + W &gt; N</code> still holds, and the write
+was acknowledged by two nodes. Is it guaranteed visible to the next strict
+read?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>No, and the arithmetic was never the guarantee.</strong> If you said yes because
+the numbers still add up, that is precisely the trap. <code>R + W &gt; N</code> is a
+statement about two sets being forced to intersect. A sloppy quorum collects
+its acknowledgements from <em>outside</em> the set a read will ask, so there is
+nothing for the read set to intersect with. Elle asks Ben and Cara; the
+neighbour is not on her list. <code>java src/Experiments.java sloppy</code>:</p>
+<div class="code"><pre><code>hinted handoff OFF :  writes accepted 300/300   visible to a strict read afterwards 200/300
+hinted handoff ON  :  writes accepted 300/300   visible to a strict read afterwards 300/300
+</code></pre></div>
+<p>A third of the writes are invisible until the hints are delivered. <strong>A
+sloppy quorum is not a quorum.</strong> It is an eventually-consistent write
+wearing a quorum's clothes. During that window you have a different
+database than the one you configured.</p>
+</details>
+
+</blockquote>
+<p>Hinted handoff repairs it, and it is worth being precise about. The hint sits
+on a node that does not own the key, and that node <strong>may itself die while
+holding the only recent copy</strong>. Hinted handoff is a best-effort mechanism,
+not a durability one. That is why it is paired with anti-entropy rather than
+trusted alone.</p>
+<h3 id="readme-105-why-does-nothing-converge-on-its-own">10.5 Why does nothing converge on its own?</h3>
+<p>A replica that was down during a write comes back holding stale data.
+Nothing in the protocol has told it so, and nothing will, unless one of two
+mechanisms runs.</p>
+<p>In the story: Cara was away for two hundred changes. She comes back with two
+hundred old notes and nobody says a word.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Cara missed 200 keys. Elle then reads 100 of them, the
+popular half. How many of the 200 does Cara end up holding?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>100, and exactly those 100.</strong> If you said 200, you assumed a read repairs
+the replica. It repairs the key that was read, and nothing else.</p>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java repair
+</code></pre></div>
+<div class="code"><pre><code>straight after it returns, n2 holds 0 of 200 keys
+after reading the hot half, n2 holds 100 of 200  (read repair fixed 100)
+after a background comparison sweep, n2 holds 200 of 200
+</code></pre></div>
+</details>
+
+</blockquote>
+<p><strong>Read repair</strong> fixes exactly what somebody reads: a hundred of two hundred
+keys, because a hundred were read. It is free, because it rides on requests
+you were already serving. It is also proportional to traffic. That means the
+keys most likely to be stale are the ones nobody looks at.</p>
+<p><strong>Anti-entropy</strong> is the background comparison that fixes the rest. Real
+systems do it with Merkle trees so replicas can find their differences
+without shipping everything. It is the process people forget to schedule
+until an incident teaches them. In Cassandra it has a name and a deadline:
+repair must complete within <code>gc_grace_seconds</code>, or deleted data can come back
+to life.</p>
+<h3 id="readme-106-what-does-the-family-with-a-leader-do-differently">10.6 What does the family with a leader do differently?</h3>
+<p>Everything so far has been <strong>leaderless</strong>: any node coordinates, no node has
+authority. The other family puts one node in charge and has the rest copy it.
+In the story, Ana takes every change and Ben and Cara copy from her.</p>
+<p>The interesting question is identical. <em>How many copies must have it before I
+say yes?</em> Here it has a name: the <strong>replication mode</strong>.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> in fully synchronous mode (&quot;wait for all live followers&quot;),
+both followers are unreachable. How many of 100 writes are refused?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>None.</strong> If you said all 100, you read &quot;synchronous&quot; as &quot;safe&quot;. It is only
+as safe as the number of followers it happens to have. <code>java src/Experiments.java leader</code>:</p>
+<div class="code"><pre><code>  mode         acked   lost on failover   refused 1 down   refused 2 down   refused 2 down + floor
+  ASYNC         100                100                0                0                    100
+  SEMI_SYNC     100                  0                0              100                    100
+  SYNC          100                  0                0                0                    100
+</code></pre></div>
+<p>&quot;Wait for all <em>live</em> followers&quot; quietly becomes &quot;wait for nobody&quot; at
+precisely the moment there is nobody left to wait for. Ana, alone, waits
+for no one and says &quot;done&quot;. The setting chosen for safety degrades into the
+least safe one exactly when safety matters, and reports success throughout.</p>
+<p>The last column is the fix: a <strong>floor</strong> on how many replicas must be in
+sync before a write is permitted at all. Kafka spells it
+<code>min.insync.replicas</code>. This is the reason <code>acks=all</code> on its own is not a
+durability setting. It is only a durability setting <em>with</em> the floor.</p>
+</details>
+
+</blockquote>
+<p>Read the three rows as three products:</p>
+<ul>
+<li><strong>Async</strong> never refuses a write and loses whatever had not been copied when
+the leader died: 100 acknowledged writes, gone. That column is not a
+failover bug. It is the bill for saying &quot;done&quot; early.</li>
+<li><strong>Sync</strong> loses nothing and stalls behind the slowest follower. It also
+carries the degradation trap above.</li>
+<li><strong>Semi-sync with a floor</strong>, meaning wait for one follower and refuse if
+fewer than two replicas are in sync, is what most people should actually
+run. It is roughly what <code>W=2, N=3</code> gives you in the leaderless world.</li>
+</ul>
+<p><strong>The equivalence worth carrying:</strong> <code>W</code> in a leaderless store and the
+acknowledgement count in a leader-based one are the same knob. <code>acks=all</code>
+with <code>min.insync.replicas=2</code> on a 3-replica Kafka topic <em>is</em> <code>W=2, N=3</code>.</p>
+<h3 id="readme-107-why-is-replication-lag-a-queue-not-a-number">10.7 Why is replication lag a queue, not a number?</h3>
+<p>The last piece of the leader-based family. Ana takes changes at one rate; Ben
+copies them at another. <code>java src/Experiments.java lag</code>:</p>
+<div class="code"><pre><code>  writes in   applied out   final backlog   user cannot see own change
+          1             3               0            0 / 300
+          1             1               0            0 / 300
+          2             1             300          300 / 300
+          5             1            1200          300 / 300
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Leader writes : follower applies</th>
+  <th>Backlog after 300 rounds</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1 : 3</td>
+  <td>0</td>
+  <td>Ben copies faster than Ana writes; lag hovers near zero</td>
+</tr>
+<tr>
+  <td>1 : 1</td>
+  <td>0</td>
+  <td>just keeping up, and nobody notices anything</td>
+</tr>
+<tr>
+  <td>2 : 1</td>
+  <td>300, and growing</td>
+  <td>every one of 300 users cannot see their own change</td>
+</tr>
+<tr>
+  <td>5 : 1</td>
+  <td>1200, and growing</td>
+  <td>the backlog grows without bound</td>
+</tr>
+</tbody>
+</table></div>
+<p>Lag is not a property you tune. It is the backlog of a queue. While the
+follower's apply rate is at or above the leader's write rate, lag hovers near
+zero and nobody notices. The moment it drops below, because of a big batch
+job, a slow disk, or a schema change holding a lock, <strong>the backlog grows
+without bound</strong>. Every read from that follower is arbitrarily far in the
+past.</p>
+<p>The user-visible symptom is the classic bug report: <em>&quot;I saved my profile and
+it still shows the old name.&quot;</em> Nothing is broken. Every one of those reads is
+a correct read of a correct replica. The fixes are all <strong>routing</strong> rules, not
+storage changes:</p>
+<ul>
+<li><strong>Read-your-own-writes:</strong> route a user's reads to the leader for a few
+seconds after they write, or to a replica known to be caught up.</li>
+<li><strong>Monotonic reads:</strong> pin a user to one replica so they never move
+<em>backwards</em> in time by hopping to a laggier one.</li>
+<li><strong>Consistent prefix:</strong> make sure causally-related writes are not seen out
+of order, which matters most in partitioned or multi-leader setups.</li>
+</ul>
+<p>Those three names describe the three ways a user notices lag. They are worth
+memorising, because they are what a design review will ask you about.</p>
+<h3 id="readme-108-what-does-none-of-this-give-you">10.8 What does none of this give you?</h3>
+<p>Worth stating plainly, because it is the most common overclaim about quorums.</p>
+<p><strong><code>R + W &gt; N</code> does not give you linearizability.</strong> It guarantees a read sees
+the last <em>successful</em> write's value. It does not give a single global order.
+It does not make concurrent writes resolvable. It does not stop a
+failed-but-applied write from appearing later. And it does not stop two
+concurrent reads from seeing different values while a write is in flight:
+one may catch it, one may not, and read repair makes which one wins depend
+on timing.</p>
+<p>If you need &quot;everyone agrees on one order&quot;, you need consensus: the
+<a href="../39-paxos/notes.html#readme">paxos</a> machinery, or Raft, or a single leader with a commit
+quorum. That is a different, more expensive tool. Dynamo-style quorums are
+what you use when you have decided you do not need it.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-you-now-have-the-intermediate-model">✅ Checkpoint: you now have the intermediate model</h3>
+<p>You can walk a write and a read replica by replica, derive and defend
+<code>R + W &gt; N</code>, and name the five situations that suspend it: an unrolled-back
+failed write, concurrent writers, a replica that lost its data, a sloppy
+quorum, and the absence of repair.</p>
+<p><strong>Say it back.</strong> Without using the words <em>sloppy</em>, <em>hint</em> or <em>partition</em>,
+explain why Dev leaving the new time with Ben's neighbour can leave Elle
+wrong, even though &quot;two told plus two asked&quot; still adds up to more than
+three.</p>
+<details><summary>A good answer sounds like</summary>
+"The counting only works if Dev's two and Elle's two are drawn from the
+same three friends. The neighbour is not one of the three. Elle will never
+ask her, so Dev's two and Elle's two can miss each other completely."
+</details>
+
+<p>Next: each of those as a failure you create and watch, and exactly which
+guarantee each one bends.</p>
+</blockquote>
+<hr />
+<h1 id="readme-engineering-model">ENGINEERING MODEL</h1>
+<h2 id="readme-11-what-are-the-ten-ways-it-fails-and-what-survives-each-one">11. What are the ten ways it fails, and what survives each one?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten failures, each a short story about Ana, Ben and Cara.
+Each one says how to cause it, what breaks, what still holds, and what a
+real system does about it. One table at the end lines them all up.</p>
+</blockquote>
+<h3 id="readme-f1-what-if-caras-phone-is-off-when-dev-calls">F1: What if Cara's phone is off when Dev calls?</h3>
+<p>Dev tells Ana and Ben. Cara is unreachable. At <code>W=2, N=3</code> the write still
+succeeds; the dead replica simply misses it. When Cara comes back she holds
+2pm, and nobody tells her.</p>
+<p>To cause it, run <code>java src/Experiments.java overlap</code>, or in the simulator
+double-click a replica and then write.</p>
+<p>The read guarantee survives, because two replicas have the value and any R=2
+read must touch one of them. Nothing is lost yet. But the cluster is now one
+failure away from losing it.</p>
+<p>In production this is the normal state of a large cluster, not an incident.
+Something is always down. It is why anti-entropy is a scheduled job rather
+than an emergency procedure.</p>
+<h3 id="readme-f2-what-if-so-many-friends-are-away-that-dev-or-elle-cannot-reach-enough">F2: What if so many friends are away that Dev or Elle cannot reach enough?</h3>
+<p>Kill two replicas at <code>N=3, R=2, W=2</code>. Only Ana is reachable. Dev needs two
+and Elle needs two, so both reads and writes are <strong>refused</strong>.</p>
+<p>This is the system working correctly. Refusing is how it keeps its promise,
+because answering from the single reachable replica might return a value
+that missed the last write. Correctness survives. Availability is lost,
+completely, for those keys.</p>
+<p>In production this is the <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> choice made per
+request. It is precisely why Cassandra exposes the consistency level per
+query. The same cluster serves <code>ONE</code> for a metrics dashboard and <code>QUORUM</code>
+for a balance, and the dashboard stays up during an outage that stops the
+balance.</p>
+<h3 id="readme-f3-what-if-a-write-fails-and-applies-anyway">F3: What if a write fails and applies anyway?</h3>
+<p>Cara stores Dev's change but confirms too late. The coordinator gives up
+counting before the slow replica replies, and the replica had already stored
+the value. There is no rollback and no transaction.</p>
+<p>To cause it, run <code>java src/Experiments.java partial</code>: 500 of 500 such writes
+are readable afterwards.</p>
+<p>Nothing is corrupted. What is lost is the meaning of the error. &quot;Failed&quot;
+tells you only that confirmation did not arrive.</p>
+<p>In production this is why every write must be idempotent, why retry-on-error
+is safe only for idempotent writes, and why read-modify-write against a
+Dynamo-style store needs a compare-and-set rather than a bare retry.
+Cassandra's lightweight transactions and DynamoDB's conditional writes are
+that compare-and-set.</p>
+<h3 id="readme-f4-what-if-two-people-change-the-plan-at-the-same-moment">F4: What if two people change the plan at the same moment?</h3>
+<p>Dev and a second organiser both write, neither having seen the other. Run
+<code>java src/Experiments.java concurrent</code>, or in the simulator press <strong>Ana
+writes</strong>, then <strong>Ben writes</strong>, then <strong>Read</strong>.</p>
+<p>With version vectors, no write is lost and the conflict is surfaced. With
+last-write-wins, one of every pair is lost, silently: 1000 of 1000 in the
+experiment.</p>
+<p>In production the systems disagree on purpose. Riak returns siblings and
+expects the application to merge. Cassandra is last-write-wins by design and
+pushes you toward data types that cannot conflict (its counters and
+collections, or CRDTs generally). DynamoDB gives you conditional writes so
+you can refuse instead of merging.</p>
+<h3 id="readme-f5-what-if-caras-watch-is-wrong">F5: What if Cara's watch is wrong?</h3>
+<p>Under last-write-wins the timestamp <em>is</em> the resolution rule, so a fast clock
+wins every race. Run <code>java src/Experiments.java clockskew</code>: 1000 of 1000
+newer writes are discarded.</p>
+<p>Convergence survives. Every replica agrees on the wrong value. What is lost
+is the newer write, with no error and no record.</p>
+<p>In production, monitor clock skew as a first-class metric. Prefer
+client-supplied timestamps where the client has a better order. And treat
+&quot;replicas disagree about time&quot; as the reason last-write-wins is a data-model
+decision rather than a configuration one.</p>
+<h3 id="readme-f6-what-if-ben-is-handed-a-blank-notebook">F6: What if Ben is handed a blank notebook?</h3>
+<p>A replica is rebuilt or restored from backup. <code>R + W &gt; N</code> counts replicas,
+not copies of the data, so two reset replicas can satisfy an R=2 read between
+them and return nothing. The test that causes it is
+<code>rebuiltEmptyReplicas_canSatisfyAQuorumWithNothing</code>.</p>
+<p>The data still exists on the third replica; Ana still has 3pm. What is lost
+is the read guarantee, for as long as the reset replicas are in the ring.</p>
+<p>In production a replacement node must <strong>bootstrap</strong>: stream its data in
+before it is allowed to serve reads. Cassandra does this explicitly, and
+<code>auto_bootstrap: false</code> on a replacement node is a well-known way to cause
+exactly this incident.</p>
+<h3 id="readme-f7-what-if-the-network-splits-while-sloppy-quorums-are-on">F7: What if the network splits while sloppy quorums are on?</h3>
+<p>Dev leaves the new time with a neighbour because Ben and Cara are cut off.
+Run <code>java src/Experiments.java sloppy</code>, or in the simulator turn sloppy on,
+cut the network, write, heal, and read.</p>
+<p>Availability survives: 300 of 300 writes accepted. The read guarantee is
+lost for 100 of 300 keys, until hints are delivered.</p>
+<p>In production this is Dynamo's deliberate AP choice. The operational
+consequences are a <strong>hinted handoff queue</strong> you must monitor, and a repair
+job that must complete afterwards. The queue can grow without bound during a
+long partition, and it is <em>not</em> durable: the holder may die.</p>
+<h3 id="readme-f8-what-if-ana-the-leader-dies-before-ben-has-copied-her">F8: What if Ana, the leader, dies before Ben has copied her?</h3>
+<p>Run <code>java src/Experiments.java leader</code>. In async mode, 100 acknowledged
+writes are lost on failover.</p>
+<p>Availability survives throughout. What is lost is acknowledged writes, the
+worst category of loss, because the client was told it succeeded.</p>
+<p>In production this is what <code>synchronous_commit</code> in Postgres, semi-synchronous
+replication in MySQL, and <code>acks</code> in Kafka are all about. The question to ask
+about any system is not &quot;does it replicate?&quot; but <strong>&quot;at what point does it
+say yes?&quot;</strong></p>
+<h3 id="readme-f9-what-if-wait-for-everyone-who-is-here-means-waiting-for-nobody">F9: What if &quot;wait for everyone who is here&quot; means waiting for nobody?</h3>
+<p>Take the SYNC row of <code>leader</code> with two followers down: 0 writes refused.
+&quot;Wait for all live followers&quot; is vacuous when none are live. Ana is alone and
+waits for no one.</p>
+<p>Availability survives. All redundancy is lost, invisibly. The system reports
+healthy while running on one copy.</p>
+<p>In production the fix is a floor: <code>min.insync.replicas</code> in Kafka,
+<code>synchronous_standby_names</code> with a count in Postgres. Monitor the <strong>size of
+the in-sync set</strong>, not just whether writes succeed. A green write-success
+graph is compatible with having exactly one copy of your data.</p>
+<h3 id="readme-f10-what-if-ben-falls-further-and-further-behind-ana">F10: What if Ben falls further and further behind Ana?</h3>
+<p>Run <code>java src/Experiments.java lag</code>: at 2 writes per 1 applied, the backlog
+is 300 and growing.</p>
+<p>Correctness survives, because every stale read is a correct read of a correct
+replica. What is lost is the user's model of a single database.</p>
+<p>In production, alert on lag <em>in seconds</em> and on its <strong>derivative</strong>. A backlog
+that is growing is a different incident from one that is merely large. Route
+read-your-writes traffic to the leader. And remember that a lagging follower
+is also a failover risk: promoting it makes its lag into permanent data loss.</p>
+<h3 id="readme-the-ten-failures-side-by-side">The ten failures side by side</h3>
+<p>The same facts in one place, so you can compare down the columns.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Failure</th>
+  <th>How to cause it</th>
+  <th>What survives</th>
+  <th>What is lost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1</td>
+  <td>one replica down during a write</td>
+  <td><code>overlap</code>; double-click a replica, then write</td>
+  <td>the read guarantee</td>
+  <td>nothing yet; one failure from losing it</td>
+</tr>
+<tr>
+  <td>F2</td>
+  <td>too few replicas for R or W</td>
+  <td>kill two replicas at <code>N=3, R=2, W=2</code></td>
+  <td>correctness</td>
+  <td>availability, completely, for those keys</td>
+</tr>
+<tr>
+  <td>F3</td>
+  <td>write fails, applies anyway</td>
+  <td><code>partial</code> (500/500 readable)</td>
+  <td>nothing is corrupted</td>
+  <td>the meaning of the error</td>
+</tr>
+<tr>
+  <td>F4</td>
+  <td>two clients write concurrently</td>
+  <td><code>concurrent</code>; Ana writes, Ben writes, Read</td>
+  <td>with version vectors: every write</td>
+  <td>with last-write-wins: one of every pair (1000/1000)</td>
+</tr>
+<tr>
+  <td>F5</td>
+  <td>one clock is wrong</td>
+  <td><code>clockskew</code> (1000/1000 discarded)</td>
+  <td>convergence, on the wrong value</td>
+  <td>the newer write, with no record</td>
+</tr>
+<tr>
+  <td>F6</td>
+  <td>replica rebuilt or restored</td>
+  <td>the <code>rebuiltEmptyReplicas_canSatisfyAQuorumWithNothing</code> test</td>
+  <td>the data, on the third replica</td>
+  <td>the read guarantee while reset replicas are in the ring</td>
+</tr>
+<tr>
+  <td>F7</td>
+  <td>partition with sloppy quorums</td>
+  <td><code>sloppy</code>; sloppy on, cut, write, heal, read</td>
+  <td>availability (300/300 accepted)</td>
+  <td>the read guarantee for 100/300 keys until hints land</td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>leader dies before catch-up</td>
+  <td><code>leader</code> (async: 100 lost)</td>
+  <td>availability</td>
+  <td>acknowledged writes</td>
+</tr>
+<tr>
+  <td>F9</td>
+  <td>sync replication degrades</td>
+  <td>SYNC row of <code>leader</code>, two down: 0 refused</td>
+  <td>availability</td>
+  <td>all redundancy, invisibly</td>
+</tr>
+<tr>
+  <td>F10</td>
+  <td>lag outgrows the follower</td>
+  <td><code>lag</code> (backlog 300 at 2:1)</td>
+  <td>correctness of each read</td>
+  <td>the user's model of one database</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-exactly-is-promised-and-what-is-not">12. What exactly is promised, and what is not?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five rules the design never breaks, four things it
+therefore guarantees, seven things it deliberately does not, and the price
+paid for each guarantee.</p>
+</blockquote>
+<h3 id="readme-which-five-rules-does-the-design-never-break">Which five rules does the design never break?</h3>
+<p>Each rule is written twice: once for Dev, Elle and the three friends, and
+once the way an engineer would state it.</p>
+<ol>
+<li><strong>A write is reported successful only when W replicas that own the key
+have acknowledged it.</strong> Dev is told &quot;done&quot; only when enough of Ana, Ben
+and Cara said &quot;got it&quot;. An acknowledgement from anything else, such as a
+neighbour, is not a W.</li>
+<li><strong>A read is answered only when R replicas that own the key have replied</strong>,
+or it is refused. Elle hears an answer only after enough of the three
+friends spoke.</li>
+<li><strong>A value is never discarded because it looks older unless it is provably
+older.</strong> Under version vectors, <code>BEFORE</code> is a proof, and <code>CONCURRENT</code> is
+not.</li>
+<li><strong>Concurrent values are preserved, not resolved</strong>, unless you explicitly
+chose last-write-wins. Two changes at the same instant are both kept.</li>
+<li><strong>A write is applied to every replica the coordinator can reach</strong>,
+regardless of whether W was met. Cara writes it down even if her &quot;got it&quot;
+arrives too late. This is why &quot;failed&quot; never means &quot;did not happen&quot;.</li>
+</ol>
+<h3 id="readme-what-is-guaranteed">What is guaranteed?</h3>
+<ul>
+<li>If <code>R + W &gt; N</code>, and the replica set is intact, and the quorum is strict,
+<strong>a read returns the value of the most recent successful write</strong> (or a
+value that supersedes it). Elle hears Dev's latest change.</li>
+<li><strong>Convergence</strong>: given repair and enough time without new writes, all
+replicas end up holding the same thing. The three notes eventually agree.</li>
+<li><strong>No lost updates under version vectors</strong>: every write is either superseded
+by one that saw it, or preserved as a sibling.</li>
+<li><strong>Tunability per request</strong>: the same data can be read cheaply or carefully.</li>
+</ul>
+<h3 id="readme-what-is-explicitly-not-guaranteed">What is explicitly NOT guaranteed?</h3>
+<ul>
+<li><strong>Linearizability.</strong> No single global order. Two concurrent reads can
+disagree.</li>
+<li><strong>Any resolution of concurrent writes.</strong> The overlap rule is silent; you
+get a conflict, a guess, or a merge, depending on what you configured.</li>
+<li><strong>That a failed write did not happen.</strong></li>
+<li><strong>Freshness under a sloppy quorum</strong>, for the duration of the partition plus
+the handoff.</li>
+<li><strong>Anything at all if replicas lose data.</strong> The argument assumes the replica
+set is intact.</li>
+<li><strong>Read-your-own-writes</strong> in the leader-based family without extra routing.</li>
+<li><strong>Bounded staleness</strong> without anti-entropy actually running.</li>
+</ul>
+<h3 id="readme-what-was-traded-away-and-for-what">What was traded away, and for what?</h3>
+<p>Read each row as a bargain: the left column is the price, the right column
+is what it bought.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Given up</th>
+  <th>Bought</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Linearizability</td>
+  <td>No coordination on the write path: no leader, no consensus round, no commit point</td>
+</tr>
+<tr>
+  <td>Automatic conflict resolution</td>
+  <td>Either honesty (siblings) or simplicity (LWW); you pick which</td>
+</tr>
+<tr>
+  <td>Rollback of failed writes</td>
+  <td>A design with no distributed transaction in it at all</td>
+</tr>
+<tr>
+  <td>Full availability (at strict R/W)</td>
+  <td>The read guarantee, refused rather than faked</td>
+</tr>
+<tr>
+  <td>The read guarantee (at sloppy)</td>
+  <td>Availability during a partition</td>
+</tr>
+<tr>
+  <td>A single fixed consistency level</td>
+  <td>Per-request tuning, so one cluster serves both a dashboard and a balance</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The through-line:</strong> this design buys enormous availability and operational
+simplicity by refusing to make any decision. Its entire correctness is one
+counting argument. Every failure in section 11 is a situation where the thing
+being counted is not what you thought.</p>
+<h2 id="readme-13-where-is-the-code-that-carries-the-design">13. Where is the code that carries the design?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight Java files, no build tool. Five lines in them carry
+the whole design, and each one maps to a failure in section 11.</p>
+</blockquote>
+<p>No build tool, no dependencies. <code>java src/Tests.java</code> compiles the directory
+in place (JDK 25).</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/VersionVector.java is in the lab folder on your laptop"><code>src/VersionVector.java</code></span></td>
+  <td>one counter per writer, and the <code>BEFORE / AFTER / CONCURRENT / EQUAL</code> comparison the whole conflict story rests on</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Val.java is in the lab folder on your laptop"><code>src/Val.java</code></span></td>
+  <td>a stored value: content, version vector, and the timestamp last-write-wins uses</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Node.java is in the lab folder on your laptop"><code>src/Node.java</code></span></td>
+  <td>one replica (Ana, Ben or Cara). Deliberately dumb: it merges what it is given and never talks to another replica</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Cluster.java is in the lab folder on your laptop"><code>src/Cluster.java</code></span></td>
+  <td>the leaderless store: placement, <code>put</code>, <code>get</code>, read repair, anti-entropy, hinted handoff, and every fault knob</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/LeaderCluster.java is in the lab folder on your laptop"><code>src/LeaderCluster.java</code></span></td>
+  <td>the other family: async / semi-sync / sync, <code>minInSync</code>, replication lag, failover</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Tests.java is in the lab folder on your laptop"><code>src/Tests.java</code></span></td>
+  <td>42 scenario checks, readable as documentation</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Experiments.java is in the lab folder on your laptop"><code>src/Experiments.java</code></span></td>
+  <td>the ten experiments</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Broken.java is in the lab folder on your laptop"><code>src/Broken.java</code></span></td>
+  <td>three planted bugs for exercise rung 6</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The five load-bearing places</strong>, each commented in the source with the rule
+it enforces:</p>
+<ol>
+<li><strong><code>Cluster.put</code>, the two loops.</strong> Every reachable replica is written; only
+the timely ones are counted. The gap between those two facts is failure
+F3: Cara writes it down, but is not counted.</li>
+<li><strong><code>Node.write</code>'s <code>CONCURRENT -&gt; next.add(v)</code>.</strong> Three words that are the
+difference between preserving a conflict and silently destroying a write.</li>
+<li><strong><code>Cluster.get</code>'s <code>if (responders.size() &gt;= R) break;</code></strong> The read stops at
+R and does not wait for the rest. This is where the freshness/availability
+trade physically lives, and it is why Elle never asks Ana in section 10.3.</li>
+<li><strong><code>Cluster.put</code>'s sloppy branch.</strong> Acknowledgements from nodes that do not
+own the key, with a comment saying exactly why a strict reader will never
+look there.</li>
+<li><strong><code>LeaderCluster.write</code>'s <code>live &lt; minInSync</code>.</strong> The floor that stops &quot;wait
+for all live followers&quot; from degrading to &quot;wait for nobody&quot;.</li>
+</ol>
+<h2 id="readme-14-what-do-the-ten-experiments-show">14. What do the ten experiments show?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten experiments, one question each. Commit to an answer
+before you run the command.</p>
+</blockquote>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java        # lists all ten
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Command</th>
+  <th>Predict before running</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><code>overlap</code></td>
+  <td>At which (R,W) pairs does the stale-read count become exactly zero?</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>availability</code></td>
+  <td>At <code>R=W=2, N=3</code>, how many replicas may be down before reads stop?</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>partial</code></td>
+  <td>The client got an error. What fraction of those values are readable afterwards?</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>concurrent</code></td>
+  <td>1,000 concurrent write pairs. How many updates does each mode lose?</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>clockskew</code></td>
+  <td>One node's clock is 60 s fast. How many newer writes survive?</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>sloppy</code></td>
+  <td><code>R+W&gt;N</code> holds throughout. What fraction of writes is a strict read able to see?</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>repair</code></td>
+  <td>A replica missed 200 keys and half are then read. How many does it end up with?</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>leader</code></td>
+  <td>In fully-synchronous mode with both followers down, how many writes are refused?</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>lag</code></td>
+  <td>The leader takes 2 writes for every 1 the follower applies. Where does the backlog settle?</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>latency</code></td>
+  <td>Waiting for all 3 replicas instead of 2: what fraction of requests gets slow?</td>
+</tr>
+</tbody>
+</table></div>
+<p>Experiment 10 is the one people do not expect, so here it is in full. Each
+replica answers in 5 ms normally, but one request in ten hits a 200 ms
+stall. In the story, each of Ana, Ben and Cara is quick nine times out of
+ten, and on the tenth she is on another call.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Dev waits for all three instead of any two. Each friend
+stalls one time in ten. What fraction of Dev's requests hit a stall?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>About 27%.</strong> If you said 10%, you counted one friend's bad moments. Dev
+now inherits all three friends' bad moments, and they rarely coincide.</p>
+<div class="code"><pre><code>wait for 1 of 3:  p50 = 5 ms   p99 =   5 ms   requests that hit a stall:  0.09%
+wait for 2 of 3:  p50 = 5 ms   p99 = 200 ms   requests that hit a stall:  2.85%
+wait for 3 of 3:  p50 = 5 ms   p99 = 200 ms   requests that hit a stall: 27.31%
+</code></pre></div>
+</details>
+
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>Wait for</th>
+  <th>p50</th>
+  <th>p99</th>
+  <th>Requests that hit a stall</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1 of 3</td>
+  <td>5 ms</td>
+  <td>5 ms</td>
+  <td>0.09%</td>
+  <td>all three friends must stall at once</td>
+</tr>
+<tr>
+  <td>2 of 3</td>
+  <td>5 ms</td>
+  <td>200 ms</td>
+  <td>2.85%</td>
+  <td>two must stall at once; you ignore the slowest</td>
+</tr>
+<tr>
+  <td>3 of 3</td>
+  <td>5 ms</td>
+  <td>200 ms</td>
+  <td>27.31%</td>
+  <td>any one stalling stalls you</td>
+</tr>
+</tbody>
+</table></div>
+<p>Waiting for all three means every replica's bad moment becomes <em>your</em> bad
+moment. 27% of requests are slow, from replicas that are individually
+healthy 90% of the time. Waiting for two lets you ignore whichever replica is
+garbage-collecting right now. <strong>A quorum is a tail-latency device as much as
+a durability one</strong>, and it is the same trick as hedged requests.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-you-now-have-the-engineering-model">✅ Checkpoint: you now have the engineering model</h3>
+<p>You can state the invariants, name what each failure bends, and run the
+experiment that shows it.</p>
+<p><strong>Say it back.</strong> Elle's read came back with two different times. Without
+using the words <em>sibling</em> or <em>version vector</em>, explain why the system
+handed her both instead of picking one.</p>
+<details><summary>A good answer sounds like</summary>
+"Two people changed the plan at the same moment and neither heard the
+other. There is no honest way to say which was later. So the system keeps
+both and lets the app decide, rather than throwing one away and pretending
+it never existed."
+</details>
+
+<p>Next: the knobs these ideas are actually called in Cassandra, Kafka,
+Postgres and MongoDB, and what to put on a dashboard.</p>
+</blockquote>
+<hr />
+<h1 id="readme-production-model">PRODUCTION MODEL</h1>
+<h2 id="readme-15-what-are-these-knobs-called-in-real-systems">15. What are these knobs called in real systems?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Everything Dev and Elle did exists in the databases you
+run; only the spelling changes. Two settings deserve their own paragraph,
+and one dashboard line matters more than the rest.</p>
+</blockquote>
+<h3 id="readme-151-how-does-each-knob-translate">15.1 How does each knob translate?</h3>
+<p>Everything in this lab exists in the systems you actually run; only the
+spelling changes. Defaults move between versions, so check the docs for
+yours. The mapping is what matters. The table is split in two so it fits on
+a screen: the same rows, different systems.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>This lab</th>
+  <th>Cassandra</th>
+  <th>Kafka</th>
+  <th>Postgres</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>N</strong></td>
+  <td><code>replication_factor</code></td>
+  <td><code>replication.factor</code></td>
+  <td>number of standbys</td>
+</tr>
+<tr>
+  <td><strong>W</strong></td>
+  <td>consistency level on the write (<code>ONE</code>, <code>QUORUM</code>, <code>ALL</code>)</td>
+  <td><code>acks=0 / 1 / all</code></td>
+  <td><code>synchronous_commit</code> + <code>synchronous_standby_names</code></td>
+</tr>
+<tr>
+  <td><strong>R</strong></td>
+  <td>consistency level on the read</td>
+  <td>consumers read the leader</td>
+  <td>route to primary or standby</td>
+</tr>
+<tr>
+  <td><strong>the floor</strong></td>
+  <td>— (implied by CL)</td>
+  <td><strong><code>min.insync.replicas</code></strong></td>
+  <td><code>ANY 2 (s1,s2,s3)</code></td>
+</tr>
+<tr>
+  <td><strong>conflict rule</strong></td>
+  <td>last-write-wins on cell timestamps</td>
+  <td>single leader, no conflicts</td>
+  <td>single leader, no conflicts</td>
+</tr>
+<tr>
+  <td><strong>hinted handoff</strong></td>
+  <td>yes, <code>max_hint_window_in_ms</code></td>
+  <td>—</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td><strong>anti-entropy</strong></td>
+  <td><code>nodetool repair</code> (Merkle trees)</td>
+  <td>—</td>
+  <td>—</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>This lab</th>
+  <th>MongoDB</th>
+  <th>DynamoDB / Riak</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>N</strong></td>
+  <td>replica set size</td>
+  <td><code>n_val</code> (Riak); fixed at 3 (DynamoDB)</td>
+</tr>
+<tr>
+  <td><strong>W</strong></td>
+  <td><code>writeConcern: {w: 1 \| &quot;majority&quot;}</code></td>
+  <td><code>w</code>, <code>pw</code> (Riak)</td>
+</tr>
+<tr>
+  <td><strong>R</strong></td>
+  <td><code>readConcern</code> + <code>readPreference</code></td>
+  <td>consistent-read flag (DynamoDB); <code>r</code> (Riak)</td>
+</tr>
+<tr>
+  <td><strong>the floor</strong></td>
+  <td><code>w: &quot;majority&quot;</code></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td><strong>conflict rule</strong></td>
+  <td>single leader, no conflicts</td>
+  <td>LWW (DynamoDB global tables); siblings with <code>allow_mult</code> (Riak)</td>
+</tr>
+<tr>
+  <td><strong>hinted handoff</strong></td>
+  <td>—</td>
+  <td>yes (Riak)</td>
+</tr>
+<tr>
+  <td><strong>anti-entropy</strong></td>
+  <td>—</td>
+  <td>active anti-entropy (Riak)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two entries deserve their own paragraph.</p>
+<p><strong><code>min.insync.replicas</code> is the single most under-set option in the table.</strong>
+As section 10.6 showed, <code>acks=all</code> alone degrades to <code>acks=1</code> when the
+in-sync set shrinks to the leader, silently. <code>acks=all</code> <strong>plus</strong>
+<code>min.insync.replicas=2</code> on a 3-replica topic is <code>W=2, N=3</code>, and it refuses
+rather than degrading. Configuring the first without the second is the most
+common way to believe you have durability you do not have.</p>
+<p><strong><code>LOCAL_QUORUM</code> is what makes multi-datacentre Cassandra usable.</strong> A plain
+<code>QUORUM</code> across two datacentres 80 ms apart means every write waits for a
+cross-ocean round trip, and a datacentre outage stops writes. <code>LOCAL_QUORUM</code>
+requires a quorum <em>within the local datacentre</em>. It is fast, it survives
+losing the remote one, and it consciously gives up the cross-datacentre read
+guarantee. <code>EACH_QUORUM</code> is the strict version, and its latency is why almost
+nobody uses it for reads.</p>
+<h3 id="readme-152-what-does-the-toy-leave-out">15.2 What does the toy leave out?</h3>
+<p>Ana, Ben and Cara are <code>HashMap</code>s in this lab. Read the right-hand column for
+what a real replica adds.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted here</th>
+  <th>What production does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Real storage</strong></td>
+  <td>replicas are <code>HashMap</code>s; real ones are LSM trees with a commit log (<a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a>), and durability includes whether the write was fsynced (<code>j: true</code>, <code>synchronous_commit = remote_apply</code>)</td>
+</tr>
+<tr>
+  <td><strong>Real placement</strong></td>
+  <td>this lab uses &quot;the first N nodes&quot;; production hashes keys onto a ring (<a href="../35-consistent-hashing/notes.html#readme">consistent-hashing</a>) and adds rack/datacentre awareness so the N replicas are not in one failure domain</td>
+</tr>
+<tr>
+  <td><strong>Deletes</strong></td>
+  <td>a delete is a <strong>tombstone</strong>, a write like any other. It must outlive any replica that could resurrect the value, which is what <code>gc_grace_seconds</code> is: purge too early and a replica that was down comes back and un-deletes the row</td>
+</tr>
+<tr>
+  <td><strong>Merkle trees</strong></td>
+  <td>anti-entropy here compares full values; real repair compares hash trees so only differences are streamed</td>
+</tr>
+<tr>
+  <td><strong>Coordinator-side latency</strong></td>
+  <td>real reads send a full data request to one replica and cheap digest requests to the others, so R replies do not mean R full copies on the wire</td>
+</tr>
+<tr>
+  <td><strong>Compare-and-set</strong></td>
+  <td>this lab cannot express &quot;write only if unchanged&quot;. Cassandra's lightweight transactions do it with Paxos, <em>per operation</em>, and roughly an order of magnitude slower, which is the price of borrowing the other kind of quorum</td>
+</tr>
+<tr>
+  <td><strong>Bootstrap</strong></td>
+  <td>a joining or replacement node must stream its data before serving reads (failure F6)</td>
+</tr>
+<tr>
+  <td><strong>Backpressure and hint limits</strong></td>
+  <td>hint queues are bounded; past the window, hints are dropped and repair is the only path</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-153-what-does-an-on-call-engineer-watch">15.3 What does an on-call engineer watch?</h3>
+<p>Not &quot;is the database up&quot;. These:</p>
+<ul>
+<li><strong>Replication lag in seconds, and its derivative.</strong> A backlog that is
+<em>growing</em> is a different incident from one that is merely large (section
+10.7).</li>
+<li><strong>In-sync replica count / size of the healthy replica set</strong>, per partition.
+This is the metric that catches the silent degradation in F9, and a green
+write-success graph will not.</li>
+<li><strong>Hinted handoff queue depth and age.</strong> Growing means a node has been away
+too long. Past the hint window, hints are dropped and you now <em>need</em> repair.</li>
+<li><strong>Repair completion time against <code>gc_grace_seconds</code>.</strong> If repair takes
+longer than the grace period, deleted data can come back. This is a
+correctness deadline hiding in an operations schedule.</li>
+<li><strong>Read/write timeouts and unavailable-exception rates split by consistency
+level.</strong> A rise in <code>QUORUM</code> failures while <code>ONE</code> is fine tells you exactly
+how many replicas you have lost.</li>
+<li><strong>Clock skew across nodes</strong>, if anything in your stack is last-write-wins
+(F5).</li>
+<li><strong>Sibling counts</strong>, if you use version vectors. A key whose sibling count
+grows without bound means the application is reading and writing without
+merging.</li>
+</ul>
+<p><strong>The pager you least want:</strong> <em>&quot;writes succeeding, <code>min.insync.replicas</code> not
+set, in-sync set size = 1&quot;</em>. Everything is green and you have one copy. Ana
+is alone, and she is saying &quot;done&quot; to everyone.</p>
+<h3 id="readme-154-how-do-you-choose-the-numbers">15.4 How do you choose the numbers?</h3>
+<p>A short decision guide, in the order the questions actually arise:</p>
+<ol>
+<li><strong>Do you need a single agreed order</strong> (leader election, locking, unique
+constraints, &quot;exactly one of these may succeed&quot;)? Then you do not want
+this chapter's tool at all. You want consensus: etcd, ZooKeeper, a Raft
+group, or a single-leader database. See <a href="../39-paxos/notes.html#readme">paxos</a>.</li>
+<li><strong>Otherwise start at <code>N=3, R=2, W=2</code></strong> (or <code>acks=all</code> + <code>min.insync=2</code>).
+It crosses the overlap line at the lowest availability cost, and it is
+the default for a reason.</li>
+<li><strong>Write-heavy and can tolerate stale reads?</strong> <code>W=1, R=1</code> is legitimate for
+metrics, logs, caches and last-seen timestamps. But somebody must have
+written down that staleness is accepted, because the 3–20% seen in section
+10.0 will otherwise arrive as a bug report.</li>
+<li><strong>Need more failure tolerance rather than more consistency?</strong> Raise N, not
+R and W. <code>N=5, R=3, W=3</code> tolerates two dead replicas with the same
+guarantee.</li>
+<li><strong>Multi-datacentre?</strong> Use the local-quorum variant unless you can
+articulate why a cross-region round trip on every write is acceptable.</li>
+<li><strong>Concurrent writes to the same key are expected?</strong> Decide the conflict
+rule <em>as a data-modelling decision</em>: conflict-free types where possible,
+siblings where the application can merge, last-write-wins only where
+losing one of two simultaneous writes is genuinely harmless.</li>
+</ol>
+<h3 id="readme-155-what-do-you-say-if-this-comes-up-in-an-interview">15.5 What do you say if this comes up in an interview?</h3>
+<p>The four sentences that show you actually understand it:</p>
+<ol>
+<li><em>&quot;<code>R + W &gt; N</code> guarantees the read set and the write set intersect, so a
+read sees the last successful write. It is a pigeonhole argument, not a
+protocol.&quot;</em></li>
+<li><em>&quot;It is not linearizability. Concurrent writes are unordered, and a failed
+write is never rolled back, so I need idempotent writes and a conflict
+rule.&quot;</em></li>
+<li><em>&quot;<code>acks=all</code> without <code>min.insync.replicas</code> degrades silently to
+<code>acks=1</code>.&quot;</em></li>
+<li><em>&quot;Read repair only fixes what is read; anti-entropy is what bounds
+staleness, and it has a deadline set by the tombstone grace period.&quot;</em></li>
+</ol>
+<p>And the question that most often separates candidates: <em>&quot;you have <code>R+W&gt;N</code>.
+Name three situations where you can still read stale data.&quot;</em> The answers are
+in section 10: a sloppy quorum, a replica that lost its data, and a write
+that failed but applied (plus concurrent writes, where &quot;stale&quot; is not even
+the right word).</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-you-now-have-the-production-model">✅ Checkpoint: you now have the production model</h3>
+<p>You can translate the three numbers into the knobs of four real systems,
+say which dashboard line catches each silent failure, and choose N, R and
+W on purpose.</p>
+<p><strong>Say it back.</strong> Your write-success graph is 100% green. Without using the
+word <em>floor</em> or the name <code>min.insync.replicas</code>, say why that could be the
+worst news on the dashboard.</p>
+<details><summary>A good answer sounds like</summary>
+"Ana might be the only friend still around. The rule 'wait for everyone
+who is here' happily waits for nobody, so she says 'done' to every change.
+The graph says every write was confirmed, and every one of them is held by
+exactly one copy."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-16-exercises">16. Exercises</h2>
+<p><a href="notes.html#exercises">EXERCISES.md</a> has eight rungs, from explaining the overlap
+rule in your own words to designing a three-datacentre configuration and
+deciding what a payment ledger may and may not use quorums for. Attempt each
+one before opening <a href="notes.html#solutions">SOLUTIONS.md</a>.</p>
+<hr />
+<h2 id="readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab sits on four you already have, is constantly
+confused with one of them, and opens the door to the ones that give Dev and
+Elle a real ordering.</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+    CAP[&quot;cap-theorem · done&quot;] --&gt; Q
+    CH[&quot;consistent-hashing · done&lt;br&gt;which N nodes hold a key&quot;] --&gt; Q
+    PX[&quot;paxos · done&lt;br&gt;the OTHER kind of quorum&quot;] --&gt; Q
+    DB[&quot;database-landscape · done&quot;] --&gt; Q
+    Q[&quot;&lt;b&gt;quorums and replication&lt;/b&gt;&quot;]
+    Q --&gt; RAFT[&quot;raft&quot;]
+    Q --&gt; LIN[&quot;linearizability&quot;]
+    Q --&gt; CRDT[&quot;crdts&quot;]
+    Q --&gt; CDC[&quot;change-data-capture&quot;]
+    Q --&gt; PART[&quot;partitioning-and-rebalancing&quot;]
+    Q -.- CAS[&quot;cassandra · a store built on this&quot;]
+</pre>
+<p><strong>Builds directly on.</strong></p>
+<ul>
+<li><a href="../39-paxos/notes.html#readme">paxos</a>: the consensus quorum this one is constantly confused
+with, and the tool you reach for when overlap is not enough.</li>
+<li><a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>: R and W turn the CP/AP switch into a dial
+you set per request.</li>
+<li><a href="../35-consistent-hashing/notes.html#readme">consistent-hashing</a>: which N machines are the
+replicas in the first place, and why its 1/n disagreement window matters
+here. Two clients briefly disagreeing about the replica set are two clients
+whose quorums may not intersect.</li>
+<li><a href="../04-database-landscape/notes.html#readme">database-landscape</a>: masterless stores and the
+consistency window, now with the mechanism underneath.</li>
+<li><a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>: expected-version conflict detection,
+the same problem solved by <em>refusing</em> rather than preserving.</li>
+<li><a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a>: what a replica actually is underneath,
+tombstones included.</li>
+<li><a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>: idempotent writes, which
+failure F3 makes mandatory.</li>
+<li><a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a>: a coordinator with authority
+whose death blocks everyone. Contrast with the coordinator here, whose
+death costs a retry.</li>
+<li><a href="../11-caching/notes.html#readme">caching</a>: a stale replica and a stale cache entry are the
+same object with different names.</li>
+</ul>
+<p><strong>Closest neighbour:</strong> <a href="../37-gossip-protocols/notes.html#readme">gossip-protocols</a>. This lab
+assumes every node already knows which replicas own a key and which of them
+are alive. Gossip is how that knowledge spreads, and it is also the transport
+anti-entropy rides on. Read it right after this one.</p>
+<p><strong>Sibling system-design labs that use this:</strong>
+<a href="../69-whatsapp-system-design/notes.html#readme">whatsapp-system-design</a>, whose mailbox store is
+exactly this kind of replicated store, and whose &quot;store before you
+acknowledge&quot; rule is <code>W ≥ 1</code> stated in words;
+<a href="../70-uber-system-design/notes.html#readme">uber-system-design</a>, whose geo index is AP and
+whose driver claim is CP: the two halves of this lab in one product.</p>
+<p><strong>Commonly confused with.</strong></p>
+<ul>
+<li><strong>Consensus quorum (Paxos/Raft)</strong> decides an order; this one only
+intersects. Same word, different guarantee. If you need &quot;exactly one
+winner&quot;, you need that one.</li>
+<li><strong>Two-phase commit</strong> makes several systems commit atomically. It has a
+coordinator with authority and blocks when it dies. Nothing here is atomic
+across keys.</li>
+<li><strong>Sharding / partitioning</strong> is <em>which</em> machines hold a key, not <em>how many
+copies</em>. Orthogonal: you shard and then replicate each shard.</li>
+<li><strong>Read replicas for scale</strong> are the same machinery aimed at throughput
+rather than durability. That is why lag surprises people who set them up
+for performance reasons.</li>
+<li><strong>Backups.</strong> A replica is not a backup. Replication faithfully copies your
+<code>DELETE FROM</code> to every replica in milliseconds.</li>
+</ul>
+<p><strong>Suggested next lessons, in the order I would take them:</strong></p>
+<div class="code"><pre><code>/learn raft                        # the consensus quorum done properly, and the contrast that makes this lab click
+/learn linearizability             # what &quot;strong consistency&quot; actually means, and why R+W&gt;N is not it
+/learn crdts                       # conflict resolution that needs no siblings and no guessing
+/learn partitioning-and-rebalancing # the other half of scaling data: which node, not how many copies
+/learn change-data-capture         # how replication becomes an integration tool
+</code></pre></div>
+<hr />
+<h2 id="readme-18-glossary">18. Glossary</h2>
+<p>In order of appearance.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Replica</strong></td>
+  <td>one machine's copy of a given key's data</td>
+</tr>
+<tr>
+  <td><strong>Replication factor (N)</strong></td>
+  <td>how many replicas each key has</td>
+</tr>
+<tr>
+  <td><strong>W</strong></td>
+  <td>replica acknowledgements required before a write is called a success</td>
+</tr>
+<tr>
+  <td><strong>R</strong></td>
+  <td>replica responses required before a read is answered</td>
+</tr>
+<tr>
+  <td><strong>Coordinator</strong></td>
+  <td>whichever node received the request and counts the replies; no authority</td>
+</tr>
+<tr>
+  <td><strong>Consensus quorum</strong></td>
+  <td>a majority, used to make nodes <em>agree</em>; the <a href="../39-paxos/notes.html#readme">paxos</a> sense</td>
+</tr>
+<tr>
+  <td><strong>Read/write quorum</strong></td>
+  <td>any R and W with <code>R + W &gt; N</code>, used to make two sets <em>overlap</em></td>
+</tr>
+<tr>
+  <td><strong>Overlap rule</strong></td>
+  <td><code>R + W &gt; N</code> ⇒ every read set shares a replica with every write set</td>
+</tr>
+<tr>
+  <td><strong>Stale read</strong></td>
+  <td>a successful read that returned data older than the last successful write</td>
+</tr>
+<tr>
+  <td><strong>Partial write</strong></td>
+  <td>a write reported failed that nevertheless applied to some replicas; never rolled back</td>
+</tr>
+<tr>
+  <td><strong>Concurrent writes</strong></td>
+  <td>two writes neither of which saw the other; no ordering exists between them</td>
+</tr>
+<tr>
+  <td><strong>Version vector</strong></td>
+  <td>one counter per writer, so &quot;newer&quot; and &quot;concurrent&quot; are distinguishable</td>
+</tr>
+<tr>
+  <td><strong>Sibling</strong></td>
+  <td>one of several concurrent values kept side by side for the application to merge</td>
+</tr>
+<tr>
+  <td><strong>Last-write-wins (LWW)</strong></td>
+  <td>resolve conflicts by highest timestamp; always converges, always loses one write</td>
+</tr>
+<tr>
+  <td><strong>Read repair</strong></td>
+  <td>pushing the winning value back to replicas found behind during a read</td>
+</tr>
+<tr>
+  <td><strong>Anti-entropy</strong></td>
+  <td>background comparison of replicas that fixes differences nobody read</td>
+</tr>
+<tr>
+  <td><strong>Merkle tree</strong></td>
+  <td>the hash tree that lets anti-entropy find differences without shipping everything</td>
+</tr>
+<tr>
+  <td><strong>Sloppy quorum</strong></td>
+  <td>counting acknowledgements from nodes outside the key's replica set; not a quorum</td>
+</tr>
+<tr>
+  <td><strong>Hinted handoff</strong></td>
+  <td>those nodes holding the value and delivering it home later; best-effort, not durable</td>
+</tr>
+<tr>
+  <td><strong>Leader / follower</strong></td>
+  <td>one node takes all writes; the others copy its change stream</td>
+</tr>
+<tr>
+  <td><strong>Synchronous replication</strong></td>
+  <td>the leader waits for followers before saying &quot;done&quot;</td>
+</tr>
+<tr>
+  <td><strong>Asynchronous replication</strong></td>
+  <td>the leader says &quot;done&quot; immediately and copies later; loses writes on failover</td>
+</tr>
+<tr>
+  <td><strong>Semi-synchronous</strong></td>
+  <td>wait for <em>k</em> followers; the practical middle, and W's leader-based twin</td>
+</tr>
+<tr>
+  <td><strong>In-sync replicas (ISR)</strong></td>
+  <td>the followers currently keeping up; <code>acks=all</code> means all of <em>these</em></td>
+</tr>
+<tr>
+  <td><strong>min.insync.replicas</strong></td>
+  <td>the floor that stops <code>acks=all</code> degrading to <code>acks=1</code></td>
+</tr>
+<tr>
+  <td><strong>Replication lag</strong></td>
+  <td>the follower's backlog; a queue, so it grows without bound if apply &lt; write rate</td>
+</tr>
+<tr>
+  <td><strong>Read-your-own-writes</strong></td>
+  <td>a user always sees their own change; a routing property, not a storage one</td>
+</tr>
+<tr>
+  <td><strong>Monotonic reads</strong></td>
+  <td>a user never moves backwards in time by hopping to a laggier replica</td>
+</tr>
+<tr>
+  <td><strong>Consistent prefix</strong></td>
+  <td>causally-related writes are never seen out of order</td>
+</tr>
+<tr>
+  <td><strong>Bootstrap</strong></td>
+  <td>streaming data into a joining replica before it is allowed to serve reads</td>
+</tr>
+<tr>
+  <td><strong>Tombstone</strong></td>
+  <td>a delete recorded as a write, which must outlive any replica that could resurrect the row</td>
+</tr>
+<tr>
+  <td><strong><code>gc_grace_seconds</code></strong></td>
+  <td>how long tombstones are kept; repair must finish inside it or deletes come back</td>
+</tr>
+<tr>
+  <td><strong>LOCAL_QUORUM</strong></td>
+  <td>a quorum within one datacentre; fast, survives losing the remote one</td>
+</tr>
+<tr>
+  <td><strong>Linearizability</strong></td>
+  <td>a single global order every reader agrees on; what <code>R + W &gt; N</code> does <em>not</em> give you</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<h3 id="readme-what-is-in-the-folder">What is in the folder?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document: 18 sections plus this appendix</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>the interactive simulator, also published at <a href="https://claude.ai/code/artifact/d1e569b2-2338-4c35-9ad0-81417b750086" target="_blank" rel="noopener">https://claude.ai/code/artifact/d1e569b2-2338-4c35-9ad0-81417b750086</a></td>
+</tr>
+<tr>
+  <td><code>src/*.java</code></td>
+  <td>the store, the leader-based store, 42 scenario checks, ten experiments and three planted bugs (section 13 lists each file)</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code>, <code>SOLUTIONS.md</code></td>
+  <td>eight rungs and their answers</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-how-do-you-run-it">How do you run it?</h3>
+<div class="code"><pre><code class="language-bash">java src/Tests.java                  # 42 scenario checks
+java src/Experiments.java            # list the ten measured experiments
+java src/Experiments.java overlap    # the headline measurement
+open visualization.html              # or the published link above
+</code></pre></div>
+<p>No build tool and no dependencies; <code>java src/Tests.java</code> compiles the
+directory in place on JDK 25.</p>
+<h3 id="readme-where-does-it-sit-among-your-other-labs">Where does it sit among your other labs?</h3>
+<p>You have already done <a href="../39-paxos/notes.html#readme">paxos</a>, <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>,
+<a href="../35-consistent-hashing/notes.html#readme">consistent-hashing</a> and
+<a href="../04-database-landscape/notes.html#readme">database-landscape</a>. This lab sits on all four, and
+section 17 says exactly how. The one thing to carry in from paxos is the
+warning in section 1: the word <em>quorum</em> means something weaker here than it
+did there, and section 7 puts the two meanings side by side.</p>
+<p>The depth map in section 2 is the reading plan: sections 1–9 are the
+beginner model, section 10 the intermediate model, sections 11–14 the
+engineering model, and section 15 the production model. Each transition has
+a checkpoint with a Say-it-back box.</p>
+<h3 id="readme-how-were-the-numbers-made">How were the numbers made?</h3>
+<p>Every number in this document was measured by running the lab's own Java
+code on the machine the lab was written on. The ten experiments in
+<code>src/Experiments.java</code> use fixed random seeds. The <code>overlap</code> experiment, for
+instance, runs 4,000 rounds per configuration with a 20% independent failure
+chance per replica and a fixed seed. So a re-run reproduces the same figures
+exactly; they are not one representative sample of a noisy process.</p>
+<p>The two <code>PASS</code> lines in section 10.3 are the output of the
+<code>rebuiltEmptyReplicas_canSatisfyAQuorumWithNothing</code> check in
+<code>src/Tests.java</code>. The figures quoted in sections 10 to 14 are all from the
+Java experiments and tests, not from the simulator page, which is a separate
+model of the same rules.</p>
+<p>The knob defaults in section 15.1 move between versions of Cassandra, Kafka,
+Postgres and MongoDB, and were not verified against a specific release.
+Check the docs for yours; the mapping is what matters.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--quorums-and-replication">Exercises — quorums and replication</h1>
+<p>Eight rungs, easiest first. Attempt each before opening
+<a href="notes.html#solutions">SOLUTIONS.md</a>. Rungs 7 and 8 are worked design discussions with
+no single right answer.</p>
+<div class="code"><pre><code class="language-bash">java src/Tests.java                  # 42 scenario checks
+java src/Experiments.java            # ten measured experiments
+open visualization.html
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Why does keeping three copies of your data create a problem that
+keeping one copy does not? Answer without using the word &quot;consistency&quot;.</p>
+<p><strong>1.2</strong> Derive <code>R + W &gt; N</code> from scratch, out loud, for <code>N = 5</code>. Why is <code>R = 3, W = 3</code> enough and <code>R = 2, W = 3</code> not?</p>
+<p><strong>1.3</strong> In the <a href="../39-paxos/notes.html#readme">paxos</a> lab you met a quorum that was a majority. In
+this lab a quorum is any R or W with <code>R + W &gt; N</code>. Give one sentence that
+separates what each guarantees.</p>
+<p><strong>1.4</strong> Your colleague says &quot;we set <code>acks=all</code>, so our writes are durable.&quot;
+What is the follow-up question, and why does the answer matter?</p>
+<p><strong>1.5</strong> Explain to a non-engineer why &quot;the write failed&quot; does not mean &quot;the
+write did not happen&quot;.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open the <a href="visualization.html">visualization</a>.</p>
+<p><strong>2.1</strong> With N=3, W=2, R=2, do one write and one read. Which replica is coloured
+violet, and what exactly does that colour claim?</p>
+<p><strong>2.2</strong> During a write, at which step is the client told &quot;success&quot;? What happens
+to the remaining replicas after that moment, and why does it matter?</p>
+<p><strong>2.3</strong> Turn on <strong>Sloppy quorum</strong>, cut the network, and write. Look at the
+banner at the top: the arithmetic and the verdict now disagree. Which one is
+lying, and what is the precise reason?</p>
+<p><strong>2.4</strong> In <span class="missing" title="Not in the hub: src/Cluster.java is in the lab folder on your laptop"><code>src/Cluster.java</code></span>, find the two loops in <code>put</code>.
+What is true of a replica that appears in the first loop but not the second, and
+which failure scenario in the README is that?</p>
+<p><strong>2.5</strong> In <span class="missing" title="Not in the hub: src/Node.java is in the lab folder on your laptop"><code>src/Node.java</code></span>, find the three-way switch in
+<code>write</code>. What happens on <code>CONCURRENT</code>, and what would change if that line said
+<code>dominated = true</code> instead?</p>
+<p><strong>2.6</strong> In <span class="missing" title="Not in the hub: src/Cluster.java is in the lab folder on your laptop"><code>src/Cluster.java</code></span>'s <code>get</code>, find the line that
+stops the read early. Which of the three numbers does it enforce, and what would
+break if you removed it?</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Commit to an answer, then run the command.</p>
+<p><strong>3.1</strong> <code>N=3</code>. At which of the nine (R,W) combinations is the stale-read count
+exactly zero? Now predict the <em>write success rate</em> at <code>W=3</code> with each replica
+failing 20% of the time. <code>java src/Experiments.java overlap</code></p>
+<p><strong>3.2</strong> A write requires W=3, one replica is slow, the client gets an error.
+Out of 500 such writes, how many values are readable afterwards?
+<code>java src/Experiments.java partial</code></p>
+<p><strong>3.3</strong> 1,000 pairs of concurrent writes. How many updates does last-write-wins
+lose? How many does the version-vector mode lose?
+<code>java src/Experiments.java concurrent</code></p>
+<p><strong>3.4</strong> <code>R+W&gt;N</code> holds throughout, sloppy quorums are on, and a partition cuts
+the coordinator off from two of three owners. What fraction of writes will a
+strict read afterwards be able to see? <code>java src/Experiments.java sloppy</code></p>
+<p><strong>3.5</strong> In fully-synchronous mode with both followers unreachable, how many of
+100 writes are refused? <code>java src/Experiments.java leader</code></p>
+<p><strong>3.6</strong> Each replica stalls on 10% of requests. Waiting for 3 of 3 rather than
+2 of 3 — what fraction of requests becomes slow?
+<code>java src/Experiments.java latency</code></p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>For each: predict, change it, run it, and name whether what you lost was
+<strong>safety</strong> (something wrong happened) or <strong>liveness</strong> (nothing wrong happened,
+but progress stopped).</p>
+<p><strong>4.1</strong> In <span class="missing" title="Not in the hub: src/Experiments.java is in the lab folder on your laptop"><code>src/Experiments.java</code></span>'s <code>staleRun</code>, remove
+<code>ctx = wr.vv()</code> so every write is made with an empty version context. Re-run
+<code>overlap</code>. What happens to the stale-read counts, and <em>why</em>? (This is the bug
+the README describes in the box in stage 10.2 — reproduce it deliberately.)</p>
+<p><strong>4.2</strong> Set <code>c.readRepair = true</code> in <code>staleRun</code> and re-run <code>overlap</code>. Do the
+stale counts for <code>R+W ≤ N</code> fall to zero? Should they? What has read repair
+actually changed, and what has it not?</p>
+<p><strong>4.3</strong> In <span class="missing" title="Not in the hub: src/Cluster.java is in the lab folder on your laptop"><code>src/Cluster.java</code></span>, change <code>get</code> so that it
+gathers from <em>all</em> reachable replicas but still requires only R to have
+answered. Which experiment's numbers change, and does the guarantee get
+stronger, or only the luck?</p>
+<p><strong>4.4</strong> In <span class="missing" title="Not in the hub: src/LeaderCluster.java is in the lab folder on your laptop"><code>src/LeaderCluster.java</code></span>, set
+<code>minInSync = 3</code> and re-run <code>leader</code>. Which column changes, and what have you
+just made impossible?</p>
+<p><strong>4.5</strong> In the visualization, set <strong>asks first</strong> to a fixed replica rather than
+&quot;rotate&quot;. Run the <code>W=1, R=1</code> scenario several times. What changed about the
+<em>reproducibility</em> of the bug, and what does that tell you about why staleness
+bugs are so hard to reproduce in production?</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1 · <code>LOCAL_QUORUM</code>.</strong> Give each node a datacentre label (<code>dc1</code>, <code>dc2</code>) and
+add a consistency level that requires a quorum <em>within the coordinator's own
+datacentre</em>. Write a test showing that a write succeeds while the entire remote
+datacentre is unreachable — and a second test showing exactly which guarantee
+you have given up by doing so.</p>
+<p><strong>5.2 · Bounded staleness.</strong> Add a read mode that refuses to answer from a
+replica whose version is more than K writes behind the newest version seen in
+that read. What does this buy that R alone does not? What new failure does it
+introduce?</p>
+<p><strong>5.3 · Compare-and-set (the instructive failure).</strong> Implement
+<code>putIfVersionMatches(key, expectedVV, value)</code>: the write applies only if the
+replica's current version matches. Then write a test in which two clients
+attempt a compare-and-set concurrently and prove that <strong>both can succeed</strong>.</p>
+<p>Then answer the real question: what would you have to add so that only one can?
+Why is that a fundamentally different (and more expensive) mechanism than
+anything else in this lab?</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p>Three bugs are planted behind flags. Each disables exactly one rule from the
+CORRECTNESS stage of the <a href="notes.html#readme">README</a>.</p>
+<div class="code"><pre><code class="language-bash">java src/Tests.java bug=no-overlap-check
+java src/Tests.java bug=lww-always
+java src/Tests.java bug=count-any-ack
+</code></pre></div>
+<p>For <strong>each</strong>: (a) which checks fail? (b) which invariant is violated? (c) what
+would a <em>user</em> see — the symptom, not the test output? (d) would monitoring
+catch it, or is it silent?</p>
+<p><strong>6.4</strong> <code>bug=count-any-ack</code> fails only two checks, and both are in a test that
+had to be written specially. Why did the rest of the suite not notice, and what
+does that tell you about how to test a quorum system?</p>
+<p><strong>6.5</strong> Which of the three bugs would be hardest to find in production, and why?
+Rank them and defend the order.</p>
+<hr />
+<h2 id="exercises-rung-7--handle-a-failure-the-lab-does-not-survive">Rung 7 — Handle a failure the lab does not survive</h2>
+<p><strong>7.1 · The acknowledgement that outran the disk.</strong> A replica acknowledges a
+write when it has it in memory, before it is on disk. Three replicas do this,
+W=2 is met, and then a rack loses power. What has been lost, what did the client
+believe, and what must change in the protocol for the acknowledgement to mean
+what it claims? What does this cost, and which real settings correspond to each
+choice?</p>
+<p><strong>7.2 · The hint holder dies.</strong> During a partition, a sloppy write is held as a
+hint on a node that does not own the key. That node then dies permanently while
+holding the only recent copy. Trace exactly what the client was told, what
+exists afterwards, and what mechanism (if any) recovers it. Then decide: should
+a sloppy quorum be allowed to satisfy W on its own?</p>
+<p><strong>7.3 · The grey failure.</strong> A replica is up, fast, and answering every request —
+with data that stopped updating an hour ago (a stuck compaction, a full disk
+that silently drops writes). Nothing times out. Design the detection. What
+signal distinguishes &quot;this replica has quiet keys&quot; from &quot;this replica has
+stopped applying writes&quot;? What do you do once you are sure, and what is the risk
+of acting on a false positive?</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 · Three datacentres, 80 ms apart.</strong> A user-profile store. Choose N, R, W
+and the replica placement. Where does each write's latency go? What happens when
+one datacentre is isolated — for users in it, and for users elsewhere? Which
+guarantee do you deliberately give up, and how would you word that to a product
+manager?</p>
+<p><strong>8.2 · A payment ledger.</strong> Connecting to <a href="../47-saga/notes.html#readme">saga</a> and
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>: you are storing account
+balances and a transaction ledger. Decide, for each of these, whether a
+Dynamo-style quorum is acceptable or whether you need consensus, and say why:
+(a) appending an immutable ledger entry, (b) reading a balance for display,
+(c) reading a balance to authorise a payment, (d) enforcing &quot;this idempotency
+key may be used exactly once&quot;, (e) the daily reconciliation job. What goes wrong
+if you get (d) wrong?</p>
+<p><strong>8.3 · Migrating off last-write-wins.</strong> A live Cassandra table uses
+last-write-wins and you have discovered concurrent writes are losing customer
+data. You cannot take downtime. Design the migration to a conflict-free
+representation. What runs in parallel, how do you verify it before cutting over,
+and how do you handle the data already corrupted?</p>
+<p><strong>8.4 · A read-heavy service.</strong> 10 reads per write, a p99 latency budget of
+50 ms, and replicas that stall on 5% of requests. Choose N, R, W. Show the
+arithmetic for both the consistency guarantee and the expected tail latency, and
+say which of the two constrained your answer.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--quorums-and-replication">Solutions — quorums and replication</h1>
+<p>Attempt <a href="notes.html#exercises">EXERCISES.md</a> first. Rungs 7–8 are worked discussions.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> With one copy, whatever it says is by definition the truth — there is
+nothing to disagree with. With three copies, a change may reach one and not the
+others, and then three machines hold three different answers, all of them
+delivered confidently and quickly. You have traded &quot;the data can be destroyed&quot;
+for &quot;the data can be wrong in a way nothing detects&quot;.</p>
+<p><strong>1.2</strong> For <code>N = 5</code>: the read set has R members, the write set has W members,
+both drawn from the same 5. They can be completely disjoint only if <code>R + W ≤ 5</code>,
+because that is exactly when R + W distinct machines fit. So <code>R = 3, W = 3</code> gives
+6 &gt; 5 and they must share one. <code>R = 2, W = 3</code> gives 5, and 5 distinct machines
+fit inside 5 exactly — the reader can ask precisely the two the writer did not
+reach.</p>
+<p><strong>1.3</strong> A consensus quorum makes the nodes <strong>agree on one value and one order</strong>,
+so every later reader sees the same history. A read/write quorum only makes the
+read set and the write set <strong>intersect</strong>, so a reader sees the last successful
+write's value — with no ordering between concurrent writes and no agreement
+between two readers about what happened.</p>
+<p><strong>1.4</strong> <em>&quot;What is <code>min.insync.replicas</code> set to?&quot;</em> Because <code>acks=all</code> means &quot;all
+replicas currently in sync&quot;, and when failures shrink that set to just the
+leader, <code>acks=all</code> becomes <code>acks=1</code> with no error and no change in behaviour.
+The measured evidence is in <code>java src/Experiments.java leader</code>: fully
+synchronous mode with both followers down refuses <strong>zero</strong> writes.</p>
+<p><strong>1.5</strong> The write was sent to three machines. Two of them replied &quot;got it&quot; and
+one did not reply in time, so we needed three and only counted two — but the
+third one may well have stored it anyway, and there is no way to reach back and
+undo that. So an error means &quot;we could not confirm enough copies&quot;, not &quot;nothing
+happened&quot;. That is why re-sending has to be harmless.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> The violet replica is in both the write set and the read set. It claims
+exactly one thing: <em>this replica acknowledged the last successful write and also
+answered this read, so the value the read returned is at least as new as that
+write.</em> It claims nothing about ordering between concurrent writes.</p>
+<p><strong>2.2</strong> At the step where the acknowledgement count reaches W. The remaining
+replicas keep being written to afterwards, in the background. It matters because
+it means the count W is about <em>confirmation</em>, not about <em>how many copies exist</em> —
+which is the same gap that makes a failed write still land (failure F3).</p>
+<p><strong>2.3</strong> The verdict is right and the arithmetic is irrelevant. <code>R + W &gt; N</code> is a
+statement about two sets being forced to intersect, and it only means anything
+while both sets are drawn from the same N replicas. A sloppy quorum takes its
+acknowledgements from outside that set, so the read set has nothing to intersect
+with. Measured: 300/300 writes accepted, 200/300 visible afterwards.</p>
+<p><strong>2.4</strong> A replica in the first loop but not the second <strong>received and stored the
+write, but did not reply in time to be counted</strong>. That is failure F3, and it is
+why &quot;write failed&quot; never means &quot;write did not happen&quot;.</p>
+<p><strong>2.5</strong> On <code>CONCURRENT</code> the incoming value is added <em>alongside</em> the existing one,
+so both survive as siblings. If that line set <code>dominated = true</code> instead, the
+incoming value would be dropped whenever it could not be proven newer — which
+means every concurrent write would be silently discarded in favour of whichever
+arrived first. You would have built last-write-wins with an even worse rule
+(first-write-wins, per replica, so different replicas could keep different
+values).</p>
+<p><strong>2.6</strong> <code>if (responders.size() &gt;= R) break;</code> enforces <strong>R</strong>. Remove it and every
+read waits for every replica, which makes reads strictly fresher and
+dramatically slower and less available — you would have turned every read into
+<code>R = N</code>. Experiment 10 measures the cost: 27% of requests slow instead of 2.85%.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> Zero stale reads at exactly the six combinations where <code>R + W &gt; N</code>:
+(1,3), (2,3), (3,3), (2,2), (3,2), (3,1). Write success at <code>W=3</code> with 20%
+independent failure is <code>0.8³ ≈ 51.2%</code> — and the measured figure is <strong>51.2%</strong>.</p>
+<p><strong>3.2</strong> 500 of 500 — 100%.</p>
+<p><strong>3.3</strong> Last-write-wins loses <strong>1000</strong>; version vectors lose <strong>0</strong> and surface
+1000 conflicts instead.</p>
+<p><strong>3.4</strong> 200 of 300 with hinted handoff off; 300 of 300 once handoff has run.</p>
+<p><strong>3.5</strong> <strong>Zero.</strong> That is the trap: &quot;wait for all live followers&quot; is vacuous when
+none are live.</p>
+<p><strong>3.6</strong> 27.31% (waiting for 3) against 2.85% (waiting for 2) — nearly a
+tenfold increase in slow requests, from replicas that are individually healthy
+90% of the time.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Every configuration reports stale reads, including the ones where that
+is impossible. The cause is not the quorum logic: with an empty context, every
+write produces the identical version vector <code>{cli:1}</code>, so <code>compare</code> returns
+<code>EQUAL</code>, and <code>Node.write</code> treats each new write as one it already has and
+<strong>ignores it</strong>. The replicas keep the first value for ever.</p>
+<p>The lesson is not about measurement. In a version-vector store, a client that
+writes without carrying forward the version it read is not writing &quot;the newest
+value&quot; — it is writing something the store cannot tell apart from a stale
+retry. <strong>Read-before-write is how a write acquires its place in the order.</strong>
+This is neither safety nor liveness in the usual sense: the system did exactly
+what it was told, and what it was told was meaningless.</p>
+<p><strong>4.2</strong> No — and this is worth measuring rather than reasoning about. Running
+<code>overlap</code> with read repair on and off:</p>
+<div class="code"><pre><code>readRepair=false   R1W1 stale=784   R2W1 stale=119
+readRepair=true    R1W1 stale=784   R2W1 stale=118
+</code></pre></div>
+<p>Essentially unchanged. Read repair fixes the replica <strong>after</strong> the stale value
+has already been returned to the client. It improves the <em>next</em> read of that key
+by that path; it cannot un-answer this one. What it has changed is the
+long-run convergence of the replicas; what it has not changed is the guarantee,
+because there was never a guarantee to change. Anything that makes staleness
+<em>less likely</em> without making it <em>impossible</em> is a probability, not a property.</p>
+<p><strong>4.3</strong> The stale counts for <code>R + W ≤ N</code> fall, sometimes to zero on a healthy
+cluster, because gathering from more replicas makes it more likely you catch the
+fresh one. <strong>The guarantee does not get stronger — only the luck.</strong> The read
+still <em>returns</em> after R replies in the general case, and under partition or
+failure the extra replicas are exactly the ones you cannot reach. This is the
+most dangerous kind of change: it makes the bug disappear in testing and keeps
+it in production.</p>
+<p><strong>4.4</strong> The <code>refused 2 down</code> column goes to 100 for every mode, including ASYNC.
+You have made it impossible to write unless all three replicas are in sync — you
+have chosen <code>W = N</code>, with the availability that implies (measured at 51.2% under
+20% independent failure). Safety maximal, liveness minimal.</p>
+<p><strong>4.5</strong> With &quot;rotate&quot;, the stale read appears only when the rotation happens to
+point at a replica that missed the write, so re-running gives different results.
+Pinned, it happens every single time.</p>
+<p>That is exactly why staleness bugs are so hard to reproduce: in production the
+client library spreads requests across replicas, so the same user action is
+correct on most attempts and wrong on some. The bug report says &quot;it sometimes
+shows old data&quot;, it never reproduces on demand, and the natural response —
+&quot;cannot reproduce&quot; — is correct and useless. The way to reproduce it is to
+<strong>pin the routing</strong>, which is the debugging trick worth remembering.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1 · <code>LOCAL_QUORUM</code>.</strong> Label nodes with a datacentre, and count
+acknowledgements only from nodes in the coordinator's datacentre against a
+local W. The test that shows what you gave up is the important one: write with
+<code>LOCAL_QUORUM</code> in dc1 while dc2 is unreachable, heal, then read with
+<code>LOCAL_QUORUM</code> in dc2 — and observe a stale read. <strong>You have not weakened the
+guarantee, you have narrowed its scope</strong>: it now holds within a datacentre and
+not across them. That is usually the right trade, and it must be a stated one,
+because a user who fails over between regions will notice.</p>
+<p><strong>5.2 · Bounded staleness.</strong> It buys a <em>time</em> (or version) bound where R buys a
+<em>set</em> bound. R says &quot;I asked enough replicas that one must be current&quot;; bounded
+staleness says &quot;whatever I got is at most K behind&quot;. They are useful together:
+R protects the guarantee, the bound protects you when the guarantee has been
+suspended (sloppy quorum, reset replica). The new failure it introduces is
+<strong>availability</strong>: a replica that is behind now refuses to answer, so during
+recovery — precisely when replicas are behind — reads start failing. You have
+converted a silent-wrongness failure into a loud-unavailability one, which is
+usually right and is never free.</p>
+<p><strong>5.3 · Compare-and-set: the instructive failure.</strong></p>
+<p>Both succeed. Measured with the lab's own cluster:</p>
+<div class="code"><pre><code>CAS: both clients read the same version=true
+     bothWritesReportedOk=true
+     valuesNowStored=[A-wins, B-wins]
+</code></pre></div>
+<p>Ana and Ben both read version <code>{init:1}</code>, both find their expected version
+matches on the replicas they reach, and both write. Each write is applied. The
+result is two siblings — which is honest, and is <em>not</em> a compare-and-set: the
+whole point of CAS is that exactly one attempt succeeds.</p>
+<p><strong>Why the quorum cannot fix this.</strong> The overlap rule guarantees a reader sees a
+writer. It does not create a moment at which the two clients' attempts are
+ordered relative to each other, because no node ever decides anything and no
+node has authority. Both clients observed a true fact (&quot;the version is
+<code>{init:1}</code>&quot;) and both acted on it, and the fact stopped being true between the
+observation and the action. That gap cannot be closed by asking more replicas.</p>
+<p><strong>What you would have to add:</strong> an agreement round — a majority of replicas
+agreeing on which attempt goes first, before either is applied. That is
+consensus, and it is exactly the <a href="../39-paxos/notes.html#readme">paxos</a> machinery. Cassandra offers
+it as <em>lightweight transactions</em> (<code>IF NOT EXISTS</code>, <code>IF version = ?</code>), which run
+a Paxos round per operation and cost roughly an order of magnitude more than a
+normal write. DynamoDB's conditional writes get it from a single-leader
+partition instead.</p>
+<p>The takeaway is the shape of the whole topic: <strong>overlap is cheap and gives you
+visibility; agreement is expensive and gives you exclusivity.</strong> Pay for the
+second only where you genuinely need &quot;exactly one&quot;.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<h3 id="solutions-bugno-overlap-check--4-checks-fail"><code>bug=no-overlap-check</code> — 4 checks fail</h3>
+<p>Reads answer from the first replica that replies, ignoring R. Violates
+<strong>invariant 2</strong> (a read is answered only when R owning replicas have replied).</p>
+<p><strong>Symptom for a user:</strong> intermittently old data — worse right after a replica
+has been down, better later, never reproducible. Also note it breaks two <em>read
+repair</em> checks, because a read that touches one replica cannot repair the others:
+disabling the read quorum silently disables the repair mechanism that was
+compensating for it.</p>
+<p><strong>Monitoring:</strong> would not catch it. Latency improves, error rates improve, and
+every read succeeds. This bug looks like a performance win on every dashboard
+you have.</p>
+<h3 id="solutions-buglww-always--2-checks-fail"><code>bug=lww-always</code> — 2 checks fail</h3>
+<p>Resolves by timestamp even when the version vectors say <code>CONCURRENT</code>. Violates
+<strong>invariants 3 and 4</strong> (nothing discarded unless provably older; concurrent
+values preserved).</p>
+<p><strong>Symptom:</strong> customers lose data occasionally and cannot explain it — an item
+disappears from a cart, an edit reverts. Support cannot reproduce it because it
+requires two writes in the same instant.</p>
+<p><strong>Monitoring:</strong> only if you were already tracking sibling counts, and the bug's
+effect is that sibling counts go to zero — which reads as &quot;no conflicts,
+everything is fine&quot;. A metric that looks healthiest exactly when the bug is
+worst.</p>
+<h3 id="solutions-bugcount-any-ack--2-checks-fail"><code>bug=count-any-ack</code> — 2 checks fail</h3>
+<p>Counts acknowledgements from nodes that do not own the key and store nothing.
+Violates <strong>invariant 1</strong> (W counts owning replicas only).</p>
+<p><strong>Symptom:</strong> writes that report success and then are not there. This is the
+worst of the three for a user, because it violates the one thing they were told.</p>
+<p><strong>Monitoring:</strong> invisible. Write success rate goes <em>up</em>.</p>
+<p><strong>6.4</strong> The rest of the suite did not notice because almost every test runs on a
+healthy cluster where all owning replicas are reachable, and the buggy branch
+only fires when fewer than W owners can be reached. <strong>A quorum system is correct
+on a healthy network by accident</strong> — every configuration, including the broken
+ones, looks right when nothing is failing.</p>
+<p>The consequence for testing: failures must be an <em>input</em>, not an environment.
+Node death, partitions, slow replicas and clock skew have to be parameters your
+tests set on purpose, which is why <code>Cluster</code> in this lab exposes <code>kill</code>,
+<code>makeSlow</code>, <code>partition</code> and <code>skewClock</code> as first-class knobs and why the tests
+that catch these bugs are the ones that use them.</p>
+<p><strong>6.5</strong> Hardest to find in production, in order:</p>
+<ol>
+<li><strong><code>count-any-ack</code></strong> — silent, and every metric moves in the <em>good</em> direction.
+You would find it only from a user reporting a lost write, and you would not
+believe them.</li>
+<li><strong><code>lww-always</code></strong> — silent and rare, and its natural metric (siblings) reads
+as healthy when it is at its worst.</li>
+<li><strong><code>no-overlap-check</code></strong> — also silent, but it produces stale reads at a high
+enough rate (784 in 4,000 at R=W=1) that users notice a pattern.</li>
+</ol>
+<p>The ranking principle worth keeping: a bug is hard to find in proportion to how
+much it <em>improves</em> your dashboards.</p>
+<hr />
+<h2 id="solutions-rung-7--handling-new-failures-discussion">Rung 7 — Handling new failures (discussion)</h2>
+<p><strong>7.1 · The acknowledgement that outran the disk.</strong> All three replicas
+acknowledged from memory; the rack lost power; the write is gone. The client was
+told it succeeded, and W=2 was genuinely met — the acknowledgement simply meant
+something weaker than the client assumed.</p>
+<p>The protocol change is to define what an acknowledgement asserts, and there are
+three defensible answers, each a real setting:</p>
+<ul>
+<li><em>&quot;I received it&quot;</em> — Kafka <code>acks=1</code> / Postgres <code>synchronous_commit = remote_write</code>.</li>
+<li><em>&quot;I wrote it to my log and fsynced&quot;</em> — MongoDB <code>j: true</code>, Postgres <code>on</code>.</li>
+<li><em>&quot;I applied it and it is visible&quot;</em> — Postgres <code>remote_apply</code>.</li>
+</ul>
+<p>The cost is latency, and it is not small: an fsync is milliseconds, and it is on
+the critical path of every write. The systems' answer is to make it configurable
+per write, which is the same per-request tuning idea as R and W. The deeper point
+is that <strong>W counts acknowledgements, and the durability of a write is W
+multiplied by what one acknowledgement means.</strong> Quoting W alone tells you
+nothing.</p>
+<p>Note also the correlation trap: three replicas in one rack fsyncing perfectly
+still lose everything when the rack does. Replica placement across failure
+domains is part of the durability answer, not separate from it.</p>
+<p><strong>7.2 · The hint holder dies.</strong> The client was told the write succeeded. The
+owning replicas never had it. The hint holder is gone. <strong>The write no longer
+exists anywhere, and nothing will ever recover it</strong> — anti-entropy compares
+owning replicas against each other, and they agree, on the old value.</p>
+<p>So: should a sloppy quorum satisfy W on its own? The honest answer is that it
+should be a <em>separate, explicit</em> mode, not a silent fallback. Riak makes this
+concrete by exposing <code>pw</code> — the number of acknowledgements that must come from
+<strong>primary</strong> (owning) replicas — alongside <code>w</code>. Setting <code>pw ≥ 1</code> means at least
+one real owner has the value, which turns this scenario from &quot;gone&quot; into
+&quot;recoverable by repair&quot;. The general rule: <strong>let a sloppy quorum extend
+availability, never let it be the entire basis of a successful write.</strong></p>
+<p><strong>7.3 · The grey failure.</strong> The distinguishing signal is <em>not</em> request volume or
+latency — both look healthy. It is <strong>version age relative to peers on the same
+keys</strong>. A replica with quiet keys and a replica that has stopped applying writes
+look identical in isolation and completely different in comparison: for the same
+key, healthy peers hold a newer version than the suspect does, consistently,
+across many keys. Anti-entropy already computes exactly this comparison, so the
+detector is a metric derived from a process you should be running anyway —
+&quot;fraction of compared keys where this replica was behind&quot;, per replica.</p>
+<p>Two supporting signals: read repair <em>direction</em> (a replica that is always the
+target and never the source is not keeping up) and the digest-mismatch rate a
+coordinator sees per replica.</p>
+<p>Once sure: take it out of the read path first (stop routing reads to it), which
+is cheap and reversible, before doing anything destructive. <strong>The risk of a false
+positive is a capacity cliff</strong> — removing a replica from a set of three means the
+other two now carry the load and a further failure makes reads unavailable. So
+the automation must be rate-limited and must refuse to eject more than one
+replica per replica set, because the detector's own failure mode is correlated:
+whatever fooled it about one node probably fools it about its neighbours.</p>
+<hr />
+<h2 id="solutions-rung-8--design-discussion">Rung 8 — Design (discussion)</h2>
+<p><strong>8.1 · Three datacentres, 80 ms apart.</strong> Place the replicas one per
+datacentre (<code>N=3</code>, one per DC) so no single DC failure loses more than one copy.</p>
+<p>The naive choice, <code>R=W=2</code> across all three, is correct and slow: every write
+waits for an acknowledgement from a second datacentre, so every write costs
+≥80 ms, and every read likewise. For a user-profile store that is a bad trade.</p>
+<p>The better shape is <code>N=6</code>, two replicas per datacentre, with <code>LOCAL_QUORUM</code>
+(local W=2, local R=2 out of the 2… which does not overlap locally, so make it
+3 replicas per DC, N=9, local R=W=2). Simpler and more common in practice:
+<strong>N=3 per datacentre</strong> (9 replicas total, RF 3 in each of three DCs), reads and
+writes at <code>LOCAL_QUORUM</code> = 2 of the local 3. Writes are local-latency, and
+cross-DC replication happens asynchronously.</p>
+<p>What you gave up, stated plainly: <strong>the guarantee now holds within a datacentre,
+not between them.</strong> A user whose request lands in dc2 immediately after writing
+in dc1 may see old data. When one DC is isolated: users inside it keep reading
+and writing normally against a diverging copy; users elsewhere are unaffected
+and do not see that DC's writes; on healing, conflicts are resolved by whatever
+rule you chose (and if that rule is last-write-wins, the clock skew between
+datacentres is now a data-loss mechanism — see F5).</p>
+<p>To the product manager: <em>&quot;Writes are fast everywhere because each region
+confirms locally. The cost is that a change made in Europe can take a second or
+two to be visible in the US, and if a user is bounced between regions in that
+window they can briefly see the older value. We can make that impossible, and
+every write would then take at least 160 milliseconds instead of 5.&quot;</em></p>
+<p><strong>8.2 · A payment ledger.</strong></p>
+<ul>
+<li><strong>(a) Appending an immutable ledger entry</strong> — a quorum is fine, and this is the
+best case for one. The entry has a unique id, it is never updated, so
+concurrent writes cannot conflict: two appends are two different rows. Use
+<code>W = quorum</code> for durability. This is the same insight as
+<a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>: append-only data has no conflicts to
+resolve.</li>
+<li><strong>(b) Reading a balance for display</strong> — a quorum read is fine, and <code>R = 1</code> is
+arguably fine too if the UI labels it as of a moment. Cheap, available.</li>
+<li><strong>(c) Reading a balance to authorise a payment</strong> — a quorum read is <strong>not
+enough</strong>, and the reason is subtle: <code>R + W &gt; N</code> tells you your read reflects
+the last successful write, but authorising is a read-modify-write, and between
+your read and your write another authorisation can complete. You would be
+building exercise 5.3 and getting its answer. You need either a conditional
+write on a version (single-partition CAS), or to model the balance as a fold
+over the append-only ledger with a uniqueness constraint on the deduction.</li>
+<li><strong>(d) &quot;This idempotency key may be used exactly once&quot;</strong> — this needs
+<strong>consensus</strong>, unambiguously. It is the definition of exclusivity: exactly one
+of many concurrent attempts may win. A quorum gives you overlap, and overlap
+lets both attempts see the same &quot;not used yet&quot; and both proceed. Use a
+single-leader store with a unique constraint, or a compare-and-set backed by
+Paxos/Raft.</li>
+<li><strong>(e) The daily reconciliation job</strong> — a quorum read is fine, but read at a
+consistent point and expect to find genuine disagreement; reconciliation is
+the process that <em>discovers</em> the consequences of every choice above.</li>
+</ul>
+<p><strong>What goes wrong if you get (d) wrong:</strong> a retried payment request is processed
+twice. The customer is charged twice, the ledger has two entries, and — because
+the duplicate arose from a <em>retry</em>, which is most likely during an incident —
+it happens to many customers at once. It is also nearly invisible in testing,
+because it needs two concurrent attempts with the same key, which is exactly the
+case a healthy network never produces. This is why the idempotency key is the
+one place in a payment system where paying for consensus is not negotiable.</p>
+<p><strong>8.3 · Migrating off last-write-wins.</strong> The migration is a
+<a href="../51-cqrs/notes.html#readme">cqrs</a>-shaped dual-write with a verification period:</p>
+<ol>
+<li>Start writing a <strong>conflict-free representation alongside</strong> the existing
+column — an append-only set of operations, or a CRDT-shaped structure the
+application merges on read. Do not switch reads yet.</li>
+<li>Backfill history into the new representation. It will be incomplete by
+definition: <strong>the data already lost is not recoverable</strong>, because
+last-write-wins left no record of what it discarded. Say so explicitly rather
+than implying the migration is a repair.</li>
+<li>Run a <strong>shadow comparison</strong>: read both, serve the old, log the differences.
+The difference rate is your evidence, and it also measures how bad the
+original problem was — probably the first real number anyone has had.</li>
+<li>Cut reads over when the difference rate is explained rather than merely small.</li>
+<li>Remove the old column only after a full <code>gc_grace_seconds</code> period, so no
+replica that was down can resurrect it.</li>
+</ol>
+<p>For the already-corrupted data: identify it (rows whose write timestamps cluster
+suspiciously, or where an audit trail exists elsewhere), and treat recovery as a
+business process, not a migration step.</p>
+<p><strong>8.4 · A read-heavy service.</strong> 10:1 reads, p99 budget 50 ms, 5% stall rate.</p>
+<p>Consistency first: any <code>R + W &gt; N</code> works. Latency decides between them, and the
+arithmetic is the binomial from experiment 10. With a 5% per-replica stall rate:</p>
+<ul>
+<li><code>N=3, R=2, W=2</code>: a read is slow if ≥2 of 3 replicas stall = <code>3(0.05²)(0.95) + 0.05³ ≈ 0.72%</code>. Comfortably inside a p99 budget.</li>
+<li><code>N=3, R=3, W=1</code>: slow if any of 3 stalls = <code>1 − 0.95³ ≈ 14.3%</code>. Blows the p99
+budget outright.</li>
+<li><code>N=3, R=1, W=3</code>: reads are fastest possible (<code>0.0125%</code> slow) but writes are
+slow <em>and</em> fragile — one dead replica stops writes entirely.</li>
+</ul>
+<p>Given 10:1 reads, the instinct is to push R down and W up. Do not go past the
+line: <code>R=1, W=3</code> satisfies the guarantee but makes writes unavailable whenever
+any replica is down, which at any real cluster size is most of the time. The
+answer is <strong><code>N=5, R=2, W=4</code></strong>: reads are slow only if ≥2 of 5 stall (≈2.3%),
+writes tolerate one dead replica, and the guarantee holds (2+4 &gt; 5). If write
+availability matters more, <code>N=5, R=3, W=3</code> is the balanced point.</p>
+<p><strong>Which constraint bound the answer:</strong> latency, not consistency. Every candidate
+satisfied <code>R + W &gt; N</code> — the consistency requirement did not distinguish between
+them at all. That is the usual case in practice, and it is why picking R and W
+by reciting the inequality and stopping there is only half the job.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../33-flp-impossibility/notes.html"><small>← Lab 33</small>flp-impossibility</a><a href="../35-consistent-hashing/notes.html" style="text-align:right"><small>Lab 35 →</small>consistent-hashing</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-keeping-copies-create-a-problem-that-nothing-reports">1. Why does keeping copies create a problem that nothing reports?</a><a href="#readme-2-how-many-friends-must-dev-tell-and-how-many-must-elle-ask">2. How many friends must Dev tell, and how many must Elle ask?</a><a href="#readme-3-why-not-just-tell-everybody">3. Why not just tell everybody?</a><a href="#readme-4-why-does-tell-one-pass-it-on-fail-in-the-opposite-direction">4. Why does &quot;tell one, pass it on&quot; fail in the opposite direction?</a><a href="#readme-5-what-do-we-actually-need">5. What do we actually need?</a><a href="#readme-6-what-is-the-key-idea">6. What is the key idea?</a><a href="#readme-7-what-are-these-things-called-now-that-the-idea-is-yours">7. What are these things called, now that the idea is yours?</a><a href="#readme-8-what-two-pictures-should-you-carry">8. What two pictures should you carry?</a><a href="#readme-9-where-can-you-move-the-sliders-yourself">9. Where can you move the sliders yourself?</a><a href="#readme-10-what-does-the-rule-look-like-when-you-run-it-and-when-does-it-stop-applying">10. What does the rule look like when you run it, and when does it stop applying?</a><a href="#readme-11-what-are-the-ten-ways-it-fails-and-what-survives-each-one">11. What are the ten ways it fails, and what survives each one?</a><a href="#readme-12-what-exactly-is-promised-and-what-is-not">12. What exactly is promised, and what is not?</a><a href="#readme-13-where-is-the-code-that-carries-the-design">13. Where is the code that carries the design?</a><a href="#readme-14-what-do-the-ten-experiments-show">14. What do the ten experiments show?</a><a href="#readme-15-what-are-these-knobs-called-in-real-systems">15. What are these knobs called in real systems?</a><a href="#readme-16-exercises">16. Exercises</a><a href="#readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</a><a href="#readme-18-glossary">18. Glossary</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

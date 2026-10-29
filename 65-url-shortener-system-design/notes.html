@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="en" data-hub-lab="65-url-shortener-system-design">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>65. url-shortener-system-design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 65 of 71 · Stage 8</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 65 · Whole Systems</p><article id="readme"><h1 id="readme-highly-scalable-url-shortener--high-level-design">Highly Scalable URL Shortener — High-Level Design</h1>
+<div class="table"><table><thead>
+<tr>
+  <th>Section</th>
+  <th>What it answers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>§1–2 WHY / the problem</td>
+  <td>Why does this product exist, and what does &quot;highly scalable&quot; mean in numbers?</td>
+</tr>
+<tr>
+  <td>§3–5 Naive design → failure</td>
+  <td>What would you build in an afternoon, and where does it fall over?</td>
+</tr>
+<tr>
+  <td>§6–7 The real requirement</td>
+  <td>What must actually be true, and what's the first fix?</td>
+</tr>
+<tr>
+  <td>§8–11 The ID-minting story</td>
+  <td>The one genuinely hard problem: unique short codes, minted without a bottleneck</td>
+</tr>
+<tr>
+  <td>§12 Sharding &amp; self-routing</td>
+  <td>How the code itself replaces a lookup</td>
+</tr>
+<tr>
+  <td>§13 Failure scenarios</td>
+  <td>What breaks, one piece at a time, and what survives</td>
+</tr>
+<tr>
+  <td>§14 Correctness &amp; guarantees</td>
+  <td>What's actually promised, CP vs AP, per path</td>
+</tr>
+<tr>
+  <td>§15 Production bridge</td>
+  <td>301 vs 302, abuse, expiry, analytics, edge deployment</td>
+</tr>
+<tr>
+  <td>§16 Wrong models</td>
+  <td>The misconceptions this lesson exists to prevent</td>
+</tr>
+<tr>
+  <td>§17 Knowledge map</td>
+  <td>Prerequisites, related labs, what to learn next</td>
+</tr>
+<tr>
+  <td>§18 Glossary</td>
+  <td>Every load-bearing term, in order of appearance</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Interpretation note:</strong> &quot;URL shortener&quot; here means the generic product (think TinyURL/Bitly-shaped), not any single company's real internal architecture. Neither Bitly nor TinyURL publish detailed system-design papers, so every number below is an <em>estimation exercise</em> built from stated assumptions — the kind an interviewer expects you to derive live, not a fact about a real company's infrastructure. Every assumption is named so you can redo the arithmetic with different ones.</p>
+<hr />
+<h2 id="readme-1-why-this-exists">1. Why this exists</h2>
+<p>Long URLs are unwieldy. <code>https://example.com/products/electronics/laptops?category=gaming&amp;sort=price&amp;filter=in-stock&amp;page=3&amp;session=a8f3e9c2...</code> doesn't fit in a text message, gets mangled by some email clients, and used to blow past Twitter's old 140-character limit entirely. A URL shortener maps that whole string to something like <code>acme.ly/x7Bq2</code> — short enough to say out loud, print on a billboard, or paste into an SMS — and transparently sends anyone who visits it to the original destination.</p>
+<p>That's the whole product idea. It sounds almost too simple to be an interesting system-design problem — &quot;store a mapping, look it up&quot; is something you could build in twenty minutes with one database table. And for a personal project, that build is correct and complete. The interesting design work only starts once you ask what happens at the scale implied by &quot;highly scalable&quot;: millions of links created a day, and — this is the detail that reshapes every decision that follows — a redirect click landing on your system possibly <em>years</em> after the link was created, from a corner of the internet you don't control (a printed flyer, an old text thread, a Wikipedia citation) that has no way to know or care that your system changed underneath it.</p>
+<h2 id="readme-2-the-concrete-problem-in-numbers">2. The concrete problem, in numbers</h2>
+<p><strong>Acme.ly</strong> is a URL-shortening product. To make &quot;highly scalable&quot; concrete rather than a vibe, put stated assumptions behind it:</p>
+<ul>
+<li>100 million new short links created per day, system-wide. <em>(A round planning number for this exercise — not a measured figure.)</em></li>
+<li>A 100:1 read-to-write ratio: every link, on average, gets clicked about 100 times before people stop clicking it. <em>(A commonly used rule-of-thumb for link-shortening workloads — some links get one click ever, some go viral and get millions; 100:1 is the average across the whole corpus.)</em></li>
+<li>Links must keep working for years. There's no natural expiry — a link is a promise made once and expected to be kept indefinitely.</li>
+</ul>
+<p>From those three assumptions alone, arithmetic gives you the shape of the system before you've designed a single component:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Quantity</th>
+  <th>Formula</th>
+  <th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Average write QPS</td>
+  <td>100,000,000 ÷ 86,400 s/day</td>
+  <td>≈ 1,157 writes/sec</td>
+</tr>
+<tr>
+  <td>Average read QPS</td>
+  <td>write QPS × 100</td>
+  <td>≈ 115,700 reads/sec</td>
+</tr>
+<tr>
+  <td>Peak read QPS</td>
+  <td>average × assumed 5× peak factor</td>
+  <td>≈ 580,000 reads/sec</td>
+</tr>
+<tr>
+  <td>5-year corpus size</td>
+  <td>100M/day × 365 × 5</td>
+  <td>≈ 182.5 billion links</td>
+</tr>
+<tr>
+  <td>Storage (rough)</td>
+  <td>182.5B rows × ~500 bytes/row (code + URL + metadata + index overhead)</td>
+  <td>≈ 90 TB</td>
+</tr>
+</tbody>
+</table></div>
+<p>The peak factor (5×) is an assumed heuristic for time-of-day plus the occasional viral spike concentrated on a handful of links — flagged explicitly as an assumption, not a derived number, because that's exactly the kind of figure a real system would get from actual traffic logs, not from a whiteboard.</p>
+<p>Two of those numbers are the whole story before you've drawn a single box: <strong>reads outnumber writes by two orders of magnitude</strong>, and <strong>the corpus is enormous and permanent</strong>. Every design decision below is downstream of those two facts.</p>
+<h2 id="readme-3-the-obvious-first-design">3. The obvious first design</h2>
+<p>A reasonable engineer, asked to build this in an afternoon, would reach for exactly this:</p>
+<div class="code"><pre><code class="language-sql">CREATE TABLE links (
+  id        BIGSERIAL PRIMARY KEY,   -- auto-incrementing integer
+  long_url  TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT now()
+);
+</code></pre></div>
+<p>To create a short link: <code>INSERT</code> the long URL, get back the auto-generated <code>id</code> (say, <code>125,000,042</code>), and convert that integer to base62 (digits 0–9, letters a–z, A–Z — 62 symbols, all URL-safe with no punctuation to escape). Base62 is just positional-notation encoding, the same idea as hex or binary, with a bigger alphabet: <code>125,000,042</code> becomes something like <code>8P1Ug</code>. To redirect: decode the base62 code back to the integer, <code>SELECT long_url FROM links WHERE id = ...</code>, and issue an HTTP redirect to whatever comes back.</p>
+<p>This is a genuinely good design for the first version. It's also the design most people would independently arrive at, because it uses the one thing a database gives you for free — a monotonically increasing, guaranteed-unique integer — and gets the shortest possible code for free as a side effect (base62 of a small number is a short string; you never pay for length you don't need yet). Nothing about this is naive in a &quot;beginner mistake&quot; sense. It's naive only in the specific sense that it hasn't yet met the requirement from §2.</p>
+<p><strong>🔮 Predict:</strong> This design is one server with one database. Given the QPS numbers from §2, where do you expect it to break first — on writes, or on reads?</p>
+<h2 id="readme-4-where-it-breaks">4. Where it breaks</h2>
+<p>Two independent things go wrong, and they go wrong for different reasons.</p>
+<p><strong>Read throughput.</strong> A single Postgres instance, well-tuned, can serve on the order of tens of thousands of simple indexed point-reads per second. §2's peak estimate is ~580,000 reads/sec. That's not &quot;needs tuning&quot; — it's multiple orders of magnitude past what one machine can do, full stop, no matter how good the query plan is.</p>
+<p><strong>The hot-link case makes it worse, and sooner.</strong> Say one link gets tweeted by someone with a large following and receives 50,000 clicks in the first ten seconds. That's 50,000 near-simultaneous point-reads for one row on one machine — the <em>average</em> QPS budget for the whole system doesn't even matter here; a single link can locally exceed what one database connection pool can push through, while every other link on the service sees no unusual load at all. (This is the exact shape of problem the [[caching]] lab calls a <strong>hot key</strong>: a workload where the interesting failure is about a small number of keys receiving disproportionate traffic, not about the aggregate.)</p>
+<p><strong>Single point of failure, with an unusual blast radius.</strong> If this one database goes down, <em>every previously shared link stops working</em>, everywhere on the internet, simultaneously — the flyer printed three years ago, the citation in a 2019 blog post, the SMS from last week. A URL shortener has an unusually strong version of the ordinary &quot;don't have a SPOF&quot; rule: outages don't just degrade <em>today's</em> traffic, they retroactively break every promise the product has ever made.</p>
+<p>Neither of these is solved by &quot;get a bigger database.&quot; They're solved by not putting every read on the database at all.</p>
+<h2 id="readme-5-the-real-requirement">5. The real requirement</h2>
+<p>State it precisely, because it will drive every decision from here on:</p>
+<blockquote>
+<p>Redirects must be servable — fast, and almost all the time — from something other than the single system of record, because a redirect is a promise made in the past that must be honored regardless of what's currently happening to the write path.</p>
+</blockquote>
+<p>Two consequences fall out of that sentence immediately:</p>
+<ol>
+<li><strong>The read path needs its own copy of the data</strong>, one that can absorb far more traffic than the source of truth and that doesn't go down when the source of truth has a bad day.</li>
+<li><strong>The read path's availability requirement is higher than the write path's.</strong> If link <em>creation</em> is briefly degraded during a database blip, that's an inconvenience. If link <em>redirection</em> is degraded, every already-published link everywhere breaks at once. Design the two paths to fail independently.</li>
+</ol>
+<h2 id="readme-6-first-fix-cache-in-front-of-the-database">6. First fix: cache in front of the database</h2>
+<p>This part doesn't need reinventing — it's a direct application of the [[caching]] lab, so only the application is new here, not the mechanism. Put a cache-aside cache (Redis or similar) in front of the redirect path: on a redirect request, check the cache first; on a hit, redirect immediately without touching the database at all; on a miss, read from the database, populate the cache, then redirect.</p>
+<p>This works unreasonably well here specifically <em>because</em> of the skew the caching lab already measured: a small fraction of the keyspace accounts for most of the traffic (that lab measured 10% of keys serving 67.3% of requests on a representative skewed workload). A URL shortener's access pattern is skewed the same way — most links get a handful of clicks and fade, a few links go viral and get most of the traffic — so a cache sized to hold only the <em>currently hot</em> fraction of a 182-billion-row corpus, not the whole corpus, still absorbs the large majority of read traffic. The hot-link scenario from §4 is now the cache's best case, not the database's worst case: 50,000 clicks on one link in ten seconds means one cache miss and 49,999 cache hits, not 50,000 database queries.</p>
+<p>This single change gets the read path most of the way to the requirement in §5 — but it doesn't touch the write path at all, and the write path has its own scaling story that's specific to <em>this</em> product in a way caching isn't. That's where the rest of this lesson lives.</p>
+<h2 id="readme-7-why-the-write-path-is-the-interesting-problem">7. Why the write path is the interesting problem</h2>
+<p>Here's the detail that makes a URL shortener a genuinely different design exercise from &quot;a CRUD app with a cache in front&quot; — and the reason this concept earns its own lesson instead of being three bullet points inside a generic web-scaling lab.</p>
+<p>The naive design's cleverest trick — using the database's auto-increment counter to generate both a <strong>unique</strong> id and, via base62, the <strong>shortest possible</strong> code — depends on there being exactly one counter. That's fine with one database server. But §5 already told you the write path needs to survive the database having a bad day too (creation shouldn't go down just because one machine is unhealthy), and §2's write volume (1,157/sec average, with its own spikes) is exactly the kind of load you'd normally handle by adding more application servers and more database capacity in parallel.</p>
+<p>The moment you have more than one place capable of accepting a &quot;create a link&quot; request — multiple app servers, or a sharded database — &quot;give me the next integer&quot; stops being a question one machine can answer alone. You've reintroduced, in miniature, the exact global-coordination problem the [[consistent-hashing]] lab spent its whole lesson eliminating for <em>key placement</em>. Here it shows up for <em>key generation</em> instead: uniqueness is a global property, and a global property under concurrent, distributed writers is where the hard part of this design actually lives.</p>
+<p><strong>🔮 Predict:</strong> If a single shared counter is the problem, what's the most obvious way to remove it — and what do you think goes wrong with that fix?</p>
+<h2 id="readme-8-attempt-two-skip-the-counter-guess-randomly">8. Attempt two: skip the counter, guess randomly</h2>
+<p>The obvious fix for &quot;one shared counter is a bottleneck&quot; is: don't share a counter. Let every app server generate its own random 7-character base62 string locally — no coordination, no shared state, trivially parallel — and <code>INSERT ... ON CONFLICT DO NOTHING</code>, retrying with a new random string if the insert reports a collision.</p>
+<p>This removes the single-counter bottleneck. It has a different cost, and the size of that cost is a number worth actually computing rather than waving at.</p>
+<p>A 7-character base62 code can represent 62⁷ = <strong>3,521,614,606,208</strong> distinct values (~3.52 trillion). That looks enormous next to the 182.5-billion-link, 5-year corpus from §2. But the question that matters for a random-guess scheme isn't &quot;is the keyspace big enough in total&quot; — it's &quot;what's the chance my next random guess collides with something already stored,&quot; and that's simply (codes already used) ÷ (total keyspace):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Corpus size (already stored)</th>
+  <th>Code length</th>
+  <th>Collision probability on next random guess</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>182.5 billion (5-year corpus)</td>
+  <td>7 chars (62⁷ ≈ 3.52T)</td>
+  <td>182.5B ÷ 3.52T ≈ <strong>5.2%</strong></td>
+</tr>
+<tr>
+  <td>182.5 billion (5-year corpus)</td>
+  <td>6 chars (62⁶ ≈ 56.8B)</td>
+  <td>keyspace exhausted before you get there</td>
+</tr>
+</tbody>
+</table></div>
+<p>The 6-character row isn't a rounding error — it's a hard wall. 62⁶ ≈ 56.8 billion codes, and at 100M new links/day the <em>entire</em> 6-character keyspace is exhausted in 56.8B ÷ 100M ≈ <strong>568 days</strong>, well under two years. Every insert after that point collides with certainty, forever, no matter how many retries you allow. This is the concrete version of an abstract worry (&quot;what if we pick too short a code&quot;) turning into an exact, computable, and avoidable failure — one interview candidates often gesture at without ever running the number.</p>
+<p>But even the 7-character row, at &quot;only&quot; a 5.2% collision rate, exposes the deeper problem with this whole approach, and it's not the collision <em>rate</em> — it's what a collision costs you. Every single insert, colliding or not, still needs a <strong>uniqueness check against shared state</strong>: a database unique constraint, checked synchronously, on every write. Random generation didn't remove the dependency on a shared coordination point at all — it just replaced &quot;ask for the next number&quot; with &quot;guess, then ask if you were wrong,&quot; which is the same round trip to the same database, now sometimes paid twice or three times per successful insert. You've made the coordination <em>probabilistic and retried</em> instead of <em>deterministic and singular</em> — which is a strictly worse trade, not an escape from the problem.</p>
+<h2 id="readme-9-the-refinement-batch-the-coordination-dont-eliminate-it">9. The refinement: batch the coordination, don't eliminate it</h2>
+<p>The insight the last two sections are building toward: you don't actually need to remove the shared counter. You need to stop paying its coordination cost <strong>on every single write</strong>.</p>
+<p>This is the same move as batching in general — do the expensive, coordinated thing rarely, and let each participant work from a private supply the rest of the time — applied to id generation specifically. It's commonly called a <strong>Key Generation Service (KGS)</strong>, sometimes a &quot;ticket server&quot; (the pattern predates URL shorteners; Flickr described a version of it for their photo-id ticket servers).</p>
+<p>The mechanism:</p>
+<ol>
+<li>A small, separately-scaled coordination service owns the one true counter (or a small number of them — more on that in §12).</li>
+<li>When an app server needs ids, it asks the KGS for a <strong>block</strong> — say, &quot;give me the next 1,000 ids&quot; — in a single request.</li>
+<li>The KGS atomically advances its counter by 1,000 and hands the <em>range</em> (e.g., <code>125,001,000</code>–<code>125,001,999</code>) to that app server. No other app server will ever be handed any id in that range — the KGS's job is exclusively to make range ownership globally non-overlapping.</li>
+<li>The app server mints ids 999 more times <strong>entirely locally</strong>, from memory, with zero network calls, until the block runs out — at which point it asks for another block.</li>
+</ol>
+<p>This changes the <em>frequency</em> of coordination, not its <em>existence</em>. Coordination is still required for correctness — uniqueness is still a global property, and global properties still need a single source of truth somewhere — but instead of paying for it once per write, you pay for it once per <strong>block</strong>. With a block size of 1,000, that's a <strong>1,000× reduction</strong> in coordination traffic (100 million writes/day become 100,000 block-fetches/day, system-wide, independent of how many app servers you run), and it eliminates the collision-and-retry problem from §8 entirely — allocated ranges never overlap, so there's nothing to collide with.</p>
+<p><strong>🔮 Predict:</strong> An app server crashes right after fetching a fresh block of 1,000 ids, having used only 12 of them. What happens to the other 988?</p>
+<p>The other 988 are simply never used. Nobody reclaims them; nobody needs to. This is the trade the design is explicitly making: a crash wastes at most (block size − 1) ids, which is a rounding error against a keyspace measured in trillions, in exchange for a coordination service that never needs to track <em>which specific ids</em> are outstanding — only the next range to hand out. Contrast this with the naive single-counter design, where the same crash mid-transaction risks a gap that some other piece of code might feel obligated to &quot;fix&quot; by reusing — exactly the kind of fragile, stateful bookkeeping the block design was built to avoid.</p>
+<p><strong>Block size is a real dial, not a free win</strong>, and it trades against the crash cost you just computed:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Block size</th>
+  <th>Coordination calls, system-wide (100M writes/day)</th>
+  <th>Max ids wasted per app-server crash</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>10</td>
+  <td>10,000,000/day</td>
+  <td>9</td>
+</tr>
+<tr>
+  <td>1,000</td>
+  <td>100,000/day</td>
+  <td>999</td>
+</tr>
+<tr>
+  <td>100,000</td>
+  <td>1,000/day</td>
+  <td>99,999</td>
+</tr>
+</tbody>
+</table></div>
+<p>There's no universally correct choice — it's a genuine tradeoff between how rarely you want to hit the coordination service and how many ids you're willing to burn on every crash, chosen by scale and by how &quot;expensive&quot; wasted keyspace actually is (in a 3.52-trillion-code space, it essentially never is, which is why production systems tend to pick block sizes on the larger end of this table).</p>
+<h2 id="readme-10-signposted-walkthrough-the-visualization">10. Signposted walkthrough: the visualization</h2>
+<p><strong>Open <code>visualization.html</code>.</strong> Before you look at it, here's what to watch for and why it's there.</p>
+<p>The panel lets you mint a chosen number of short codes under three strategies side by side — <em>naive shared counter</em>, <em>random-guess-and-retry</em>, and <em>block allocation</em> — and count the actual coordination round trips and (for the random strategy) collisions each one produces, against the same total workload. The random-guess strategy runs against a deliberately small demo keyspace (a few hundred thousand codes, not 62⁷) so that collisions are visible within a demo-sized run — <strong>this is a pedagogical simplification, called out explicitly</strong>: only the <em>mechanism</em> (probability of collision = fill fraction of the keyspace) is real; the specific numbers you'll see on screen are a scaled-down teaching model, not a claim about how a 7-character production keyspace behaves (that arithmetic is in the table in §8, computed exactly).</p>
+<p>What to look at: predict, before running, which of the three strategies will need the fewest round trips to the shared coordination point for a fixed number of minted codes — then run it and check the round-trip counter. Then increase the block size for the block-allocation strategy and watch that counter fall further, while the naive and random counters (which don't have a block size to adjust) stay fixed. That single relationship — round trips scale down linearly with block size, everything else held constant — <em>is</em> §9's argument, made visible instead of asserted.</p>
+<h2 id="readme-11-what-the-block-design-still-needs-it-isnt-snowflake-and-thats-a-choice">11. What the block design still needs: it isn't Snowflake, and that's a choice</h2>
+<p>Worth knowing the shape of the well-known alternative, briefly, because interviewers expect you to know it exists and to be able to say why you would or wouldn't pick it here.</p>
+<p>Twitter's <strong>Snowflake</strong> scheme generates ids with <em>no</em> coordination service at all: pack a timestamp, a fixed worker-id, and a per-millisecond sequence number into one integer, and any worker can mint ids forever without ever contacting anything else, because uniqueness comes from the worker-id field being disjoint by construction rather than from a range being handed out. This is strictly simpler operationally (no KGS to keep available), which is a real advantage this design should take seriously.</p>
+<p>The trade a URL shortener specifically cares about: a Snowflake-style id is a 64-bit integer carrying a timestamp and a worker id inside it, so it's <em>longer</em> once base62-encoded — you lose the &quot;shortest possible code for the current corpus size&quot; property that made base62-of-a-dense-counter attractive in the first place (§3). For a product whose entire value proposition is &quot;short,&quot; that's not a free trade. This lesson uses block allocation because it keeps codes dense and short; a design that didn't care about code length (an internal-only id service, say) might reasonably pick Snowflake instead and skip §9–§10 entirely. Both are legitimate answers to &quot;how do you mint unique ids without a bottleneck&quot; — they just optimize for different things.</p>
+<h2 id="readme-12-sharding-and-making-the-code-route-itself">12. Sharding, and making the code route itself</h2>
+<p>Once the corpus outgrows one database (§2's ~90 TB and ~580K peak reads/sec both argue for this well before 182.5 billion rows are reached), the database gets sharded — the same idea the [[consistent-hashing]] lab covered for placing keys across machines, applied here to placing <em>rows</em> across database shards.</p>
+<p>The natural sharding key is the short code itself, because that's what every read arrives with. But there's a small addition worth making, directly reusing the block-allocation mechanism from §9: instead of one single KGS counter, run a small fixed number of counters, each pre-assigned to a shard — for example, reserve two low-order bits of the minted id to name one of four shards. Now decoding a code back into &quot;which database shard owns this row&quot; is pure arithmetic (<code>id &amp; 0b11</code>), performed by whichever service received the redirect request — <strong>no lookup table, no metadata service, nothing that itself needs to be replicated and kept consistent.</strong></p>
+<p>This is the exact idea the [[consistent-hashing]] lab's takeaway is built around — <em>the machine count should appear nowhere in the placement rule, so there's nothing global left to keep in sync</em> — reused for id-to-shard placement instead of key-to-cache-node placement. It's also precisely how Snowflake's own worker-id field works (§11): the field exists specifically so an id is <strong>self-describing</strong> about where it came from, without anyone needing to ask.</p>
+<h2 id="readme-13-failure-scenarios">13. Failure scenarios</h2>
+<p>Work through these one at a time — each reveals a different part of the design, and a couple of them are places where a design that &quot;sounds right&quot; quietly isn't.</p>
+<p><strong>The KGS is unreachable.</strong> New links can't be created (an app server that's exhausted its current block has nowhere to get another one) — but every existing redirect keeps working, because the read path (§6) never talks to the KGS at all. This is the payoff of separating the read and write paths as sharply as §5 demanded: a coordination-service outage degrades <em>creation</em>, which is inconvenient, and leaves <em>redirection</em> — the higher-stakes path, per §4's blast-radius argument — completely unaffected.</p>
+<p><strong>One database shard goes down.</strong> Only the redirects whose codes hash to that shard fail; every other shard keeps serving normally. This is a direct benefit of sharding by code (§12): the blast radius of one shard's outage is 1/N of the corpus, not all of it — a sharp contrast with the single-database SPOF from §4.</p>
+<p><strong>A link goes viral (the hot-link / hot-key case, revisited).</strong> The cache from §6 absorbs the read storm for that one code. But — and this is a genuine limit worth stating precisely, not glossing over — sharding by consistent hashing does <strong>not</strong> spread a single hot key's load across multiple shards, no matter how good the hashing scheme is. The [[consistent-hashing]] lab's own list of failure modes it does <em>not</em> solve names this explicitly: every scheme agrees a key has exactly one owner, and that agreement is the feature, not a bug to route around. The fix for one code getting an enormous share of traffic is a bigger/faster cache in front of that one shard (or a dedicated local cache on each redirect server for the currently-hottest handful of codes), never &quot;reshard so the hot key spreads out&quot; — resharding a hash-partitioned key doesn't spread one key across multiple owners, it just changes which single owner has to deal with it.</p>
+<p><strong>Cache stampede on cache eviction.</strong> If a viral link's cache entry expires (or the caching layer restarts cold) while it's still receiving thousands of requests per second, a naive cache-aside implementation lets every one of those requests miss simultaneously and hit the database at once. This is the exact failure the [[caching]] lab covers under <strong>single-flight</strong> (collapse concurrent misses for the same key into one database read, fan the answer out to all waiters) — reused here without modification, because the mechanism doesn't care whether the cached value is a URL or anything else.</p>
+<p><strong>A malicious actor abuses the create API.</strong> Nothing in §3–§12 stops someone from scripting a million link creations a minute for spam or phishing redirects. This is a write-path abuse problem, and the fix is the [[distributed-rate-limiting]] lab's whole subject applied directly: rate-limit the create API per API key/IP, and — a URL-shortener-specific addition — screen the destination URL against a known-malicious-URL list (e.g., a Safe Browsing–style API) synchronously before minting a code, so the product doesn't become a phishing redirector.</p>
+<p><strong>Click-counting shouldn't sit on the redirect's critical path.</strong> If every redirect synchronously increments an analytics counter in the same transaction that serves the redirect, analytics-store latency or an outage now directly slows or breaks redirects — reintroducing exactly the fragile coupling §5 was designed to avoid. The fix: the redirect responds immediately from cache, and a click event is emitted asynchronously (a message onto a queue, processed later into whatever analytics store makes sense — see [[database-landscape]] on choosing an OLAP-shaped store for that kind of write-heavy, rarely-point-read data) so a slow or down analytics pipeline never touches redirect latency at all.</p>
+<h2 id="readme-14-correctness-and-guarantees">14. Correctness and guarantees</h2>
+<p>Pull together what's actually promised, because &quot;highly available&quot; and &quot;strongly consistent&quot; don't both apply uniformly across this design — they apply <em>per path</em>, and mixing them up is the most common way this design gets described sloppily in an interview.</p>
+<p><strong>The one real invariant, and its exact scope.</strong> Two short codes must never point to two different long URLs at the same code, ever. That's the <em>entire</em> correctness requirement for the write path — noticeably narrower than &quot;the database must be strongly consistent about everything.&quot; The block-allocation mechanism from §9 buys exactly this and nothing more: non-overlapping ranges guarantee non-colliding ids, full stop, independent of how many app servers are minting concurrently or how staggered their clocks are.</p>
+<p><strong>Write path: closer to CP.</strong> Creating a link needs the KGS's counter advance to actually be durable and unique before an id is handed out — a lost or double-counted range advance would violate the one invariant above. This is worth naming in [[cap-theorem]] / [[pacelc]] terms: under a partition that isolates the KGS, the write path should refuse rather than risk issuing overlapping ranges (favor consistency over availability, for this one narrow operation).</p>
+<p><strong>Read path: unapologetically AP.</strong> A redirect should almost always answer, even from a slightly stale cached copy, rather than block or fail waiting to confirm the mapping is fresh (§5's whole argument). Concretely: if someone edits a custom alias's destination and a cache entry serves the old destination for a few more seconds until its TTL expires, that's a fully acceptable, deliberately chosen staleness window — not a bug. This is exactly [[pacelc]]'s else-clause (favor latency over consistency on a healthy network) applied to a system that, unlike most of that lab's other examples, essentially never has a legitimate reason to pick the other side for this particular operation.</p>
+<p><strong>What none of this guarantees:</strong> <em>ordering</em> of link creation (two links created in the same millisecond on different app servers may land in either block — nothing in this design promises or needs a global creation order), or <em>exactly-once</em> delivery of click analytics (§13's async event pipeline is at-least-once, same as every asynchronous pipeline in [[communication-protocols]] — analytics counts are treated as approximate, which is an acceptable trade for a metric that doesn't gate anything).</p>
+<h2 id="readme-15-production-bridge">15. Production bridge</h2>
+<p>The design above is complete as a teaching model. Real products add several more pieces on top of it — named here explicitly rather than left as an implied gap.</p>
+<p><strong>301 vs. 302, and it's a real tradeoff, not a default.</strong> A <code>301 Moved Permanently</code> tells the visitor's browser to cache the redirect itself — the <em>next</em> time that same browser visits the same short link, it goes straight to the long URL without ever hitting your servers again, which is a genuine, free reduction in your infrastructure's load. The cost: you now can't see that second click (it never reached you) or ever repoint the link to a different destination for that browser (it's cached the old answer, possibly permanently). A <code>302 Found</code> costs you a hit on every single click, forever, but keeps full control and full click visibility. Products that sell click analytics as a feature (most commercial URL shorteners) use 302 for exactly this reason, deliberately paying for load they could have avoided.</p>
+<p><strong>Custom/vanity aliases</strong> (<code>acme.ly/summer-sale</code> instead of a random code) break the &quot;just mint from a range&quot; story from §9 — a user is now requesting a <em>specific</em> string, so uniqueness has to be checked against the exact one they asked for, which is a synchronous existence check against the sharded store, plus a reserved-word/profanity blocklist, plus a race-condition guard for two users requesting the same alias at once (a unique constraint, same tool as §8's naive design — narrower in scope here because it's the rare path, not every single write).</p>
+<p><strong>Expiration and cleanup.</strong> Not every link lives forever by design — some products offer TTLs. Expired rows need a background reaper (never on the read path — an expired-but-not-yet-reaped link should either redirect one last time or return a clean &quot;expired&quot; page, but should never block a live request waiting for cleanup to run).</p>
+<p><strong>Global edge deployment.</strong> For a product with a worldwide audience, the redirect service itself — not just the cache — benefits from being deployed at multiple geographic points of presence (anycast DNS routing a click to the nearest edge location), so the speed-of-light cost of a redirect doesn't dominate over the actual lookup cost, especially once that lookup is a cache hit and takes microseconds.</p>
+<p><strong>What this lesson deliberately did not build:</strong> authentication/ownership of links, a management UI, QR-code generation, per-link analytics dashboards, or link-editing/versioning history. None of them change the core mechanism above; they're additive features layered on top of a design that's already correct without them.</p>
+<h2 id="readme-16-common-wrong-models">16. Common wrong models</h2>
+<p><strong>&quot;It's just a hash map — this is a trivial design.&quot;</strong> The <em>storage</em> half is genuinely trivial (key → value, done). The entire interesting design surface is §7–§12: minting globally unique keys under concurrent, distributed writers without a coordination bottleneck. A candidate who jumps straight to &quot;we'll use a NoSQL database&quot; without ever discussing how ids get generated has skipped the actual hard problem.</p>
+<p><strong>&quot;Shorter codes are always better.&quot;</strong> Wrong once you connect code length to keyspace size: §8's table showed a 6-character keyspace exhausting in under two years at a modest write rate. Code length has to be chosen against <em>projected corpus lifetime</em>, not against &quot;as short as looks nice.&quot; (And in production, the <em>usable</em> keyspace is smaller still than 62ⁿ, once you reserve blocklisted/profane strings and anything that collides with existing routes.)</p>
+<p><strong>&quot;Consistent hashing / sharding solves the hot-link problem.&quot;</strong> Directly contradicted in §13: sharding by code spreads <em>different</em> codes across shards, but a <em>single</em> code, by design, always lives on exactly one shard — that's the guarantee, not a gap in it. The fix for one overloaded key is caching in front of it, not redistributing it (which is structurally impossible for a single key under any hash-based scheme).</p>
+<p><strong>&quot;301 redirects are obviously the right choice — they're faster.&quot;</strong> True for load, false for the whole story: §15 showed the real cost is losing click visibility and the ability to ever repoint the link. &quot;Faster&quot; and &quot;better&quot; aren't the same axis here, and a design that silently picks 301 for performance reasons has silently also given up an entire analytics feature.</p>
+<p><strong>&quot;A URL shortener needs strong consistency because it's dealing with money-adjacent redirects (affiliate links, etc.).&quot;</strong> §14 draws the line precisely: the <em>write</em> path (issuing a code) needs strong guarantees about uniqueness; the <em>read</em> path (serving a redirect) is explicitly and correctly AP. Conflating the two leads to over-engineering the read path with coordination it doesn't need and can't afford at 580K reads/sec.</p>
+<h2 id="readme-17-knowledge-map-and-next-steps">17. Knowledge map and next steps</h2>
+<p><strong>Built on directly:</strong></p>
+<ul>
+<li>[[caching]] — cache-aside for the redirect path (§6), single-flight for stampedes (§13), and the skew measurement that explains why a small cache absorbs most traffic.</li>
+<li>[[consistent-hashing]] — sharding by code (§12), and its explicit &quot;hot key is not solved by hashing&quot; finding, reused unchanged in §13.</li>
+<li>[[cap-theorem]] / [[pacelc]] — the write-path-CP / read-path-AP split in §14.</li>
+<li>[[distributed-rate-limiting]] — abuse protection on the create API (§13).</li>
+<li>[[database-landscape]] — choosing an OLAP-shaped store for async click analytics (§13), separate from the OLTP-shaped store for the mapping itself.</li>
+<li>[[communication-protocols]] — at-least-once delivery for the async click-event pipeline (§14).</li>
+</ul>
+<p><strong>Related but not covered here:</strong></p>
+<ul>
+<li>[[load-balancing]] — distributing redirect traffic across app-server replicas; this lesson assumed that layer exists without re-deriving it.</li>
+<li>[[quorums-and-replication]] — if the mapping store itself is replicated for durability (not just sharded), that lab's R+W&gt;N reasoning applies to reads of the mapping the same way it applies anywhere else.</li>
+<li>[[http-caching]] — the 301-vs-302 discussion in §15 is this lab's subject (<code>Cache-Control</code>, browser-side caching of a <em>response</em>) applied to a redirect response specifically.</li>
+</ul>
+<p><strong>Commonly confused with each other:</strong></p>
+<ul>
+<li><em>Sharding</em> (§12, spreading rows across databases by key) vs. <em>caching</em> (§6, keeping a small hot copy in front of the database) — sharding scales storage and write throughput; caching scales read throughput. This design needs both, for different reasons.</li>
+<li><em>Block allocation</em> (§9, this lesson's mechanism) vs. <em>Snowflake</em> (§11, the well-known alternative) — both solve &quot;mint unique ids without a bottleneck,&quot; trading code length for operational simplicity in opposite directions.</li>
+</ul>
+<p><strong>Suggested next labs</strong>, as ready-to-type commands:</p>
+<ul>
+<li><code>/learn distributed-id-generation</code> — a full treatment of Snowflake, ULIDs, and other id schemes, if you want the deep dive §11 only sketched.</li>
+<li><code>/learn database-sharding</code> — if you want the sharding mechanics (resharding, rebalancing, cross-shard queries) in more depth than §12's short version.</li>
+<li><code>/learn cdn</code> — the edge-deployment idea from §15, opened up properly.</li>
+</ul>
+<h2 id="readme-18-glossary">18. Glossary</h2>
+<ul>
+<li><strong>Short code</strong> — the compact string (e.g., <code>x7Bq2</code>) that maps to a long URL.</li>
+<li><strong>Base62 encoding</strong> — positional notation using 62 URL-safe symbols (0–9, a–z, A–Z); the same idea as hex, with a bigger alphabet, used here to turn an integer id into a short string.</li>
+<li><strong>Hot key / hot link</strong> — a single key (here, one short code) receiving disproportionate traffic relative to the rest of the keyspace.</li>
+<li><strong>Cache-aside</strong> — a caching pattern where the application checks the cache first, falls back to the source of truth on a miss, and populates the cache with the result.</li>
+<li><strong>Single-flight</strong> — collapsing multiple concurrent cache misses for the same key into one source-of-truth read, fanning the result out to all waiters.</li>
+<li><strong>Key Generation Service (KGS) / ticket server</strong> — a small coordination service that hands out non-overlapping ranges (&quot;blocks&quot;) of ids to writers, so writers don't need to coordinate with each other on every write.</li>
+<li><strong>Block allocation</strong> — the pattern of pre-reserving a range of ids in one coordination call, then minting from that range locally with no further coordination until it's exhausted.</li>
+<li><strong>Snowflake-style id</strong> — an id built from a timestamp, a fixed worker/shard identifier, and a per-interval sequence number, requiring no shared coordination service at all.</li>
+<li><strong>Self-routing (self-describing) id</strong> — an id that encodes, in its own bits, which shard or partition owns it, so routing a request needs only arithmetic on the id, not a lookup.</li>
+<li><strong>301 (permanent) vs. 302 (temporary) redirect</strong> — HTTP status codes distinguishing a redirect a browser may cache and reuse forever (301) from one it must re-request every time (302).</li>
+<li><strong>Vanity / custom alias</strong> — a user-chosen short code (e.g., <code>acme.ly/summer-sale</code>) instead of a system-generated one.</li>
+<li><strong>CP vs. AP</strong> — shorthand from [[cap-theorem]] for a component that refuses to answer under a partition to preserve consistency (CP) versus one that answers with a possibly-stale value to preserve availability (AP).</li>
+</ul>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--highly-scalable-url-shortener">Exercises — Highly Scalable URL Shortener</h1>
+<p>Work through these roughly in order — later ones assume the earlier ones. Attempt
+each before checking <code>SOLUTIONS.md</code>.</p>
+<h2 id="exercises-1-explain">1. Explain</h2>
+<p>In your own words, in 3–4 sentences: why is a URL shortener's <em>write</em> path a
+genuinely different scaling problem from a typical CRUD app's write path, even
+though both are &quot;just inserting a row&quot;? Your answer should mention the specific
+thing that makes generating the id itself hard, not just &quot;high write volume.&quot;</p>
+<h2 id="exercises-2-identify">2. Identify</h2>
+<p>Given the design in §9–§12 of the README (block-allocation KGS + sharded storage,
+codes carrying a shard id), answer:</p>
+<ul>
+<li>Which single component, if it disappears entirely for an hour, stops new link
+creation but leaves every existing redirect working?</li>
+<li>Which single component, if it disappears entirely for an hour, breaks roughly
+1/N of all redirects (N = shard count) but leaves link creation for everyone
+else unaffected?</li>
+</ul>
+<h2 id="exercises-3-predict">3. Predict</h2>
+<p>An app server has just been handed a fresh block of 500 ids (say, ids
+900,000–900,499). It successfully mints 3 short links, then its process is
+killed (deploy, crash, doesn't matter).</p>
+<ul>
+<li>What happens to ids 900,003–900,499?</li>
+<li>Does this ever cause a correctness problem (two different long URLs sharing
+one short code)? Justify your answer from the mechanism, not just &quot;no.&quot;</li>
+</ul>
+<h2 id="exercises-4-modify">4. Modify</h2>
+<p>Suppose product wants short codes limited to <strong>5 characters</strong> instead of 7, to
+make links even more shareable, on the same 100M-links/day, 5-year corpus
+assumption from §2 of the README.</p>
+<ul>
+<li>Compute 62⁵.</li>
+<li>At 100M new links/day, how many days until that keyspace is exhausted?</li>
+<li>Name one design change (from §8–§9) that would need to happen <em>before</em> that
+exhaustion date, and why waiting until the keyspace is actually full would be
+too late.</li>
+</ul>
+<h2 id="exercises-5-trace">5. Trace</h2>
+<p>Walk through the block-allocation mechanism (§9) by hand for <strong>block size = 4</strong>,
+starting from counter value 100, with two app servers, A and B, making requests
+in this order:</p>
+<ol>
+<li>A requests a block.</li>
+<li>A mints one code.</li>
+<li>B requests a block.</li>
+<li>A mints one code.</li>
+<li>B mints one code.</li>
+<li>A mints two more codes (its block is now exhausted after this).</li>
+<li>A requests a new block.</li>
+</ol>
+<p>For each step, write down: the counter's value immediately after any block
+request, which ids A has minted so far, which ids B has minted so far, and
+confirm no id is ever minted by both.</p>
+<h2 id="exercises-6-spot-the-flaw">6. Spot the flaw</h2>
+<p>A colleague proposes this variant of block allocation to &quot;make it simpler&quot;:
+instead of each app server tracking its own remaining count locally, every app
+server calls the KGS on every mint, and the KGS returns the next id <strong>plus</strong> a
+&quot;hint&quot; saying how many more the caller is <em>allowed</em> to mint without asking
+again — but the KGS doesn't actually reserve those ids; it just increments its
+counter by 1 each time, same as the naive design, and trusts the app server to
+not ask again until the hint's count is exhausted.</p>
+<p>Find the smallest concrete scenario (how many app servers, doing what, in what
+order) where this produces a duplicate id. Name exactly which line of reasoning
+in §9 this variant violates.</p>
+<h2 id="exercises-7-handle-failure">7. Handle failure</h2>
+<p>The README's failure-scenario table (§13) states that when the KGS is
+unreachable, existing redirects are unaffected. Extend the design one step
+further: what should an app server do if it receives a <em>create link</em> request
+while its local block is exhausted <strong>and</strong> the KGS is unreachable? List at
+least two different acceptable behaviors a real product might choose between,
+and name the tradeoff each one makes (in terms of the CP/AP framing from §14).</p>
+<h2 id="exercises-8-design">8. Design</h2>
+<p>A stakeholder asks for a new feature: <strong>link ownership and per-user link lists</strong>
+(&quot;show me every link I've ever created&quot;), sorted by creation time, for accounts
+that may have created millions of links.</p>
+<ul>
+<li>What does this requirement do to the sharding decision in §12 (which shards
+by short code)? Is &quot;shard by code&quot; still sufficient, or does something need
+to change?</li>
+<li>Sketch, in 4–6 sentences, how you'd support this feature without turning
+every redirect into a two-shard lookup. (Hint: think about what data the
+<em>read-heavy redirect path</em> needs versus what the <em>much rarer</em> &quot;list my links&quot;
+page needs, and whether they have to live in the same table.)</li>
+<li>What would you monitor in production to know this feature is healthy?</li>
+</ul>
+<h2 id="exercises-counterfactual-folds-into-68">Counterfactual (folds into 6–8)</h2>
+<p>If block allocation didn't exist — if every design were forced to choose
+between &quot;one global counter&quot; and &quot;random guess and retry&quot; — what's the
+smallest concrete write-scaling requirement (stated as a QPS number, referencing
+§2) that would make the naive single-counter design <em>impossible to run at all</em>,
+regardless of how good the database is? Be specific about what physically
+serializes.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--highly-scalable-url-shortener">Solutions — Highly Scalable URL Shortener</h1>
+<p>Attempt each exercise before reading its answer.</p>
+<h2 id="solutions-1-explain">1. Explain</h2>
+<p>A typical CRUD row's primary key can be anything unique — a UUID generated
+locally with no coordination at all works fine, because nothing about the
+<em>value</em> of the key matters to the product. A URL shortener's short code <em>is</em>
+the product-facing value: it has to be short, which historically meant &quot;dense&quot;
+(no gaps, assigned close to sequentially) to get the most mileage out of a
+small alphabet — and density is exactly the property that needs a shared,
+ordered counter, which is the one thing that doesn't parallelize for free.
+That's the specific tension: the write path needs both &quot;many independent
+writers&quot; (for throughput and availability) and &quot;one shared sequence&quot; (for
+short, dense, unique codes) at once, and reconciling those two is the actual
+design problem — not the write <em>volume</em> by itself.</p>
+<h2 id="solutions-2-identify">2. Identify</h2>
+<ul>
+<li><strong>The Key Generation Service (KGS)</strong> — if it's gone for an hour, any app
+server that exhausts its current block has nowhere to get a new one, so
+<em>new</em> link creation stalls or fails. Every already-issued short code still
+resolves normally, because the read path (§6) never talks to the KGS.</li>
+<li><strong>One database shard</strong> — if it's gone for an hour, every code that hashes
+to that shard fails to redirect (and fails to be created, if its counter
+range happens to route there), but the other (N−1)/N of the corpus is
+completely unaffected, because §12 sharded by code specifically so that one
+shard's fate is independent of the others'.</li>
+</ul>
+<h2 id="solutions-3-predict">3. Predict</h2>
+<p>Ids 900,003–900,499 (497 of them) are simply never minted by anyone. Nobody
+reclaims them, and no other server will ever be handed them either, because
+the KGS's counter has already moved past 900,499 — it gave that whole range to
+the crashed server and will never hand out any id inside it again.</p>
+<p>This does <strong>not</strong> cause a correctness problem. The one invariant the design
+promises (§14) is that two different long URLs never share one short code.
+Wasting a range doesn't touch that invariant at all — it only means the
+keyspace fills up very slightly faster than the theoretical minimum, which is
+irrelevant at a keyspace measured in trillions (§8). The design deliberately
+accepts this waste in exchange for never needing a mechanism to &quot;return&quot;
+unused ids, which would itself be extra coordination (exactly what block
+allocation exists to avoid).</p>
+<h2 id="solutions-4-modify">4. Modify</h2>
+<p>62⁵ = <strong>916,132,832</strong> (≈ 916 million).</p>
+<p>At 100,000,000 new links/day: 916,132,832 ÷ 100,000,000 ≈ <strong>9.16 days</strong>. A
+5-character keyspace at this write rate is completely exhausted in under two
+weeks — dramatically faster than the 6-character wall from §8 (568 days),
+because dropping one character divides the keyspace by 62, not by some small
+constant.</p>
+<p>The change that has to happen <em>before</em> that: either accept a longer code
+(defeating the point of the request), or move the block-allocation and
+sharding scheme (§9, §12) to actively track fill percentage and alert well
+before exhaustion — because unlike the 7-character design where exhaustion is
+theoretical over the planning horizon, a 5-character keyspace's exhaustion
+date is a real, near-term operational event, and finding out by having every
+insert start failing is far too late; you want alerting at, say, 50% fill,
+which here would be about 4.5 days after launch.</p>
+<h2 id="solutions-5-trace">5. Trace</h2>
+<p>Counter starts at 100. Block size = 4.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>Action</th>
+  <th>Counter after</th>
+  <th>A has minted</th>
+  <th>B has minted</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>A requests block</td>
+  <td>104 (A holds [100–103])</td>
+  <td>—</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>A mints</td>
+  <td>104</td>
+  <td>{100}</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>B requests block</td>
+  <td>108 (B holds [104–107])</td>
+  <td>{100}</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>A mints</td>
+  <td>108</td>
+  <td>{100, 101}</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>B mints</td>
+  <td>108</td>
+  <td>{100, 101}</td>
+  <td>{104}</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>A mints twice (block exhausted)</td>
+  <td>108</td>
+  <td>{100, 101, 102, 103}</td>
+  <td>{104}</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>A requests new block</td>
+  <td>112 (A holds [108–111])</td>
+  <td>{100, 101, 102, 103}</td>
+  <td>{104}</td>
+</tr>
+</tbody>
+</table></div>
+<p>No id appears in both sets. This holds regardless of the interleaving of steps
+2, 4, 5, 6 — A's and B's ranges were made disjoint the moment each block was
+requested (step 1 and step 3), before either server minted anything from it.
+That's the load-bearing point: uniqueness is decided at <strong>allocation time</strong>,
+not at <strong>mint time</strong>, so the order in which two servers happen to actually use
+their already-disjoint ids never matters.</p>
+<h2 id="solutions-6-spot-the-flaw">6. Spot the flaw</h2>
+<p>Smallest scenario, counter starting at 100:</p>
+<ol>
+<li>Server A calls the KGS. The KGS returns id <strong>100</strong> and a hint: &quot;mint up to
+5 more locally before calling back&quot; — but internally advances its counter
+by only 1, to <strong>101</strong> (same as the naive design's single-increment call).</li>
+<li>Before A has used any of its &quot;allowed&quot; ids 101–104, server B calls the KGS.
+The KGS's counter is 101, so it hands B id <strong>101</strong>, with the same
+&quot;5 more&quot; hint, and advances its counter to 102.</li>
+<li>A now locally mints its second id, believing it owns 101 (from its
+original hint). B mints its first id, using the 101 it was actually
+handed. <strong>Both servers insert a row for short code 101, with two different
+long URLs.</strong></li>
+</ol>
+<p>The exact line this violates, from §9: <em>&quot;No other app server will ever be
+handed any id in that range — the KGS's job is exclusively to make range
+ownership globally non-overlapping.&quot;</em> The proposed variant only advances the
+counter by 1 per call, so the &quot;range&quot; a server is told it owns was never
+actually reserved anywhere — the hint is an unenforced promise, not a real
+allocation. This is exactly the naive single-counter design from §3 wearing
+a disguise: the <em>coordination call</em> still only advances by one, which is the
+one thing block allocation is supposed to change.</p>
+<h2 id="solutions-7-handle-failure">7. Handle failure</h2>
+<p>Two legitimate choices, with different costs:</p>
+<p><strong>Fail closed</strong> — reject the create request (e.g., HTTP 503, &quot;try again
+shortly&quot;) until the KGS is reachable and a new block can be fetched. This
+favors correctness of the global counter over availability of link creation —
+the CP choice from §14 — and is the safer default, because it never risks
+inventing an id through any path that hasn't been proven disjoint from the
+KGS's normal ranges.</p>
+<p><strong>Fail open with a pre-provisioned emergency range</strong> — before any outage
+happens, each app server is given a small, permanently reserved sub-range of
+the keyspace that only it may use, and only during a declared KGS outage
+(e.g., a dedicated high bit in the id marks &quot;emergency-minted&quot;). This favors
+availability of creation over the simplicity of having one counter — the AP
+choice — but it isn't free: now there are two id-issuing mechanisms that must
+be proven, by construction, to never collide with each other or with the
+KGS's own ranges, which is real design and testing cost paid specifically to
+buy creation-availability during a rare event.</p>
+<p>Neither choice touches the read path — this exercise only concerns link
+<em>creation</em>, which is exactly the asymmetry §5 and §14 are built around.</p>
+<h2 id="solutions-8-design">8. Design</h2>
+<p><strong>Does sharding by code still work?</strong> For redirects, yes — nothing about
+adding a &quot;list my links&quot; feature changes how a <em>redirect</em> request should be
+routed, and §12's whole argument (self-routing from the code, no lookup) still
+holds. But it does mean a user's links are scattered essentially randomly
+across every shard (code assignment has nothing to do with who created the
+link), so &quot;give me all of user X's links&quot; as posed would require asking every
+shard and merging — a fan-out query, which is a fundamentally different and
+much more expensive access pattern than the point-lookup the sharding scheme
+was built for.</p>
+<p><strong>Sketch:</strong> Don't make the redirect-serving table answer this query at all.
+Add a second, separate store keyed by <code>user_id</code>, holding
+<code>(user_id, code, created_at)</code> rows, sharded by <code>user_id</code> instead of by code —
+optimized for &quot;give me this one user's rows, sorted by time,&quot; which is a
+completely different shape from &quot;give me this one code's row.&quot; Populate it the
+same way §13 already populates the async click-analytics pipeline: emit an
+event when a link is created, and let a consumer write it into the per-user
+store, off the create request's critical path. The redirect path never touches
+this second store, and the per-user store never needs to serve a single
+redirect — this is the same principle as [[database-landscape]]'s &quot;match the
+store to the access pattern&quot; applied to a second, unrelated query shape that
+showed up after the fact.</p>
+<p><strong>What to monitor:</strong> the lag between a link's creation event and its
+appearance in the per-user store (a user who just created a link and
+immediately opens &quot;my links&quot; is looking at a consistency window, and that
+window should be small and watched, not unbounded); and the per-user list
+endpoint's own latency and error rate, tracked and alerted on <em>separately</em>
+from redirect latency, so a slow or degraded &quot;my links&quot; page can never be
+confused with — or, worse, allowed to affect — the health of the redirect
+path, which is the metric that actually matters most for this product (§5).</p>
+<h2 id="solutions-counterfactual">Counterfactual</h2>
+<p>What physically serializes in the naive single-counter design (§3) is the
+<strong>round trip to the one row holding the counter</strong>: every writer, regardless of
+how many writers there are or how fast their own machines are, must complete
+a full request/response cycle against that one row before it can safely tell
+the next writer to proceed (an auto-increment, or any correctly-implemented
+compare-and-swap loop, cannot let two writers both advance from the same
+starting value). If that round trip averages, say, 2 ms end-to-end — a
+plausible number for a same-datacenter database call, offered here as an
+illustrative order of magnitude rather than a measured benchmark — the
+absolute ceiling on genuinely serialized increments to that one row is on the
+order of a few hundred to roughly 500 per second, no matter how the rest of
+the fleet is scaled. §2's average write requirement alone is <strong>≈1,157/sec</strong>,
+already past that ceiling before any peak multiplier is applied — which is
+exactly the number that makes &quot;just add more app servers in front of one
+counter&quot; not a tuning problem but a structural dead end, and it's the concrete
+threshold block allocation (§9) exists to remove.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../64-compound-engineering-plugin/notes.html"><small>← Lab 64</small>compound-engineering-plugin</a><a href="../66-google-spanner/notes.html" style="text-align:right"><small>Lab 66 →</small>google-spanner</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-this-exists">1. Why this exists</a><a href="#readme-2-the-concrete-problem-in-numbers">2. The concrete problem, in numbers</a><a href="#readme-3-the-obvious-first-design">3. The obvious first design</a><a href="#readme-4-where-it-breaks">4. Where it breaks</a><a href="#readme-5-the-real-requirement">5. The real requirement</a><a href="#readme-6-first-fix-cache-in-front-of-the-database">6. First fix: cache in front of the database</a><a href="#readme-7-why-the-write-path-is-the-interesting-problem">7. Why the write path is the interesting problem</a><a href="#readme-8-attempt-two-skip-the-counter-guess-randomly">8. Attempt two: skip the counter, guess randomly</a><a href="#readme-9-the-refinement-batch-the-coordination-dont-eliminate-it">9. The refinement: batch the coordination, don&#x27;t eliminate it</a><a href="#readme-10-signposted-walkthrough-the-visualization">10. Signposted walkthrough: the visualization</a><a href="#readme-11-what-the-block-design-still-needs-it-isnt-snowflake-and-thats-a-choice">11. What the block design still needs: it isn&#x27;t Snowflake, and that&#x27;s a choice</a><a href="#readme-12-sharding-and-making-the-code-route-itself">12. Sharding, and making the code route itself</a><a href="#readme-13-failure-scenarios">13. Failure scenarios</a><a href="#readme-14-correctness-and-guarantees">14. Correctness and guarantees</a><a href="#readme-15-production-bridge">15. Production bridge</a><a href="#readme-16-common-wrong-models">16. Common wrong models</a><a href="#readme-17-knowledge-map-and-next-steps">17. Knowledge map and next steps</a><a href="#readme-18-glossary">18. Glossary</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,2415 @@
+<!doctype html>
+<html lang="en" data-hub-lab="01-networking-for-developers">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>1. networking-for-developers</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 1 of 71 · Stage 1</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 1 · The Ground Floor</p><article id="readme"><h1 id="readme-networking-for-developers--what-happens-between-one-line-of-code-and-a-reply">Networking for developers — what happens between one line of code and a reply</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Priya posts a parcel to Arjun in another city. Sometimes it
+comes back stamped &quot;no such flat&quot;. Sometimes the courier says &quot;nobody home&quot;.
+Sometimes it just vanishes and she never hears anything at all. Those three
+feel the same to Priya, but they have three different causes and three
+different fixes. When your code sends one request, it passes through six
+hands exactly like Priya's parcel, and every failure it hits is one of those
+three. This lab teaches you to read <em>which one</em> from the symptom alone, and
+to know whether trying again can possibly help.</p>
+</blockquote>
+<p>The trainer for this lab is <a href="visualization.html"><code>visualization.html</code></a>, also
+published as <a href="https://claude.ai/code/artifact/cf035459-a3d8-4a72-9111-1c6680ba8605" target="_blank" rel="noopener">Why The Request Hung</a>.
+Six runnable experiments live in <code>NetLab.java</code>. Everything about how the lab
+was built, and where it sits among your other labs, is in
+<a href="#readme-19-about-this-lab">section 19</a> at the end.</p>
+<hr />
+<h1 id="readme-beginner-model">BEGINNER MODEL</h1>
+<h2 id="readme-1-why-does-one-line-of-code-hide-six-systems">1. Why does one line of code hide six systems?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You write one line. At least six independent systems take
+a turn before an answer comes back. Each can fail, and almost all of them fail
+as the same vague exception, or as nothing at all.</p>
+</blockquote>
+<p>You write this:</p>
+<div class="code"><pre><code class="language-java">HttpResponse&lt;String&gt; res = client.send(request, ofString());
+</code></pre></div>
+<p>What could be simpler? And yet between <code>httpClient.send(request)</code> and a
+response, at least six separate systems each do a job. Any one of them can
+break. Almost all of them break in a way that reaches your code as a generic
+exception. The worst ones reach your code as <em>nothing</em>: a thread that never
+comes back.</p>
+<p>Why does that matter? Because not understanding it produces a very specific
+kind of stuck. The app team says &quot;the network is flaky&quot;. The network team says
+&quot;nothing is wrong&quot;. Both are right, because neither can see the layer that
+actually broke. Meanwhile the retry you added &quot;to be safe&quot; is making it worse.</p>
+<h2 id="readme-2-what-happens-to-priyas-parcel">2. What happens to Priya's parcel?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Priya knows Arjun's name but not his address. Her parcel
+passes through hands she never sees. When it fails, she gets one of three
+experiences, and only one of them tells her anything.</p>
+</blockquote>
+<p>Priya wants to send a parcel to Arjun, who lives in another city.</p>
+<p>She knows his <strong>name</strong>. She does not know his address. So first she has to
+look it up. The directory she uses might be out of date, or slow, or might
+simply not answer.</p>
+<p>Once she has an address, the parcel goes through several pairs of hands: the
+local post office, a sorting centre, a truck, a delivery office in Arjun's
+city, and finally a courier at his door. She sees none of this.</p>
+<p>Now the important part. When things go wrong, Priya gets one of three
+experiences:</p>
+<ul>
+<li>The parcel comes back stamped <strong>&quot;no such address&quot;</strong>. Annoying, but she
+<em>learned something</em>. The address is wrong.</li>
+<li>The courier reports <strong>&quot;nobody home&quot;</strong>. Also useful. The building exists;
+the person was not in.</li>
+<li><strong>Nothing happens at all.</strong> No parcel, no return, no message. Weeks pass.</li>
+</ul>
+<p>That third case is the one that ruins her week. It is also the one that maps
+most directly onto network debugging. Hold on to this: <strong>those three outcomes
+have completely different causes and completely different right responses.</strong>
+But if Priya only checks &quot;did Arjun reply?&quot;, all three look identical.</p>
+<p>Here is how far the lab goes, and what you can do after each layer:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner</strong></td>
+  <td>1–9</td>
+  <td>name the six systems in the path and say what each one can break</td>
+</tr>
+<tr>
+  <td><strong>Intermediate</strong></td>
+  <td>10</td>
+  <td>walk one request phase by phase, with real timings</td>
+</tr>
+<tr>
+  <td><strong>Engineering</strong></td>
+  <td>11–14</td>
+  <td>diagnose nine failures from their symptoms, and measure them</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>15</td>
+  <td>set timeouts and pools deliberately, and know what to watch</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-why-not-just-send-it-and-retry-if-nothing-comes-back">3. Why not just send it, and retry if nothing comes back?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Retrying is the obvious fix for an unreliable thing. It is
+genuinely right for one class of problem, and quietly wrong for two others.</p>
+</blockquote>
+<p>The obvious approach, and the one most code ships with:</p>
+<div class="code"><pre><code class="language-java">for (int attempt = 0; attempt &lt; 3; attempt++) {
+    try { return client.send(request, ofString()); }
+    catch (Exception e) { /* try again */ }
+}
+</code></pre></div>
+<p>Send it. If it fails, send it again. Networks are unreliable, and retrying is
+what you do about unreliable things. This is not stupid. For one whole class
+of problem it is exactly correct.</p>
+<p>So what is wrong with it?</p>
+<h2 id="readme-4-how-does-the-retry-make-it-worse">4. How does the retry make it worse?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The same catch block handles three different failures.
+One retry is free, one costs nine seconds for nothing, and one never runs at
+all because nothing ever throws.</p>
+</blockquote>
+<p>Walk it through with real behaviour, all of it from this lab's experiments.</p>
+<p><strong>Case A: the machine is up, but nothing is listening on your port.</strong> Think
+of Priya's parcel coming back stamped &quot;no such flat&quot;. The failure arrives
+fast. Three retries cost you almost nothing, and all three fail identically.</p>
+<p><strong>Case B: a firewall is dropping your packets.</strong> This is the parcel that
+vanishes. The failure arrives only when your own patience runs out. With a
+3-second timeout, three retries hold a thread for nine seconds and every one
+fails for the same permanent reason.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Case</th>
+  <th>What happened</th>
+  <th>Time to fail</th>
+  <th>Cost of three retries</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>A</td>
+  <td>nothing listening on the port</td>
+  <td>under 5 ms</td>
+  <td>almost nothing, same answer thrice</td>
+</tr>
+<tr>
+  <td>B</td>
+  <td>firewall dropping packets</td>
+  <td>3,001 ms (timeout 3,000 ms)</td>
+  <td>9 seconds of a held thread</td>
+</tr>
+</tbody>
+</table></div>
+<p>Same code. Same catch block. Same log line. One retry loop is free; the other
+holds a thread for nine seconds and achieves nothing.</p>
+<p><strong>And case C is worse than both.</strong> A server accepts your connection and then
+never answers. Arjun takes the parcel at the door and never opens it. Your
+retry loop never even runs, because the first attempt <em>never throws</em>. There is
+no exception to catch. The thread simply stops, on a connection that is
+genuinely healthy and open.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> In case C the code <em>did</em> set a timeout: 2 seconds, on opening
+the connection. The connection opened in about 1 ms. So why did the request
+still hang forever instead of giving up at 2 seconds?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Because that timeout had already succeeded.</strong> The setting is called a
+<strong>connect timeout</strong>, and the name is exact. It bounds the <em>handshake</em> and
+nothing else. The moment the connection is established, it has done its job
+and is spent. It never applies to anything that happens afterwards.</p>
+<p>Everything after the handshake is unbounded unless you bound it separately:
+sending the request, waiting for the server to think, receiving the response.
+Most code does not bound those, because &quot;I set a timeout&quot; feels like it
+covers the call.</p>
+<p>If you guessed &quot;the server must have sent a byte&quot;, that is a real failure
+too, and you will meet it in section 10 as the slow drip. It is not this one.</p>
+<p>| Setting | What experiment 3 saw |
+|---|---|
+| connect timeout only | still waiting when the lab's 4-second watchdog gave up; would wait forever |
+| plus an 800 ms read timeout, same server | failed in 801 ms |</p>
+</details>
+
+</blockquote>
+<p>So the naive fix fails in three distinct ways, and they point at one shared
+cause. <strong>The code cannot tell the difference between &quot;refused&quot;, &quot;ignored&quot;, and
+&quot;accepted then abandoned&quot;.</strong> So it applies one response to three different
+problems.</p>
+<h2 id="readme-5-what-do-we-actually-need">5. What do we actually need?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> For any failed or slow request we need three things:
+which layer broke, whether retrying can help, and a hard ceiling on how long
+we will wait.</p>
+</blockquote>
+<p>What we actually need, for any failed or slow request:</p>
+<ol>
+<li><strong>Which layer broke.</strong> Names, routing, the connection, trust, or the
+application at the far end.</li>
+<li><strong>Whether retrying can possibly help.</strong> Retrying a permanent failure is
+not neutral. It is expensive.</li>
+<li><strong>A guaranteed upper bound on how long we wait</strong>, even when nothing fails
+and nothing errors.</li>
+</ol>
+<p>The rest of this lesson is those three.</p>
+<h2 id="readme-6-what-is-the-key-idea">6. What is the key idea?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The path is a stack of layers, each hiding the one below.
+That hiding is what makes one line of code possible. And each layer fails
+with its own signature, so the failure tells you where it happened.</p>
+</blockquote>
+<p>Why is one line of code enough to reach a server across the world? Because the
+path is <strong>layered</strong>. Each layer provides one guarantee to the layer above and
+hides everything below it. Priya does not know about sorting centres; the
+sorting centre does not know what is in the box.</p>
+<p>That hiding is exactly what makes failures hard to read. But the layers leak
+in a useful way. <strong>How a request fails, meaning how long it took and which
+exception came back, identifies the layer that broke.</strong> Each layer fails with
+a different signature.</p>
+<p>Read the signature, and you skip the guessing.</p>
+<h2 id="readme-7-whose-hands-does-the-parcel-pass-through">7. Whose hands does the parcel pass through?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Follow Priya's parcel from the directory to Arjun's door.
+Each pair of hands has an engineer's name, one job, and one way of failing.</p>
+</blockquote>
+<p>Let's walk the parcel through every hand, and name each hand as we get there.</p>
+<h3 id="readme-the-directory-how-does-a-name-become-an-address">The directory: how does a name become an address?</h3>
+<p>Priya starts with a name. The directory turns it into an address. Your
+machine does the same: it asks a configured <strong>resolver</strong> for the records
+attached to a hostname, and it remembers the answer for as long as the answer
+says it may.</p>
+<p>Engineers call this <strong>name resolution</strong>, or <strong>DNS</strong>. An address for the older
+kind of network address is an <code>A</code> record; an address for the newer, longer kind
+is an <code>AAAA</code> record. Both come with a <strong>time-to-live</strong> (<code>TTL</code>), which is how
+long your machine may reuse the answer before asking again.</p>
+<p>Why does the directory exist as a separate step? To separate <em>who</em> from
+<em>where</em>. Servers move and multiply; the name stays. Everything about deploys,
+failover and blue-green rests on that separation.</p>
+<p>Notice that this happens entirely <em>before</em> any of the protocol knowledge from
+your communication-protocols lab applies. No socket exists yet.</p>
+<h3 id="readme-the-address-and-the-flat-number-which-machine-and-which-door">The address and the flat number: which machine, and which door?</h3>
+<p>The directory gives Priya a street address. But Arjun's building has many
+flats, so she also needs his flat number.</p>
+<p>The street address is the <strong>IP address</strong>. It routes a packet to a network
+interface, meaning one machine. The flat number is the <strong>port</strong>. It selects
+which listening process on that machine receives the packet. One machine runs
+many services, so you need both: the address gets you to the building, the
+port gets you to the right room.</p>
+<h3 id="readme-the-knock-how-do-two-machines-agree-to-talk">The knock: how do two machines agree to talk?</h3>
+<p>Before Priya hands anything over, the courier knocks: &quot;Are you there?&quot; &quot;Yes.&quot;
+&quot;Good, here you go.&quot; Three short exchanges, and only then does the parcel move.</p>
+<p>Engineers call this the <strong>three-way handshake</strong>. Your machine sends a small
+&quot;are you there?&quot; packet called a <code>SYN</code>. The server replies &quot;yes, and are you?&quot;
+with a <code>SYN-ACK</code>. Your machine answers &quot;yes&quot; with an <code>ACK</code>. That costs <strong>one
+round trip</strong> before any of your data can move.</p>
+<p>A <strong>round trip</strong> (<code>RTT</code>) is one message there and back. You met it in the
+communication-protocols lab. It is repeated here because this lab makes it the
+<em>unit of account</em>. Every connection cost below is quoted in round trips, not
+milliseconds, because round trips are what stay true when you move regions.</p>
+<p>Why does the handshake matter so much? Because it is the moment <em>reachability</em>
+is established, and its failure carries the most diagnostic information of any
+step in the path. That brings us to the two stamps.</p>
+<h3 id="readme-the-two-stamps-why-is-a-fast-failure-good-news">The two stamps: why is a fast failure good news?</h3>
+<p>Priya's first parcel came back the same afternoon, stamped &quot;no such flat&quot;.
+Her second parcel simply never came back. Which of those helped her more?</p>
+<p>The first. It was a <em>reply</em>. Something at the far end read the address and
+answered. Engineers call that reply a <strong>reset</strong> (<code>RST</code>), and the failure
+&quot;<strong>refused</strong>&quot;. The machine received your handshake and actively answered:
+&quot;I'm here, and nothing is listening on that port.&quot; Your code sees a
+<code>ConnectException</code>, and it arrives in about one round trip.</p>
+<p>The second parcel was <strong>dropped</strong>. A firewall or a wrong route discarded your
+packets. Nobody answered anything. Your code sees a <code>SocketTimeoutException</code>,
+and it arrives exactly when <em>your</em> timeout expires, because nothing else was
+ever going to end the wait.</p>
+<p>Why is this the single most useful distinction in the lab? Because a refusal
+<em>proves the network path works</em>. The problem is the process or the port.
+Silence proves nothing reached anything, and points at routing or a firewall.
+The tell is the clock: <strong>when elapsed time equals your configured timeout
+almost exactly, nobody answered you.</strong></p>
+<h3 id="readme-the-id-check-who-is-arjun-really">The ID check: who is Arjun, really?</h3>
+<p>The courier reaches the door. Before handing over anything private, the
+courier checks that the person is actually Arjun.</p>
+<p>That is the <strong>TLS handshake</strong>. On top of the established connection, the two
+sides agree on an encryption method, and your machine checks the server's
+certificate against the list of authorities it trusts. Roughly one further
+round trip with TLS 1.3.</p>
+<p>Why does it matter for diagnosis? Because it happens <em>after</em> a successful
+connection. Its failures are therefore never connectivity problems, however
+much an <code>SSLHandshakeException</code> looks like one.</p>
+<h3 id="readme-the-two-stopwatches-why-is-one-timeout-not-enough">The two stopwatches: why is one timeout not enough?</h3>
+<p>Priya has two separate worries. Will the courier reach the door at all? And
+once there, will Arjun ever open the parcel? Two waits, two stopwatches.</p>
+<p>The <strong>connect timeout</strong> bounds the handshake only. The <strong>read timeout</strong>
+(<code>SO_TIMEOUT</code> on a socket) bounds <em>each individual read</em>, not the whole
+request. They fail independently, and the gap between them is where services
+hang.</p>
+<p>Here is the sharp edge in the second one. A 30-second read timeout does
+<strong>not</strong> mean the request takes at most 30 seconds. A server that sends one
+byte every 29 seconds resets the stopwatch every time, and keeps your thread
+alive forever.</p>
+<h3 id="readme-the-courier-on-retainer-why-keep-the-connection-open">The courier on retainer: why keep the connection open?</h3>
+<p>Priya sends parcels to Arjun every week. Looking up the address, knocking, and
+checking ID every single time is wasteful. So she keeps the same courier on
+retainer, and he just goes straight to the door.</p>
+<p>That is <strong>connection reuse</strong>, or <strong>keep-alive</strong>. The client holds established
+connections in a <strong>pool</strong> between requests. A request that finds an idle one
+skips name resolution and both handshakes. Setup is a per-<em>connection</em> cost,
+not a per-<em>request</em> one, so reuse converts a fixed cost into an amortised one.</p>
+<h3 id="readme-the-concierge-who-forgets-you-what-is-a-middlebox">The concierge who forgets you: what is a middlebox?</h3>
+<p>There is a third party in Priya's story that she never thinks about: the
+building concierge who logs which couriers are expected. If a courier has not
+been seen for a while, the concierge quietly crosses him off the list and
+tells nobody.</p>
+<p>Engineers call that a <strong>middlebox</strong>: a NAT gateway, a load balancer, a
+firewall. It is neither you nor the server, but it holds state about your
+connection anyway. It tracks active connections in a table, and <strong>evicts
+entries that have been idle too long, silently.</strong> There is a third party, it
+has an opinion, and it will not tell you.</p>
+<h3 id="readme-the-numbers-behind-the-story">The numbers behind the story</h3>
+<p>Each hand above has a number from this lab's experiments. Read the last column
+for what each number proves.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Hand</th>
+  <th>Figure from this lab</th>
+  <th>What it proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Directory (DNS)</td>
+  <td><code>api.github.com</code> → <code>20.207.73.85</code>, TTL 56 seconds</td>
+  <td>your machine may reuse that answer for 56 seconds</td>
+</tr>
+<tr>
+  <td>Address and port</td>
+  <td><code>20.207.73.85:443</code></td>
+  <td>the machine, and the door where TLS-wrapped HTTP is expected</td>
+</tr>
+<tr>
+  <td>Round trip</td>
+  <td>loopback 0.117 ms; <code>8.8.8.8</code> 16.2 ms across 8 hops</td>
+  <td>a 138× difference, and it is not a defect, it is distance</td>
+</tr>
+<tr>
+  <td>Handshake</td>
+  <td>~16 ms at the 16 ms RTT</td>
+  <td>one round trip before your request has begun</td>
+</tr>
+<tr>
+  <td>Refused vs dropped</td>
+  <td>refused in 0–4 ms; dropped in 3,001 ms against a 3,000 ms timeout</td>
+  <td>time alone separates &quot;something answered&quot; from &quot;nothing did&quot;</td>
+</tr>
+<tr>
+  <td>ID check (TLS)</td>
+  <td><code>cloudflare.com</code> 46 ms; <code>www.google.com</code> 456 ms; both connected in under 31 ms</td>
+  <td>the difference is handshake and certificate work, not distance</td>
+</tr>
+<tr>
+  <td>Two stopwatches</td>
+  <td>connect timeout only: still blocked at the 4-second watchdog; 800 ms read timeout: failed at 801 ms</td>
+  <td>the connect timeout is spent once the connection opens</td>
+</tr>
+<tr>
+  <td>Courier on retainer</td>
+  <td>20 requests: 682 ms over 20 new connections vs 38 ms over 1 reused</td>
+  <td>17.9× faster for identical work</td>
+</tr>
+<tr>
+  <td>Concierge (middlebox)</td>
+  <td>idle timeouts: 350 seconds on AWS NLB, 60 seconds on many ALB configs, 5 minutes on lots of NAT hardware</td>
+  <td>the connection can die while you are not using it</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-what-are-the-two-pictures-to-keep-in-your-head">8. What are the two pictures to keep in your head?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Carry Priya's postal service for intuition, and the six
+systems table for precision. Then learn the three places the postal picture
+lies to you.</p>
+</blockquote>
+<h3 id="readme-the-simple-picture-the-postal-service">The simple picture: the postal service</h3>
+<p>Priya's parcel. A directory lookup, then a chain of handlers, each of which
+knows only the next hop, and three distinguishable outcomes: returned to
+sender, delivered, or vanished.</p>
+<h3 id="readme-the-engineers-picture-six-systems-each-with-one-job">The engineer's picture: six systems, each with one job</h3>
+<p>Read the last column. It is the list of things that can go wrong, one per
+system.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>System</th>
+  <th>Its one job</th>
+  <th>How it fails</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Your process</td>
+  <td>Make the call, bound the wait</td>
+  <td>Blocks forever with no timeout</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Resolver</td>
+  <td>Name → address</td>
+  <td>Wrong answer, no answer, or a slow one</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Router / NAT</td>
+  <td>Private address → public, and back</td>
+  <td>Forgets idle connections</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Firewall</td>
+  <td>Allow, reject, or drop</td>
+  <td>Drops (silence) instead of rejecting</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Load balancer</td>
+  <td>Pick a healthy server</td>
+  <td>Own idle timeouts, own health view</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>The server</td>
+  <td>Do the work</td>
+  <td>Accepts and then never answers</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-how-the-two-pictures-line-up">How the two pictures line up</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Postal</th>
+  <th>Network</th>
+  <th>Fails as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Looking up Arjun's address</td>
+  <td>Name resolution</td>
+  <td><code>UnknownHostException</code>, or a slow lookup</td>
+</tr>
+<tr>
+  <td>The address itself</td>
+  <td>IP address</td>
+  <td>Routes nowhere → silence</td>
+</tr>
+<tr>
+  <td>The flat number</td>
+  <td>Port</td>
+  <td>Wrong one → refused</td>
+</tr>
+<tr>
+  <td>&quot;No such address&quot;, returned</td>
+  <td>TCP reset</td>
+  <td><code>ConnectException</code>, ~1 RTT</td>
+</tr>
+<tr>
+  <td>Parcel vanishes, no word</td>
+  <td>Dropped packets</td>
+  <td><code>SocketTimeoutException</code> at your timeout</td>
+</tr>
+<tr>
+  <td>Checking Arjun's ID at the door</td>
+  <td>TLS handshake</td>
+  <td><code>SSLHandshakeException</code></td>
+</tr>
+<tr>
+  <td>Arjun takes the parcel, never opens it</td>
+  <td>Server accepts, never replies</td>
+  <td><strong>no exception at all</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-the-story-lies-to-you">Where the story lies to you</h3>
+<p>Three places, and each one matters.</p>
+<p><strong>The post always eventually tells you something; the network often does
+not.</strong> A postal service has no equivalent of a DROP rule. This is the single
+biggest gap. It is why &quot;no news&quot; is the hardest network failure to reason
+about, rather than the mildest.</p>
+<p><strong>A parcel is one object; TCP is a stream with no parcels in it.</strong> You already
+know framing from io-multiplexing. This is why. There is no envelope. In
+experiment 6, three separate writes of <code>ALPHA</code>, <code>BETA</code>, <code>GAMMA</code> arrive
+regrouped. One run gave two reads (<code>ALPHABETA</code>, then <code>GAMMA</code>). Another gave a
+single read of <code>ALPHABETAGAMMA</code>. <strong>Run it several times: the grouping
+changes.</strong> Your write boundaries are not preserved, and they are not even
+deterministic.</p>
+<p><strong>Delivery is not the same as being acted upon, and TCP only promises
+delivery.</strong> When TCP acknowledges your bytes, it means the <em>operating system</em>
+at the far end received them. It does not mean the application read them, or
+processed them, or survived doing so. This is precisely the gap the
+idempotency key from your communication-protocols lab exists to cover, and
+section 12 returns to it.</p>
+<h2 id="readme-9-where-can-you-break-each-layer-yourself">9. Where can you break each layer yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Open the trainer, send one request, then break one thing
+at a time and read three panels together: where it broke, how long it took,
+and what your code saw.</p>
+</blockquote>
+<p>Open <strong><a href="https://claude.ai/code/artifact/cf035459-a3d8-4a72-9111-1c6680ba8605" target="_blank" rel="noopener">Why The Request Hung</a></strong>,
+or <a href="visualization.html"><code>visualization.html</code></a>, which works offline. It is
+Priya's parcel with every hand made visible.</p>
+<p>What to do, in this order:</p>
+<ol>
+<li><strong>Press &quot;Send request&quot; once with nothing broken.</strong> Look at the waterfall.
+Notice how much of the total elapsed before &quot;Send request&quot;. That is setup
+cost, and you paid it before your data moved at all.</li>
+<li><strong>Press it again.</strong> The first three phases go grey and the total collapses.
+That is connection reuse, and it is experiment 4 in one picture.</li>
+<li><strong>Now break things</strong>, one at a time, from the &quot;What is wrong today?&quot; menu.
+For each, read three panels together: <em>the path</em> (where it broke), <em>the
+waterfall</em> (how long it took to break), and <em>what your code sees</em> (the
+actual exception, or its absence).</li>
+<li><strong>The one to spend time on</strong> is &quot;the server accepts, then never answers&quot;
+with the default read timeout of <em>none</em>. Then set a read timeout and send
+again. One dropdown converts a hang into an error.</li>
+</ol>
+<p>Three faults pause and ask you to predict first. Take the guess.</p>
+<p>The RTT slider is worth dragging. At 1 ms nothing matters. At 250 ms the two
+handshakes dominate everything, and connection reuse stops being an
+optimisation and becomes the whole design.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-beginner-model">✅ Checkpoint: end of the beginner model</h3>
+<p>You can now name the six systems in the path, and you know the most
+valuable distinction in the lab: a fast failure means something answered
+you; a slow one means nothing did.</p>
+<p><strong>Say it back.</strong> Without using the words <em>reset</em>, <em>timeout</em> or <em>firewall</em>,
+explain to a friend why Priya should be <em>relieved</em> when a parcel comes back
+stamped, and worried when nothing comes back at all.</p>
+<details><summary>A good answer sounds like</summary>
+"A stamp means somebody at the other end read her address and answered.
+The road works; the problem is the door. Silence means she has no idea how
+far the parcel got, and the only thing that ended her wait was her own
+patience running out."
+</details>
+
+<p>Next: one request, phase by phase, with the real numbers. And why the naive
+version of &quot;just make the call&quot; is slower than it needs to be.</p>
+</blockquote>
+<hr />
+<h1 id="readme-intermediate-model">INTERMEDIATE MODEL</h1>
+<h2 id="readme-10-what-does-one-request-actually-look-like-phase-by-phase">10. What does one request actually look like, phase by phase?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One request is three systems in a row before your bytes
+move. Version 1 pays for all three every time. Version 2 keeps the connection.
+Version 3 puts a stopwatch on every wait, not just the first.</p>
+</blockquote>
+<h3 id="readme-mechanism-v1-the-honest-version-of-one-https-request">Mechanism v1: the honest version of one HTTPS request</h3>
+<p>What does <code>client.send(request)</code> actually perform? Here it is in order,
+timed against <code>cloudflare.com</code>. Read it as Priya's parcel: directory,
+knock, ID check, and only then the parcel itself.</p>
+<pre class="mermaid">sequenceDiagram
+    participant A as Your app
+    participant R as Resolver
+    participant S as Server
+    A-&gt;&gt;R: what is the address of cloudflare.com?
+    R--&gt;&gt;A: 104.16.133.229   (2 ms, cached)
+    A-&gt;&gt;S: SYN
+    S--&gt;&gt;A: SYN-ACK
+    A-&gt;&gt;S: ACK                (18 ms — one round trip)
+    A-&gt;&gt;S: TLS ClientHello
+    S--&gt;&gt;A: certificate + key exchange
+    A-&gt;&gt;S: Finished           (57 ms — handshake + cert validation)
+    A-&gt;&gt;S: GET /  (finally, your actual request)
+    S--&gt;&gt;A: 200 OK
+</pre>
+<p>Read that as three separate systems, not one call. And note the ordering
+consequence: <strong>your request bytes are the fourth thing to move, not the
+first.</strong></p>
+<p>Two hosts, same machine, same run. Read the last column for what each phase
+is made of.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Phase</th>
+  <th style="text-align:right">cloudflare.com</th>
+  <th style="text-align:right">www.google.com</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Name lookup</td>
+  <td style="text-align:right">2 ms</td>
+  <td style="text-align:right">18 ms</td>
+  <td>configuration, not distance</td>
+</tr>
+<tr>
+  <td>TCP handshake</td>
+  <td style="text-align:right">18 ms</td>
+  <td style="text-align:right">31 ms</td>
+  <td>~1 round trip: distance</td>
+</tr>
+<tr>
+  <td>TLS handshake</td>
+  <td style="text-align:right">57 ms</td>
+  <td style="text-align:right">456 ms</td>
+  <td>~1 round trip + certificate work</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Same table, same machine, same run. But <code>api.github.com</code> and
+<code>github.com</code> both showed a name lookup of just over <strong>5,000 ms</strong>, while their
+TCP and TLS phases were normal. Distance can't explain it. What can?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>A timeout.</strong> 5,000 ms is not a duration anything <em>takes</em>. It is a duration
+something <em>waits</em> before giving up. A suspiciously round number is nearly
+always a configured limit rather than a measurement.</p>
+<p>If you guessed &quot;GitHub is slow&quot;, notice that the TCP and TLS phases to the
+same host were normal. Whatever it was, it was over before the connection
+even started.</p>
+<p>This turned out to be a real fault on the machine this lab was written on,
+and section 11 walks the whole diagnosis. The short version: the router at
+<code>192.168.1.1</code> answers the newer-address question (<code>AAAA</code>) only when the
+answer is <em>yes</em>. When a hostname has no such address, it stays completely
+silent instead of replying &quot;none&quot;. The resolver waits a full 5 seconds
+before falling back to the older-address answer (<code>A</code>) it already had.</p>
+<p>The application is blameless, the server is blameless, and nothing in the
+code can see it. Every IPv4-only host costs 5 extra seconds on every cold
+lookup.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-mechanism-v2-reuse-the-connection">Mechanism v2: reuse the connection</h3>
+<p>Why is v1 slow? Because it pays name lookup, TCP handshake and TLS handshake
+<strong>for every request</strong>. At 16 ms RTT that is roughly 2 round trips of pure
+setup before any useful byte moves. Priya looks up the address, knocks, and
+checks ID for every single parcel.</p>
+<p>The fix is to stop closing the connection. Keep the courier on retainer.
+Experiment 4 sends 20 identical requests both ways:</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th style="text-align:right">Time</th>
+  <th style="text-align:right">Connections opened</th>
+  <th style="text-align:right">Per request</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>New connection each time</td>
+  <td style="text-align:right">682 ms</td>
+  <td style="text-align:right">20</td>
+  <td style="text-align:right">34 ms</td>
+</tr>
+<tr>
+  <td>One connection reused</td>
+  <td style="text-align:right">38 ms</td>
+  <td style="text-align:right">1</td>
+  <td style="text-align:right">1 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>17.9× faster for identical work.</strong> This is why every HTTP client you have
+used keeps a pool. It is also why constructing a client inside a request
+handler is a performance bug rather than a style question. It discards the
+pool. Every request pays the handshakes again.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> You now hold connections open in a pool. What new failure
+have you just created that did not exist in v1?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Connections can die while you are not using them, and you will not be
+told.</strong></p>
+<p>The concierge from section 7. A NAT gateway or load balancer between you and
+the server keeps a table of active connections and evicts entries that have
+been idle too long. It sends nothing to either end. Your socket still reports
+<code>isConnected() == true</code>, because that method reports whether this socket was
+<em>ever</em> connected, not whether the peer is still there. TCP has no dial tone.</p>
+<p>If you guessed &quot;the pool fills up&quot;, that is a real problem too (failure 9),
+but it is the opposite one: too many connections, not dead ones.</p>
+<p>| Experiment 5, step by step | What happened |
+|---|---|
+| request 1 | succeeded |
+| the connection sat idle | 900 ms, past a 600 ms idle timeout |
+| the socket still said | <code>isConnected=true isClosed=false</code> |
+| request 2 | failed with <strong>Connection reset</strong> |</p>
+<p>The cruel part is <em>when</em> you find out: on the next request. So the failure
+lands on a random unlucky user rather than during the idle period that
+caused it. That is why these errors correlate with traffic <em>gaps</em> rather
+than with load, and look maddeningly random.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-mechanism-v3-bound-every-wait-not-just-the-first">Mechanism v3: bound every wait, not just the first</h3>
+<p>v2 is fast and reuses connections. Why is it still not safe? Because it still
+hangs forever against a server that accepts and goes quiet. The connect
+timeout was spent at the handshake, exactly as section 4 showed.</p>
+<p>The fix is a <strong>hierarchy</strong> of bounds, outermost first. Read the last column:
+it is what happens to Priya if she forgets each one.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Bound</th>
+  <th>What it covers</th>
+  <th>If you omit it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Connect timeout</td>
+  <td>The handshake only</td>
+  <td>You inherit the OS default: minutes</td>
+</tr>
+<tr>
+  <td>Read timeout</td>
+  <td>Each individual read</td>
+  <td>The call can block forever</td>
+</tr>
+<tr>
+  <td><strong>Request timeout</strong></td>
+  <td>The whole call, end to end</td>
+  <td>Slow-drip responses evade the read timeout</td>
+</tr>
+<tr>
+  <td>Pool idle-eviction</td>
+  <td>How long a connection may sit unused</td>
+  <td>Middleboxes kill it first, and you find out on a user's request</td>
+</tr>
+</tbody>
+</table></div>
+<p>The third row is the subtle one, and the reason v3 exists rather than stopping
+at v2. A read timeout of 30 seconds resets on <em>every</em> read. A server that
+sends one byte every 29 seconds keeps the connection alive indefinitely while
+never completing the response. Only a bound on the whole operation catches
+that. In Java that is <code>HttpClient.Builder.connectTimeout()</code> plus
+<code>HttpRequest.Builder.timeout()</code>, two different settings for exactly this
+reason.</p>
+<p><strong>The rule that ties it together:</strong> every timeout must be shorter than the
+timeout of whatever is calling you. If your caller gives up at 5 seconds and
+you wait 30, you are holding a thread doing work nobody will ever read.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-intermediate-model">✅ Checkpoint: end of the intermediate model</h3>
+<p>You can walk one request phase by phase, explain why connection reuse
+exists, and name the four separate bounds a call needs.</p>
+<p><strong>Say it back.</strong> Priya keeps a courier on retainer to save time. In two
+sentences, say what she gained and what new thing she now has to worry
+about.</p>
+<details><summary>A good answer sounds like</summary>
+"She skips the directory, the knock and the ID check on every parcel, so
+each one is many times faster. But the building's concierge may have
+quietly crossed her courier off the list while he sat idle, and she only
+finds out when the next parcel bounces."
+</details>
+
+<p>Next: the nine failures, each with the symptom that identifies it, and the
+guarantees TCP does and does not give you.</p>
+</blockquote>
+<hr />
+<h1 id="readme-engineering-model">ENGINEERING MODEL</h1>
+<h2 id="readme-11-what-are-the-nine-ways-it-fails-and-how-do-you-tell-them-apart">11. What are the nine ways it fails, and how do you tell them apart?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nine failures, nine signatures. Each one is a short story
+about Priya's parcel, and each has one <em>tell</em>: the observable that identifies
+it without guessing.</p>
+</blockquote>
+<h3 id="readme-failure-1-the-directory-that-answers-only-half-the-question">Failure 1: the directory that answers only half the question</h3>
+<p><em>A real fault, diagnosed while writing this lab. It is worth the space because
+it demonstrates the whole method.</em></p>
+<p>Priya asks the directory for Arjun's address and gets it, but only after
+waiting exactly five seconds every time. The directory is not slow at finding
+the answer. It is waiting for something else.</p>
+<p><strong>The symptom.</strong> <code>curl</code> to <code>api.github.com</code> took 5.39 s total, of which
+<code>time_namelookup</code> was <strong>5.03 s</strong>. Three warm runs in a row: 5.004, 5.005,
+5.011. Java agreed. <code>InetAddress.getAllByName(&quot;api.github.com&quot;)</code> took
+<strong>5,027 ms</strong>, while <code>www.google.com</code> took <strong>12 ms</strong> on the same machine, same
+second.</p>
+<p><strong>The diagnosis, in four steps:</strong></p>
+<ol>
+<li><em>A round number is a timeout, not a measurement.</em> 5.00 s is the classic
+resolver timeout.</li>
+<li><em>Is it the name, or the resolver?</em> Querying <code>8.8.8.8</code> directly returned the
+answer in 0.24 s. So the name is fine. The configured resolver
+(<code>192.168.1.1</code>, the home router) is the problem.</li>
+<li><em>Which query is hanging?</em> macOS asks for the older address (<code>A</code>) and the
+newer address (<code>AAAA</code>) together. Against the router: <code>A</code> returned in
+<strong>0.24 s</strong>; <code>AAAA</code> <strong>timed out entirely</strong>, no response at all.</li>
+<li><em>Falsify it.</em> If the theory were &quot;this router hates github&quot;, it should
+hold only for github. The actual theory was &quot;this router stays silent when
+a hostname has <strong>no</strong> IPv6 address instead of replying 'none'.&quot; So: test
+six hostnames, three with IPv6 records and three without.</li>
+</ol>
+<div class="table"><table><thead>
+<tr>
+  <th>Hostname</th>
+  <th>Has IPv6?</th>
+  <th>Router's answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>api.github.com</code></td>
+  <td>no</td>
+  <td><strong>timeout (7.02 s)</strong></td>
+</tr>
+<tr>
+  <td><code>github.com</code></td>
+  <td>no</td>
+  <td><strong>timeout (7.02 s)</strong></td>
+</tr>
+<tr>
+  <td><code>api.stripe.com</code></td>
+  <td>no</td>
+  <td><strong>timeout (7.02 s)</strong></td>
+</tr>
+<tr>
+  <td><code>registry.npmjs.org</code></td>
+  <td>yes</td>
+  <td>answered, 0.03 s</td>
+</tr>
+<tr>
+  <td><code>www.google.com</code></td>
+  <td>yes</td>
+  <td>answered, 0.02 s</td>
+</tr>
+<tr>
+  <td><code>cloudflare.com</code></td>
+  <td>yes</td>
+  <td>answered, 0.02 s</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Six for six.</strong> The split is perfectly along &quot;does this name have an IPv6
+record&quot;, not along which company owns it.</p>
+<p>What does it mean in practice? On this network, <em>every IPv4-only host costs a
+flat 5 seconds on every cold lookup</em>. That is <code>git push</code>, <code>npm install</code>, a
+Stripe API call, and any service of yours that happens to be IPv4-only.
+Nothing in the application is wrong, and no amount of profiling application
+code would ever find it.</p>
+<p>What survived? Correctness: you eventually get the right address. What was
+lost? Latency, invisibly, and only on cold lookups, which makes it look
+intermittent. In production the same shape appears as a misconfigured search
+domain turning one lookup into five, or a resolver whose secondary is dead.
+<strong>The tell:</strong> a suspiciously round number in the DNS phase.</p>
+<h3 id="readme-failure-2-refused">Failure 2: refused</h3>
+<p>Priya's parcel comes back the same afternoon, stamped &quot;no such flat&quot;. The
+building is there. The road is fine. Nobody lives at that number.</p>
+<p>Your code sees <code>ConnectException: Connection refused</code>, in <strong>under 5 ms</strong>
+(0–4 ms across runs). The machine is reachable and answered with a reset.
+Nothing is listening on that port: wrong port, or the process is down.</p>
+<p>Should you retry? Only if the process is restarting. It fails fast and
+cheaply. <strong>The tell:</strong> <em>fast</em>, and an exception that names refusal. Something
+answered you, so the network path is fine. This is an application problem
+wearing a network costume.</p>
+<h3 id="readme-failure-3-dropped">Failure 3: dropped</h3>
+<p>Priya's parcel goes out and nothing ever comes back. No stamp, no courier, no
+word. She stops waiting only because she decides to.</p>
+<p>Your code sees <code>SocketTimeoutException</code>, in <strong>3,001 ms</strong> against a 3,000 ms
+timeout. A firewall or security group is set to DROP, or the address routes
+nowhere. In the lab, case B connects to <code>10.255.255.1</code>, which routes nowhere.
+Nobody answered anything.</p>
+<p>Should you retry? Pointless while the rule stands, and each attempt costs a
+full timeout. <strong>The tell:</strong> <em>elapsed ≈ your configured timeout</em>. That is the
+fingerprint of silence.</p>
+<h3 id="readme-failure-4-accepted-then-silence">Failure 4: accepted, then silence</h3>
+<p>Arjun opens the door, takes the parcel, and then never opens it. Priya's
+courier stands there forever, because nothing ever went wrong.</p>
+<p>With a connect timeout only, your code sees <strong>nothing</strong>. It is still blocked
+when the lab's 4-second watchdog gives up, and it would block forever. With an
+800 ms read timeout, it sees <code>SocketTimeoutException</code> in 801 ms.</p>
+<p>Why? The connection is genuinely healthy. The application at the far end is
+wedged. Everything below the application worked perfectly. What was lost is
+your thread, permanently.</p>
+<p>In production, <strong>this is how a service dies without a single error in its
+logs.</strong> Threads accumulate on healthy sockets, the pool drains, and your error
+dashboard stays green throughout. The response is a read timeout, and above it
+a whole-request timeout. <strong>The tell:</strong> no exception, rising thread count, flat
+error rate.</p>
+<h3 id="readme-failure-5-trust-failure">Failure 5: trust failure</h3>
+<p>The courier reaches the door and checks ID. The person at the door is not
+Arjun, or the ID has expired. The courier refuses to hand anything over.</p>
+<p>Your code sees <code>SSLHandshakeException</code>, shortly <em>after</em> a successful connect.
+The certificate is expired, or the hostname is wrong, or a private authority
+signed it and the JVM does not trust that authority.</p>
+<p>Should you retry? <strong>Never.</strong> It is perfectly deterministic until a certificate
+or trust store changes. <strong>The tell:</strong> the TCP connection succeeded first. Any
+failure after a successful connect is not a connectivity problem, whatever it
+looks like.</p>
+<h3 id="readme-failure-6-the-idle-connection-that-died">Failure 6: the idle connection that died</h3>
+<p>Priya's courier has been sitting in the lobby for a while. The concierge
+crossed him off the list without saying a word. The next time Priya sends a
+parcel, it bounces at the lobby door.</p>
+<p>Your code sees <code>SocketException: Connection reset</code> on the <em>next</em> request,
+while <code>isConnected()</code> returned <code>true</code> moments earlier. A middlebox evicted its
+connection-table entry and told nobody.</p>
+<p>Should you retry? Yes, on a new connection, and only if the request is
+idempotent. You cannot know whether the server processed it. The response is
+pool idle-eviction set <strong>below</strong> the shortest idle timeout in the path, plus
+retry-on-fresh-connection for idempotent requests. <strong>The tell:</strong> errors
+correlate with quiet periods rather than with load.</p>
+<h3 id="readme-failure-7-the-mtu-black-hole">Failure 7: the MTU black hole</h3>
+<p>Priya's letters always arrive. Her big boxes never do. Somewhere on the route
+is a doorway too small for a box, and the note that says &quot;too big, split it&quot;
+is being thrown away along with the box.</p>
+<p>Your code sees a hang, or a read timeout, but only for large payloads.
+Something in the path cannot carry full-size packets and should reply &quot;too
+big, split it&quot;. That reply is itself blocked, so your machine never learns and
+retransmits forever.</p>
+<p><strong>The tell:</strong> <em>small requests work, large ones hang, on the same connection.</em>
+That pattern has essentially one cause. Classic on VPNs and tunnels.</p>
+<h3 id="readme-failure-8-the-retry-storm">Failure 8: the retry storm</h3>
+<p>Priya's parcel vanished, so she sends three more. So does everyone else on
+the street. The sorting centre, already struggling, is now buried under four
+times the parcels.</p>
+<p>Combine failure 3 with the naive retry loop from section 3. Every attempt
+costs a full timeout. Three retries turn a 3-second failure into 9 seconds of
+held thread. Under load, retries multiply the offered load against a service
+that is already struggling.</p>
+<p>The response is retry budgets, exponential backoff <strong>with jitter</strong>, and
+circuit breakers. You met all of them in your
+<a href="../06-software-architecture-patterns/notes.html#readme">software-architecture-patterns</a>
+lab under resilience patterns. This is the concrete network-level reason they
+exist. <strong>The tell:</strong> load <em>increases</em> after a dependency degrades.</p>
+<h3 id="readme-failure-9-not-enough-ports">Failure 9: not enough ports</h3>
+<p>Priya hires a fresh courier for every parcel and sends thousands. The agency
+runs out of couriers, because each one has to rest for a minute after a job
+before taking another.</p>
+<p>A client opening many short-lived connections exhausts its ephemeral ports.
+Each closed connection sits in <code>TIME_WAIT</code> for around 60 seconds before its
+port can be reused. New connections then fail on a machine with no other
+problem.</p>
+<p>The response is connection reuse. Notice that reuse is failure 6's <em>cause</em>
+and this one's <em>cure</em>: the same mechanism, two opposite risks. <strong>The tell:</strong>
+failures scale with connection <em>rate</em>, not with concurrency or payload size.
+This one is described but not reproduced in the lab.</p>
+<h3 id="readme-the-nine-failures-side-by-side">The nine failures side by side</h3>
+<p>The same facts, in one place, so you can compare down the columns.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Failure</th>
+  <th>Reproduce</th>
+  <th>Your code sees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Half-answering resolver</td>
+  <td>real fault; <code>curl -w</code> phase timings</td>
+  <td>5,027 ms in the DNS phase, then success</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Refused</td>
+  <td><code>java NetLab.java 2</code>, case A</td>
+  <td><code>ConnectException</code>, under 5 ms</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Dropped</td>
+  <td><code>java NetLab.java 2</code>, case B</td>
+  <td><code>SocketTimeoutException</code>, 3,001 ms</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Accepted, then silence</td>
+  <td><code>java NetLab.java 3</code></td>
+  <td>nothing; or <code>SocketTimeoutException</code> at 801 ms with a read timeout</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Trust failure</td>
+  <td>trainer → &quot;certificate does not match the name&quot;</td>
+  <td><code>SSLHandshakeException</code> after a good connect</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Idle connection died</td>
+  <td><code>java NetLab.java 5</code></td>
+  <td><code>SocketException: Connection reset</code> on the next request</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>MTU black hole</td>
+  <td>trainer → &quot;big requests vanish, small ones work&quot;</td>
+  <td>hang or read timeout, large payloads only</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>Retry storm</td>
+  <td>failure 3 + the loop from section 3</td>
+  <td>9 seconds of held thread per call</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>Not enough ports</td>
+  <td>not reproduced here</td>
+  <td>new connections fail on a healthy machine</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Retry?</th>
+  <th>The tell</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>it will succeed, slowly, every time</td>
+  <td>a suspiciously round number in the DNS phase</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>only if the process is restarting</td>
+  <td>fast, and an exception that names refusal</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>pointless while the rule stands</td>
+  <td>elapsed ≈ your configured timeout</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>never reaches a retry; nothing throws</td>
+  <td>no exception, rising thread count, flat error rate</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>never; deterministic</td>
+  <td>TCP connected first, then it failed</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>yes, on a new connection, if idempotent</td>
+  <td>errors correlate with quiet periods</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>pointless; same size, same hole</td>
+  <td>small works, large hangs, same connection</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>this <em>is</em> the retry</td>
+  <td>load increases after a dependency degrades</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>makes it worse</td>
+  <td>failures scale with connection rate</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-does-tcp-actually-promise">12. What does TCP actually promise?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> TCP promises that bytes arrive in order, uncorrupted and
+not duplicated, between two operating systems. It promises nothing about
+message boundaries, about the application reading them, or about time.</p>
+</blockquote>
+<p>Why be precise here? Because the gap between what people assume and what is
+guaranteed is where distributed-systems bugs live. Think of Priya's courier:
+he promises the parcel reaches the building's post room. He does not promise
+Arjun opens it.</p>
+<p><strong>TCP guarantees, between the two operating systems:</strong></p>
+<ul>
+<li>Bytes arrive <strong>in the order sent</strong>.</li>
+<li>Bytes arrive <strong>without corruption</strong> (checksummed) and <strong>without
+duplication</strong>.</li>
+<li>Lost segments are <strong>retransmitted</strong> until acknowledged or the connection
+fails.</li>
+<li>Flow control stops a fast sender overwhelming a slow receiver.</li>
+</ul>
+<p><strong>TCP does not guarantee:</strong></p>
+<ul>
+<li><strong>Message boundaries.</strong> Experiment 6: three writes arrive as one or two
+reads, and the split differs between runs of identical code. Framing is
+your job, always.</li>
+<li><strong>That the application read your bytes.</strong> An acknowledgement comes from the
+<em>kernel</em>. The process may never have called <code>read()</code>, and may have crashed
+immediately after the ACK.</li>
+<li><strong>That the application acted on them.</strong> Delivered ≠ processed.</li>
+<li><strong>Timeliness.</strong> Nothing bounds how long delivery takes. That is entirely on
+you, hence section 10's timeout hierarchy.</li>
+<li><strong>That an idle connection is alive.</strong> Failure 6.</li>
+<li><strong>Privacy or identity.</strong> That is TLS, a separate layer with separate
+failures.</li>
+</ul>
+<p>What is the consequence that matters most? When a request fails after the
+connection was established, you are in a genuine state of ignorance. The
+server may have processed it completely, partially, or not at all. There is no
+protocol-level way to find out. Priya's courier can tell her the parcel
+reached the post room. He cannot tell her whether Arjun read the letter
+inside.</p>
+<p>This is exactly the gap the <strong>idempotency key</strong> from your
+communication-protocols lab fills, and this lab is <em>why</em> it is not optional. A
+retried non-idempotent request over TCP is a coin flip on double execution. It
+is also why the <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>
+lab's at-least-once delivery is the honest default. Exactly-once is not
+something a network can offer you.</p>
+<p>What was traded away to get those guarantees? Three things. Reliability and
+ordering cost you latency: a handshake before any data. They cost you
+head-of-line blocking: one lost segment stalls everything behind it, which is
+the reason QUIC exists, from your communication-protocols lab. And they cost
+per-connection state on every box in the path, which is the reason
+middleboxes forget you.</p>
+<h2 id="readme-13-where-is-the-code">13. Where is the code?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four Java files, no build tool. The load-bearing part is a
+diagnosis table that reads elapsed time as evidence.</p>
+</blockquote>
+<div class="code"><pre><code class="language-bash">cd ~/Documents/Learning/01-networking-for-developers
+java NetLab.java          # all six experiments
+java NetLab.java 2 5      # just experiments 2 and 5
+java BrokenClient.java    # the planted bug
+</code></pre></div>
+<p>JDK 25, no build tool, no dependencies. Experiment 1 uses the internet; the
+rest run against a deliberately broken server inside the same JVM. The server
+plays every role Arjun can play: he answers, he stays silent, he answers
+slowly, or he closes the door when the courier has been idle too long.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Server.java</code></td>
+  <td>A server that misbehaves on purpose: <code>ECHO</code>, <code>SILENT</code>, <code>SLOW</code>, <code>CLOSE_IDLE</code></td>
+</tr>
+<tr>
+  <td><code>Probe.java</code></td>
+  <td>Times each phase separately, and maps every exception to a layer and a retry verdict</td>
+</tr>
+<tr>
+  <td><code>NetLab.java</code></td>
+  <td>The six experiments</td>
+</tr>
+<tr>
+  <td><code>BrokenClient.java</code></td>
+  <td>One bug, for exercise 6</td>
+</tr>
+</tbody>
+</table></div>
+<p>Where is the part that matters? <strong>The diagnosis table in <code>Probe.java</code>.</strong>
+Everything else is scaffolding to produce inputs for it:</p>
+<div class="code"><pre><code class="language-java">if (e instanceof ConnectException) {
+    // Fast + ConnectException = the host actively said &quot;no&quot;.
+    return new Diagnosis(&quot;Connection (TCP) — REFUSED&quot;,
+        &quot;The host was reached and it answered immediately with a refusal (a TCP RST)...&quot;,
+        &quot;Retrying helps only if the process is restarting...&quot;);
+}
+if (e instanceof SocketTimeoutException) {
+    boolean atLimit = elapsedMs &gt;= timeoutMs * 0.9;
+    // The elapsed time is the evidence. At the limit means nobody answered.
+    ...
+}
+</code></pre></div>
+<p>Note the second branch. It uses <strong>elapsed time as evidence</strong>, not just the
+exception type. That is the whole method of this lab expressed in three lines.</p>
+<p>And in <code>Server.java</code>, the one line that produces the nastiest failure:</p>
+<div class="code"><pre><code class="language-java">if (mode == Mode.SILENT) {
+    in.readLine();
+    Thread.sleep(Long.MAX_VALUE);   // connection stays OPEN — that&#x27;s the point
+    return;
+}
+</code></pre></div>
+<p>The connection is never closed. A closed connection would give the client an
+<code>EOFException</code>, an <em>error</em>, something to act on. Staying open gives it
+nothing. Arjun takes the parcel and simply never opens it.</p>
+<h2 id="readme-14-what-do-the-six-experiments-show">14. What do the six experiments show?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six experiments, one lesson each. Predict first, then
+run.</p>
+</blockquote>
+<p>Read each row as: what you would expect, what the lab saw, what it proves.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Experiment</th>
+  <th>Expect</th>
+  <th>Observed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Where did the time go? <code>java NetLab.java 1</code></td>
+  <td>TCP and TLS track distance; DNS is small</td>
+  <td>cloudflare 2/18/57 ms; <code>api.github.com</code> <strong>5,027 ms</strong> in DNS alone</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Refused or ignored? <code>java NetLab.java 2</code></td>
+  <td>both fail</td>
+  <td><strong>0–4 ms</strong> vs <strong>3,001 ms</strong>, stable across repeated runs</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Connected, and still hung <code>java NetLab.java 3</code></td>
+  <td>the connect timeout protects you</td>
+  <td>still blocked when the 4-second watchdog fired; with an 800 ms read timeout, failed at 801 ms</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>The price of a new connection <code>java NetLab.java 4</code></td>
+  <td>reuse helps a bit</td>
+  <td>682 ms / 20 connections vs 38 ms / 1 connection: <strong>17.9×</strong></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>The idle connection that died <code>java NetLab.java 5</code></td>
+  <td>the socket reports the problem</td>
+  <td><code>isConnected=true isClosed=false</code>, then <strong>Connection reset</strong> on the next request</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Three writes, how many reads? <code>java NetLab.java 6</code></td>
+  <td>three</td>
+  <td>varies: <code>ALPHABETA</code> + <code>GAMMA</code> on one run, a single <code>ALPHABETAGAMMA</code> on the next</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>What it proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>phases fail and slow down independently; the DNS column is configuration, not physics</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>elapsed time alone separates &quot;something answered&quot; from &quot;nothing did&quot;: the highest-value diagnostic in the lab</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>a connect timeout bounds the handshake and nothing else</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>setup is a per-connection cost (this one simulates the 16 ms RTT to make loopback honest, so it shows the shape, not a capture)</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>isConnected()</code> answers a question you did not ask</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>write boundaries are not preserved <strong>and not deterministic</strong>; exercise 4.4 runs it five times and gets three different groupings, so a parser that works because messages happened to arrive whole is a latent bug</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-engineering-model">✅ Checkpoint: end of the engineering model</h3>
+<p>You can diagnose nine failures from their symptoms and state what TCP does
+and does not promise.</p>
+<p><strong>Say it back.</strong> A colleague shows you a log line: &quot;request failed after
+3,002 ms&quot;. Without opening anything, say which of the three parcel outcomes
+this is, and what the very next check should be.</p>
+<details><summary>A good answer sounds like</summary>
+"That is the vanished parcel. The time matches a 3-second timeout almost
+exactly, so nothing answered at all. The next check is the road, not the
+door: security groups and routing, not the application."
+</details>
+
+<p>Next: what changes in a real production path, what to configure
+deliberately, and what to watch.</p>
+</blockquote>
+<hr />
+<h1 id="readme-production-model">PRODUCTION MODEL</h1>
+<h2 id="readme-15-what-changes-in-a-real-system">15. What changes in a real system?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A real path adds more concierges, each with its own idle
+timer and its own opinion. Production is mostly the numbers you chose in
+advance: timeouts, pool sizes, retry budgets.</p>
+</blockquote>
+<h3 id="readme-what-is-different-about-the-real-chain">What is different about the real chain?</h3>
+<p><strong>This lab</strong> runs a client and a deliberately broken server in one JVM on
+loopback, plus a handful of real internet measurements.</p>
+<p><strong>A real path</strong> adds a service mesh sidecar, a cloud load balancer, security
+groups, a NAT gateway, and often a VPN. Each is a middlebox with <strong>its own
+idle timeout, its own health checks, and its own failure modes</strong>. Each is
+capable of turning a REJECT into a DROP: turning Priya's stamped parcel into a
+vanished one.</p>
+<p><strong>Production</strong> is mostly about the numbers you chose in advance: timeouts,
+pool sizes, retry budgets. Every one of them is a bet about the failure modes
+above.</p>
+<h3 id="readme-what-does-this-lab-leave-out">What does this lab leave out?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted</th>
+  <th>What real systems do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>TLS session resumption</td>
+  <td>Cuts a repeat handshake to ~0 RTT; makes reconnects far cheaper than measured here</td>
+</tr>
+<tr>
+  <td>HTTP/2 multiplexing</td>
+  <td>Many concurrent requests over one connection, which changes what &quot;pool size&quot; even means</td>
+</tr>
+<tr>
+  <td>TCP slow start</td>
+  <td>A new connection does not get full bandwidth immediately: another hidden cost of not reusing</td>
+</tr>
+<tr>
+  <td>IPv6 dual-stack (Happy Eyeballs)</td>
+  <td>Racing A and AAAA to avoid exactly failure 1</td>
+</tr>
+<tr>
+  <td>DNS TTL vs failover</td>
+  <td>A cached record survives a failover; TTL is your outage floor</td>
+</tr>
+<tr>
+  <td>Service mesh</td>
+  <td>mTLS and retries move into a sidecar, with its own timeouts to align</td>
+</tr>
+<tr>
+  <td>Bandwidth and congestion</td>
+  <td>This lab treats latency only</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-should-you-configure-deliberately">What should you configure deliberately?</h3>
+<ol>
+<li><strong>Four bounds, always:</strong> connect, read, whole-request, pool idle-eviction.</li>
+<li><strong>Pool idle-eviction below the shortest idle timeout in the path.</strong> Find
+the real number, the ALB's or the NAT gateway's. Do not guess.</li>
+<li><strong>Timeout budgets that shrink inward.</strong> If your caller waits 5 s, you
+cannot wait 30.</li>
+<li><strong>Retry only what is idempotent, with a budget, backoff, and jitter.</strong>
+Failure 8 is what happens otherwise.</li>
+<li><strong>Never construct an HTTP client per request.</strong></li>
+</ol>
+<h3 id="readme-what-should-you-watch">What should you watch?</h3>
+<ul>
+<li><strong>Latency percentiles per phase</strong>, not just totals. A p99 that is exactly
+1,000 ms or 5,000 ms is a timeout, not a slow server.</li>
+<li><strong>Connection-establishment rate.</strong> Rising while request rate is flat means
+the pool is being thrown away.</li>
+<li><strong>Errors bucketed by exception type</strong>, never lumped as &quot;network error&quot;.
+<code>ConnectException</code> and <code>SocketTimeoutException</code> are opposite problems, and
+merging them destroys the one signal that separates them.</li>
+<li><strong>Thread pool utilisation.</strong> Failure 4 shows up here and <em>nowhere else</em>.</li>
+<li><strong>DNS lookup latency.</strong> Almost nobody instruments it, and failure 1 is
+invisible without it.</li>
+</ul>
+<h3 id="readme-what-does-the-on-call-engineer-see">What does the on-call engineer see?</h3>
+<p>Priya's three outcomes, expanded to seven symptoms, each with its most likely
+cause and the first thing to check.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Symptom</th>
+  <th>Most likely</th>
+  <th>First check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Fails instantly, <code>ConnectException</code></td>
+  <td>Process down / wrong port</td>
+  <td>Is it listening? <code>nc -vz host port</code></td>
+</tr>
+<tr>
+  <td>Fails at exactly your timeout</td>
+  <td>Firewall DROP, wrong route</td>
+  <td>Security groups; <code>traceroute</code></td>
+</tr>
+<tr>
+  <td>Hangs, no exception, threads climbing</td>
+  <td>Server accepted and wedged</td>
+  <td>Set a read timeout, then look upstream</td>
+</tr>
+<tr>
+  <td>Fails after connecting, TLS error</td>
+  <td>Certificate or trust store</td>
+  <td><code>openssl s_client -connect host:443</code></td>
+</tr>
+<tr>
+  <td>Random resets, correlate with quiet</td>
+  <td>Middlebox idle timeout</td>
+  <td>Pool idle-eviction vs LB idle timeout</td>
+</tr>
+<tr>
+  <td>Small requests fine, large hang</td>
+  <td>MTU black hole</td>
+  <td>Test with increasing payload sizes</td>
+</tr>
+<tr>
+  <td>Slow, suspiciously round number</td>
+  <td>A timeout somewhere</td>
+  <td><code>curl -w</code> phase timings</td>
+</tr>
+</tbody>
+</table></div>
+<p>The honest limits of the lab's numbers, and which figures are modelled rather
+than captured, are collected in <a href="#readme-19-about-this-lab">section 19</a>.</p>
+<hr />
+<h2 id="readme-16-exercises">16. Exercises</h2>
+<p><code>EXERCISES.md</code>, eight rungs. Answers in <code>SOLUTIONS.md</code>. Attempt each one
+before opening the answer.</p>
+<hr />
+<h2 id="readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab is the floor under three labs you already have,
+and the direct prerequisite for the ones that open the boxes it treats as
+sealed.</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+    subgraph known[&quot;you already have these&quot;]
+        CP[&quot;communication-protocols&lt;br/&gt;&lt;i&gt;which protocol, and why&lt;/i&gt;&quot;]
+        IO[&quot;io-multiplexing&lt;br/&gt;&lt;i&gt;sockets, readiness, event loops&lt;/i&gt;&quot;]
+        SA[&quot;software-architecture-patterns&lt;br/&gt;&lt;i&gt;timeout, retry, breaker&lt;/i&gt;&quot;]
+    end
+    NET[&quot;networking-for-developers&lt;br/&gt;&lt;b&gt;this lab — the floor underneath&lt;/b&gt;&quot;]
+    CP --&gt; NET
+    IO --&gt; NET
+    SA --&gt; NET
+    NET --&gt; A1[&quot;tls?&quot;]
+    NET --&gt; A2[&quot;dns-deep-dive?&quot;]
+    NET --&gt; A3[&quot;load-balancing?&quot;]
+    NET --&gt; A4[&quot;tcp-congestion-control?&quot;]
+    style NET fill:#dceef4,stroke:#0f6e7e,stroke-width:2px
+</pre>
+<p><strong>Builds on.</strong></p>
+<ul>
+<li><strong>communication-protocols.</strong> That lab chose <em>between</em> protocols; this one is
+what every one of them sits on. Its idempotency-key rule gets its
+justification here in section 12: TCP cannot tell you whether a request
+was processed.</li>
+<li><strong>io-multiplexing.</strong> You knew sockets and framing; experiment 6 shows the
+socket-level reason framing is unavoidable.</li>
+<li><strong>software-architecture-patterns.</strong> Its resilience family (timeout, retry,
+backoff, circuit breaker) is abstract until you have watched failure 8.
+This is the concrete network behind those patterns.</li>
+</ul>
+<p><strong>Commonly confused.</strong></p>
+<ul>
+<li><strong>Latency vs bandwidth.</strong> Latency is delay, bandwidth is width. Handshakes
+cost latency, and no amount of bandwidth fixes them. On the same machine and
+the same fibre link: 0.117 ms loopback vs 16.2 ms internet.</li>
+<li><strong><code>ConnectException</code> vs <code>SocketTimeoutException</code>.</strong> Opposite problems.
+Merging them in a log destroys the most useful signal you have.</li>
+<li><strong>Connection closed vs connection idle.</strong> TCP cannot distinguish them
+without sending something. Failure 6.</li>
+<li><strong>Delivered vs processed.</strong> TCP promises the first and says nothing about
+the second. Priya's courier reaches the post room; Arjun may never open the
+box.</li>
+</ul>
+<p><strong>Suggested next.</strong></p>
+<div class="code"><pre><code>/learn tls
+/learn load-balancing
+/learn tcp-congestion-control
+</code></pre></div>
+<p><code>tls</code> was already flagged as a &quot;next&quot; in your communication-protocols lab and
+is the natural follow-on. Section 7 here treats the ID check as one opaque
+round trip, and that is exactly the box to open. <code>load-balancing</code> is the
+middlebox from failure 6, taken seriously. <code>tcp-congestion-control</code> explains
+slow start, the cost this lab acknowledges but does not measure.</p>
+<hr />
+<h2 id="readme-18-glossary">18. Glossary</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Name resolution (DNS)</strong></td>
+  <td>Turning a hostname into an address, with a cached time-to-live</td>
+</tr>
+<tr>
+  <td><strong>A / AAAA record</strong></td>
+  <td>The IPv4 and IPv6 address records for a name</td>
+</tr>
+<tr>
+  <td><strong>TTL</strong></td>
+  <td>How long an answer may be reused before asking again</td>
+</tr>
+<tr>
+  <td><strong>IP address</strong></td>
+  <td>Which machine a packet is routed to</td>
+</tr>
+<tr>
+  <td><strong>Port</strong></td>
+  <td>Which listening process on that machine receives it</td>
+</tr>
+<tr>
+  <td><strong>Round trip time (RTT)</strong></td>
+  <td>One message there and back; the unit all connection costs are quoted in</td>
+</tr>
+<tr>
+  <td><strong>Three-way handshake</strong></td>
+  <td>SYN / SYN-ACK / ACK: one round trip to open a connection</td>
+</tr>
+<tr>
+  <td><strong>RST (refused)</strong></td>
+  <td>An active &quot;nothing is listening here&quot; reply; fast, and proves the path works</td>
+</tr>
+<tr>
+  <td><strong>Dropped</strong></td>
+  <td>Packets silently discarded; no reply at all, so you learn only that time passed</td>
+</tr>
+<tr>
+  <td><strong>TLS handshake</strong></td>
+  <td>Agreeing encryption and validating the certificate, after TCP connects</td>
+</tr>
+<tr>
+  <td><strong>Connect timeout</strong></td>
+  <td>Bounds the handshake only, and is spent once it succeeds</td>
+</tr>
+<tr>
+  <td><strong>Read timeout</strong></td>
+  <td>Bounds each individual read, not the whole request</td>
+</tr>
+<tr>
+  <td><strong>Request timeout</strong></td>
+  <td>Bounds the entire call; the only one a slow drip cannot evade</td>
+</tr>
+<tr>
+  <td><strong>Keep-alive / connection reuse</strong></td>
+  <td>Holding a connection open so later requests skip setup</td>
+</tr>
+<tr>
+  <td><strong>Connection pool</strong></td>
+  <td>The client's set of reusable connections</td>
+</tr>
+<tr>
+  <td><strong>Middlebox</strong></td>
+  <td>NAT, firewall or load balancer that holds state about your connection</td>
+</tr>
+<tr>
+  <td><strong>Idle timeout</strong></td>
+  <td>How long a middlebox keeps that state before silently discarding it</td>
+</tr>
+<tr>
+  <td><strong>MTU</strong></td>
+  <td>The largest packet a link can carry without fragmenting</td>
+</tr>
+<tr>
+  <td><strong>MTU black hole</strong></td>
+  <td>A path that drops oversized packets <em>and</em> the message saying so</td>
+</tr>
+<tr>
+  <td><strong>Ephemeral port / TIME_WAIT</strong></td>
+  <td>The client-side port pool, and the ~60 s wait before reuse</td>
+</tr>
+<tr>
+  <td><strong>Head-of-line blocking</strong></td>
+  <td>One lost segment stalls everything behind it (from communication-protocols)</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<h3 id="readme-what-is-in-the-folder">What is in the folder?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document, 18 stages plus this appendix</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>the diagnostic trainer, also published at <a href="https://claude.ai/code/artifact/cf035459-a3d8-4a72-9111-1c6680ba8605" target="_blank" rel="noopener">claude.ai/code/artifact/cf035459</a></td>
+</tr>
+<tr>
+  <td><code>NetLab.java</code>, <code>Server.java</code>, <code>Probe.java</code></td>
+  <td>six runnable experiments</td>
+</tr>
+<tr>
+  <td><code>BrokenClient.java</code></td>
+  <td>a planted bug, for exercise 6</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code>, <code>SOLUTIONS.md</code></td>
+  <td>eight rungs and their answers</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-it-sit-relative-to-what-you-already-know">Where does it sit relative to what you already know?</h3>
+<p>You already did <a href="../02-communication-protocols/notes.html#readme">communication-protocols</a>
+(HTTP, gRPC, WebSocket, framing, RTT, head-of-line blocking) and
+<a href="../03-io-multiplexing/notes.html#readme">io-multiplexing</a> (sockets, file descriptors,
+readiness, event loops). Both of those are about <strong>choosing and serving a
+protocol</strong>.</p>
+<p>This lab is the floor underneath them. It answers a different question. Not
+<em>&quot;which protocol should I use?&quot;</em> but <em><strong>&quot;it's broken, and where?&quot;</strong></em> So there
+is no reteaching of sockets, framing or RTT here. They are used as known
+vocabulary, and section 8's point about framing exists only to show the
+socket-level reason behind something you already accepted as a rule.</p>
+<h3 id="readme-how-were-the-numbers-made">How were the numbers made?</h3>
+<p><strong>Every number in this document was measured on the machine the lab was
+written on, while writing it.</strong> Timings vary a few percent between runs, so
+treat the quoted milliseconds as one representative run and the <em>ratios</em> as
+the durable finding.</p>
+<p>The failure modes, exception types and symptom-to-cause mappings are real and
+tested. Three things are modelled or unmeasured rather than captured:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Figure</th>
+  <th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The millisecond values inside the trainer (<code>visualization.html</code>)</td>
+  <td>modelled, not captured</td>
+</tr>
+<tr>
+  <td>Experiment 4's RTT</td>
+  <td>simulated with <code>Thread.sleep</code>, so it shows the <em>shape</em> of the handshake cost rather than a packet capture</td>
+</tr>
+<tr>
+  <td>Failure 9 (port exhaustion)</td>
+  <td>described but <strong>not reproduced here</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>And every internet measurement is from one machine on one home connection in
+one city. The <em>ratios</em> transfer; the absolute numbers do not. Priya's parcel
+would take a different number of days from a different city, but the three
+outcomes would be the same three.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--networking-for-developers">Exercises — networking for developers</h1>
+<p>Rungs 1–3 need only the README and the
+<a href="https://claude.ai/code/artifact/cf035459-a3d8-4a72-9111-1c6680ba8605" target="_blank" rel="noopener">diagnostic trainer</a>
+(or <code>visualization.html</code>). Rungs 4–6 need <code>java NetLab.java</code>. Rungs 7–8 are design
+work with no single right answer.</p>
+<p>Attempt before opening <code>SOLUTIONS.md</code>.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> A colleague says: <em>&quot;the API is flaky, I added a retry.&quot;</em> In your own
+words, no jargon, explain the two questions they should have answered first, and
+why a retry can make things worse rather than better.</p>
+<p><strong>1.2</strong> Explain to someone with no networking background why a failure that takes
+0 ms and a failure that takes 3,000 ms are <em>good news and bad news respectively</em>,
+even though both mean &quot;I couldn't reach the service&quot;.</p>
+<p><strong>1.3</strong> In one sentence each, say what these three promise you, and name one thing
+each explicitly does not promise:
+(a) a successful TCP connection, (b) a TCP acknowledgement of your bytes,
+(c) a 200 response.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open the trainer. Leave everything at its defaults and press <strong>Send request</strong>.</p>
+<p><strong>2.1</strong> In the waterfall, how many milliseconds elapsed <em>before</em> the &quot;Send
+request&quot; phase began? What is that time buying you, and how often do you pay it?</p>
+<p><strong>2.2</strong> Press <strong>Send request</strong> a second time without changing anything. Which
+three phases went grey, and why?</p>
+<p><strong>2.3</strong> Set the fault to <em>&quot;the server machine is up, the process is not&quot;</em>. Before
+sending: which box in the path do you expect to light up red — the firewall or
+the server? Send, and check. Explain the answer.</p>
+<p><strong>2.4</strong> Set the fault to <em>&quot;a firewall silently drops our packets&quot;</em> and send. Now
+change the connect timeout from 2s to 10s and send again. Which number in the
+waterfall changed, and what does that tell you about who is controlling the
+duration of this failure?</p>
+<p><strong>2.5</strong> In <code>Probe.java</code>, find the branch that uses <strong>elapsed time</strong> rather than
+the exception type to decide what happened. Quote it, and say what it is
+distinguishing.</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Write the answer down <em>before</em> you run anything.</p>
+<p><strong>3.1</strong> Fault: <em>&quot;the server accepts, then never answers&quot;</em>. Read timeout: none.
+Predict what your code sees and how long it waits. Then set the read timeout to
+3s and predict again. Run both.</p>
+<p><strong>3.2</strong> Fault: <em>&quot;a middlebox killed our idle connection&quot;</em>. You press Send once.
+Predict the outcome. Now press Send again. Predict that outcome too. Explain why
+the two differ.</p>
+<p><strong>3.3</strong> Fault: <em>&quot;the name server ignores one question type&quot;</em> (the real 5-second
+one). You press Send twice with connection reuse <strong>on</strong>. Predict the total for
+request 1 and for request 2, and explain the difference in one sentence.</p>
+<p><strong>3.4</strong> Drag the round-trip slider from 16 ms to 250 ms with nothing broken.
+Before releasing: which phases grow, which stay flat, and roughly what fraction
+of the new total is setup? Check against the waterfall.</p>
+<p><strong>3.5</strong> <code>java NetLab.java 2</code> connects to <code>10.255.255.1</code>. Predict the elapsed
+time to within 100 ms <em>without running it</em>. What information are you using to
+make that prediction so precisely?</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> In <code>NetLab.java</code>, change <code>RTT_MS</code> from 16 to 150 (a cross-continent link)
+and re-run experiment 4. Does the <em>ratio</em> between fresh and reused change, or
+just the absolute numbers? What does your answer imply about where connection
+pooling matters most?</p>
+<p><strong>4.2</strong> In experiment 4, change the request count from 20 to 2. Is reuse still
+worth it? Find, by experiment, the number of requests at which reuse stops paying
+for itself — and explain why that number depends on RTT.</p>
+<p><strong>4.3</strong> In <code>Server.java</code>, change <code>Mode.SILENT</code> so it calls <code>c.close()</code> instead of
+sleeping forever. Re-run experiment 3. What does the client see now, and why is
+this <em>far better</em> for the client even though the server is equally broken?</p>
+<p><strong>4.4</strong> In experiment 6, add <code>o.flush()</code> after the <code>BETA</code> write. Re-run. Did the
+number of reads change? Run it five times. What does the variability tell you
+about relying on write boundaries?</p>
+<p><strong>4.5</strong> In experiment 5, change the server's idle timeout from 600 ms to 2000 ms
+but leave the client's idle gap at 900 ms. Predict, then run. Now explain the
+production rule this demonstrates, in terms of which side's timeout must be
+smaller.</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> <code>Probe.java</code> has no whole-request bound — only connect and read. Implement
+<code>Probe.callWithDeadline(host, port, message, totalBudgetMs)</code> that fails if the
+<em>entire</em> operation exceeds the budget, regardless of how many individual reads
+succeed. Then prove it works against a server that drips one byte at a time
+(add a <code>DRIP</code> mode to <code>Server.java</code>), where a read timeout alone would never fire.</p>
+<p><strong>5.2</strong> Write <code>Diagnose.java</code>: a command-line tool taking a host and port that
+reports, separately, whether name resolution succeeded, whether TCP connected,
+whether TLS completed, and how long each took — printing the layer diagnosis for
+the first thing that fails. This is <code>Probe</code> assembled into something you could
+genuinely reach for on call.</p>
+<p><strong>5.3</strong> Implement a minimal connection pool: <code>get()</code> returns an idle connection or
+opens a new one, <code>release()</code> returns it, and connections idle for longer than a
+configured limit are evicted rather than handed out. Prove with a test that it
+never hands out a connection the server has already closed.</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> Run <code>java BrokenClient.java</code>.</p>
+<ul>
+<li>Which check fails, and what does the failure look like — an exception, or
+something else?</li>
+<li>Which single line in <code>call()</code> is wrong, and what is missing?</li>
+<li>The author set <code>TIMEOUT_MS = 1500</code>. State precisely what those 1,500 ms bound
+and what they do not.</li>
+<li>In a Spring Boot service on a bounded thread pool, describe what happens to the
+<strong>whole service</strong> when one downstream dependency starts behaving like the
+server in check 2. Why is this worse than that dependency returning 500s?</li>
+</ul>
+<p><strong>6.2</strong> Write the smallest assertion you would add to a real test suite to catch
+this class of bug, and name the production metric that would reveal it.</p>
+<p><strong>6.3</strong> A colleague proposes this fix instead:</p>
+<div class="code"><pre><code class="language-java">socket.setSoTimeout(TIMEOUT_MS);
+// ... and wrap the whole call in a try/catch that retries 3 times
+</code></pre></div>
+<p>Name two distinct problems with it. (One is about total elapsed time; the other
+is about correctness, and connects to stage 12.)</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1 — Make the silent hang impossible.</strong> Failure 4 kills services without
+raising a single error. Design a change to a Java HTTP client wrapper so that
+this failure <em>cannot</em> occur, no matter what a caller forgets to configure. What
+is the default you enforce, what escape hatch do you allow, and what breaks for
+callers who legitimately need long-running requests?</p>
+<p><strong>7.2 — Retry that is safe by construction.</strong> Failures 2, 3, 4 and 6 all reach
+your code as exceptions, and only some are worth retrying. Design a retry policy
+that decides from the <em>diagnosis</em> rather than from the exception type alone.
+Specify: which failures you retry, how you bound total attempts and total time,
+and what the caller must guarantee about the request for your policy to be sound.</p>
+<p><strong>7.3 — Survive the middlebox.</strong> Your service calls a dependency through a load
+balancer with a 60-second idle timeout, and traffic is bursty with long quiet
+gaps. Design the pool configuration so users never see failure 6. Name every
+number you would need to find out first, and what you would do if you could not
+find one of them.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — The timeout budget.</strong> An API gateway gives a user 3 seconds. The request
+fans out to service A, which calls B and C in parallel, and B calls D. Assign a
+timeout to every hop. State your rule, then answer: what happens to D's work when
+A gives up, and does D know? What should A do about a response arriving after it
+stopped waiting?</p>
+<p><strong>8.2 — Diagnose from a description.</strong> For each report, name the most likely layer
+and the single command or measurement you would run first:
+(a) &quot;It works from my laptop but not from the cluster.&quot;
+(b) &quot;It started failing at exactly 09:00 and recovered at 09:04, twice this week.&quot;
+(c) &quot;Small payloads work, anything over about 1 KB times out.&quot;
+(d) &quot;It fails only on the first request after a deploy, then it's fine.&quot;
+(e) &quot;p50 is 40 ms, p99 is exactly 5,000 ms.&quot;</p>
+<p><strong>8.3 — Argue against retries.</strong> Make the strongest honest case that a service you
+know should have <em>fewer</em> retries than it does. Use failures 3 and 8 and the
+correctness argument in stage 12. Then name the conditions under which you would
+be wrong.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<p>Every number below was produced by running the modification described. Where an
+answer is a design discussion (rungs 7–8) there is no single right output —
+those are worked arguments with the trade-offs named.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> The two questions are: <strong>which layer failed</strong>, and <strong>is the request safe
+to send twice?</strong></p>
+<p>A retry helps exactly one class of problem — a transient one. It is actively
+harmful in two others. Against a permanent failure such as a firewall DROP rule,
+each attempt costs a <em>full timeout</em> and learns nothing: measured, one attempt
+took 3,001 ms, so three attempts hold a thread for nine seconds and fail
+identically. And if the request is not idempotent, a retry can double-execute it,
+because a failure after the connection was established tells you nothing about
+whether the server processed it.</p>
+<p><strong>1.2</strong> A failure at 0 ms means <strong>something answered you</strong>. A machine received
+your packets and actively replied &quot;nothing is listening here&quot;. That is good news:
+the network path works end to end, so the problem is small and local — a wrong
+port, or a process that is down.</p>
+<p>A failure at 3,000 ms means <strong>nothing answered you at all</strong>, and 3,000 ms is
+simply how long you were willing to wait. That is worse news, because you have
+learned almost nothing: the packets may have been dropped by a firewall, or gone
+to an address that routes nowhere, or reached a machine that is wedged. You have
+no evidence anything you sent ever arrived anywhere.</p>
+<p><strong>1.3</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>Promises</th>
+  <th>Explicitly does not promise</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>A successful TCP connection</td>
+  <td>A path exists and a process accepted it</td>
+  <td>That the process will ever reply</td>
+</tr>
+<tr>
+  <td>A TCP acknowledgement</td>
+  <td>The <em>kernel</em> at the far end received the bytes</td>
+  <td>That the application read them, or processed them, or survived</td>
+</tr>
+<tr>
+  <td>A 200 response</td>
+  <td>The application processed it and said so</td>
+  <td>Anything about requests that <em>failed</em> — those remain genuinely unknown</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> At the default 16 ms RTT: name lookup 22 ms + TCP 16 ms + TLS ~33 ms ≈
+<strong>71 ms before your request body moves at all</strong>. It buys you a resolved address,
+an open connection, and a verified encrypted channel. You pay it <strong>once per
+connection</strong>, not once per request — which is the entire argument for pooling.</p>
+<p><strong>2.2</strong> Name lookup, TCP handshake and TLS handshake all go grey. The connection
+was already established and still open, so there is nothing to resolve and
+nothing to negotiate. Only &quot;send request&quot;, &quot;server works&quot; and &quot;response&quot; remain.</p>
+<p><strong>2.3</strong> <strong>The server</strong> lights up red, not the firewall. This is the point of the
+distinction: the packets got all the way there. The machine is up, reachable, and
+answered — with a refusal, because nothing is listening on that port. A firewall
+would not have answered at all.</p>
+<p><strong>2.4</strong> The <strong>TCP handshake</strong> row changes, from 2,000 ms to 10,000 ms — and so
+does the total. Nothing about the fault changed. <strong>You are controlling the
+duration of this failure, not the network.</strong> When elapsed time tracks your
+configured timeout, that is the signature of silence: nobody is answering, so
+your own patience is the only thing setting the clock.</p>
+<p><strong>2.5</strong> In <code>Probe.diagnose</code>:</p>
+<div class="code"><pre><code class="language-java">if (e instanceof SocketTimeoutException) {
+    boolean atLimit = elapsedMs &gt;= timeoutMs * 0.9;
+</code></pre></div>
+<p>It distinguishes <strong>&quot;nobody answered&quot;</strong> (elapsed ≈ your timeout, so the timeout is
+what ended it) from <strong>&quot;your timeout is simply too short for this server&quot;</strong>
+(elapsed well under the limit, meaning something was happening). Same exception
+type, opposite problems — only the elapsed time separates them.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> With no read timeout: <strong>no exception at all</strong>, and the request never
+returns. In the lab, experiment 3 bounds it with a 4-second watchdog and reports
+<em>&quot;still waiting after 4,096 ms&quot;</em>; the real call has no upper bound. With a 3 s
+read timeout: <code>SocketTimeoutException</code> at ~3,000 ms. One dropdown converts an
+unbounded hang into a bounded, catchable error.</p>
+<p><strong>3.2</strong> Send 1 <strong>succeeds</strong> — the connection is being created right then, so
+there has been no idle period for a middlebox to notice. Send 2 <strong>fails with
+Connection reset</strong>, because between the two requests the connection sat idle long
+enough to be evicted, and nobody told your end. This is the defining property of
+the failure: it is created by request 1 and paid for by request 2.</p>
+<p><strong>3.3</strong> Request 1: <strong>~5,100 ms</strong> (the 5-second resolver timeout plus normal
+work). Request 2: <strong>~56 ms</strong>. The name lookup is skipped entirely on a reused
+connection, so the fault simply is not on the path. That is why this class of bug
+looks intermittent — it only bites cold connections.</p>
+<p><strong>3.4</strong> TCP and TLS grow (they are round trips); name lookup, server processing
+and the request send stay flat (they are not). At 250 ms RTT: TCP 250 ms + TLS
+~314 ms ≈ <strong>564 ms of setup</strong> against ~40 ms of actual server work. Setup becomes
+roughly <strong>90%</strong> of the request. This is why connection reuse stops being an
+optimisation at distance and becomes the design.</p>
+<p><strong>3.5</strong> <strong>About 3,000 ms</strong> — because that is the configured timeout, and
+<code>10.255.255.1</code> is a non-routable address that will never answer. You are not
+predicting the network's behaviour; you are reading your own configuration. That
+is precisely the tell: <em>when you can predict a failure's duration from your own
+settings, nobody is answering you.</em> Measured: <strong>3,001 ms</strong>.</p>
+<hr />
+<h2 id="solutions-rung-4--modify-all-measured">Rung 4 — Modify (all measured)</h2>
+<p><strong>4.1 — <code>RTT_MS</code> 16 → 150</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th style="text-align:right">16 ms RTT</th>
+  <th style="text-align:right">150 ms RTT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>New connection each time</td>
+  <td style="text-align:right">682 ms</td>
+  <td style="text-align:right"><strong>6,164 ms</strong></td>
+</tr>
+<tr>
+  <td>One connection reused</td>
+  <td style="text-align:right">38 ms</td>
+  <td style="text-align:right"><strong>312 ms</strong></td>
+</tr>
+<tr>
+  <td>Ratio</td>
+  <td style="text-align:right">17.9×</td>
+  <td style="text-align:right"><strong>19.8×</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The ratio barely moves; the absolute numbers move by ~9×. The saving is
+<code>(n−1) × setup</code>, and setup is proportional to RTT — so <strong>the further away the
+dependency, the more absolute time pooling saves</strong>, even though the multiple
+looks similar. Pooling matters most for cross-region and third-party calls, and
+least for a sidecar on the same host.</p>
+<p><strong>4.2 — Is there a break-even point?</strong> <strong>No, and the exercise is a trap.</strong></p>
+<p>Theory first: <code>fresh = n × (setup + work)</code>, <code>reused = setup + n × work</code>, so the
+difference is exactly <code>(n−1) × setup</code>. At n=1 they should tie, and reuse can
+never lose.</p>
+<p>The naive measurement disagrees:</p>
+<div class="table"><table><thead>
+<tr>
+  <th style="text-align:right">n</th>
+  <th style="text-align:right">fresh</th>
+  <th style="text-align:right">reused</th>
+  <th style="text-align:right">ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">1</td>
+  <td style="text-align:right">113 ms</td>
+  <td style="text-align:right">35 ms</td>
+  <td style="text-align:right">3.2×</td>
+</tr>
+<tr>
+  <td style="text-align:right">2</td>
+  <td style="text-align:right">158 ms</td>
+  <td style="text-align:right">36 ms</td>
+  <td style="text-align:right">4.4×</td>
+</tr>
+<tr>
+  <td style="text-align:right">20</td>
+  <td style="text-align:right">791 ms</td>
+  <td style="text-align:right">40 ms</td>
+  <td style="text-align:right">19.8×</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>A 3.2× win at n=1 is impossible</strong>, so the measurement is wrong, not the theory.
+The cause is <strong>JVM warmup</strong>: the fresh loop runs first and pays for class loading
+and JIT compilation of the socket path, which the reused arm then enjoys for
+free. Any benchmark that runs arm A before arm B is biased toward B.</p>
+<p>Re-measured after 50 warmup iterations, with the simulated RTT removed:</p>
+<div class="table"><table><thead>
+<tr>
+  <th style="text-align:right">n</th>
+  <th style="text-align:right">fresh</th>
+  <th style="text-align:right">reused</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">1</td>
+  <td style="text-align:right">0 ms</td>
+  <td style="text-align:right">0 ms</td>
+</tr>
+<tr>
+  <td style="text-align:right">5</td>
+  <td style="text-align:right">2 ms</td>
+  <td style="text-align:right">0 ms</td>
+</tr>
+<tr>
+  <td style="text-align:right">20</td>
+  <td style="text-align:right">6 ms</td>
+  <td style="text-align:right">2 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>At n=1 the difference is <strong>zero</strong>, exactly as predicted. Two lessons: there is no
+break-even (reuse never loses, and its benefit grows linearly in both <code>n</code> and
+RTT), and <strong>the first measurement in a JVM is not a measurement.</strong></p>
+<p><strong>4.3 — <code>SILENT</code> closes instead of sleeping</strong></p>
+<p><em>Measured:</em> the request <strong>finished in 74 ms</strong> instead of hanging, and the
+read-timeout case &quot;succeeded&quot; in 1 ms — <code>readLine()</code> returned <code>null</code>.</p>
+<p>The server is equally broken in both versions: it never answers the question. But
+closing the connection sends a FIN, which reaches the client as <strong>end-of-stream —
+an event</strong>. The client learns immediately that no answer is coming and can fail,
+retry, or fall back.</p>
+<p>Leaving it open sends nothing at all, and a healthy open connection with no
+traffic on it is indistinguishable from one that is about to reply.</p>
+<p><strong>This is the single most useful thing a failing server can do for its callers:
+fail loudly rather than quietly.</strong> It is also why <code>Server.SILENT</code> deliberately
+sleeps rather than closes — the whole point of experiment 3 is the case where the
+server denies you even that.</p>
+<p><strong>4.4 — Adding <code>flush()</code> after <code>BETA</code>.</strong> Five identical runs:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Run</th>
+  <th style="text-align:right">Reads</th>
+  <th>Grouping</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td style="text-align:right">1</td>
+  <td><code>ALPHABETAGAMMA</code></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td style="text-align:right">1</td>
+  <td><code>ALPHABETAGAMMA</code></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td style="text-align:right">2</td>
+  <td><code>ALPHA</code> | <code>BETAGAMMA</code></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td style="text-align:right">2</td>
+  <td><code>ALPHABETA</code> | <code>GAMMA</code></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td style="text-align:right">1</td>
+  <td><code>ALPHABETAGAMMA</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Three different groupings from identical code</strong>, including one (<code>ALPHA</code> |
+<code>BETAGAMMA</code>) that the un-flushed version never produced. Adding <code>flush()</code> did not
+make boundaries predictable — it changed the odds.</p>
+<p>The conclusion is stronger than &quot;boundaries are not preserved&quot;: <strong>they are not
+even deterministic</strong>. Any parser that works because messages happened to arrive
+whole is a parser that will fail in production, on a different network, under
+load, at 3 a.m. — and it will be blamed on the network.</p>
+<p><strong>4.5 — Server idle 2,000 ms, client gap 900 ms</strong></p>
+<p><em>Measured:</em> request 1 → <code>ok:first</code>; request 2 → <code>ok:second</code>. <strong>No failure</strong>,
+because the client came back before the server gave up on it.</p>
+<p>The production rule: <strong>the side that holds the connection must give up on it
+sooner than the side in the middle does.</strong> Concretely, your pool's idle-eviction
+must be <em>shorter</em> than the shortest idle timeout anywhere in the path — the load
+balancer's, the NAT gateway's, the server's. If your pool evicts at 50 s and the
+ALB evicts at 60 s, you always discard connections before they can be silently
+killed, and failure 6 becomes impossible. Reverse those numbers and it is
+guaranteed.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> The key insight to demonstrate: a read timeout resets on <em>every</em> read, so
+a drip server sending one byte per interval keeps it alive forever while never
+completing. Your deadline must be computed <strong>once, before the first read</strong>, and
+each subsequent read's timeout set to <code>deadline − now</code>. Prove it with a <code>DRIP</code>
+mode that sends one byte every 200 ms: a 1 s read timeout never fires; a 1 s
+<em>total</em> deadline fires at ~1 s.</p>
+<p><strong>5.2</strong> The value of <code>Diagnose.java</code> is the ordering: resolve, then connect, then
+TLS, reporting the <strong>first</strong> failure with its layer. Stopping at the first failure
+is the point — once name resolution fails there is nothing meaningful to say
+about TCP, and a tool that reports &quot;DNS failed, TCP failed, TLS failed&quot; has
+buried the one fact that mattered.</p>
+<p><strong>5.3</strong> The trap: a pooled connection cannot be validated by asking it. There is
+no way to check liveness without sending something, and <code>isConnected()</code> answers a
+different question (experiment 5). So the pool must rely on <strong>time</strong> — evict on
+age, not on a health check — plus optionally a cheap retry-once-on-fresh for
+idempotent requests. A test proving it never hands out a dead connection must
+therefore test the <em>eviction clock</em>, not a liveness probe.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> Measured output:</p>
+<div class="code"><pre><code>CHECK 1  unreachable_host_fails_within_budget
+         outcome  : SocketTimeoutException after 1,514 ms      -&gt; PASS
+CHECK 2  silent_server_fails_within_budget
+         outcome  : STILL BLOCKED — no exception, no return after 5,004 ms
+         -&gt; FAIL  (watchdog gave up at 5,000 ms; the real call has no upper bound)
+</code></pre></div>
+<ul>
+<li><p><strong>Which check fails:</strong> check 2, and it fails by <strong>not failing</strong>. There is no
+exception, no return value, and no log line — only a thread that never comes
+back. Check 1 passes, which is what makes the bug so durable: the obvious test
+case is green.</p>
+</li>
+<li><p><strong>The line:</strong> <code>socket.connect(new InetSocketAddress(host, port), TIMEOUT_MS);</code>
+is correct but insufficient. Missing: <code>socket.setSoTimeout(TIMEOUT_MS);</code> before
+the read.</p>
+</li>
+<li><p><strong>What the 1,500 ms bound:</strong> the TCP handshake, and only the handshake. They do
+not bound writing the request, waiting for the server, or reading the response
+— which together are the entire rest of the call.</p>
+</li>
+<li><p><strong>In a Spring Boot service:</strong> each stuck call parks one request thread forever.
+With a 200-thread pool and a dependency in this state, ~200 requests are enough
+to consume every thread. New requests queue, then time out at the load
+balancer. <strong>The service is now down, and it has logged zero errors</strong> — because
+no exception was ever thrown anywhere.</p>
+<p>This is worse than the dependency returning 500s in every operational sense.
+A 500 is fast, it increments an error counter, it trips a circuit breaker, and
+it frees the thread. A hang does none of those. Your dashboards stay green
+while the service dies, and the alert that eventually fires is about <em>your</em>
+latency, pointing investigation at the wrong service.</p>
+</li>
+</ul>
+<p><strong>6.2</strong> The assertion:</p>
+<div class="code"><pre><code class="language-java">assertTimeoutPreemptively(Duration.ofMillis(2000),
+    () -&gt; client.call(silentServer.host(), silentServer.port(), &quot;x&quot;));
+</code></pre></div>
+<p><code>assertTimeoutPreemptively</code> matters — a plain <code>assertTimeout</code> runs the code to
+completion and then complains, which against this bug means never.</p>
+<p>The production metric is <strong>active thread count / thread-pool utilisation</strong>. It is
+the only signal that moves during this failure. Error rate, latency percentiles
+of <em>completed</em> requests, and status-code distributions all stay flat, because the
+affected requests never complete and therefore never appear in any of them.</p>
+<p><strong>6.3</strong> Two problems.</p>
+<p><strong>Total elapsed.</strong> Adding retries multiplies the bound rather than enforcing it.
+Three attempts at a 1,500 ms read timeout is 4,500 ms of reading plus up to
+4,500 ms of connecting — the &quot;no call takes more than 1,500 ms&quot; claim is now
+violated by a factor of six. A retry policy needs a <em>total</em> budget, not a
+per-attempt one.</p>
+<p><strong>Correctness.</strong> <code>setSoTimeout</code> fires on requests the server may have received
+and processed — the timeout tells you only that no answer arrived in time, not
+that no work happened. Retrying a non-idempotent request in that state can
+double-execute it. Per stage 12, TCP cannot distinguish &quot;not delivered&quot; from
+&quot;delivered, processed, response lost&quot;, so a blanket retry is only sound for
+idempotent operations or ones carrying an idempotency key.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure-worked-discussions">Rung 7 — Handle failure (worked discussions)</h2>
+<p><strong>7.1 — Make the silent hang impossible.</strong> The design move is to <strong>invert the
+default</strong>: the wrapper requires a total request budget at construction and
+refuses to build without one, rather than defaulting to &quot;unbounded&quot; as every
+underlying client does.</p>
+<p>Escape hatch: an explicit, awkwardly-named opt-out (<code>unboundedBecause(String reason)</code>) that forces the caller to write down <em>why</em> — streaming downloads and
+long-poll endpoints are legitimate. Making it verbose is the point; the failure
+mode is people not thinking about it, not people being unable to.</p>
+<p>What breaks: genuine streaming callers must migrate, and anyone who was
+accidentally relying on unbounded behaviour will start seeing timeouts. Both are
+good — the second group had this bug and did not know.</p>
+<p><strong>7.2 — Retry from the diagnosis, not the exception.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Diagnosis</th>
+  <th>Retry?</th>
+  <th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Refused (fast <code>ConnectException</code>)</td>
+  <td>Yes, briefly</td>
+  <td>Cheap, and a restart may be in progress</td>
+</tr>
+<tr>
+  <td>Dropped (timeout at your limit)</td>
+  <td><strong>No</strong></td>
+  <td>Each attempt costs a full timeout and the cause is usually a standing rule</td>
+</tr>
+<tr>
+  <td>TLS failure</td>
+  <td><strong>Never</strong></td>
+  <td>Deterministic until a certificate changes</td>
+</tr>
+<tr>
+  <td>Unknown host</td>
+  <td><strong>No</strong></td>
+  <td>The name will not resolve differently</td>
+</tr>
+<tr>
+  <td>Reset after idle</td>
+  <td>Yes, once, on a <strong>fresh</strong> connection</td>
+  <td>Almost always a dead pooled connection</td>
+</tr>
+<tr>
+  <td>Read timeout</td>
+  <td>Only if idempotent</td>
+  <td>The server may have processed it</td>
+</tr>
+</tbody>
+</table></div>
+<p>Bound by <strong>total attempts and total time</strong>, with exponential backoff plus
+<strong>jitter</strong> (unjittered retries synchronise clients into a thundering herd). The
+caller must guarantee the request is idempotent, or supply an idempotency key —
+your policy cannot establish that, and must not assume it.</p>
+<p><strong>7.3 — Survive the middlebox.</strong> Numbers to find, in priority order: the load
+balancer's idle timeout (60 s here), any NAT gateway's idle timeout, the server's
+own keep-alive timeout, and your client's current pool idle setting.</p>
+<p>Set pool idle-eviction to roughly <strong>half the shortest</strong> of those — 25–30 s
+against a 60 s LB. Half rather than just-under, so a connection cannot be checked
+out at the moment it is about to be reaped.</p>
+<p>If you cannot find one of the numbers, <strong>do not guess upward</strong>. Take the smallest
+value you can confirm and halve it; the cost of evicting too eagerly is a few
+extra handshakes, and the cost of evicting too late is user-visible errors. Add
+retry-once-on-fresh-connection for idempotent requests as a belt-and-braces
+measure — it converts the residual failures into latency rather than errors.</p>
+<hr />
+<h2 id="solutions-rung-8--design-worked-arguments">Rung 8 — Design (worked arguments)</h2>
+<p><strong>8.1 — The timeout budget.</strong> The rule: <strong>each hop's timeout must be strictly
+less than its caller's remaining budget</strong>, and every hop must pass its remaining
+budget downstream.</p>
+<p>With a 3 s user budget: gateway 3 s → A 2.5 s → B and C 2 s in parallel → D
+1.5 s. The shrinking margin absorbs network time and leaves each layer room to
+respond rather than being cut off mid-answer.</p>
+<p><strong>What happens to D when A gives up:</strong> D keeps working. Nothing tells it. It will
+complete, write to its database, and send a response into a socket nobody is
+reading. This is the ordinary state of affairs and it is why <em>cancellation is a
+distributed problem, not a timeout setting</em> — and why the work D did must be safe
+to have happened, which is the idempotency argument again.</p>
+<p><strong>A late response</strong> must be <strong>discarded, not used</strong>. A response arriving after the
+deadline is unsafe: the caller has already returned an answer or retried, and
+acting on a stale response can produce a second, conflicting action.</p>
+<p><strong>8.2 — Diagnose from a description.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Report</th>
+  <th>Most likely layer</th>
+  <th>First check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>(a) works from laptop, not cluster</td>
+  <td>Firewall / security group / egress rules</td>
+  <td><code>nc -vz host port</code> from inside the cluster — does it refuse fast or hang?</td>
+</tr>
+<tr>
+  <td>(b) fails 09:00–09:04, twice weekly</td>
+  <td>Something scheduled: DNS TTL expiry, cert rotation, a batch job saturating a link</td>
+  <td>Correlate against the exact window; check whether failures are fast or slow</td>
+</tr>
+<tr>
+  <td>(c) &gt;1 KB times out</td>
+  <td><strong>MTU black hole</strong> — the classic signature</td>
+  <td>Send increasing payload sizes and find the exact cliff</td>
+</tr>
+<tr>
+  <td>(d) only first request after deploy</td>
+  <td>Cold connection pool plus a slow cold lookup — failure 1's shape</td>
+  <td>Instrument DNS lookup time separately</td>
+</tr>
+<tr>
+  <td>(e) p50 40 ms, p99 exactly 5,000 ms</td>
+  <td>A <strong>timeout</strong>, not slowness — the roundness gives it away</td>
+  <td>Find what is configured to 5,000 ms; likely a resolver or a retrying client</td>
+</tr>
+</tbody>
+</table></div>
+<p>The unifying method: <strong>fast or slow, and is the number suspiciously round?</strong></p>
+<p><strong>8.3 — The case against retries.</strong> The strongest honest version:</p>
+<blockquote>
+<p>Retries are a correctness liability sold as a reliability feature. They only
+help transient failures, and most of what we retry is not transient: a firewall
+rule, a bad certificate, a wrong port. Against those, each retry costs a full
+timeout and holds a thread — measured, 3 attempts against a DROP rule is 9
+seconds of a thread doing nothing.</p>
+<p>Worse, they are unsound by default. TCP cannot tell us whether a failed request
+was processed, so every retry of a non-idempotent operation is a coin flip on
+double execution. And under partial degradation they amplify: the dependency
+slows, everyone retries, offered load multiplies, and a brownout becomes an
+outage.</p>
+</blockquote>
+<p>What would change my mind: evidence the failures actually <em>are</em> transient — a
+measurable success rate on second attempts. If retry #2 succeeds 40% of the time,
+retries are earning their keep. If it succeeds 2% of the time, they are pure cost
+and the honest fix is a circuit breaker plus a fast, clear error.</p>
+<p>That is also the cheapest thing to instrument before arguing either way: <strong>count
+retry outcomes, not just retry attempts.</strong></p>
+</div></details></section><nav class="pager" aria-label="Other labs"><span></span><a href="../02-communication-protocols/notes.html" style="text-align:right"><small>Lab 2 →</small>communication-protocols</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-one-line-of-code-hide-six-systems">1. Why does one line of code hide six systems?</a><a href="#readme-2-what-happens-to-priyas-parcel">2. What happens to Priya&#x27;s parcel?</a><a href="#readme-3-why-not-just-send-it-and-retry-if-nothing-comes-back">3. Why not just send it, and retry if nothing comes back?</a><a href="#readme-4-how-does-the-retry-make-it-worse">4. How does the retry make it worse?</a><a href="#readme-5-what-do-we-actually-need">5. What do we actually need?</a><a href="#readme-6-what-is-the-key-idea">6. What is the key idea?</a><a href="#readme-7-whose-hands-does-the-parcel-pass-through">7. Whose hands does the parcel pass through?</a><a href="#readme-8-what-are-the-two-pictures-to-keep-in-your-head">8. What are the two pictures to keep in your head?</a><a href="#readme-9-where-can-you-break-each-layer-yourself">9. Where can you break each layer yourself?</a><a href="#readme-10-what-does-one-request-actually-look-like-phase-by-phase">10. What does one request actually look like, phase by phase?</a><a href="#readme-11-what-are-the-nine-ways-it-fails-and-how-do-you-tell-them-apart">11. What are the nine ways it fails, and how do you tell them apart?</a><a href="#readme-12-what-does-tcp-actually-promise">12. What does TCP actually promise?</a><a href="#readme-13-where-is-the-code">13. Where is the code?</a><a href="#readme-14-what-do-the-six-experiments-show">14. What do the six experiments show?</a><a href="#readme-15-what-changes-in-a-real-system">15. What changes in a real system?</a><a href="#readme-16-exercises">16. Exercises</a><a href="#readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</a><a href="#readme-18-glossary">18. Glossary</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

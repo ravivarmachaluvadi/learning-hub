@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en" data-hub-lab="21-java-version-features">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Java 14 — records arrive, and NullPointerException finally tells you which thing was null</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 21 · java-14.md</span><nav class="tabs" aria-label="This lab"><a href="notes.html">Lab notes</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 21 · java-version-features</p><h1 id="doc-java-14--records-arrive-and-nullpointerexception-finally-tells-you-which-thing-was-null">Java 14 — records arrive, and NullPointerException finally tells you which thing was null</h1>
+<p><strong>GA:</strong> March 2020 · <strong>LTS:</strong> no · <strong>Class file major version:</strong> 58 ·
+<strong>Oracle support:</strong> ended September 2020 <strong>[documented — Oracle roadmap]</strong></p>
+<p><strong>Previous:</strong> <a href="java-13.html">Java 13</a> · <strong>Next:</strong> <a href="java-15.html">Java 15</a> ·
+<strong>Back to:</strong> <a href="notes.html#readme">the story</a></p>
+<hr />
+<h2 id="doc-the-one-thing-to-remember">The one thing to remember</h2>
+<p><strong>Java 14 is where Project Amber's programme becomes visible.</strong> Records
+(preview), pattern matching for <code>instanceof</code> (preview) and finalised switch
+expressions all land here, and they are not three unrelated features — they are
+three parts of one design that completes in <a href="java-21.html">Java 21</a>.</p>
+<p>It also ships <strong>helpful NullPointerExceptions</strong>, which is, per line of code
+saved in debugging, one of the highest-value changes in this entire lab.</p>
+<h2 id="doc-what-you-actually-get">What you actually get</h2>
+<h3 id="doc-helpful-nullpointerexceptions--jep-358">Helpful NullPointerExceptions — JEP 358</h3>
+<p>Before:</p>
+<div class="code"><pre><code>Exception in thread &quot;main&quot; java.lang.NullPointerException
+    at com.acme.Orders.process(Orders.java:42)
+</code></pre></div>
+<p>Line 42 is <code>return order.getCustomer().getAddress().getCity().toUpperCase();</code>.
+Four things could be null. Good luck.</p>
+<p>After:</p>
+<div class="code"><pre><code>Exception in thread &quot;main&quot; java.lang.NullPointerException:
+Cannot invoke &quot;String.toUpperCase()&quot; because the return value of
+&quot;com.acme.Address.getCity()&quot; is null
+    at com.acme.Orders.process(Orders.java:42)
+</code></pre></div>
+<p>The JVM reconstructs which dereference failed by analysing the bytecode at the
+throw site. <strong>In Java 14 it is off by default</strong> (<code>-XX:+ShowCodeDetailsInExceptionMessages</code>);
+<strong>it became the default in <a href="java-15.html">Java 15</a>.</strong></p>
+<p>One caution worth knowing: the message can include variable and field names
+from your code, so an NPE message reaching a user-facing error page can leak
+internal structure. That is an argument for not putting raw exception messages
+in HTTP responses, which was true anyway.</p>
+<h3 id="doc-records--jep-359-first-preview">Records — JEP 359 (<strong>first preview</strong>)</h3>
+<p>A record is a transparent carrier for immutable data.</p>
+<div class="code"><pre><code class="language-java">public record OrderLine(String sku, int quantity, BigDecimal unitPrice) { }
+</code></pre></div>
+<p>That single line generates: a canonical constructor, <code>sku()</code>, <code>quantity()</code>,
+<code>unitPrice()</code> accessors, <code>equals</code>, <code>hashCode</code>, and <code>toString</code>. All fields are
+<code>private final</code>; the class is <code>final</code>; it cannot extend anything.</p>
+<p><strong>What records are for, precisely:</strong> a record's contract is that it is exactly
+its components — nothing hidden, nothing derived, no identity beyond its
+values. That is a stronger statement than &quot;a class with less boilerplate&quot;, and
+it is why the compiler is allowed to generate <code>equals</code> for you.</p>
+<p><strong>What they are not:</strong> a replacement for JavaBeans in every context. A record
+has no no-arg constructor and no setters, which historically confused
+frameworks. Modern Jackson, Spring and Hibernate handle records well now (as
+DTOs and projections; as JPA <code>@Entity</code> types they remain a poor fit, because
+JPA requires mutability and a no-arg constructor).</p>
+<p>Validation goes in a <strong>compact constructor</strong>:</p>
+<div class="code"><pre><code class="language-java">public record OrderLine(String sku, int quantity, BigDecimal unitPrice) {
+    public OrderLine {                        // no parameter list, no assignments
+        Objects.requireNonNull(sku);
+        if (quantity &lt;= 0) throw new IllegalArgumentException(&quot;quantity must be &gt; 0&quot;);
+        sku = sku.strip();                    // you may normalise; assignment to
+                                              // the field happens after this block
+    }
+}
+</code></pre></div>
+<p>A record can also have static factories, extra instance methods, and can
+implement interfaces — it just cannot extend a class or add instance fields.</p>
+<p>Records become genuinely powerful in <a href="java-21.html">Java 21</a>, where <strong>record
+patterns</strong> let you destructure them in a <code>switch</code>. Keep that endpoint in mind;
+records are step one of three.</p>
+<h3 id="doc-pattern-matching-for-instanceof--jep-305-first-preview">Pattern matching for <code>instanceof</code> — JEP 305 (<strong>first preview</strong>)</h3>
+<div class="code"><pre><code class="language-java">// before
+if (obj instanceof String) {
+    String s = (String) obj;      // the cast you just proved was safe
+    if (s.length() &gt; 5) { ... }
+}
+
+// after
+if (obj instanceof String s &amp;&amp; s.length() &gt; 5) { ... }
+</code></pre></div>
+<p>The binding variable <code>s</code> is in scope exactly where the compiler can prove the
+test passed — including in the rest of the <code>&amp;&amp;</code>, and in the <code>else</code> branch of a
+negated test:</p>
+<div class="code"><pre><code class="language-java">if (!(obj instanceof String s)) return;
+// s is in scope here, because the method returned if it wasn&#x27;t a String
+use(s);
+</code></pre></div>
+<p>That flow-sensitive scoping is the part people find surprising and it is
+deliberate — it makes the early-return idiom work.</p>
+<h3 id="doc-switch-expressions--final--jep-361">Switch expressions — <strong>final</strong> — JEP 361</h3>
+<p>Two previews (<a href="java-12.html">12</a>, <a href="java-13.html">13</a>), one syntax change, done. Use
+them freely from Java 14 on; no flag.</p>
+<h3 id="doc-text-blocks-second-preview--jep-368">Text blocks, second preview — JEP 368</h3>
+<p>Adds two escapes: <code>\s</code> (a space that survives incidental-whitespace stripping)
+and a trailing <code>\</code> (join to the next line without a newline).</p>
+<h3 id="doc-jfr-event-streaming--jep-349">JFR event streaming — JEP 349</h3>
+<p>Consume Flight Recorder events <em>as they happen</em>, in-process or from another
+process, rather than dumping a file and opening it later:</p>
+<div class="code"><pre><code class="language-java">try (var rs = new RecordingStream()) {
+    rs.enable(&quot;jdk.CPULoad&quot;).withPeriod(Duration.ofSeconds(1));
+    rs.onEvent(&quot;jdk.CPULoad&quot;, e -&gt; gauge.set(e.getFloat(&quot;machineTotal&quot;)));
+    rs.startAsync();
+}
+</code></pre></div>
+<p>This is how you get JFR data into Micrometer/Prometheus without a file
+round-trip.</p>
+<h3 id="doc-packaging-tool-incubator--jep-343">Packaging tool (incubator) — JEP 343</h3>
+<p><code>jpackage</code> — native installers (<code>.msi</code>, <code>.dmg</code>, <code>.deb</code>). Final in
+<a href="java-16.html">Java 16</a>. Partly a response to Java Web Start's removal in
+<a href="java-11.html">11</a>.</p>
+<h3 id="doc-foreign-memory-access-api-incubator--jep-370">Foreign-Memory Access API (incubator) — JEP 370</h3>
+<p>The first step of the eight-year road to the FFM API. See the README's
+<a href="notes.html#readme-the-very-long-case--the-foreign-function--memory-api-eight-years">very long case</a>
+for the full ladder.</p>
+<h2 id="doc-pipeline-movement-this-release">Pipeline movement this release</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Feature</th>
+  <th>State here</th>
+  <th>Ends up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Switch expressions (JEP 361)</td>
+  <td><strong>FINAL</strong></td>
+  <td>done</td>
+</tr>
+<tr>
+  <td><strong>Records (JEP 359)</strong></td>
+  <td>1st preview</td>
+  <td>Final in <a href="java-16.html">16</a></td>
+</tr>
+<tr>
+  <td><strong>Pattern matching for <code>instanceof</code> (JEP 305)</strong></td>
+  <td>1st preview</td>
+  <td>Final in <a href="java-16.html">16</a></td>
+</tr>
+<tr>
+  <td>Text blocks (JEP 368)</td>
+  <td>2nd preview</td>
+  <td>Final in <a href="java-15.html">15</a></td>
+</tr>
+<tr>
+  <td><strong>Foreign-Memory Access (JEP 370)</strong></td>
+  <td>1st incubator</td>
+  <td>FFM final in <a href="java-22.html">22</a></td>
+</tr>
+<tr>
+  <td>Packaging tool (JEP 343)</td>
+  <td>Incubator</td>
+  <td>Final in <a href="java-16.html">16</a></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="doc-what-broke">What broke</h2>
+<ul>
+<li><strong>CMS garbage collector removed — JEP 363.</strong> Deprecated in
+<a href="java-09.html">Java 9</a>, gone here. <code>-XX:+UseConcMarkSweepGC</code> now fails to
+start. If you inherit JVM flags from a pre-2017 runbook, this is the flag
+that bites. Move to G1 (the default) or ZGC.</li>
+<li><strong>Pack200 tools and API removed — JEP 367.</strong> Deprecated in
+<a href="java-11.html">11</a>.</li>
+<li><strong><code>ParallelScavenge + SerialOld</code> GC combination deprecated — JEP 366.</strong></li>
+<li><strong>Solaris and SPARC ports deprecated — JEP 362.</strong> Removed in
+<a href="java-15.html">15</a>.</li>
+</ul>
+<h2 id="doc-verdict-for-your-day-job">Verdict for your day job</h2>
+<p><strong>Don't target it.</strong> Six months, ended September 2020.</p>
+<p>But this is the release to read if you want to understand where modern Java's
+<em>shape</em> comes from. Records and pattern matching start here; helpful NPEs start
+here. Everything in this file is available and better in
+<a href="java-17.html">17</a>, <a href="java-21.html">21</a> and <a href="java-25.html">25</a>.</p>
+</main><aside aria-label="On this page"><h2>On this page</h2><a href="#doc-the-one-thing-to-remember">The one thing to remember</a><a href="#doc-what-you-actually-get">What you actually get</a><a href="#doc-pipeline-movement-this-release">Pipeline movement this release</a><a href="#doc-what-broke">What broke</a><a href="#doc-verdict-for-your-day-job">Verdict for your day job</a><h2>More in this lab</h2><a href="java-09.html">java-09</a><a href="java-10.html">java-10</a><a href="java-11.html">java-11</a><a href="java-12.html">java-12</a><a href="java-13.html">java-13</a><a href="java-14.html">java-14</a><a href="java-15.html">java-15</a><a href="java-16.html">java-16</a><a href="java-17.html">java-17</a><a href="java-18.html">java-18</a><a href="java-19.html">java-19</a><a href="java-20.html">java-20</a><a href="java-21.html">java-21</a><a href="java-22.html">java-22</a><a href="java-23.html">java-23</a><a href="java-24.html">java-24</a><a href="java-25.html">java-25</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

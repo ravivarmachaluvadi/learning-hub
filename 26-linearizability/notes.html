@@ -1,0 +1,2960 @@
+<!doctype html>
+<html lang="en" data-hub-lab="26-linearizability">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>26. linearizability</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 26 of 71 · Stage 4</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 26 · Why Distribution Is Hard</p><article id="readme"><h1 id="readme-linearizability--when-is-consistent-a-promise-you-can-check">Linearizability — when is &quot;consistent&quot; a promise you can check?</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Meera sees PASS on the university results page and phones
+her father, Raghu, who opens the same page a few seconds later and sees &quot;not
+yet published&quot;. No machine crashed and nobody lied: two of the three copies
+simply disagreed for a moment, and Meera's phone call proves that something
+already seen was then un-seen. Linearizability is the rule that forbids
+exactly this: however many machines there are, the whole system must behave
+like one notebook, read and written one request at a time. This lab builds
+a checker that reads only the requests and their answers on a clock, points
+it at six replication designs, and convicts four of them.</p>
+</blockquote>
+<p>The checker you can drag is <a href="visualization.html"><code>visualization.html</code></a>, also
+published at <a href="https://claude.ai/code/artifact/01a5e2be-a55e-470a-b3a9-ce07e3d479b1" target="_blank" rel="noopener">https://claude.ai/code/artifact/01a5e2be-a55e-470a-b3a9-ce07e3d479b1</a>.
+How to run the code, and where every number came from, is in
+<a href="#readme-19-about-this-lab">section 19</a> at the end.</p>
+<hr />
+<h2 id="readme-1-why-does-consistent-need-a-definition">1. Why does &quot;consistent&quot; need a definition?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every database says it is &quot;consistent&quot;. Until you say
+exactly what that word promises, you cannot write a test that fails, you
+cannot compare two databases, and you cannot tell a real bug from a bad
+memory.</p>
+</blockquote>
+<p>Every distributed store advertises that it is &quot;consistent&quot;. This lab is about
+the one precise thing that word can mean, and why it is the version worth
+wanting. Then the part almost nobody does: how to <em>check</em> whether a system
+actually delivered it.</p>
+<p>You already know that copies of data can disagree. You also know the counting
+trick from the quorums lab that stops a reader from missing a write. So here
+is a different question, and it is the one that actually bites in production:</p>
+<p><strong>When is a storage system allowed to be called correct?</strong></p>
+<p>That sounds like philosophy until you have to answer it for real. Someone
+files a bug: &quot;I updated the setting, my colleague refreshed, and she saw the
+old one.&quot; Is that a bug in your service? A bug in the database? Or the
+documented behaviour of the database you chose? You cannot answer without a
+precise statement of what the database promised.</p>
+<p>&quot;Eventually consistent&quot; does not help. <em>Eventually</em> has no deadline.
+<em>Consistent</em> is doing no work in that sentence at all.</p>
+<p>Without a precise definition, three things happen. You cannot write a test
+that would fail. You cannot compare two databases. And you cannot tell a real
+incident from someone misremembering.</p>
+<h2 id="readme-2-what-happened-to-meera-and-her-father">2. What happened to Meera and her father?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Meera saw PASS and phoned her father. Raghu looked
+afterwards and saw nothing. Two honest machines gave one impossible pair of
+answers, and the phone call is what makes the pair impossible.</p>
+</blockquote>
+<p>Meera is waiting for her exam results. The university publishes them on a
+website. The website is served from three machines, call them A, B and C, so
+that it does not fall over on results day.</p>
+<p>At 10:00 the results are published. Meera refreshes, sees <strong>PASS</strong>, and
+immediately phones her father.</p>
+<blockquote>
+<p>&quot;It's up. Go and look.&quot;</p>
+</blockquote>
+<p>Her father, Raghu, puts down the phone, opens the same page, and sees <strong>not
+yet published</strong>.</p>
+<p>Nothing has broken. No machine has crashed. No error was logged. Nobody was
+lied to on purpose. Meera hit machine A, which had the new page. Raghu hit
+machine C, which had not received it yet. Both machines answered honestly.</p>
+<p>Here is what makes this the interesting case, rather than an ordinary
+staleness complaint. <strong>Raghu looked strictly after Meera had already been told
+the answer.</strong> There is no way to arrange these two page loads on a single
+timeline such that one noticeboard could have produced both. Meera's phone
+call is the proof. Something that had already happened, un-happened.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Ignore the machines for a moment. What is the smallest
+number of facts you need about these two page loads to be sure something is
+wrong, without knowing anything about how the website is built?</em></p>
+<details><summary>Reveal</summary>
+Four. When each page load **started**, when each one **finished**, and what
+each one **returned**. Nothing else. You never need to know how many machines
+there are, how they replicate, or what happened inside.
+
+<p>If you said &quot;two: what each returned&quot;, you have missed the clock. Two
+different answers are fine when the two loads overlap. It is the order in
+time that convicts.</p>
+<p>That is the whole idea this lab is built on. Correctness here is a property
+of what an outside observer can see: the requests and their answers, laid on
+a clock. It is not a property of the implementation.</p>
+</details>
+
+</blockquote>
+<p><strong>Where this lab takes you.</strong> Stop at any checkpoint and you still have
+something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–9</td>
+  <td>say what &quot;the system behaves like one copy&quot; means, and spot a violation on a timeline</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>10</td>
+  <td>run the checking algorithm by hand, and explain the one rule that makes it strict</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>11–14</td>
+  <td>say which designs provide it, which fail and how often, and prove it with code</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>15</td>
+  <td>read etcd, ZooKeeper, Spanner and DynamoDB consistency docs and know exactly what each is promising</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-why-not-just-make-the-copies-catch-up-faster">3. Why not just make the copies catch up faster?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The obvious reading is &quot;machine C was behind&quot;, so make
+it less behind. That genuinely helps. It cannot finish the job.</p>
+</blockquote>
+<p>The obvious reading of Meera's bug is &quot;machine C was behind&quot;. So the obvious
+fix is to make it not be behind. Replicate faster. Replicate synchronously.
+Add health checks that pull a lagging machine out of rotation.</p>
+<p>This is what most teams try first, and it is not stupid. It genuinely reduces
+how often Raghu sees the old page.</p>
+<h2 id="readme-4-why-does-faster-never-become-never">4. Why does &quot;faster&quot; never become &quot;never&quot;?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Faster replication has no finish line. Sticky routing
+fixes Meera and does nothing for Raghu. And the failure raises no error, so
+nobody knows it happened.</p>
+</blockquote>
+<p>Three things go wrong with &quot;just replicate faster&quot;.</p>
+<p><strong>It has no stopping condition.</strong> How fast is fast enough? There is no number
+you can put in a ticket. &quot;Usually within 50ms&quot; is not a guarantee. It is a
+description of a good day. Meera's phone call takes two seconds.</p>
+<p><strong>The second fix is worse.</strong> The next idea is usually &quot;make every user always
+read from the same machine&quot;, which engineers call sticky routing. That does
+fix Meera reading her <em>own</em> writes. It does nothing for Raghu, because Raghu is
+a different person on a different machine. And the moment that machine
+restarts, the guarantee silently disappears with it.</p>
+<p><strong>And the failure is invisible.</strong> No error is raised. Your dashboards are
+green. This is the killer: you cannot alert on a condition you have not
+defined.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Suppose you make replication perfectly synchronous. A write
+is not acknowledged until all three machines have it. Is Meera's bug gone
+for good?</em></p>
+<details><summary>Reveal</summary>
+That specific bug, yes. But now try this: the write is **still in flight**.
+It has reached machine A and not yet B or C. Meera reads, hits A, sees PASS.
+Raghu reads a second later, hits C, sees nothing. The write has still not
+finished, so nobody has broken the "wait for all three" rule.
+
+<p>If you said &quot;gone for good&quot;, you were fixing lag. The problem was never lag.
+The problem is that <strong>while an operation is in progress, different
+observers can be shown different pasts, and the system never reconciles
+them.</strong> Making the window smaller does not make it a different kind of
+thing.</p>
+<p>This is exactly the case the last lab's counting rule cannot see. That rule
+honestly gave you 0 stale reads over 4,000 rounds. You will count the thing
+it missed in section 14.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-5-what-do-we-actually-want">5. What do we actually want?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Not &quot;copies agree quickly&quot;. We want a system that nobody
+outside could ever prove has more than one copy.</p>
+</blockquote>
+<p>Step back from mechanisms and say what we actually want. Not &quot;copies agree
+quickly&quot;. This:</p>
+<blockquote>
+<p><strong>The system must be indistinguishable, from outside, from a system that has
+exactly one copy of the data and handles one request at a time.</strong></p>
+</blockquote>
+<p>Read that again, because two words are carrying everything.</p>
+<p><strong>Indistinguishable.</strong> We are not asking for one copy. We are asking that no
+sequence of requests and answers could ever prove there is more than one. The
+implementation may have five hundred machines.</p>
+<p><strong>From outside.</strong> The only evidence admissible is what clients asked, when
+they asked, when they were answered, and what they were told. If the internals
+are a mess but no client can catch it, the requirement is met.</p>
+<p>Everything else in this lab is either a way to check this, or a way to build
+it.</p>
+<h2 id="readme-6-what-is-the-one-idea-that-makes-this-checkable">6. What is the one idea that makes this checkable?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every request takes a stretch of time. Pretend it
+happened at one instant somewhere inside that stretch. If you can pick the
+instants so that a single notebook explains every answer, the impersonation
+held.</p>
+</blockquote>
+<p>Here is the invention, and it fits in two sentences.</p>
+<p>A request is not an instant. It is a <em>stretch</em> of time, from when Meera's
+browser sent it to when Meera was answered. But if the system really were one
+notebook handling one request at a time, then somewhere inside that stretch
+there would be a single moment when the operation actually took effect.</p>
+<blockquote>
+<p><strong>Pick one instant inside each request's stretch. If you can pick them such
+that reading the requests in instant-order tells a sensible one-notebook
+story, the system's impersonation held. If no such choice exists, it did
+not.</strong></p>
+</blockquote>
+<p>That is the entire concept. Everything after this is vocabulary, algorithms,
+and consequences.</p>
+<p>Notice what makes it powerful: <strong>overlapping requests are free</strong>. If Meera's
+read and the publish overlap in time, both answers are defensible. The instant
+could have fallen on either side. It is only when a request <em>finishes</em> before
+another one <em>starts</em> that the order is nailed down and cannot be argued with.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Two facts about the story: Meera's read overlapped the
+publish, and Raghu's read started after Meera's had finished. Which of the
+two facts convicts the website?</em></p>
+<details><summary>Reveal</summary>
+Only the second. Meera's read overlapping the publish is free: her PASS is
+explained by putting the publish's instant just before her read's instant.
+Raghu's read starting *after* Meera was answered is the fact that cannot be
+argued with. His instant must come after hers, so his answer must include
+whatever hers included.
+
+<p>If you picked the first fact, you are treating &quot;overlapped a write&quot; as
+suspicious. It never is. Overlap is where the system is allowed to choose.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-7-what-do-engineers-call-all-these-things">7. What do engineers call all these things?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every word below names something that has already
+happened to Meera and Raghu. The phone records are a <em>history</em>. The moment a
+request &quot;really happened&quot; is its <em>linearization point</em>. The rule that makes
+the phone call count is <em>real-time order</em>.</p>
+</blockquote>
+<p>Each of these names something you have already met in the story. Now they get
+their real names, their precise meanings, and their connections to the labs
+you have already done. The story keeps going while the words arrive.</p>
+<h3 id="readme-what-is-the-evidence-called">What is the evidence called?</h3>
+<p>Imagine the university's lawyer collecting evidence. She asks for exactly
+four facts per page load: who asked, when they asked, when they were answered,
+and what they were told. That list is the <strong>history</strong>. It is the recording of
+what happened, as seen from outside.</p>
+<p>Precisely: a history is the list of operations, each with the time its client
+sent it, the time its client was answered, and the answer it got. The term
+exists to name the <em>only</em> evidence that is admissible. Everything about
+internals is deliberately excluded. That is what makes the property checkable
+against any system, including one you did not write.</p>
+<p>Meera and Raghu's two page loads are a two-operation history. This lab writes
+histories in a compact form. Here is that form beside its meaning, so you
+never have to decode it in the middle of a sentence.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Written</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>C1 put(1) [0,4]</code></td>
+  <td>client 1 asked to store the value 1 at tick 0, and was told &quot;done&quot; at tick 4</td>
+</tr>
+<tr>
+  <td><code>C2 get()→0 [6,10]</code></td>
+  <td>client 2 asked for the value at tick 6, and was told &quot;0&quot; at tick 10</td>
+</tr>
+<tr>
+  <td>the two lines together</td>
+  <td>a two-operation history: a write, then a read that missed it</td>
+</tr>
+</tbody>
+</table></div>
+<p>The Java class is literally called <span class="missing" title="Not in the hub: src/History.java is in the lab folder on your laptop"><code>History</code></span>. It is the
+input to everything in this lab.</p>
+<h3 id="readme-where-does-a-request-start-and-end">Where does a request start and end?</h3>
+<p>Each page load is a bar on a timeline. The bar's left end is the moment Meera
+pressed refresh. The right end is the moment the page appeared. Engineers call
+the left end the <strong>invocation</strong> and the right end the <strong>response</strong>.</p>
+<p>Precisely: the invocation is the moment the request left the client. The
+response is the moment the answer arrived back. Two operations are
+<strong>concurrent</strong> if their stretches overlap. A history is <strong>sequential</strong> if no
+two operations overlap at all; everything happened one at a time.</p>
+<p>These terms exist because the gap between them is where all the interesting
+behaviour hides. A system is only ever caught out by what it does <em>during</em> an
+operation.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Written</th>
+  <th>In words</th>
+  <th>Concurrent?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>put [0,24]</code> and <code>get [2,8]</code></td>
+  <td>a write from tick 0 to 24; a read from tick 2 to 8, inside it</td>
+  <td>yes, they overlap</td>
+</tr>
+<tr>
+  <td><code>put [0,4]</code> and <code>get [6,10]</code></td>
+  <td>a write finished at tick 4; a read began at tick 6</td>
+  <td>no, the put finished first</td>
+</tr>
+</tbody>
+</table></div>
+<p>Concurrency is <em>permission</em>. The more operations overlap, the more orders are
+defensible, and the harder the system is to catch.</p>
+<h3 id="readme-when-did-it-actually-happen">When did it actually happen?</h3>
+<p>Somewhere inside Meera's bar there is one moment when her page load &quot;really&quot;
+read the noticeboard. Engineers call that moment the <strong>linearization point</strong>.
+It is the single instant an operation took effect.</p>
+<p>Precisely: a linearization point is a chosen point inside
+<code>[invocation, response]</code> for each operation. The points are chosen so that
+ordering the operations by their points produces a legal one-copy execution.</p>
+<p>The term exists to separate <em>when an operation took effect</em> from <em>how long
+the request took</em>. The point is a claim about the outcome, not about anything
+the code does. It is often nowhere near the middle.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>History</th>
+  <th>Where the put's point must sit</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>put(1) [0,24]</code>, <code>get()→0 [2,8]</code>, <code>get()→1 [12,18]</code></td>
+  <td>between tick 8 and tick 12</td>
+  <td>after the read that missed it, before the read that saw it</td>
+</tr>
+</tbody>
+</table></div>
+<p>The put took 24 units of wall clock. Its point is a four-unit window inside
+that. In the visualization, this is the black dot you can drag.</p>
+<h3 id="readme-what-would-one-notebook-have-said">What would one notebook have said?</h3>
+<p>To judge Raghu's page, you need to know what a single noticeboard <em>would</em>
+have shown. That set of rules is the <strong>sequential specification</strong>, or the
+&quot;one-copy story&quot;. It is the rules the thing would obey if there were only one
+of it, used by one person at a time.</p>
+<p>Precisely, for a register: <code>put(v)</code> sets the value to <code>v</code>. <code>get()</code> returns
+the current value. <code>cas(a,b)</code> sets the value to <code>b</code> and returns success only
+if the value was <code>a</code>. A sequential history is <strong>legal</strong> if it obeys these
+rules.</p>
+<p>The term exists because &quot;correct&quot; is meaningless without saying correct <em>at
+what</em>. The specification is the single-copy behaviour you are claiming to
+imitate. It is chosen, not discovered.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Sequential history</th>
+  <th>Legal?</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>put(1), get()→1</code></td>
+  <td>yes</td>
+  <td>store 1, then read 1</td>
+</tr>
+<tr>
+  <td><code>put(1), get()→0</code></td>
+  <td>no</td>
+  <td>store 1, then read 0: no single notebook does that</td>
+</tr>
+</tbody>
+</table></div>
+<p>In the code it is twelve lines: <span class="missing" title="Not in the hub: src/Checker.java is in the lab folder on your laptop"><code>Checker.apply</code></span>, the
+method named <code>apply</code>.</p>
+<h3 id="readme-which-rule-makes-the-phone-call-count">Which rule makes the phone call count?</h3>
+<p>Meera was answered before Raghu asked. The phone call proves it. Any story
+about the noticeboard must therefore put Meera's read before Raghu's.
+Engineers call this the <strong>real-time order</strong>: if one request was already
+answered before another was sent, the first one really did come first, and no
+story may claim otherwise.</p>
+<p>In words: whenever operation <em>a</em>'s response came before operation <em>b</em>'s
+invocation, <em>a</em> must precede <em>b</em> in the chosen order. In symbols: if
+<code>response(a) ≤ invocation(b)</code> then <code>a</code> must precede <code>b</code>. Operations that
+overlap have no such constraint.</p>
+<p>This rule is the <em>only</em> thing separating the guarantee we want from the
+weaker one below it. It is the thing that makes Meera's phone call count as
+evidence. Without it, &quot;Raghu saw the old page&quot; is perfectly acceptable
+behaviour.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Fact</th>
+  <th>Time</th>
+  <th>What the rule forces</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Meera's read was answered</td>
+  <td>10:00:02</td>
+  <td>any explanation must put Meera's read first</td>
+</tr>
+<tr>
+  <td>Raghu's read began</td>
+  <td>10:00:05</td>
+  <td>since Meera's read returned PASS, Raghu's must too</td>
+</tr>
+</tbody>
+</table></div>
+<p>It is one <code>if</code> in the checker, the method
+<span class="missing" title="Not in the hub: src/Checker.java is in the lab folder on your laptop"><code>Checker.candidates</code></span>. You can switch it off and watch the
+verdicts change.</p>
+<h3 id="readme-so-what-does-linearizable-mean">So what does &quot;linearizable&quot; mean?</h3>
+<p>Now the word itself. A history is <strong>linearizable</strong> if the single-copy
+impersonation held. Precisely: there exists a choice of linearization points,
+one inside each operation, such that the resulting sequential history is legal
+and respects real-time order. A <em>system</em> is linearizable if every history it
+can produce is. (For operations that never got an answer, see the next term.)</p>
+<p>Herlihy and Wing coined the term in 1990. They wanted concurrent objects to
+have the same kind of specification single-threaded ones have. The name means:
+the concurrent execution can be <em>linearized</em>, flattened onto a line, without
+anyone noticing.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>History</th>
+  <th>Verdict</th>
+  <th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>put(1)[0,4]</code>, <code>get()→0[6,10]</code></td>
+  <td>not linearizable</td>
+  <td>the put finished before the read began, and the read missed it</td>
+</tr>
+<tr>
+  <td>widen the put to <code>[0,24]</code></td>
+  <td>linearizable</td>
+  <td>now the read sits inside the put; the point can fall after the read</td>
+</tr>
+</tbody>
+</table></div>
+<p>No answer changed between those two rows. Only the clock did. <strong>Time is
+data.</strong></p>
+<p>This is the <code>C</code> in the CAP theorem you learned in
+<a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>. CAP's consistency is precisely this, and
+nothing weaker.</p>
+<h3 id="readme-what-about-a-request-that-never-got-an-answer">What about a request that never got an answer?</h3>
+<p>Suppose the registrar's publish request timed out. Did the results go up or
+not? The registrar does not know. Engineers call that a <strong>pending</strong> (or
+indeterminate) operation: an operation with an invocation and no response.</p>
+<p>The definition allows a pending operation to be either linearized at any
+point, with any result, or discarded entirely. This is the honest model of a
+timeout. A timed-out write is not &quot;failed&quot;. It is <em>unknown</em>, and it may become
+visible later. Any definition that could not express this would be useless in
+practice.</p>
+<p>Scenario F shows it (situation F in the visualization, from
+<code>Scenarios.java</code>). A write times out; two later reads see its value.
+Perfectly linearizable. It simply happened.</p>
+<p>The quorums lab counted 500/500 &quot;failed&quot; writes that were readable
+afterwards. This is the formal name for that situation. It is also the reason
+<strong>writes must be idempotent</strong>: a retry of a pending operation might be its
+second execution.</p>
+<h3 id="readme-what-if-you-throw-the-clock-away">What if you throw the clock away?</h3>
+<p>Take the phone call out of the story. Nobody knows whether Meera or Raghu
+looked first. Now order the events as <em>Raghu's read, then the publish, then
+Meera's read</em>. Every answer is correct. That weaker guarantee is
+<strong>sequential consistency</strong>: the same idea with the clock thrown away.</p>
+<p>Precisely: there must exist <em>some</em> total order producing the observed
+answers, respecting each client's own order of requests, but not real time.
+Every linearizable history is sequentially consistent. The reverse is not
+true.</p>
+<p>Lamport defined it in 1979 for shared-memory multiprocessors, where &quot;real
+time&quot; between two CPUs is not observable. It is the natural weakening, and it
+is the exact thing most &quot;eventually consistent but ordered&quot; systems actually
+give you.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Run 600 histories from a design that reads any replica,
+and 600 from a design with a client cache in front of a correct store. Both
+fail linearizability often. How many of the failures are still sequentially
+consistent?</em></p>
+<details><summary>Reveal</summary>
+For the cache, almost all of them. For the read-any-replica design, only a
+few.
+
+<p>| Design | Sequentially consistent, not linearizable (of 600) | What it means |
+|---|---|---|
+| asynchronous replicas | 52 | a single client bouncing between replicas usually sees time go backwards, which breaks even per-client order |
+| client cache in front | 560 | each client sees its own consistent past; only the clock between clients convicts it |</p>
+<p>If you guessed &quot;about the same for both&quot;, you are missing what a cache
+preserves: one client's own order. That is why cache bugs feel harmless in
+testing. Experiment 4 in section 14 produces both numbers.</p>
+</details>
+
+</blockquote>
+<p>You already know its consequences under other names. <em>Monotonic reads</em> and
+<em>read-your-own-writes</em> are what you ask for when you cannot afford
+linearizability but need some order to survive.</p>
+<h3 id="readme-what-about-transactions">What about transactions?</h3>
+<p>Everything so far is one operation on one object: one page, one read.
+Databases work in transactions over many keys. The transaction version of the
+same question has two names. <strong>Serializability</strong> says a set of
+multi-operation transactions produces the same result as <em>some</em> serial order
+of them. It has no real-time requirement. <strong>Strict serializability</strong> adds it
+back.</p>
+<p>The terms come from databases, where the unit is a transaction over many
+keys. Linearizability comes from concurrent programming, where the unit is one
+operation on one object. Keeping them apart matters. Linearizability says
+nothing about grouping operations, and serializability says nothing about
+time.</p>
+<p>A serializable database may commit your transaction and then serve a later
+transaction an order in which yours had not happened yet. That is legal
+serializability and would be an obvious bug to a user. Spanner's &quot;external
+consistency&quot; is strict serializability.</p>
+<p><strong>Linearizability is strict serializability where every transaction is a
+single operation on a single object.</strong> That one sentence places all four
+terms on one map.</p>
+<h3 id="readme-does-it-add-up-across-keys">Does it add up across keys?</h3>
+<p>The results website has one page per student. If Meera's page behaves like
+one notebook, and Priya's page behaves like one notebook, does the whole site
+behave? Yes. Engineers call this <strong>locality</strong>, or composability: if every key
+behaves, the whole store behaves.</p>
+<p>Precisely: a history over many objects is linearizable <strong>if and only if</strong> its
+restriction to each object is linearizable.</p>
+<p>The term exists because it is not obvious and it is not true of the
+alternatives. It means you can make each shard, each key, each object
+linearizable independently, with no coordination between them, and get a
+linearizable system for free.</p>
+<p>Experiment 10 in section 14 merged 300 pairs of independently linearizable
+histories, and 300 of 300 were linearizable together. The same experiment
+shows two <em>sequentially consistent</em> objects combining into a history that is
+not sequentially consistent. This is the reason linearizability, and not
+sequential consistency, is the property real systems chase. It is the only
+one that scales with sharding.</p>
+<h3 id="readme-the-map-back-to-the-story">The map back to the story</h3>
+<p>Two small tables. Each row says where you met the thing.</p>
+<p><strong>The evidence.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Engineers say</th>
+  <th>In the story</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>history</td>
+  <td>the lawyer's four facts per page load</td>
+  <td>section 2's Predict</td>
+</tr>
+<tr>
+  <td>invocation, response</td>
+  <td>the two ends of a bar: pressed refresh, page appeared</td>
+  <td>section 6</td>
+</tr>
+<tr>
+  <td>concurrent</td>
+  <td>Meera's read and the publish overlapping</td>
+  <td>section 6</td>
+</tr>
+<tr>
+  <td>linearization point</td>
+  <td>the one moment the page load &quot;really&quot; read the board</td>
+  <td>section 6</td>
+</tr>
+<tr>
+  <td>sequential specification</td>
+  <td>what a single noticeboard would have shown</td>
+  <td>section 5</td>
+</tr>
+<tr>
+  <td>real-time order</td>
+  <td>Meera's phone call</td>
+  <td>section 2</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The verdicts and the neighbours.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Engineers say</th>
+  <th>In the story</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>linearizable</td>
+  <td>the impersonation held</td>
+  <td>section 5</td>
+</tr>
+<tr>
+  <td>pending</td>
+  <td>the registrar's publish that timed out</td>
+  <td>this section</td>
+</tr>
+<tr>
+  <td>sequential consistency</td>
+  <td>the same story with the phone call deleted</td>
+  <td>this section</td>
+</tr>
+<tr>
+  <td>serializability, strict serializability</td>
+  <td>the same question for whole transactions</td>
+  <td>this section</td>
+</tr>
+<tr>
+  <td>locality</td>
+  <td>each student's page behaving means the site behaves</td>
+  <td>this section</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-which-two-pictures-should-you-carry">8. Which two pictures should you carry?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Picture one: a single notebook and a queue. Picture two:
+the same thing written as a set of operations, an order, and two
+conditions. Then three places where the notebook picture lies.</p>
+</blockquote>
+<h3 id="readme-the-simple-model-the-notebook">The simple model: the notebook</h3>
+<p>There is one notebook. Requests queue up. Each one, when its turn comes,
+reads or writes the notebook and steps away. That is all.</p>
+<p>Your job as a judge is this. Given the bars on a timeline, <strong>can I place a
+dot inside every bar such that reading them left-to-right against one
+notebook produces exactly the answers the clients were given?</strong></p>
+<h3 id="readme-the-engineers-version">The engineer's version</h3>
+<p>The same machine, stated precisely. Words first, symbols after.</p>
+<p>A history is a set of operations. Each operation records six things: which
+client, what it did, with what arguments, what it was told, when it was sent,
+and when it was answered. Engineers write the history as <code>H</code> and one
+operation as <code>(client, op, args, result, invocation, response)</code>.</p>
+<p>Some pairs of operations are ordered by real time: <em>a</em> was answered before
+<em>b</em> was sent. Engineers write that as <code>a &lt;ᴴ b</code>, defined to hold iff
+<code>response(a) ≤ invocation(b)</code>. It is a partial order: overlapping pairs are
+simply not related.</p>
+<p>The history <code>H</code> is linearizable iff it can be extended, by giving responses to
+some pending operations and discarding the rest, to a history <code>H'</code> such that
+two conditions hold.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Condition</th>
+  <th>In words</th>
+  <th>In symbols</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>L1</strong></td>
+  <td><code>H'</code> can be re-read as one sequential story that a single notebook would accept</td>
+  <td><code>H'</code> is equivalent to some sequential history <code>S</code> that is legal under the object's sequential specification</td>
+</tr>
+<tr>
+  <td><strong>L2</strong></td>
+  <td>every &quot;this one definitely finished first&quot; fact in the real history survives in that story</td>
+  <td><code>&lt;ᴴ ⊆ &lt;ˢ</code>; every real-time precedence in <code>H</code> survives in <code>S</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>S</code> is the <em>linearization</em>. The point inside each operation is where it sits
+in <code>S</code>.</p>
+<h3 id="readme-how-the-two-pictures-line-up">How the two pictures line up</h3>
+<p>Two short tables. The first is the things; the second is the verdicts.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Notebook picture</th>
+  <th>Engineering model</th>
+  <th>On the screen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the notebook</td>
+  <td>the object's sequential specification</td>
+  <td>the &quot;single notebook&quot; replay strip</td>
+</tr>
+<tr>
+  <td>a request</td>
+  <td>an operation with invocation and response</td>
+  <td>a bar</td>
+</tr>
+<tr>
+  <td>&quot;the moment it took effect&quot;</td>
+  <td>its position in <code>S</code></td>
+  <td>the black dot</td>
+</tr>
+<tr>
+  <td>requests that overlap</td>
+  <td>operations unordered by <code>&lt;ᴴ</code></td>
+  <td>overlapping bars</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Notebook picture</th>
+  <th>Engineering model</th>
+  <th>On the screen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>&quot;this one had definitely finished&quot;</td>
+  <td><code>a &lt;ᴴ b</code></td>
+  <td>a gap between two bars</td>
+</tr>
+<tr>
+  <td>&quot;one order that explains everything&quot;</td>
+  <td>the linearization <code>S</code></td>
+  <td>the numbered dots, left to right</td>
+</tr>
+<tr>
+  <td>&quot;no order explains it&quot;</td>
+  <td>no legal <code>S</code> with <code>&lt;ᴴ ⊆ &lt;ˢ</code></td>
+  <td>red bars, no replay</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-the-notebook-lies-to-you">Where the notebook lies to you</h3>
+<p>Three places. Each one is a mistake that is easy to make and expensive to
+hold.</p>
+<p><strong>1. The dot is not a real event.</strong> Nothing in the system happens at the
+linearization point. There is no line of code, no log entry, no lock
+acquisition there. The dot is an <em>existence claim</em> made by an outside judge
+after the fact: &quot;you behaved as if there were a moment here.&quot; Two different
+valid linearizations of the same history can put the dots in different
+places, and both are correct answers. Chasing &quot;where is the linearization
+point in my code?&quot; is often a real and useful design question. But the
+property does not require you to be able to answer it.</p>
+<p><strong>2. There is no notebook, so a request may have no place at all.</strong> If a
+client times out, its operation is <em>pending</em>. It might have taken effect, it
+might not, and the judge is allowed to choose whichever explanation makes the
+history work. The notebook picture makes it feel as though every request must
+land somewhere. It does not.</p>
+<p><strong>3. One notebook per key, not one notebook.</strong> Linearizability is defined per
+object. Two separate keys are two separate notebooks. The guarantee says
+nothing whatsoever about them being read together: no snapshot, no atomic
+multi-key update. The single-notebook image over-promises here. Locality is
+what makes the under-promise safe: per-key correctness composes into
+whole-store correctness <em>for the per-key guarantee</em>, not into transactions.</p>
+<h2 id="readme-9-what-should-you-do-first-in-the-visualization">9. What should you do first in the visualization?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Open the checker, load Meera and Raghu, and drag one bar
+until the verdict flips. Five minutes here makes every later section
+easier.</p>
+</blockquote>
+<p>Open <strong><a href="https://claude.ai/code/artifact/01a5e2be-a55e-470a-b3a9-ce07e3d479b1" target="_blank" rel="noopener">https://claude.ai/code/artifact/01a5e2be-a55e-470a-b3a9-ce07e3d479b1</a></strong>
+(or <code>open visualization.html</code>). Before the mechanism, spend five minutes here.
+Everything after this section will be easier.</p>
+<p><strong>What to look at first.</strong> Each bar is one request, drawn from &quot;asked&quot; to
+&quot;was told&quot;. Situation <strong>A</strong> is loaded: one write, then one read. Answer the
+prediction question at the top, then read the verdict.</p>
+<p><strong>Then do these four things, in order.</strong></p>
+<ol>
+<li><strong>Load situation B.</strong> This is Meera and Raghu. Note the verdict, then
+<strong>drag the read's left edge leftwards</strong> until the bars overlap. The verdict
+flips to acceptable, with <em>no answer changed</em>. That is the single most
+important thing on the page: the same answers are a bug or not a bug
+depending only on the clock.</li>
+<li><strong>Load situation D.</strong> This is the one you will meet again in section 10
+as a real quorum bug. Turn <strong>off</strong> the real-time rule in the controls. The
+verdict flips. You have just switched from linearizability to sequential
+consistency and seen exactly what the difference buys.</li>
+<li><strong>Drag the dots.</strong> In any acceptable situation, grab a black dot and slide
+it. The notebook replay below re-runs live. Push a dot past the point where
+the story still works and the offending step turns red. It tells you what
+the notebook said versus what the client was told.</li>
+<li><strong>Generate a real run.</strong> In &quot;Generate from a real design&quot;, pick <em>&quot;Quorum:
+write 2 of 3, read 2 of 3&quot;</em>, set hiccups to <em>occasional</em>, and press
+<strong>Run 120 &amp; count</strong>, then <strong>Find a broken run</strong>. The number of runs it had
+to search is the lesson: a design with no guarantee at all behaves
+perfectly for dozens of runs in a row.</li>
+</ol>
+<blockquote>
+<p><strong>CHECKPOINT — beginner → intermediate.</strong> You can now say what it means for
+a system to behave like a single copy, read a history off a timeline, and
+tell a genuine violation from a stale-looking but defensible one. That is
+enough to argue correctly in a design review. Next: how a machine decides
+this, mechanically, on a history it has never seen, and the one rule inside
+that algorithm that everything depends on.</p>
+<p><strong>Say it back.</strong> Without using the words <em>linearizable</em>, <em>history</em> or
+<em>real-time</em>, explain to a friend why Raghu's &quot;not yet published&quot; is a bug,
+and why the same page would not have been a bug if he had looked while
+Meera's page was still loading.</p>
+<details><summary>A good answer sounds like</summary>
+"Meera had already been told PASS before Raghu even asked. One noticeboard
+cannot show PASS and then show nothing. If Raghu had asked while Meera's
+page was still loading, nobody could say which of them the board answered
+first, so either answer would be fine."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-10-how-does-a-machine-decide">10. How does a machine decide?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You cannot walk the history in time order, because the
+order is the thing you are looking for. So you search: try an operation, run
+it against the notebook, keep going if the notebook agrees with the client,
+back up if it does not. The real-time rule is one comparison inside that
+search.</p>
+</blockquote>
+<h3 id="readme-101-why-does-the-obvious-checker-fail">10.1 Why does the obvious checker fail?</h3>
+<p>The obvious algorithm: walk the history in time order and check that every
+read returns the most recent write. Call it the checker, version 1.</p>
+<p>Try it on this history and watch it fall apart. Read the picture first: three
+clients, one long write, two reads inside it.</p>
+<div class="code"><pre><code>  C1  [------------------ put(1) ------------------]
+  C2       [-- get()→0 --]
+  C3                          [-- get()→1 --]
+</code></pre></div>
+<p>What is &quot;the most recent write&quot; at the moment of C2's read? The write has
+started and not finished. Version 1 has no answer. If it says &quot;the write
+counts&quot;, C2's <code>get()→0</code> is a violation. But it obviously is not; the write was
+still in flight. If it says &quot;the write does not count yet&quot;, then C3's
+<code>get()→1</code> is a violation. But it obviously is not either.</p>
+<p>The bug in version 1 is that it assumed <strong>the order is given</strong>. It is not. The
+order is the thing we are looking for.</p>
+<h3 id="readme-102-what-does-version-2-do-instead">10.2 What does version 2 do instead?</h3>
+<p>So: search. Try to build the order one operation at a time. Picture the judge
+with a stack of bars and a blank notebook. She picks a bar that is allowed to
+go next, runs it against the notebook, and compares the notebook's answer with
+what the client was actually told. If they match, she places it and
+continues. If not, that branch is dead and she backs up.</p>
+<div class="code"><pre><code>place(remaining operations, notebook value):
+    if nothing remains:                       we found an order — accept
+    for each operation that is ALLOWED to go next:
+        run it against the notebook
+        if the notebook&#x27;s answer ≠ the answer the client actually got:
+            skip it — this branch is impossible
+        otherwise: place it, and recurse
+    if every candidate failed:                back up and try something else
+</code></pre></div>
+<p>The entire content of the algorithm is the phrase <strong>&quot;allowed to go next&quot;</strong>,
+and that is where the real-time rule lives. In Meera's terms: Raghu's read is
+not allowed to go next while Meera's read, already answered before Raghu
+asked, is still unplaced.</p>
+<blockquote>
+<p>An operation may go next if and only if <strong>no still-unplaced operation had
+already been answered before this one was sent.</strong></p>
+</blockquote>
+<p>Or in code. This is <span class="missing" title="Not in the hub: src/Checker.java is in the lab folder on your laptop"><code>Checker.candidates</code></span>:</p>
+<div class="code"><pre><code class="language-java">long minResp = Long.MAX_VALUE;
+for (int i = 0; i &lt; ops.size(); i++)
+    if (remaining(i)) minResp = Math.min(minResp, ops.get(i).resp());
+for (int i = 0; i &lt; ops.size(); i++)
+    if (remaining(i) &amp;&amp; ops.get(i).invoke &lt; minResp) out.add(i);
+    //                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ the whole guarantee, one comparison
+</code></pre></div>
+<p>Delete that comparison, so that every unplaced operation is a candidate, and
+you have a <strong>sequential consistency</strong> checker. That is not an analogy. It is
+the same file with one option flipped. Both checkers are in
+<span class="missing" title="Not in the hub: src/Checker.java is in the lab folder on your laptop"><code>Checker.java</code></span> as <code>Opts.linearizable()</code> and
+<code>Opts.sequential()</code>.</p>
+<h3 id="readme-103-can-you-run-it-by-hand">10.3 Can you run it by hand?</h3>
+<p>History (times are ticks on one clock). Read the picture: one long write, a
+read that saw the new value early, and a later read that saw the old value.</p>
+<div class="code"><pre><code>  C1  [----------------- put(1) ---------------------]     [0, 24]
+  C2      [--- get()→1 ---]                                [2, 8]
+  C3                            [--- get()→0 ---]          [12, 18]
+</code></pre></div>
+<p>Run the search. Each row is one step of the judge.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>Remaining</th>
+  <th>Allowed next</th>
+  <th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>put, get→1, get→0</td>
+  <td>put (started 0) and get→1 (started 2). Not get→0: it started at 12, after C2 was answered at 8</td>
+  <td>try get→1: notebook is 0, client was told 1. <strong>Contradiction, skip.</strong> Try put: notebook becomes 1. Recurse.</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>get→1, get→0</td>
+  <td>only get→1; the earliest response is still 8</td>
+  <td>notebook is 1, client was told 1. <strong>Fits.</strong></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>get→0</td>
+  <td>get→0</td>
+  <td>notebook is 1, client was told 0. <strong>Contradiction.</strong> No candidates left.</td>
+</tr>
+<tr>
+  <td>back up</td>
+  <td>put, get→1, get→0</td>
+  <td>the only other branch at step 1 was get→1 first</td>
+  <td>already dead</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>No order exists. Not linearizable.</strong></p>
+<p>Now change one number. Make C3's read <code>[6, 18]</code> instead of <code>[12, 18]</code>, so it
+overlaps C2's read. Re-run: at step 1, C3's read is now allowed to go first.
+The notebook is still 0, it returns 0, and the rest follows.
+<strong>Linearizable.</strong> Nothing about the answers changed. The clock did.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>The search above tried at most a handful of branches. How
+does its cost grow as the history gets longer?</em></p>
+<details><summary>Reveal</summary>
+Badly, and it depends entirely on how much things overlap. If operations
+are nicely separated, only one is ever "allowed to go next" and the search
+is a straight line. If everything overlaps everything, every remaining
+operation is a candidate at every step, and you are enumerating
+permutations.
+
+<p>If you said &quot;about linearly, it is one pass&quot;, you were thinking of version</p>
+<ol>
+<li>Version 1 was wrong precisely because there is no single pass.</li>
+</ol>
+<p>Deciding linearizability of a history is <strong>NP-hard in general</strong> (Gibbons
+and Korach, 1997). Experiment 9 in section 14 ran the checker on histories
+where every operation overlaps every other.</p>
+<p>| Checker | States explored at 18 operations | What it means |
+|---|---|---|
+| plain search | 79,457,057 | permutations, most of them dead ends explored again and again |
+| with a memo table | 239,506 | a 330× cut; &quot;I have already failed from exactly this position with exactly this notebook value&quot; |</p>
+<p>The verdict is identical either way. Keep the two apart: <strong>being</strong>
+linearizable is cheap; <strong>proving</strong> a history was is expensive. That
+asymmetry is why Jepsen chops a run into one small history per key before
+checking, and why nobody checks linearizability in production.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-104-the-other-half-how-do-you-provide-it">10.4 The other half: how do you <em>provide</em> it?</h3>
+<p>Checking is one half. Building is the other, and it is a short story with one
+twist. Three attempts, all judged by the checker over 600 histories each.</p>
+<p><strong>Attempt 1: one machine.</strong> One copy, one request at a time, is linearizable
+by construction. The moment the machine executes a request <em>is</em> the
+linearization point. It is also useless, because the machine dies and takes
+Meera's results with it.</p>
+<p><strong>Attempt 2: one leader, several copies.</strong> Keep three copies for durability,
+but send <em>every</em> request, reads included, to one designated machine, which
+serializes them. Also linearizable. And this is genuinely how most
+linearizable systems work.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Attempt</th>
+  <th>Violations in 600 histories</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>one machine (<code>SINGLE</code>)</td>
+  <td>0</td>
+  <td>correct by construction, and dead the moment the machine is</td>
+</tr>
+<tr>
+  <td>one leader, three copies (<code>LEADER</code>)</td>
+  <td>0</td>
+  <td>correct as long as exactly one machine is the leader</td>
+</tr>
+</tbody>
+</table></div>
+<p>The cost of attempt 2 is that the leader must be <em>the</em> leader. If two
+machines both believe they lead, you have two notebooks. Making sure exactly
+one leader exists, and that its ordering survives its death, is the problem
+you already solved in the <a href="../39-paxos/notes.html#readme">paxos</a> lab. In one line: <strong>consensus is
+the machinery that makes a single ordering authority survive the loss of the
+authority.</strong> That is the cleanest statement of why consensus exists at all.</p>
+<p><strong>Attempt 3: no leader at all.</strong> Now the interesting one. Can you get the
+single-copy illusion out of a plain quorum, with no machine in charge?</p>
+<p>You already have R + W &gt; N from the last lab. Write to 2 of 3, read from 2 of
+3, take the highest timestamp. The read set and the write set must intersect,
+so a read cannot miss a completed write. Surely that is enough?</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>R = W = 2, N = 3, timestamps handed out correctly. A write
+is <strong>still in flight</strong>: it has reached replica A but not B or C. Reader X
+reads {A, B} and is told the new value. Reader Y starts after X was
+answered and reads {B, C}. What is Y told?</em></p>
+<details><summary>Reveal</summary>
+**The old value.** B and C have not seen the write. Y's read set is a
+perfectly legal quorum. R + W > N is satisfied at every step. Nobody did
+anything wrong.
+
+<p>If you said &quot;the new value, because the quorums overlap&quot;, you have the
+right rule for the wrong question. Y's quorum is guaranteed to overlap the
+<em>write</em> quorum only once the write has finished. It has not.</p>
+<p>And it is a violation: X was already answered &quot;new&quot; before Y was even sent,
+so any explanation must put X first. Once it does, Y must also say &quot;new&quot;.
+This is Meera and Raghu again, with X as Meera and Y as Raghu.</p>
+<p>The counting rule guarantees you cannot miss a <strong>completed</strong> write. It says
+nothing about an <strong>in-flight</strong> one, and it says nothing about two readers
+agreeing with each other. That is precisely the gap the last lab's map entry
+named and this section counts.</p>
+</details>
+
+</blockquote>
+<p>Here is that violation, found by the checker in a real simulated run and then
+shrunk to its smallest broken piece. This is verbatim output from
+<code>java src/Experiments.java writeback</code>:</p>
+<div class="code"><pre><code>  seed 41 — shrunk from 20 operations to 3:
+  QUORUM_NAIVE N=3 R=2 W=2 (minimised)   (time runs left to right)
+  C0  [-----------------------------------------------------------]
+                                 put(1)
+  C1                            [-----------]
+                                  get()-&gt;0
+  C3                 [------]
+                    get()-&gt;1
+</code></pre></div>
+<p>C3 was told <strong>1</strong> and finished. C1, starting later, was told <strong>0</strong>. The write
+is still in flight across both.</p>
+<p><strong>The fix, and it is one extra round trip.</strong> Before a reader returns a value,
+it <strong>writes that value back</strong> to a quorum. Then the value it just revealed is
+durable on enough replicas that no later reader can fail to see it. A read
+becomes: ask a quorum, then tell a quorum, then answer. In the story: before
+Meera's browser shows PASS, it tells two of the three machines &quot;the answer is
+PASS&quot;. Now Raghu cannot miss it.</p>
+<p>This is the ABD algorithm (Attiya, Bar-Noy and Dolev, 1995), and the
+write-back is the entire difference. Same seeds, only that phase added or
+removed, 600 histories per row:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Message hiccup rate</th>
+  <th>Quorum, no write-back</th>
+  <th>Quorum with write-back</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0%</td>
+  <td>0 (0.0%)</td>
+  <td>0 (0.0%)</td>
+  <td>on a calm network the two designs look identical</td>
+</tr>
+<tr>
+  <td>5%</td>
+  <td>3 (0.5%)</td>
+  <td>0 (0.0%)</td>
+  <td>the first hiccups expose the in-flight write</td>
+</tr>
+<tr>
+  <td>15%</td>
+  <td>36 (6.0%)</td>
+  <td>0 (0.0%)</td>
+  <td>the headline number this lab quotes</td>
+</tr>
+<tr>
+  <td>25%</td>
+  <td>72 (12.0%)</td>
+  <td>0 (0.0%)</td>
+  <td>violations grow with jitter, not with load</td>
+</tr>
+<tr>
+  <td>40%</td>
+  <td>109 (18.2%)</td>
+  <td>0 (0.0%)</td>
+  <td>the write-back never fails, at any rate</td>
+</tr>
+</tbody>
+</table></div>
+<p>Look at the top row before the rest. <strong>On a calm network the broken design is
+indistinguishable from the correct one.</strong> Zero violations in 600 histories
+from a design with no guarantee whatsoever. This is the shape of every
+consistency bug that reaches production: it passes staging, and it fires
+during the incident, when the pager is already going off for another reason.</p>
+<p><strong>One more piece the writer needs.</strong> With more than one writer, a writer
+cannot invent its own timestamp either. It must ask a quorum for the highest
+one and use <em>that</em> plus one, tagged with its own id. Two writers that ask at
+the same moment get the same answer and pick the same number. The id is what
+breaks the tie the same way on every replica. Drop the tie-break and different
+replicas end up holding <strong>different values under the same timestamp</strong>: the
+register quietly splits in two. That is a planted bug in this lab
+(<code>Sim.noTiebreak</code>), and the test <code>dropping_the_writer_tiebreak_breaks_it</code>
+catches it.</p>
+<blockquote>
+<p><strong>CHECKPOINT — intermediate → engineering.</strong> You can now run the checking
+algorithm by hand, name the one comparison that distinguishes
+linearizability from sequential consistency, and explain why a quorum needs
+a second round trip on reads to provide the guarantee at all. Next: the six
+ways this breaks in real systems, what each one costs, and what
+linearizability still does not give you even when it holds.</p>
+<p><strong>Say it back.</strong> Without using the words <em>quorum</em>, <em>write-back</em> or <em>ABD</em>,
+explain to a friend why &quot;ask two of three machines and take the newest
+answer&quot; let Raghu see the old page, and what the extra step does about it.</p>
+<details><summary>A good answer sounds like</summary>
+"The new page had only reached one machine. Meera happened to ask that one,
+so she saw PASS. Raghu asked the other two, and neither had it yet. The
+extra step is: before Meera's screen shows PASS, her browser tells two
+machines 'the answer is PASS'. After that, any two machines Raghu asks
+include one that knows."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-11-how-does-it-break-in-real-systems">11. How does it break in real systems?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six failures, and Meera and Raghu are in every one. A
+replica that is behind, a quorum read with no write-back, a leader that
+does not know it was replaced, a cache in front, a clock ordering writes,
+and a lock that expires under you.</p>
+</blockquote>
+<p>Each of these you can make happen yourself. <code>&lt;lab&gt;</code> commands are runnable;
+the visualization situations are the letters in the &quot;Show me&quot; list. The story
+of each failure comes first, then one table compares them all.</p>
+<h3 id="readme-f1--what-if-raghu-reads-from-a-replica-that-is-behind">F1 · What if Raghu reads from a replica that is behind?</h3>
+<p>The most ordinary failure, and the most common. The university's leader
+machine acknowledges the publish before machines B and C have it. Raghu's
+read is routed to C and sees the past. Nothing warns anybody.</p>
+<p>Make it happen with <code>java src/Experiments.java stores</code>, row <code>ASYNC</code>. Or in
+the visualization: <em>Generate from a real design → &quot;read any of them&quot;</em>. Almost
+every history is convicted: <strong>587 of 600 (97.8%)</strong>. Even <em>sequential
+consistency</em> fails in 535 of 600, because a single client bouncing between
+replicas sees the value go backwards.</p>
+<p>The system's response is none; it does not know. Durability is intact and
+the write is never lost. What is lost is any ordering guarantee at all.</p>
+<p>In production this is <code>Postgres read replica</code>, <code>MySQL read replica</code>,
+<code>Cassandra with CL=ONE</code>, and every &quot;we added read replicas to reduce load&quot;
+project. It is not a bug in those systems. It is what you asked for.</p>
+<h3 id="readme-f2--what-if-the-quorum-read-has-no-write-back">F2 · What if the quorum read has no write-back?</h3>
+<p>This is section 10.4's story. The publish is in flight and sits on one
+replica. Meera's browser reads a pair of machines that includes it; Raghu's
+reads a pair that does not. The later read goes backwards.</p>
+<p>Make it happen with <code>java src/Experiments.java writeback</code>: <strong>36 of 600
+(6.0%)</strong> at a 15% hiccup rate, and <strong>0 of 600 on a calm network</strong>. The
+system's response is none. You still never miss a <em>completed</em> write, so R+W&gt;N
+is doing its job exactly as advertised. What is lost is the real-time
+ordering between two reads.</p>
+<p>In production this is Cassandra <code>QUORUM</code> reads without <code>read_repair</code> in the
+read path, and any hand-rolled &quot;read from a majority and take the newest&quot;
+cache layer. Cassandra's answer when you actually need the guarantee is a
+<em>lightweight transaction</em>: a Paxos round per operation, at roughly 4× the
+latency.</p>
+<h3 id="readme-f3--what-if-the-old-leader-has-not-noticed-it-was-replaced">F3 · What if the old leader has not noticed it was replaced?</h3>
+<p>A partition splits the cluster. The majority side elects a new leader, and
+the registrar's publish goes there. The old leader is still up, still holding
+Raghu's connection, and still happily answering reads from its own memory. It
+has no way to know it was replaced. Nobody can tell it, because it is on the
+wrong side of the partition.</p>
+<p>Make it happen in the visualization with situation B, then read this story.
+The shape is identical to Meera and Raghu, which is the point. The old leader
+finds out when the partition heals, and steps down. Writes are safe: the old
+leader cannot get a quorum, so it commits nothing. Reads are lost. This is why
+<strong>stale reads are the classic split-brain symptom and lost writes are not.</strong></p>
+<p>In production the fix is a <strong>lease</strong>. The leader holds a time-bounded grant
+and must stop serving reads when it expires, before the new leader's term can
+begin. etcd and TiKV do this. It is why a leader lease is tied to a clock
+bound, and why clock skew is a correctness input, not an ops detail.</p>
+<h3 id="readme-f4--what-if-there-is-a-cache-in-front-of-a-correct-store">F4 · What if there is a cache in front of a correct store?</h3>
+<p>Now the store underneath is perfect. Raghu's browser, or a caching layer in
+front of the site, answers his refresh from a copy it saved a moment ago,
+without asking. He is shown a value from before the publish.</p>
+<p>Make it happen with <code>java src/Experiments.java cache</code>.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>The store underneath scores 0 of 600 at every TTL. You put
+a client cache in front with a TTL of just 10 ticks. How many of the 600
+histories does the checker convict?</em></p>
+<details><summary>Reveal</summary>
+Already 555 of 600 at a TTL of 10 ticks, and 560 of 600 overall. If you
+guessed "a handful, the TTL is tiny", you are treating the cache as a
+delay. It is a second copy that nobody is keeping in order, and any
+duration of that is enough.
+</details>
+
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>Where the read is answered</th>
+  <th>Convicted (of 600)</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the store itself, any TTL</td>
+  <td>0</td>
+  <td>the store is linearizable</td>
+</tr>
+<tr>
+  <td>client cache, TTL 10 ticks</td>
+  <td>555</td>
+  <td>a tiny cache is already almost always wrong</td>
+</tr>
+<tr>
+  <td>client cache, overall</td>
+  <td>560 (93.3%)</td>
+  <td>the guarantee the client <em>experiences</em> is gone</td>
+</tr>
+<tr>
+  <td>of those 560, still sequentially consistent</td>
+  <td>560 of 560</td>
+  <td>which is why they feel harmless in testing</td>
+</tr>
+</tbody>
+</table></div>
+<p>The system's response is none. Every guarantee of the store itself is intact.
+What is lost is the guarantee the client experiences. <strong>The lesson is the
+important part:</strong> linearizability is a property of <em>what a client can
+observe</em>, not of a component. Your Redis-in-front-of-Postgres architecture is
+exactly this experiment.</p>
+<h3 id="readme-f5--what-if-writes-are-ordered-by-a-wall-clock">F5 · What if writes are ordered by a wall clock?</h3>
+<p>The registrar publishes PASS, then a correction. Each write takes its place in
+the order from the local clock of whichever machine received it. Two machines
+with clocks 20 ticks apart put the correction <em>before</em> the original. The read
+protocol, the write-back and the quorum are all unchanged. The <em>only</em>
+difference is where the order comes from.</p>
+<p>Make it happen with <code>java src/Experiments.java clock</code>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Clock skew</th>
+  <th>Convicted (of 600)</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>zero</td>
+  <td>0</td>
+  <td>with agreeing clocks the order happens to be right</td>
+</tr>
+<tr>
+  <td>20 ticks</td>
+  <td>112 (18.7%)</td>
+  <td>the order is now decided by a number nobody agreed on</td>
+</tr>
+<tr>
+  <td>60 ticks</td>
+  <td>270 (45.0%)</td>
+  <td>nearly half of all runs</td>
+</tr>
+</tbody>
+</table></div>
+<p>Nothing meaningful is intact. Everything is lost. This is the last lab's
+<em>&quot;your clock IS the conflict-resolution algorithm&quot;</em>, restated as an ordering
+failure rather than a lost-update one.</p>
+<p>In production this is last-write-wins by timestamp, everywhere it appears.
+Spanner's answer is not &quot;better clocks&quot; but <strong>explicitly bounded
+uncertainty</strong>: TrueTime returns an interval, and a transaction <em>waits out</em>
+the interval before committing. It buys the ordering with latency rather than
+hoping.</p>
+<h3 id="readme-f6--what-if-a-lock-expires-while-you-are-still-using-it">F6 · What if a lock expires while you are still using it?</h3>
+<p>The registrar runs a nightly job that must not run twice. It takes a
+distributed lock with a time-to-live. The job's process is stopped by a
+garbage-collection pause, or a scheduler hiccup, for longer than the TTL. The
+lock expires. A second process takes it. Then the first process wakes up and
+carries on, believing it still holds a lock that is now held by someone else.</p>
+<p>This one is not simulated in this lab; section 19 flags it as unverified. It
+belongs here because a distributed lock with a TTL is sold as mutual
+exclusion, which is a linearizable guarantee. It is not one. Nothing is
+intact. Mutual exclusion is lost, silently.</p>
+<p>In production this is the core of the Redlock critique. The standard
+mitigation is a <strong>fencing token</strong>: a monotonically increasing number issued
+with the lock, which the <em>storage</em> checks and rejects if it is stale. Note
+what that does: it moves the guarantee from the lock service to the resource,
+where it can actually be enforced.</p>
+<h3 id="readme-the-six-failures-side-by-side">The six failures side by side</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Failure</th>
+  <th>How to make it happen</th>
+  <th>How often (of 600)</th>
+  <th>What survives</th>
+  <th>What is lost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1 replica behind</td>
+  <td><code>stores</code>, row <code>ASYNC</code></td>
+  <td>587 (97.8%); 535 fail even sequential consistency</td>
+  <td>durability; no write is lost</td>
+  <td>any ordering guarantee</td>
+</tr>
+<tr>
+  <td>F2 quorum, no write-back</td>
+  <td><code>writeback</code></td>
+  <td>36 (6.0%) at 15% hiccups; 0 on a calm network</td>
+  <td>never missing a <em>completed</em> write</td>
+  <td>real-time order between two reads</td>
+</tr>
+<tr>
+  <td>F3 deposed leader</td>
+  <td>situation B</td>
+  <td>not counted; same shape as B</td>
+  <td>writes; the old leader cannot commit</td>
+  <td>reads, until the lease expires</td>
+</tr>
+<tr>
+  <td>F4 cache in front</td>
+  <td><code>cache</code></td>
+  <td>560 (93.3%); 555 at TTL 10</td>
+  <td>every guarantee of the store itself</td>
+  <td>the guarantee the client experiences</td>
+</tr>
+<tr>
+  <td>F5 wall-clock order</td>
+  <td><code>clock</code></td>
+  <td>112 (18.7%) at 20 ticks; 270 (45.0%) at 60</td>
+  <td>nothing meaningful</td>
+  <td>everything</td>
+</tr>
+<tr>
+  <td>F6 expiring lock</td>
+  <td>not simulated</td>
+  <td>unverified here</td>
+  <td>nothing</td>
+  <td>mutual exclusion, silently</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-does-it-guarantee-what-does-it-refuse-and-what-does-it-cost">12. What does it guarantee, what does it refuse, and what does it cost?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> It promises every request happened once, at one moment,
+in an order that respects the clock, and that promise adds up across keys.
+It does not promise transactions, snapshots, a winner, or an answer at all.
+And it costs at least one round trip you cannot skip.</p>
+</blockquote>
+<h3 id="readme-what-is-guaranteed">What is guaranteed?</h3>
+<ul>
+<li><strong>Every operation appears atomic.</strong> It takes effect once, at one instant
+between its invocation and its response. Meera's refresh happened at one
+moment, not smeared across three machines.</li>
+<li><strong>Real time is respected.</strong> Anything already answered before your request
+was sent is visible to you. This is what &quot;no stale reads&quot; actually means.
+It is a stronger statement than it sounds: it holds across <em>different
+clients</em>, Meera and Raghu, not just for one client's own writes.</li>
+<li><strong>It composes.</strong> Per-object linearizability gives whole-system
+linearizability, with no coordination between objects. Experiment 10
+counted 300 of 300.</li>
+<li><strong>It is non-blocking.</strong> A pending operation never <em>forces</em> another
+operation to wait for it in the definition. An implementation may still
+block for other reasons. This is a property of the specification, not a
+promise about your p99.</li>
+</ul>
+<h3 id="readme-what-is-explicitly-not-guaranteed">What is explicitly not guaranteed?</h3>
+<p><strong>Not transactions.</strong> Read-then-write is two operations, and anything can
+happen between them. Suppose the results site keeps a counter of how many
+students have checked. Two threads each read the counter and write it back
+plus one. <code>java src/Experiments.java lostupdate</code> makes this physical:
+<code>AtomicInteger</code> is a linearizable register shipped by the JDK.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Two virtual threads each do 20,000 <code>get</code>-then-<code>set</code>
+increments on one <code>AtomicInteger</code>. The register is linearizable
+throughout. What is the final value, to the nearest 5,000?</em></p>
+<details><summary>Reveal</summary>
+About 20,000, not 40,000. If you said 40,000 because "AtomicInteger is
+thread-safe", you are right about the register and wrong about the loop.
+Each operation was perfect. The *pair* was not one operation.
+
+<p>| Threads × increments | Survived with get-then-set | Survived with <code>compareAndSet</code> | What it means |
+|---|---|---|---|
+| 2 × 20,000 = 40,000 | 20,112 | 40,000 | half the updates overwrote each other |
+| 8 × 20,000 = 160,000 | 21,051 | 160,000 | 87% of the updates simply gone |</p>
+<p>Nothing was violated. The register was linearizable throughout.</p>
+</details>
+
+</blockquote>
+<p><strong>Not a multi-key snapshot.</strong> Two linearizable keys read one after the other
+can straddle someone else's update. That needs a transaction.</p>
+<p><strong>No say in who wins.</strong> Two concurrent writes get <em>an</em> order, not the order
+you wanted. If the second overwrites the first, that is legal.</p>
+<p><strong>No liveness.</strong> The definition constrains what may be answered, never that
+anything will be. A system that never responds is vacuously linearizable.
+That is the formal reason the CP corner of CAP is allowed to refuse service.</p>
+<h3 id="readme-what-does-it-cost">What does it cost?</h3>
+<p><strong>At least one round trip that cannot be skipped.</strong> Experiment 5 in section
+14 timed each read design.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Read design</th>
+  <th>Mean read latency (ticks)</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>leader read</td>
+  <td>14.8</td>
+  <td>one machine decides, but every read travels to it</td>
+</tr>
+<tr>
+  <td>one-round-trip quorum read</td>
+  <td>11.7</td>
+  <td>fast, and not linearizable (F2)</td>
+</tr>
+<tr>
+  <td>write-back quorum read</td>
+  <td>24.4</td>
+  <td>roughly double, because it is two round trips instead of one</td>
+</tr>
+</tbody>
+</table></div>
+<p>This is why &quot;strongly consistent read&quot; is a per-request option in DynamoDB
+and a billing line rather than a default.</p>
+<p><strong>A theoretical floor, not just an implementation cost.</strong> Attiya and Welch
+showed that in a network with message-delay uncertainty <code>u</code>, a linearizable
+read cannot beat a bound proportional to <code>u</code>. You cannot engineer this away
+with a faster protocol. (This result is cited from the literature, not tested
+in this lab; see section 19.)</p>
+<p><strong>Availability under partition.</strong> This is CAP, and CAP's <code>C</code> is exactly this
+property. On the minority side of a partition, a linearizable system must
+refuse to answer. That is not a bug and not a tuning failure. It is the
+theorem.</p>
+<h3 id="readme-which-invariants-must-a-linearizable-design-hold">Which invariants must a linearizable design hold?</h3>
+<ol>
+<li>Every operation has exactly one position in one global order per object.</li>
+<li>That order extends real-time precedence.</li>
+<li>A read returns the value of the most recent write <em>in that order</em>.</li>
+<li>A completed write is never invisible to a later operation.</li>
+<li>Once a value has been returned to any client, it can never be un-returned.
+<em>(This is the one the naive quorum breaks, and the one write-back
+restores. It is Meera's PASS.)</em></li>
+</ol>
+<hr />
+<h2 id="readme-13-what-is-in-src-and-which-four-lines-carry-the-guarantee">13. What is in <code>src/</code>, and which four lines carry the guarantee?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The judge from section 10 is real Java, and you can read
+her in an afternoon. Four lines inside seven small files do the actual work.
+Two more lines are bugs planted on purpose.</p>
+</blockquote>
+<p>Seven files, no dependencies, no build tool. <code>java src/Tests.java</code> compiles and
+runs the lot.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Op.java is in the lab folder on your laptop"><code>Op.java</code></span></td>
+  <td>one operation: client, what it did, what it was told, invocation and response</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/History.java is in the lab folder on your laptop"><code>History.java</code></span></td>
+  <td>a list of operations, plus the ASCII timeline renderer used throughout</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Checker.java is in the lab folder on your laptop"><code>Checker.java</code></span></td>
+  <td><strong>the heart of the lab</strong> — the search, the real-time rule, memoisation, and the violation minimiser</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Sim.java is in the lab folder on your laptop"><code>Sim.java</code></span></td>
+  <td>seven replication designs, simulated with virtual time, jittery messages and per-replica timestamps</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Scenarios.java is in the lab folder on your laptop"><code>Scenarios.java</code></span></td>
+  <td>the ten hand-built teaching histories, one point each</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Tests.java is in the lab folder on your laptop"><code>Tests.java</code></span></td>
+  <td>41 scenario checks</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Experiments.java is in the lab folder on your laptop"><code>Experiments.java</code></span></td>
+  <td>the ten experiments</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-four-lines-would-you-show-a-colleague">Which four lines would you show a colleague?</h3>
+<p>Read these four and you have read the lab. Each one is a single expression, and
+each one is a whole idea from an earlier section.</p>
+<ol>
+<li><strong>The real-time rule.</strong> In <code>Checker.candidates</code>, the comparison
+<code>if (o.invoke &lt; minResp)</code>. This is Meera's phone call, in code: an
+operation may not go next while something answered before it was sent is
+still unplaced. Remove the comparison and you have a sequential-consistency
+checker.</li>
+<li><strong>The contradiction test.</strong> In <code>Checker.search</code>, the line
+<code>if (!op.pending &amp;&amp; r[1] != op.ret) continue;</code>. It compares what the
+notebook would have said with what the client was actually told. When they
+differ, that branch of the search is dead.</li>
+<li><strong>The read's write-back.</strong> In <code>Sim.addQuorumPhases</code>, the line
+<code>if (secondPhase) task.phases.add(new Phase(true, p1.decideT, w, all));</code>.
+One line, and the difference between 36 violations and 0. It is the extra
+round trip Meera's browser makes before it shows her PASS.</li>
+<li><strong>The tie-break.</strong> In the <code>Sim</code> event loop, the condition
+<code>p.wTs &gt; ts[j] || (p.wTs == ts[j] &amp;&amp; p.wWid &gt; wid[j])</code>. This is the
+<code>(timestamp, writer)</code> ordering that keeps two concurrent writers from
+splitting the register. Turn it off with <code>Sim.noTiebreak</code> and watch two
+replicas end up holding different values under the same timestamp.</li>
+</ol>
+<h3 id="readme-which-switches-are-bugs-and-which-one-is-a-real-optimisation">Which switches are bugs, and which one is a real optimisation?</h3>
+<p>Two of the three switches in the code are planted bugs. Each disables exactly
+one invariant from section 12, and each is caught by a named test.
+<code>Sim.noTiebreak</code> removes the writer id from the ordering.
+<code>Checker.Opts.dropPending</code> stops the judge from treating a timed-out operation
+as possibly having happened.</p>
+<p>The third switch is not a bug. <code>Sim.lazyWriteBack</code> skips the reader's
+write-back when every replica in the read quorum already agreed. That is a real
+optimisation used in real systems. It is correct under one condition and
+silently incorrect otherwise. Finding that condition is exercise 7.2.</p>
+<p>The simulator is deliberately quiet about some things — permanent partitions,
+crashes, disks. <a href="#readme-19-about-this-lab">Section 19</a> says exactly which, and why
+each one was left out.</p>
+<h2 id="readme-14-what-do-the-ten-experiments-show">14. What do the ten experiments show?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten commands, each answering one question with a number.
+Guess before you run each one. The lesson is usually the gap between your
+guess and the number.</p>
+</blockquote>
+<p><code>java src/Experiments.java</code> lists them. <code>java src/Experiments.java all</code> runs
+everything. Read the last column first: it is what the run prints on your
+screen.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Command</th>
+  <th>The question it answers</th>
+  <th>What you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><code>stores</code></td>
+  <td>which designs actually provide it?</td>
+  <td>SINGLE 0, LEADER 0, ABD 0 · ASYNC 587/600, CACHED 560/600, naive quorum 36/600</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>jitter</code></td>
+  <td>does a calm network prove anything?</td>
+  <td>naive quorum: 0 violations at 0% hiccups, 109/600 at 40%. ABD: 0 at every level</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>writeback</code></td>
+  <td>what does the fix actually fix?</td>
+  <td>a real violation, shrunk from 20 operations to 3, printed as a timeline</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>realtime</code></td>
+  <td>what does the real-time rule catch?</td>
+  <td>52 asynchronous-replica histories and <strong>560</strong> cached histories that are sequentially consistent and still not linearizable</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>cost</code></td>
+  <td>what does it cost?</td>
+  <td>read latency 11.7 → 24.4 ticks when you add the write-back</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>cache</code></td>
+  <td>is it a property of the store?</td>
+  <td>store 0/600 at every TTL; with a 10-tick client cache, 555/600</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>clock</code></td>
+  <td>can a wall clock order writes?</td>
+  <td>0 at zero skew, 112/600 at 20 ticks, 270/600 at 60</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>lostupdate</code></td>
+  <td>is a linearizable register enough?</td>
+  <td><code>AtomicInteger</code>: 21,051 of 160,000 increments survive with get-then-set; 160,000 with compare-and-set</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>checkercost</code></td>
+  <td>why is checking hard?</td>
+  <td>18 fully-concurrent operations: 79,457,057 states without memoisation, 239,506 with</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>locality</code></td>
+  <td>does it compose?</td>
+  <td>300/300 merged pairs stay linearizable; sequential consistency does not compose</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict, before running experiment 2:</strong> <em>You have a design with no
+ordering guarantee at all. You run it 600 times on a healthy network. How
+many violations do you expect the checker to find?</em></p>
+<details><summary>Reveal</summary>
+**Zero.** Not "a few". Zero, in 600 runs at 0% hiccups and again at 2%.
+
+<p>The violation needs a specific coincidence. A write must be in flight, two
+reads must be separated in real time, and those two reads' quorums must
+cover different replicas. On a network where every message arrives promptly,
+the gap between the write reaching its first replica and its second is a
+couple of milliseconds. No pair of reads fits inside it.</p>
+<p>If you guessed &quot;a handful, because the design is broken&quot;, you are assuming a
+broken design misbehaves at a steady background rate. It does not. It waits.</p>
+<p>Take the operational lesson seriously: <strong>a green test run against a
+consistency guarantee is close to worthless unless you injected latency.</strong>
+It is why Jepsen's whole method is &quot;introduce partitions and pauses, <em>then</em>
+check&quot;, and why the visualization's <em>Find a broken run</em> button reports how
+many runs it had to search before it found one.</p>
+</details>
+
+</blockquote>
+<blockquote>
+<p><strong>CHECKPOINT — engineering → production.</strong> You can now name which designs
+provide the guarantee and which do not, say how often the broken ones
+actually misbehave, explain why that number is terrifyingly low on a healthy
+network, and state precisely what linearizability still does not give you.
+Next: what the systems on your CV are promising, in their own words.</p>
+<p><strong>Say it back.</strong> Without using the words <em>linearizable</em>, <em>quorum</em> or
+<em>violation</em>, explain to a friend why a week of green tests on the staging
+environment is not evidence that Raghu will never see the old page again.</p>
+<details><summary>A good answer sounds like</summary>
+"The bug only appears when a message is unusually slow and two people look
+in that gap. On a healthy test network the gap is a couple of milliseconds
+wide, so nobody ever lands in it. The tests were not passing because the
+design is right. They were passing because the network was being kind. To
+learn anything, you have to make the network slow on purpose and then look."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-15-what-are-the-systems-on-your-cv-actually-promising">15. What are the systems on your CV actually promising?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every real linearizable store is one machine deciding the
+order, plus a great deal of machinery to survive that machine dying. Read
+each vendor's consistency page as an answer to one question: which of
+section 11's six failures have they left open for you?</p>
+</blockquote>
+<h3 id="readme-151-what-does-a-real-system-add-to-this-labs-leader">15.1 What does a real system add to this lab's leader?</h3>
+<p>The chain runs <strong>toy → real → architecture → operations</strong>.</p>
+<p>The <code>LEADER</code> mode in <code>Sim.java</code> is, structurally, how a real linearizable store
+works: one machine decides the order. Everything a real system adds exists to
+survive that machine dying.</p>
+<ul>
+<li><strong>In this lab:</strong> a leader chosen at startup, ordering requests by the moment
+they arrive.</li>
+<li><strong>In a real system:</strong> the leader is elected by consensus. Its ordering is a
+<strong>replicated log</strong>. A new leader may only serve once it has caught up on that
+log. That is <a href="../39-paxos/notes.html#readme">paxos</a> and Raft.</li>
+<li><strong>In the architecture around it:</strong> clients have to discover the leader. A
+<strong>lease</strong> bounds how long a deposed leader may keep answering. Reads use a
+<strong>read-index</strong>: the leader confirms with a quorum that it is still the
+leader, then answers from its own memory without writing anything to the log.
+That is one round trip per read instead of a full log append, and it is what
+makes linearizable reads affordable.</li>
+<li><strong>In operations:</strong> you watch the leader-election rate, lease expiries, the
+read-index round-trip time, and clock skew across the cluster. <strong>Clock skew
+is a correctness metric in a leased system, not a hygiene metric.</strong></li>
+</ul>
+<h3 id="readme-152-what-does-each-real-system-actually-say">15.2 What does each real system actually say?</h3>
+<p>Imagine the university had to buy the results site rather than build it. Here
+is what each vendor would be promising Meera and Raghu, in the vendor's own
+terms.</p>
+<p>The four that talk about linearizability directly:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>System</th>
+  <th>What it actually says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>etcd</strong></td>
+  <td>Linearizable reads <strong>by default</strong> (via read-index). <code>--consistency=s</code> opts down to serializable reads served from the local member — faster, and stale.</td>
+</tr>
+<tr>
+  <td><strong>ZooKeeper</strong></td>
+  <td>Writes are linearizable; <strong>reads are not</strong>. Reads are served locally and may be arbitrarily stale; you get FIFO order per client. Calling <code>sync()</code> before a read is what makes that read linearizable. This surprises people constantly.</td>
+</tr>
+<tr>
+  <td><strong>Spanner</strong></td>
+  <td><strong>External consistency</strong> = strict serializability, i.e. linearizability generalised to multi-key transactions. Bought with TrueTime: commits <em>wait out</em> the clock uncertainty interval, trading latency for ordering.</td>
+</tr>
+<tr>
+  <td><strong>DynamoDB</strong></td>
+  <td>Eventually consistent reads by default; <code>ConsistentRead=true</code> gives a linearizable read at double the read-capacity cost. Transactions are a separate API.</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>ZooKeeper is a consensus system. It runs an atomic broadcast
+protocol, it has a leader, and it is the thing half the internet uses for
+locks and leader election. Are its reads linearizable?</em></p>
+<details><summary>Reveal</summary>
+**No.** A ZooKeeper read is answered by whichever member your client is
+connected to, out of that member's own memory, with no check that the member
+is current. It can be arbitrarily stale. That is failure F1 from section 11,
+shipped as documented behaviour.
+
+<p>If you said yes because &quot;it uses consensus&quot;, you have made the most common
+mistake in this whole subject: treating consensus as a property rather than
+a mechanism. Consensus orders the <em>writes</em>. Serving a read from a replica
+that has not caught up throws that order away again.</p>
+<p>What ZooKeeper does give you is per-client FIFO order, so Meera would never
+see time run backwards for herself. It is Raghu who is unprotected. Call
+<code>sync()</code> first and the read becomes linearizable, at the cost of a round trip
+to the leader.</p>
+</details>
+
+</blockquote>
+<p>The four where the promise depends on what you configure:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>System</th>
+  <th>What it actually says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Cassandra</strong></td>
+  <td><code>QUORUM</code> gives you R+W&gt;N, not linearizability — exactly the gap in section 10.4. Lightweight transactions (<code>IF NOT EXISTS</code>, <code>IF &lt;condition&gt;</code>) run Paxos per operation and <em>are</em> linearizable, at roughly 4× the latency.</td>
+</tr>
+<tr>
+  <td><strong>Kafka</strong></td>
+  <td>A partition's log is a total order, which is the ordering half. <code>acks=all</code> with <code>min.insync.replicas=2</code> on RF 3 is the durability half. Consumers only see up to the high watermark, so they never see a record that could still be lost.</td>
+</tr>
+<tr>
+  <td><strong>Redis</strong></td>
+  <td>A single node executes commands one at a time, so a single node is linearizable for its commands. Replication is asynchronous, so a failover <strong>can lose acknowledged writes</strong>; <code>WAIT</code> bounds that but does not close it. Redlock is not a safe lock across pauses.</td>
+</tr>
+<tr>
+  <td><strong>PostgreSQL</strong></td>
+  <td>The primary is linearizable. A streaming replica is not. <code>synchronous_commit = remote_apply</code> makes the primary wait until a named standby has <em>applied</em> the commit — which is the write-back idea in a different costume, and it only helps reads routed to that standby.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-153-what-does-this-educational-version-leave-out">15.3 What does this educational version leave out?</h3>
+<p>Seven things a production version would have to add. None of them changes the
+definition; all of them change what it takes to keep the promise.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted</th>
+  <th>What real systems do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Persistence</strong></td>
+  <td>replicas here are in memory; real ones fsync before acknowledging, or the guarantee dies with the power</td>
+</tr>
+<tr>
+  <td><strong>Membership change</strong></td>
+  <td>adding or removing a replica changes what a quorum <em>is</em>; real systems use joint consensus or a two-phase reconfiguration so the old and new quorums always intersect</td>
+</tr>
+<tr>
+  <td><strong>Leases and clock bounds</strong></td>
+  <td>the <code>LEADER</code> mode assumes exactly one leader forever; real leaders hold time-bounded grants</td>
+</tr>
+<tr>
+  <td><strong>Read-index / lease reads</strong></td>
+  <td>this lab's leader reads are free; real ones need a quorum confirmation or a valid lease</td>
+</tr>
+<tr>
+  <td><strong>Partitions and crashes</strong></td>
+  <td>the simulator delays messages but never drops them permanently</td>
+</tr>
+<tr>
+  <td><strong>Batching and pipelining</strong></td>
+  <td>every operation here is one round trip; real systems amortise consensus across batches</td>
+</tr>
+<tr>
+  <td><strong>Multi-key transactions</strong></td>
+  <td>out of scope by definition — that is serializability, not linearizability</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-154-what-does-an-on-call-engineer-actually-see">15.4 What does an on-call engineer actually see?</h3>
+<p>Not an alert. Linearizability violations do not page you. They arrive as user
+reports that sound like user error. &quot;I saved it and it didn't save.&quot; &quot;It showed
+the old value and then the new one.&quot; &quot;Two people got the same seat.&quot;</p>
+<p>Meera's father would file the third kind of ticket, and someone would close it
+as &quot;cannot reproduce&quot;.</p>
+<p>The tell is a <strong>non-monotonic observation</strong>: a value going backwards. That is
+the one symptom neither a stale cache nor a stale replica can disguise. If two
+people compare notes and one of them saw the future, you have this bug.</p>
+<p>Three habits do most of the work.</p>
+<ol>
+<li><strong>Know your reads.</strong> For every read path, write down which node answered and
+what that node's guarantee is. Most violations are a routing decision nobody
+documented.</li>
+<li><strong>Test with latency injected.</strong> Experiment 2 is the whole argument. A clean
+run on a healthy network is not evidence.</li>
+<li><strong>Use the real tool when you need proof.</strong> Jepsen's checkers — Knossos,
+Porcupine, and Elle for transactional histories — are this lab's <code>Checker</code>
+grown up. They are how the field discovered that many databases did not
+provide what they claimed.</li>
+</ol>
+<blockquote>
+<p><strong>CHECKPOINT — end of the production model.</strong> You can now read the
+consistency section of a database's documentation and say exactly what it
+promises, what it costs, and which of the six failures from section 11 it
+leaves open.</p>
+<p><strong>Say it back.</strong> Your team wants to cut load on the results database by
+sending reads to a replica. Without using the words <em>linearizable</em>,
+<em>replica lag</em> or <em>consistency</em>, tell your tech lead what you would be giving
+up, and what you would need to know before agreeing.</p>
+<details><summary>A good answer sounds like</summary>
+"Right now, if I tell you something has been saved, you will see it saved.
+If we serve reads from the second machine, that stops being true: you might
+look after me and still see the old thing, and nothing will log an error.
+Before I agree, I want to know which reads would move, and for each one,
+whether anyone acts on it after being told something by another person. Those
+are the ones that break."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-16-what-should-you-try-yourself">16. What should you try yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, from saying the idea back in your own words
+to designing the read path for a payments ledger across three regions.</p>
+</blockquote>
+<p>Everything up to here you have watched. The exercises are where you do it.</p>
+<p>See <a href="notes.html#exercises">EXERCISES.md</a>. Rungs 1 to 3 need nothing but this document
+and the visualization. Rungs 4 to 7 need the code: you will modify the checker,
+implement a design, debug a planted bug, and handle a failure. Rung 8 needs a
+whiteboard and no computer at all.</p>
+<p>Answers are in <a href="notes.html#solutions">SOLUTIONS.md</a>. Attempt each rung first. The
+prediction you get wrong is the one you will remember.</p>
+<hr />
+<h2 id="readme-17-where-does-this-sit-and-where-do-you-go-next">17. Where does this sit, and where do you go next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three labs fed into this one, and it turns each of them
+into a sharper statement. Five labs lead out of it.</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+  CAP[&quot;cap-theorem&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&quot;] --&gt; LIN
+  QR[&quot;quorums-and-replication&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&quot;] --&gt; LIN
+  PX[&quot;paxos&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&quot;] --&gt; LIN
+  LIN[&quot;&lt;b&gt;linearizability&lt;/b&gt;&lt;br/&gt;the definition of &#x27;consistent&#x27;&quot;]
+  LIN --&gt; RAFT[&quot;raft?&lt;br/&gt;the leader that survives&quot;]
+  LIN --&gt; SER[&quot;serializability &amp;&lt;br/&gt;isolation-levels?&quot;]
+  LIN --&gt; CRDT[&quot;crdts?&lt;br/&gt;the other answer:&lt;br/&gt;give up order&quot;]
+  LIN --&gt; CLK[&quot;logical-clocks?&lt;br/&gt;ordering without a wall clock&quot;]
+  LIN --&gt; JEP[&quot;jepsen?&lt;br/&gt;checking real databases&quot;]
+  LIN -.-&gt; SPAN[&quot;spanner / truetime?&quot;]
+</pre>
+<h3 id="readme-what-did-this-build-on">What did this build on?</h3>
+<ul>
+<li><strong><a href="../24-cap-theorem/notes.html#readme">cap-theorem</a></strong> — you now know what CAP's <code>C</code> <em>is</em>.
+Gilbert and Lynch's formal statement of the theorem is about linearizability
+specifically. That is why &quot;we're AP so we don't need CAP's C&quot; is a coherent
+sentence, and &quot;we're eventually consistent, which is a kind of consistency&quot;
+is not.</li>
+<li><strong><a href="../34-quorums-and-replication/notes.html#readme">quorums-and-replication</a></strong> — R+W&gt;N stops you
+missing a <em>completed</em> write. This lab found the in-flight write it cannot
+see, put it at 6%, and added the write-back that closes it. Your version
+vectors, read repair and anti-entropy are all <em>convergence</em> mechanisms. None
+of them is an <em>ordering</em> mechanism.</li>
+<li><strong><a href="../39-paxos/notes.html#readme">paxos</a></strong> — now has a purpose statement. Consensus exists to
+make a single ordering authority survive the death of the authority.</li>
+<li><strong><a href="../17-java-memory-model/notes.html#readme">java-memory-model</a></strong> — <code>AtomicInteger</code> and
+<code>volatile</code> are linearizable objects, and the JMM's <code>happens-before</code> is this
+same idea inside one machine. Experiment 8 is that connection made physical.</li>
+<li><strong><a href="../11-caching/notes.html#readme">caching</a> and <a href="../13-redis/notes.html#readme">redis</a></strong> — experiment 6 is why a
+cache in front of a correct store gives you an incorrect system.</li>
+<li><strong><a href="../50-event-sourcing/notes.html#readme">event-sourcing</a></strong> — <code>expected-version</code> is a
+compare-and-set, which is exactly the tool experiment 8 shows you need when
+a linearizable register is not enough.</li>
+</ul>
+<h3 id="readme-where-should-you-go-next">Where should you go next?</h3>
+<div class="code"><pre><code>/learn raft                    # the leader-based design this lab keeps pointing at
+/learn logical-clocks          # ordering without trusting a wall clock (F5&#x27;s real fix)
+/learn isolation-levels        # the transaction axis: serializable, snapshot, read-committed
+/learn crdts                   # the opposite bet: abandon global order, converge anyway
+/learn jepsen                  # how this lab&#x27;s checker is used on real databases
+</code></pre></div>
+<h3 id="readme-what-is-this-most-often-confused-with">What is this most often confused with?</h3>
+<p>Seven near neighbours, each separated by one sentence.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Confused with</th>
+  <th>The distinction</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>serializability</strong></td>
+  <td>serializability orders <em>transactions</em> and ignores real time; linearizability orders <em>single operations on one object</em> and enforces real time</td>
+</tr>
+<tr>
+  <td><strong>strict serializability</strong></td>
+  <td>that is linearizability generalised to multi-operation transactions — the same real-time rule, a bigger unit</td>
+</tr>
+<tr>
+  <td><strong>sequential consistency</strong></td>
+  <td>drop the real-time rule and you have it; it is also not composable, which is why nobody builds on it</td>
+</tr>
+<tr>
+  <td><strong>eventual consistency</strong></td>
+  <td>a promise about the <em>limit</em> with no promise at any moment; linearizability is a promise at every moment</td>
+</tr>
+<tr>
+  <td><strong>read-your-own-writes</strong></td>
+  <td>one client's own operations only; linearizability holds across <em>different</em> clients, which is the hard part</td>
+</tr>
+<tr>
+  <td><strong>atomicity (the A in ACID)</strong></td>
+  <td>all-or-nothing across failures; linearizability is about ordering and visibility. Confusingly, the literature also calls linearizable registers &quot;atomic registers&quot;</td>
+</tr>
+<tr>
+  <td><strong>consensus</strong></td>
+  <td>consensus is a <em>mechanism</em> (agree on one value); linearizability is a <em>property</em> (behave like one copy). Consensus is the usual way to get it, not the same thing</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-18-what-does-each-word-mean-precisely">18. What does each word mean, precisely?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every term in one place, in the order you met it, one line
+each. Section 7 is where each one was earned; this is where it is pinned
+down.</p>
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>history</strong></td>
+  <td>the list of operations with their start times, end times and answers — the only admissible evidence</td>
+</tr>
+<tr>
+  <td><strong>invocation</strong></td>
+  <td>the moment a client sent a request</td>
+</tr>
+<tr>
+  <td><strong>response</strong></td>
+  <td>the moment the client was told the answer</td>
+</tr>
+<tr>
+  <td><strong>concurrent</strong></td>
+  <td>two operations whose stretches overlap; neither is ordered before the other</td>
+</tr>
+<tr>
+  <td><strong>sequential history</strong></td>
+  <td>a history where no two operations overlap</td>
+</tr>
+<tr>
+  <td><strong>linearization point</strong></td>
+  <td>the single instant, inside an operation's stretch, at which it took effect</td>
+</tr>
+<tr>
+  <td><strong>sequential specification</strong></td>
+  <td>the rules the object would follow if there were one of it, used one request at a time</td>
+</tr>
+<tr>
+  <td><strong>legal</strong></td>
+  <td>a sequential history that obeys the sequential specification</td>
+</tr>
+<tr>
+  <td><strong>real-time order</strong></td>
+  <td>if <code>a</code> was answered before <code>b</code> was sent, <code>a</code> must come first in any explanation</td>
+</tr>
+<tr>
+  <td><strong>linearizable</strong></td>
+  <td>a history that has a legal sequential explanation respecting real-time order</td>
+</tr>
+<tr>
+  <td><strong>linearization</strong></td>
+  <td>the specific order that explains a linearizable history</td>
+</tr>
+<tr>
+  <td><strong>pending / indeterminate operation</strong></td>
+  <td>a request with no response; may be treated as having happened, or not</td>
+</tr>
+<tr>
+  <td><strong>sequential consistency</strong></td>
+  <td>the same idea without the real-time rule; per-client order only</td>
+</tr>
+<tr>
+  <td><strong>serializability</strong></td>
+  <td><em>some</em> serial order of multi-operation transactions produces the observed result; no real-time rule</td>
+</tr>
+<tr>
+  <td><strong>strict serializability</strong></td>
+  <td>serializability plus the real-time rule</td>
+</tr>
+<tr>
+  <td><strong>locality (composability)</strong></td>
+  <td>a multi-object history is linearizable exactly when each object's is</td>
+</tr>
+<tr>
+  <td><strong>non-blocking</strong></td>
+  <td>a pending operation never forces another to wait, by the definition</td>
+</tr>
+<tr>
+  <td><strong>write-back (ABD)</strong></td>
+  <td>a reader pushes what it read to a quorum before returning it, so no later reader can miss it</td>
+</tr>
+<tr>
+  <td><strong>ABD</strong></td>
+  <td>Attiya–Bar-Noy–Dolev: a linearizable register from message-passing quorums, with no leader</td>
+</tr>
+<tr>
+  <td><strong>(timestamp, writer) tie-break</strong></td>
+  <td>ordering equal timestamps by writer id so every replica breaks the tie identically</td>
+</tr>
+<tr>
+  <td><strong>lease</strong></td>
+  <td>a time-bounded grant of leadership; the deposed leader must stop answering when it expires</td>
+</tr>
+<tr>
+  <td><strong>read-index</strong></td>
+  <td>a leader confirming with a quorum that it is still leader, then answering a read locally</td>
+</tr>
+<tr>
+  <td><strong>fencing token</strong></td>
+  <td>a monotonically increasing number issued with a lock and checked by the resource</td>
+</tr>
+<tr>
+  <td><strong>external consistency</strong></td>
+  <td>Spanner's name for strict serializability</td>
+</tr>
+<tr>
+  <td><strong>memoisation (in the checker)</strong></td>
+  <td>remembering &quot;this set of remaining operations with this value already failed&quot; — the difference between 79M states and 240K</td>
+</tr>
+<tr>
+  <td><strong>violation minimiser</strong></td>
+  <td>shrinking a broken history to the smallest still-broken subset, so a human can read it</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Everything about the lab rather than about the subject
+lives here. How to run it, where every number came from, what it deliberately
+does not model, and how to read the notation.</p>
+</blockquote>
+<p>Where did all of this come from, and how much of it should you trust? Each
+answer is below.</p>
+<h3 id="readme-what-is-in-the-folder-and-how-do-you-run-it">What is in the folder, and how do you run it?</h3>
+<div class="code"><pre><code class="language-bash">java src/Tests.java                    # 41 scenario checks
+java src/Experiments.java              # list the ten experiments
+java src/Experiments.java stores       # the headline: seven designs, judged
+java src/Experiments.java writeback    # the one-line fix, isolated
+java src/Experiments.java all          # every experiment, in order
+open visualization.html                # or the published link below
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document</td>
+</tr>
+<tr>
+  <td><a href="notes.html#exercises"><code>EXERCISES.md</code></a></td>
+  <td>eight rungs, from explaining it to designing a payments read path</td>
+</tr>
+<tr>
+  <td><a href="notes.html#solutions"><code>SOLUTIONS.md</code></a></td>
+  <td>worked answers; attempt the rung first</td>
+</tr>
+<tr>
+  <td><a href="visualization.html"><code>visualization.html</code></a></td>
+  <td>the checker you can drag, published at <a href="https://claude.ai/code/artifact/01a5e2be-a55e-470a-b3a9-ce07e3d479b1" target="_blank" rel="noopener">https://claude.ai/code/artifact/01a5e2be-a55e-470a-b3a9-ce07e3d479b1</a></td>
+</tr>
+<tr>
+  <td><code>src/</code></td>
+  <td>the seven Java files listed in section 13</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-this-sit-relative-to-your-other-labs">Where does this sit relative to your other labs?</h3>
+<p><strong>This lab exists because of a sentence in your last one.</strong> The
+<a href="../34-quorums-and-replication/notes.html#readme">quorums-and-replication</a> lab ended with this:</p>
+<blockquote>
+<p><em>&quot;R + W &gt; N is <strong>not</strong> linearizability: no global order, concurrent writes
+unordered, two concurrent readers can disagree.&quot;</em></p>
+</blockquote>
+<p>You then counted <strong>0</strong> stale reads over 4,000 rounds with R=W=2 on N=3, and
+that number was honest. This lab shows you the thing those 4,000 rounds could
+not see, why R+W&gt;N does not catch it, and the extra half round trip that fixes
+it. If quorums were about <em>not missing a write</em>, this is about <em>time not
+running backwards</em>.</p>
+<p>How deep this goes, and where you can stop, is the depth table in
+<a href="#readme-2-what-happened-to-meera-and-her-father">section 2</a>. Section 17 has the full
+map of what feeds into this lab and what leads out of it.</p>
+<h3 id="readme-how-were-the-numbers-produced">How were the numbers produced?</h3>
+<p>Every figure in this document is printed by the code in this folder, run
+headlessly on one machine. None is copied from a vendor's documentation.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Kind of number</th>
+  <th>How it was produced</th>
+  <th>How much to trust it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>violation counts, such as 36 of 600</td>
+  <td>600 simulated histories per row, each judged by <code>Checker.java</code></td>
+  <td>one representative run of the suite; the same seeds give the same counts</td>
+</tr>
+<tr>
+  <td>latencies, such as 11.7 → 24.4</td>
+  <td>the simulator's virtual clock</td>
+  <td>ticks, not milliseconds; compare the rows to each other, never to your own p99</td>
+</tr>
+<tr>
+  <td>search sizes, 79,457,057 and 239,506</td>
+  <td>counted inside the checker's own search</td>
+  <td>exact, and the same on every machine</td>
+</tr>
+<tr>
+  <td>lost increments, 20,112 and 21,051</td>
+  <td>real virtual threads on this machine, not simulated</td>
+  <td>changes on every run; the shape is stable — about half lost with two threads, <strong>87%</strong> lost with eight</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two claims in this lab were not measured here, and say so where they appear.
+The Attiya–Welch latency lower bound in section 12 is cited from the
+literature. Failure F6, the lock that expires under a paused process, is
+described but never simulated.</p>
+<h3 id="readme-what-does-this-lab-deliberately-not-model">What does this lab deliberately not model?</h3>
+<p>One simplification matters enough to state plainly. The simulator's message
+delays are random but never <em>infinite</em>. There are no permanent partitions and
+no crashed replicas.</p>
+<p>That is on purpose. This lab is about ordering. Adding partitions would mix in
+the availability half of CAP, which the <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> lab
+already covers, and you would no longer be able to tell which half caused a
+given failure. What the simulator does model honestly is the thing that
+actually causes these bugs in the field: <strong>variable latency</strong>.</p>
+<p>Section 15.3 lists the six other things a production version would need,
+starting with persistence.</p>
+<h3 id="readme-how-do-you-read-the-notation">How do you read the notation?</h3>
+<p>Four conventions run through the document. Each was introduced in words before
+it was used.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>You will see</th>
+  <th>It means</th>
+  <th>First explained in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>C1 put(1) [0,4]</code></td>
+  <td>client 1 asked to store 1 at tick 0 and was told &quot;done&quot; at tick 4</td>
+  <td>section 7</td>
+</tr>
+<tr>
+  <td>an ASCII bar diagram</td>
+  <td>one line per client, time running left to right, in the simulator's ticks</td>
+  <td>section 10.1</td>
+</tr>
+<tr>
+  <td><code>[invocation, response]</code></td>
+  <td>the stretch of time one request occupied</td>
+  <td>section 7</td>
+</tr>
+<tr>
+  <td><code>H</code>, <code>S</code>, <code>&lt;ᴴ</code>, <code>&lt;ˢ</code></td>
+  <td>the history, the sequential order that explains it, and precedence in each</td>
+  <td>section 8</td>
+</tr>
+</tbody>
+</table></div>
+<p>The worked example in section 10.3 uses all four at once, and is the best place
+to check that you can read them.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--linearizability">Exercises — linearizability</h1>
+<p>Eight rungs. Rungs 1–3 need nothing but the doc and the visualization. Rungs
+4–7 need the code. Rung 8 needs a whiteboard.</p>
+<p>Answers in <a href="notes.html#solutions">SOLUTIONS.md</a>. Attempt first — especially the
+predictions, where being wrong is the point.</p>
+<p>Shorthand used throughout: <code>C1 put(1) [0,4]</code> means client 1 sent <code>put(1)</code> at
+time 0 and was told it succeeded at time 4.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> A colleague says: &quot;Our database is consistent — all the replicas end up
+with the same data.&quot; In three sentences, explain what that sentence does not
+promise, using Meera and Raghu.</p>
+<p><strong>1.2</strong> Explain, with no notation and no jargon, what is bought by insisting
+that every operation &quot;took effect at one instant inside its own request&quot;. Why
+is that stronger than &quot;reads return recent data&quot;?</p>
+<p><strong>1.3</strong> One sentence each, separating linearizability from:
+sequential consistency · serializability · strict serializability ·
+eventual consistency · read-your-own-writes.</p>
+<p><strong>1.4</strong> Why is linearizability defined on what clients <em>observed</em> rather than on
+what the system <em>did</em>? Give one practical consequence of that choice.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> For this history:</p>
+<div class="code"><pre><code>C1  [--------- put(1) ---------]                            [0, 20]
+C2      [-- get()→0 --]                                     [4, 10]
+C3                        [-- get()→1 --]                   [14, 22]
+C4                                     [-- get()→0 --]      [26, 34]
+</code></pre></div>
+<ul>
+<li>Which pairs of operations are concurrent?</li>
+<li>Which pairs have a real-time edge (one finished before the other started)?</li>
+<li>Where must <code>put(1)</code>'s linearization point be, if C3's answer is to be
+explained?</li>
+<li>Given that, is C4's answer explainable?</li>
+</ul>
+<p><strong>2.2</strong> Open the visualization and load situation <strong>D</strong>. Identify: which bar is
+the write, which read was answered first, and which single fact about the
+timing makes the pair impossible. Now drag one bar to make the verdict flip,
+and say which bar you moved and why that works.</p>
+<p><strong>2.3</strong> In <span class="missing" title="Not in the hub: src/Checker.java is in the lab folder on your laptop"><code>src/Checker.java</code></span>, point at:</p>
+<ul>
+<li>the line that enforces the real-time rule,</li>
+<li>the line that enforces the sequential specification,</li>
+<li>the line that lets a timed-out operation be treated as if it never happened.</li>
+</ul>
+<p><strong>2.4</strong> In <span class="missing" title="Not in the hub: src/Sim.java is in the lab folder on your laptop"><code>src/Sim.java</code></span>, find the single line that turns the
+broken quorum design into the correct one.</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>For each, write your answer down <em>before</em> running anything.</p>
+<p><strong>3.1</strong> Classify each history as <strong>linearizable</strong>, <strong>sequentially consistent but
+not linearizable</strong>, or <strong>neither</strong>:</p>
+<div class="code"><pre><code>(a)  C1 put(1) [0,20]     C2 get()→0 [4,10]     C3 get()→1 [12,18]
+(b)  C1 put(1) [0,30]     C2 get()→1 [4,10]     C2 get()→0 [12,18]
+(c)  C1 put(1) [0,30]     C2 get()→1 [4,10]     C3 get()→0 [12,18]
+(d)  C1 put(1) [0,4]      C1 put(2) [6,10]      C2 get()→1 [12,16]
+</code></pre></div>
+<p>Then check yourself by adding them to <code>Scenarios.java</code> and running the checker,
+or by drawing them in the visualization.</p>
+<p><strong>3.2</strong> <code>java src/Experiments.java jitter</code> runs the broken quorum design 600
+times at each hiccup rate. How many violations do you expect at a <strong>0%</strong> hiccup
+rate? Write a number, then run it. If you were wrong, write one sentence about
+what that means for your team's integration tests.</p>
+<p><strong>3.3</strong> <code>AtomicInteger</code> is a linearizable register. Three virtual threads each
+do 10,000 <code>int v = reg.get(); reg.set(v + 1);</code>. Predict the final value to the
+nearest 5,000. Then adapt <code>Experiments.race</code> and run it.</p>
+<p><strong>3.4</strong> In the visualization, generate a history from <em>&quot;Quorum: write 2 of 3,
+read 2 of 3&quot;</em> with hiccups set to <em>occasional</em>, and press <strong>Run 120 &amp; count</strong>.
+Predict the percentage first.</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> In <code>Tests.java</code>, change <code>lin(...)</code> to use <code>Checker.Opts.sequential()</code>
+instead of <code>Checker.Opts.linearizable()</code> and run the suite. Which checks fail?
+For each failure, say whether the <em>system</em> got worse or the <em>judge</em> got weaker.
+Is the property you lost a safety property or a liveness property?</p>
+<p><strong>4.2</strong> Predict, then measure, each of these on <code>QUORUM_NAIVE</code> (no write-back),
+600 histories at 15% hiccups. Only one of them fixes it — say which and why,
+<em>before</em> running:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>change</th>
+  <th>violations?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>R=2, W=2, N=3 (baseline)</td>
+  <td>36</td>
+</tr>
+<tr>
+  <td>R=2, <strong>W=3</strong>, N=3 — writes wait for every replica</td>
+  <td>?</td>
+</tr>
+<tr>
+  <td><strong>R=3</strong>, W=2, N=3 — reads ask every replica</td>
+  <td>?</td>
+</tr>
+<tr>
+  <td>R=3, W=3, N=5</td>
+  <td>?</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>4.3</strong> In <code>CACHED</code> mode, set <code>cacheTtl = 1</code> — a cache that expires after a
+single tick. Predict the violation count out of 600, then run it. What does
+your answer say about &quot;we only cache for a second&quot;?</p>
+<p><strong>4.4</strong> Set <code>Opts.memo = false</code> and run <code>java src/Experiments.java checkercost</code>.
+The verdicts are identical; the state counts differ by 330×.</p>
+<ul>
+<li>In one sentence: what is the memo table remembering, and why can remembering
+it never change a verdict?</li>
+<li>The memo key is <code>(remaining operations, notebook value)</code>. Argue why dropping
+the notebook value from the key would be <strong>unsound</strong>, and say which direction
+the error would go — false alarm, or missed violation?</li>
+<li>Now try to build a history where dropping it actually changes the answer.
+This lab tried across 3,700 histories, including deliberately
+fully-concurrent ones, and never triggered it. What does that tell you about
+&quot;we tested the checker&quot; as an argument that a checker is correct?</li>
+</ul>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> The sequential specification is a <em>parameter</em>, not a fact. Implement a
+<strong>FIFO queue</strong> specification in <code>Checker.apply</code>: <code>enqueue(v)</code> returns nothing,
+<code>dequeue()</code> returns the oldest un-dequeued value or <code>0</code> if empty. Then write a
+history where two concurrent <code>dequeue()</code> calls both return the same value and
+confirm the checker rejects it. <em>(You will need to widen the model state beyond
+one <code>int</code>; keep it small.)</em></p>
+<p><strong>5.2</strong> Extend <code>Checker.minimize</code> so that, in addition to removing operations,
+it reports <strong>the smallest amount of extra overlap</strong> that would make the history
+acceptable — i.e. how far one bar's edge would have to move. Print it as
+&quot;widening C3's read by 6 ticks makes this legal&quot;. Why is that number useful to
+someone reading a bug report?</p>
+<p><strong>5.3</strong> Implement a <code>Checker.explain(History)</code> that, for a non-linearizable
+history, prints the specific real-time edge that kills it: &quot;C1's read was
+answered at 30, before C2's read began at 34, so C1's answer must come first —
+and then C2 cannot return 0.&quot; Hint: compare the verdicts of the two checkers.</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> <code>Checker.Opts.dropPending = true</code> is a planted bug: the checker refuses
+to ever place a timed-out operation. Which test catches it? Does it produce a
+<strong>false alarm</strong> or a <strong>missed violation</strong>? Which of those two would do more
+damage in a tool used to audit a database, and why?</p>
+<p><strong>6.2</strong> <code>Sim.noTiebreak = true</code> is a planted bug: two writers that pick the same
+timestamp are no longer ordered by writer id. Which test catches it? Describe,
+in terms of what is physically stored on the three replicas, what has gone
+wrong — and what a user would report.</p>
+<p><strong>6.3</strong> Plant this one yourself. Stage 10.1 described the intuitive-but-wrong
+checker: walk the history in the order requests were <em>sent</em>. Implement it — in
+<code>Checker.candidates</code>, replace the real-time filter with &quot;only the remaining
+operation with the earliest invocation may go next&quot;:</p>
+<div class="code"><pre><code class="language-java">int best = -1;
+for (int i = 0; i &lt; ops.size(); i++)
+    if ((remaining &amp; (1L &lt;&lt; i)) != 0 &amp;&amp; (best &lt; 0 || ops.get(i).invoke &lt; ops.get(best).invoke)) best = i;
+out.add(best);
+</code></pre></div>
+<p>Predict which tests fail and, more importantly, in which <strong>direction</strong> the
+checker is now wrong. Then run it.</p>
+<p><strong>6.4</strong> Here is a history the checker rejects. Two engineers disagree: one says
+the storage layer is broken, the other says the <em>test harness</em> recorded the
+times wrong. What single measurement would settle it?</p>
+<div class="code"><pre><code>C1 put(1) [0,10]     C2 get()→0 [11,20]
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> The deposed-leader failure (stage 11, F3) is described in the doc but
+<strong>not simulated</strong>. Add a <code>LEADER_DEPOSED</code> mode to <code>Sim.java</code>:</p>
+<ul>
+<li>until tick <code>T</code>, replica 0 is the leader and handles everything;</li>
+<li>from tick <code>T</code>, writes go to replica 1, but replica 0 keeps serving reads from
+its own state for <code>lag</code> ticks because it has not noticed;</li>
+<li>add a test asserting the checker convicts it.</li>
+</ul>
+<p>Then add a <strong>lease</strong>: replica 0 refuses to serve reads after tick <code>T</code> (it lets
+the lease expire rather than assuming it still leads), and show the violations
+go to zero. What did the lease cost you?</p>
+<p><strong>7.2</strong> The reader's write-back costs a round trip on <strong>every read</strong>, including
+the overwhelming majority where nothing is in flight. Propose a cheaper scheme
+that is still correct, and say exactly what it assumes. Then say what happens
+to correctness when that assumption is violated.</p>
+<p><strong>7.3</strong> A client sends <code>put(1)</code> and times out. It retries. Using the <em>pending
+operation</em> rules, explain why the retry is safe for a <code>put</code> and unsafe for
+<code>increment</code>, and what the server must add to make the second one safe too.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — Payments, three regions.</strong> You run a ledger. Accounts are sharded by
+account id. Three regions: Mumbai, Frankfurt, Virginia, ~110 ms apart. Traffic
+is 95% reads.</p>
+<p>For each read path below, decide whether it must be linearizable, and justify
+the cost:</p>
+<ul>
+<li>the balance shown on the customer's dashboard,</li>
+<li>the balance check inside an authorisation decision,</li>
+<li>the transaction list on the statements page,</li>
+<li>a fraud model's feature lookup,</li>
+<li>the idempotency-key check that decides whether a payment has already been
+captured.</li>
+</ul>
+<p>Then: where do you put the leader for a shard, what is the p99 for the reads
+that must be linearizable, what do you monitor, and what do you tell the
+product team when they ask why the dashboard is 200 ms slower in one region?</p>
+<p><strong>8.2 — A lock you can actually trust.</strong> A nightly job captures authorised
+payments. It must not run twice. Given failure F6, design the mechanism. State
+what you assume about clocks, what happens when a job pauses for 90 seconds
+mid-run, and where the guarantee is actually enforced.</p>
+<p><strong>8.3 — The read that must not be linearizable.</strong> Name a read in a payments
+system where insisting on linearizability would be <em>actively wrong</em> — not merely
+expensive. Explain what you would break by making it strongly consistent.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--linearizability">Solutions — linearizability</h1>
+<p>Every number here was produced by running the code in this lab. Where something
+is reasoned rather than measured, it says so.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Your colleague has described <em>convergence</em>: given enough quiet time,
+the replicas stop differing. That says nothing about any particular moment.
+Meera was told PASS and Raghu, looking afterwards, was told &quot;not published&quot; —
+both replicas will agree eventually, and the system still showed a later
+observer an earlier world. The guarantee your colleague needs a word for is
+about <em>now</em>, not about the limit.</p>
+<p><strong>1.2</strong> It means the system can be <em>summarised</em>. If every operation took effect
+at one instant, then everything that ever happened can be written down as a
+single list, and any question about the data has one answer. &quot;Reads return
+recent data&quot; is weaker in two ways: <em>recent</em> has no definition, and it is a
+promise about one read at a time — it never says two different readers are
+looking at the same world. The instant rule does, because two operations cannot
+both be &quot;the one at that instant&quot;.</p>
+<p><strong>1.3</strong></p>
+<ul>
+<li><strong>Sequential consistency</strong> — same idea, minus the requirement that an
+operation already answered before yours began must come before yours.</li>
+<li><strong>Serializability</strong> — orders whole <em>transactions</em> rather than single
+operations, and has no real-time requirement at all.</li>
+<li><strong>Strict serializability</strong> — serializability with the real-time requirement
+put back; linearizability is its single-operation, single-object case.</li>
+<li><strong>Eventual consistency</strong> — a promise about the limit with no promise at any
+moment; it cannot be violated by any finite observation, which is why it
+cannot be tested.</li>
+<li><strong>Read-your-own-writes</strong> — a promise to one client about its own operations;
+linearizability holds <em>between</em> clients, which is the part that is hard.</li>
+</ul>
+<p><strong>1.4</strong> Because it makes the property <strong>checkable against a system you did not
+write and cannot see inside</strong>, and because it is what users actually experience.
+Practical consequence: you can run a black-box audit of a commercial database
+and produce a defensible bug report — which is exactly what Jepsen does. A
+second consequence, less obvious: <em>your</em> code is part of the observation.
+Putting a cache in your client turns a linearizable store into a
+non-linearizable system, and no change was made to the store.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong></p>
+<ul>
+<li><strong>Concurrent pairs:</strong> <code>put</code> with <code>get()→0</code>, <code>put</code> with <code>get()→1</code>. (<code>put</code> ends
+at 20; C4's read begins at 26, so those are not concurrent. The three reads
+do not overlap each other.)</li>
+<li><strong>Real-time edges:</strong> <code>get()→0</code> before <code>get()→1</code> (10 &lt; 14); <code>get()→0</code> before
+<code>get()→0</code>(C4); <code>get()→1</code> before C4's read (22 &lt; 26); <code>put</code> before C4's read
+(20 &lt; 26).</li>
+<li><strong>The put's point</strong> must be after 10 (C2 was told 0, so the put had not
+happened) and before 14 (C3 was told 1, so it had). Anywhere in <strong>(10, 14)</strong>.</li>
+<li><strong>C4 is not explainable.</strong> The put finished at 20, C4 began at 26, so the put
+must come first — and then C4 must return 1. The history is not linearizable.</li>
+</ul>
+<p><strong>2.2</strong> Situation D is <code>put(1) [4,92]</code>, <code>get()→1 [10,30]</code>, <code>get()→0 [46,66]</code>.
+The write is C1's bar, spanning almost everything. C2's read was answered first,
+at 30. The killing fact: <strong>C3's read began at 46, sixteen ticks after C2 was
+already told 1.</strong> Once C2 has been told the new value, no later reader may be
+shown the old one. To flip the verdict, drag C3's read left until it overlaps
+C2's — then neither is &quot;later&quot; and both answers are defensible.</p>
+<p><strong>2.3</strong> In <code>Checker.java</code>:</p>
+<ul>
+<li>real-time rule: <code>if (o.invoke &lt; minResp) out.add(i);</code> in <code>candidates</code></li>
+<li>sequential specification: the <code>apply</code> method — three lines, one per operation
+kind</li>
+<li>discarding a timed-out operation: the <code>allPending</code> block in <code>search</code>, which
+accepts as soon as everything left is pending</li>
+</ul>
+<p><strong>2.4</strong> In <code>Sim.addQuorumPhases</code>:
+<code>if (secondPhase) task.phases.add(new Phase(true, p1.decideT, w, all));</code>
+That is the reader's write-back. With it, 0 violations in 600; without it, 36.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> Verified with the checker:</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>verdict</th>
+  <th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>(a)</td>
+  <td><strong>linearizable</strong></td>
+  <td>the put spans both reads; its point sits between 10 and 12</td>
+</tr>
+<tr>
+  <td>(b)</td>
+  <td><strong>neither</strong></td>
+  <td>one client is shown 1 and then 0 — that breaks even its own order</td>
+</tr>
+<tr>
+  <td>(c)</td>
+  <td><strong>sequentially consistent, not linearizable</strong></td>
+  <td>different clients, so per-client order is fine; the real-time edge (10 → 12) is what convicts it</td>
+</tr>
+<tr>
+  <td>(d)</td>
+  <td><strong>sequentially consistent, not linearizable</strong></td>
+  <td><code>put(2)</code> finished at 10 and the read began at 12, so 1 is impossible; but the order <code>put(1), get()→1, put(2)</code> satisfies both clients' own order</td>
+</tr>
+</tbody>
+</table></div>
+<p>The pattern: (c) and (d) are the shapes that survive every test that does not
+look at the clock.</p>
+<p><strong>3.2</strong> <strong>Zero.</strong> 0 violations in 600 runs at 0% hiccups, and 0 at 2%. A design
+with no ordering guarantee whatsoever passed 600 consecutive runs.</p>
+<p>What that means for your tests: a green consistency test on a healthy network is
+close to worthless. The violation needs a write in flight <em>and</em> two reads
+separated in real time <em>and</em> their quorums covering different replicas. On a
+fast network the window between a write reaching its first and second replica is
+a couple of milliseconds. Jepsen's entire method is &quot;inject partitions and
+pauses, <em>then</em> check&quot;, and that is why.</p>
+<p><strong>3.3</strong> Around <strong>10,000</strong> — not 30,000. Measured for 2/4/8 threads at 20,000
+each: <strong>20,112 of 40,000</strong>, <strong>21,921 of 80,000</strong>, <strong>21,051 of 160,000</strong>. Note
+that the survivor count barely moves as you add threads: with more contention,
+more of every thread's work is overwritten. <code>compareAndSet</code> gives exactly the
+expected value every time.</p>
+<p><strong>3.4</strong> Low — typically 0 to 2 broken runs out of 120 for the naive quorum at
+<em>occasional</em> hiccups. Use <strong>Find a broken run</strong> and read the number of runs it
+had to search. That number is the point of the exercise.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> The checks that fail are the ones whose whole content is the real-time
+rule: <code>stale_read_is_not_linearizable</code>, <code>two_readers_disagreeing_is_not_ linearizable</code>, <code>same_answers_separated_in_time_are_illegal</code>, and the design
+checks for <code>ASYNC</code>, <code>QUORUM_NAIVE</code> and <code>CACHED</code>.</p>
+<p><strong>The system did not get worse — the judge got weaker.</strong> Not one line of
+<code>Sim.java</code> changed. You swapped the specification you are holding it to.</p>
+<p>Both linearizability and sequential consistency are <strong>safety</strong> properties:
+&quot;nothing bad ever happens&quot;, violated by a finite observation. Neither says
+anything about liveness. You did not trade safety for liveness; you traded a
+strong safety property for a weaker one.</p>
+<p><strong>4.2</strong> Measured, 600 histories each at 15% hiccups:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>change</th>
+  <th>violations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>R=2, W=2, N=3 (baseline)</td>
+  <td><strong>36</strong></td>
+</tr>
+<tr>
+  <td>R=2, <strong>W=3</strong>, N=3 — writes wait for every replica</td>
+  <td><strong>32</strong></td>
+</tr>
+<tr>
+  <td><strong>R=3</strong>, W=2, N=3 — reads ask every replica</td>
+  <td><strong>0</strong></td>
+</tr>
+<tr>
+  <td>R=3, W=3, N=5</td>
+  <td><strong>15</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The counter-intuitive result is the second row: <strong>making writes wait for
+everyone barely helps.</strong> The violation is caused by a write <em>in flight</em>, and a
+slower write is in flight for longer, not less.</p>
+<p>Making reads ask everyone does fix it, and here is why: if reader X was shown
+timestamp <code>T</code>, X saw <code>T</code> on some replica <code>j</code>. Replica <code>j</code>'s timestamp never goes
+down. A later reader that asks <em>every</em> replica necessarily asks <code>j</code> too, at a
+later moment, so it sees at least <code>T</code>. Reads can no longer go backwards.</p>
+<p>That is also why it is not a fix you can ship: R=N means a single unreachable
+replica blocks every read. You have bought ordering with the availability that
+made you use quorums in the first place. Row 4 shows the cost is not about the
+numbers being &quot;high&quot;: R=3 of N=5 is a perfectly good quorum and still leaves 15
+violations, because there are still two replicas a read can miss.</p>
+<p>The write-back gets you the same ordering at R=2 — one extra round trip instead
+of all your failure tolerance.</p>
+<p><strong>4.3</strong> <strong>332 of 600</strong> — more than half — with a <strong>one-tick</strong> cache. The store
+underneath is 0 of 600 at every TTL. &quot;We only cache for a second&quot; is not a
+mitigation; a cache of any duration is a second copy that nobody is keeping in
+order.</p>
+<p><strong>4.4</strong></p>
+<ul>
+<li>The memo remembers: <em>&quot;from this exact set of remaining operations, with the
+notebook holding exactly this value, I have already failed.&quot;</em> It cannot change
+a verdict because the future of the search depends on nothing else — the set
+of legal next operations depends only on which operations remain, and the
+outcome of each depends only on the notebook value.</li>
+<li>Dropping the notebook value would be <strong>unsound</strong>: two different orders can
+consume the same set of operations and leave different values behind, so
+&quot;this set failed&quot; would prune a branch that had a different, possibly
+workable, value. The error direction is a <strong>false alarm</strong> — the checker would
+reject histories that are in fact linearizable.</li>
+<li>And yet: 3,700 histories, including deliberately fully-concurrent ones, never
+triggered it. That is the lesson. A checker's soundness is an argument about
+the algorithm, not a test result — and a checker that is wrong in the
+false-alarm direction will send an engineer hunting a database bug that does
+not exist.</li>
+</ul>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1 (queue specification).</strong> Widen the model state to a small list, then:</p>
+<div class="code"><pre><code class="language-java">// enqueue(v): append v, return nothing
+// dequeue():  remove and return the oldest, or 0 if empty
+</code></pre></div>
+<p>The history to write:</p>
+<div class="code"><pre><code>C1 enqueue(1) [0,4]
+C2 dequeue()→1 [6,14]
+C3 dequeue()→1 [8,16]
+</code></pre></div>
+<p>Both dequeues are concurrent with each other, so real time does not order them
+— but no queue containing one <code>1</code> can hand it out twice, so no order works and
+the checker rejects it. The point of the exercise: <strong>the specification is a
+parameter.</strong> Linearizability is not a property of registers; it is a property
+of <em>any</em> object against <em>any</em> one-at-a-time definition of that object. Change
+<code>apply</code> and you have a checker for sets, queues, locks or counters.</p>
+<p><strong>5.2 (minimum overlap).</strong> After minimising to the smallest broken subset, for
+each operation try widening its interval by 1, 2, 4… ticks and re-check;
+report the smallest widening that makes the history acceptable.</p>
+<p>Why it is useful in a bug report: it converts <em>&quot;this is a consistency
+violation&quot;</em> into <em>&quot;the two reads were separated by 6 ms, and the system needed
+them to overlap&quot;</em>. That tells the reader whether they are looking at a genuine
+protocol bug or at a measurement artefact — see 6.4.</p>
+<p><strong>5.3 (explain).</strong> Run both checkers. If linearizable fails and sequential
+consistency passes, the culprit is a real-time edge; find it by scanning the
+minimised subset for a pair <code>(a, b)</code> with <code>response(a) ≤ invocation(b)</code> where
+extending <code>b</code>'s invocation back to before <code>response(a)</code> makes the history
+acceptable. That pair is the sentence you print. If <em>both</em> checkers fail, no
+real-time edge is involved — some client saw its own value change and change
+back, and the message should say that instead.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> Caught by <code>buggy_checker_raises_a_false_alarm</code>, which is paired with
+<code>good_checker_accepts_the_timed_out_write</code> so the contrast is visible. It is a
+<strong>false alarm</strong>: the checker rejects history F, which is perfectly explainable
+by &quot;the write did happen, the client just never heard back&quot;.</p>
+<p>False alarms are the more damaging failure for an auditing tool, and it is worth
+being clear why. A missed violation leaves you where you started. A false alarm
+sends an engineer to hunt a bug that does not exist in a database they did not
+write — and when they eventually discover the tool was wrong, every genuine
+finding it ever produced becomes arguable. <strong>The credibility of the tool is the
+product.</strong></p>
+<p><strong>6.2</strong> Caught by <code>dropping_the_writer_tiebreak_breaks_it</code>. Physically: two
+writers query at the same moment, both get &quot;the highest timestamp is 5&quot;, and
+both write timestamp 6 — with different values. Replicas now accept whichever
+arrives first, so replica A holds <code>(6, &quot;x&quot;)</code> and replica B holds <code>(6, &quot;y&quot;)</code>.
+Neither can ever displace the other, because acceptance requires a <em>strictly</em>
+higher timestamp. The register has silently become two registers.</p>
+<p>What a user reports: &quot;the value keeps flipping between two things&quot;. Reads
+alternate depending on which replicas answered, forever, with no error anywhere
+and no way for the system to notice — the two replicas both believe they are
+current. This is the same failure as the previous lab's sibling conflict, except
+that with last-write-wins-by-timestamp there is no sibling to surface.</p>
+<p><strong>6.3</strong> Two checks fail: <code>overlapping_write_read_before_and_after_is_ok</code> and
+<code>same_answers_overlapping_in_time_are_legal</code>. The direction is a <strong>false
+alarm</strong> — the invocation-order checker rejects histories that are genuinely
+linearizable.</p>
+<p>This is version 1 from stage 10.1, and the failure is exactly the one predicted
+there: it assumes the order is <em>given</em> by when requests were sent. In scenario C
+the write is sent first and takes effect last, which is completely normal and
+which the invocation-order rule cannot express.</p>
+<p><strong>6.4</strong> <strong>Whether the two timestamps came from the same clock.</strong></p>
+<p>The entire case against this history is the one-tick gap: C1 was answered at 10,
+C2 asked at 11. If those two numbers were recorded on two different client
+machines whose clocks differ by more than one tick, the &quot;edge&quot; is an artefact of
+the measurement, not a fact about the system.</p>
+<p>This is why Jepsen records every operation's times on a single node, and why
+<code>5.2</code>'s &quot;how much overlap was needed&quot; number matters: if the answer is &quot;6 ms&quot;
+and your clients' clocks are synchronised to within 20 ms, you have not found a
+bug, you have found your clock skew.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1 (deposed leader).</strong> The shape: replica 0 serves everything until <code>T</code>;
+from <code>T</code>, writes go to replica 1 while replica 0 keeps answering reads from its
+own state for <code>lag</code> ticks. The checker convicts it, and the minimised violation
+is the same three-bar shape as Meera and Raghu — a completed write on the new
+leader, and a later read from the old one returning the old value.</p>
+<p>Adding a lease means replica 0 stops serving reads at <code>T</code> even though nothing
+has told it to, because its grant has expired and it has not been renewed. The
+violations go to zero.</p>
+<p><strong>What the lease cost you, and it is three things.</strong></p>
+<ol>
+<li><strong>Availability</strong>: there is now a window where <em>nobody</em> serves reads — the old
+leader has stopped and the new one has not started. That window is the lease
+length, and it is why lease lengths are a tuning fight.</li>
+<li><strong>A clock assumption</strong>: the lease is a duration, so the two leaders must
+agree on how long a second is. If the old leader's clock runs slow, it holds
+its lease past the point where the new one begins, and the violation comes
+back. <strong>Clock skew has become a correctness input.</strong></li>
+<li><strong>Latency on renewal</strong>: the leader must keep renewing, which is traffic that
+exists purely to hold the guarantee.</li>
+</ol>
+<p><strong>7.2 (a cheaper write-back).</strong> The correct optimisation: <strong>skip the write-back
+when every replica in the read quorum already agreed.</strong> If all <code>R</code> replicas
+returned the same timestamp, then that value is already on <code>R</code> replicas, and if
+any two read quorums must intersect — <code>2R &gt; N</code> — a later read must touch one of
+them and cannot go backwards.</p>
+<p>Measured (<code>Sim.lazyWriteBack</code>, 300 histories each, and locked in as tests):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>configuration</th>
+  <th>violations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>N=3, R=2, W=2 — always write back</td>
+  <td>0</td>
+</tr>
+<tr>
+  <td>N=3, R=2, W=2 — skip when the quorum agreed (<code>2R = 4 &gt; 3</code>)</td>
+  <td><strong>0</strong></td>
+</tr>
+<tr>
+  <td>N=5, R=2, W=4 — skip when the quorum agreed (<code>2R = 4 ≤ 5</code>)</td>
+  <td><strong>6 of 600</strong></td>
+</tr>
+<tr>
+  <td>N=5, R=2, W=4 — always write back</td>
+  <td>0</td>
+</tr>
+</tbody>
+</table></div>
+<p>So: the assumption is <strong><code>2R &gt; N</code></strong>, not <code>R + W &gt; N</code>. When it is violated — a
+configuration tuned for fast reads, R=2 on N=5, which is a perfectly sensible
+thing to want — the optimisation silently stops being correct while the counting
+rule you were relying on still holds. Two read quorums that do not intersect
+each other cannot keep each other in order.</p>
+<p>The other cheap scheme is the <strong>leader lease</strong> from 7.1: one machine answers
+reads locally with no quorum round trip at all. The assumption there is bounded
+clock drift, and 7.1 lists what breaks when it fails.</p>
+<p><strong>7.3 (retry after a timeout).</strong> A pending <code>put(1)</code> may or may not have taken
+effect, and the client cannot tell. Retrying <code>put(1)</code> is safe because the second
+execution leaves the value exactly where the first one would have: the operation
+is <strong>idempotent</strong>, so &quot;once&quot; and &quot;twice&quot; are indistinguishable in the final
+state.</p>
+<p><code>increment</code> is not. If the first attempt succeeded and the client retries, the
+counter goes up twice, and the client — which never got either answer — has no
+way to detect it. This is the previous lab's <em>&quot;a failed write is never rolled
+back&quot;</em> finding, arriving from the other direction.</p>
+<p>What the server must add: <strong>a per-operation identity that survives the retry</strong>.
+The client generates a request id, sends it with the operation, and the server
+records &quot;I have already applied request <code>abc123</code>&quot; and returns the original
+result instead of applying it again. Note where the state has to live — on the
+server, durably, ordered with the write itself, which is why an idempotency key
+table is written in the same transaction as the payment.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p>These are discussions, not single answers. What follows is one defensible
+position with its reasoning exposed.</p>
+<h3 id="solutions-81--payments-three-regions">8.1 — Payments, three regions</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Read</th>
+  <th>Linearizable?</th>
+  <th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>dashboard balance</td>
+  <td><strong>No</strong></td>
+  <td>a human reading a number; a second of staleness is invisible and the extra cross-region round trip is not. Show a timestamp (&quot;as of 10:04:12&quot;) and the staleness stops being a lie</td>
+</tr>
+<tr>
+  <td>balance check inside an authorisation</td>
+  <td><strong>Yes</strong></td>
+  <td>this read <em>decides</em> whether money moves. A stale balance authorises an overdraft, and the loss is real money. This is the read you pay for</td>
+</tr>
+<tr>
+  <td>statements page</td>
+  <td><strong>No</strong></td>
+  <td>historical data; immutable once written. Nothing to be stale about</td>
+</tr>
+<tr>
+  <td>fraud feature lookup</td>
+  <td><strong>No</strong></td>
+  <td>a model input, already probabilistic, already computed from a window. Making it strongly consistent adds latency to the hot path for no decision quality</td>
+</tr>
+<tr>
+  <td>idempotency-key check</td>
+  <td><strong>Yes</strong>, and more</td>
+  <td>this decides <em>whether a payment already happened</em>. Getting it wrong is a double charge. It also needs to be atomic with the capture itself, which means a compare-and-set or a transaction — not just a linearizable read (experiment 8 is the reason)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Placement.</strong> Shard by account, and put each shard's leader in the region that
+account is used from — this is what &quot;region affinity&quot; buys, and it means the
+common case never crosses an ocean. The consensus group still spans three
+regions for durability, so a <em>write</em> pays one cross-region round trip to reach a
+majority.</p>
+<p><strong>Numbers.</strong> With regions ~110 ms apart, a majority for a leader in Mumbai is
+Mumbai plus the nearer of the other two: roughly <strong>110–120 ms</strong> for a write, and
+for a linearizable read a lease read is local (single-digit ms) while a
+read-index read costs one round trip to a majority (~110 ms). Budget p99 higher
+than that; queueing under load is what actually sets p99, not the speed of
+light.</p>
+<p><strong>What to monitor.</strong> Leader elections per hour, lease expiries, read-index round
+trip, replication lag, and <strong>clock skew across the fleet</strong> — the last one is a
+correctness metric because leases depend on it. Alert on non-monotonic reads
+observed by a canary client if you can afford one; that is the only symptom that
+a stale cache and a stale replica cannot disguise.</p>
+<p><strong>What you tell the product team.</strong> Not &quot;consistency is slow&quot;. Say: <em>the
+dashboard reads from the nearest copy and is up to a second behind, which is why
+it is fast. Authorisation reads from the copy that decides, which is why it
+takes an extra 110 ms. If we made the dashboard read the deciding copy, every
+page load would cost that 110 ms and the number on screen would still be stale
+by the time it reached the browser.</em> That last clause is the one that ends the
+argument, and it is true: <strong>linearizability is a guarantee about the moment the
+answer was produced, not about the moment the human read it.</strong></p>
+<h3 id="solutions-82--a-lock-you-can-trust">8.2 — A lock you can trust</h3>
+<p>Do not rely on the lock for correctness. Rely on the resource.</p>
+<ul>
+<li><strong>The lock</strong> is a lease with a TTL, used to make double-running <em>rare</em> — a
+performance optimisation, not a guarantee.</li>
+<li><strong>The token</strong>: acquiring the lock returns a monotonically increasing number.</li>
+<li><strong>The guarantee</strong>: every write in the capture path carries the token, and the
+storage layer <strong>rejects any write whose token is lower than the highest it has
+seen</strong>. Or, equivalently and often more simply, every capture is written
+against an idempotency key so a second attempt is a no-op.</li>
+</ul>
+<p><strong>Clock assumption:</strong> none for correctness. The TTL affects only how long you
+wait before a second worker starts; if the clocks are wrong you get more
+double-runs, not incorrect ones.</p>
+<p><strong>A 90-second pause mid-run:</strong> the lease expires, worker B starts and captures
+with token 8. Worker A wakes up believing it still holds the lock and tries to
+write with token 7. The storage rejects it. A discovers it has been fenced and
+stops. <strong>Nothing incorrect happened, and no clock had to be right.</strong></p>
+<p>The general shape is worth carrying: <em>a guarantee enforced at the place the
+damage would occur beats a guarantee enforced at the place the decision was
+made.</em></p>
+<h3 id="solutions-83--the-read-that-must-not-be-linearizable">8.3 — The read that must not be linearizable</h3>
+<p><strong>A read whose job is to be available.</strong> The clearest example in a payments
+system is the <strong>card authorisation path during a regional partition</strong>, and the
+answer is a business decision, not a technical one.</p>
+<p>If the region holding the leader for an account is unreachable, a linearizable
+read <em>must</em> refuse — that is the CAP theorem, not a design flaw. The result is
+that every card transaction for those accounts declines. For a small window and
+a large exposure, declining is right. For a large window and small transactions,
+declining every coffee purchase in a country is worse for the business than
+accepting a bounded overdraft risk — which is why real card networks have
+<strong>offline authorisation floor limits</strong>: below a value threshold, approve locally
+without contacting the issuer, and reconcile later.</p>
+<p>What you break by making it strongly consistent: <strong>availability during exactly
+the failure the design exists to survive</strong>, in exchange for eliminating a risk
+you had already priced and capped. The second clearest example is a rate limiter
+or fraud counter — both are already approximations, and paying a consensus round
+trip per request to make an approximation exact is spending latency on the
+wrong thing.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../25-pacelc/notes.html"><small>← Lab 25</small>pacelc</a><a href="../27-linearizability-vs-serializability/notes.html" style="text-align:right"><small>Lab 27 →</small>linearizability-vs-serializability</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-consistent-need-a-definition">1. Why does &quot;consistent&quot; need a definition?</a><a href="#readme-2-what-happened-to-meera-and-her-father">2. What happened to Meera and her father?</a><a href="#readme-3-why-not-just-make-the-copies-catch-up-faster">3. Why not just make the copies catch up faster?</a><a href="#readme-4-why-does-faster-never-become-never">4. Why does &quot;faster&quot; never become &quot;never&quot;?</a><a href="#readme-5-what-do-we-actually-want">5. What do we actually want?</a><a href="#readme-6-what-is-the-one-idea-that-makes-this-checkable">6. What is the one idea that makes this checkable?</a><a href="#readme-7-what-do-engineers-call-all-these-things">7. What do engineers call all these things?</a><a href="#readme-8-which-two-pictures-should-you-carry">8. Which two pictures should you carry?</a><a href="#readme-9-what-should-you-do-first-in-the-visualization">9. What should you do first in the visualization?</a><a href="#readme-10-how-does-a-machine-decide">10. How does a machine decide?</a><a href="#readme-11-how-does-it-break-in-real-systems">11. How does it break in real systems?</a><a href="#readme-12-what-does-it-guarantee-what-does-it-refuse-and-what-does-it-cost">12. What does it guarantee, what does it refuse, and what does it cost?</a><a href="#readme-13-what-is-in-src-and-which-four-lines-carry-the-guarantee">13. What is in src/, and which four lines carry the guarantee?</a><a href="#readme-14-what-do-the-ten-experiments-show">14. What do the ten experiments show?</a><a href="#readme-15-what-are-the-systems-on-your-cv-actually-promising">15. What are the systems on your CV actually promising?</a><a href="#readme-16-what-should-you-try-yourself">16. What should you try yourself?</a><a href="#readme-17-where-does-this-sit-and-where-do-you-go-next">17. Where does this sit, and where do you go next?</a><a href="#readme-18-what-does-each-word-mean-precisely">18. What does each word mean, precisely?</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

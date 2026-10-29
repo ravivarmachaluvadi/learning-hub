@@ -1,0 +1,3667 @@
+<!doctype html>
+<html lang="en" data-hub-lab="58-load-shedding">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>58. load-shedding</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 58 of 71 · Stage 7</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 58 · Running It In Production</p><article id="readme"><h1 id="readme-load-shedding--choosing-who-to-disappoint-before-the-choice-is-made-for-you">Load Shedding — choosing who to disappoint, before the choice is made for you</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Dana can finish 15 passport applications an hour, and this
+morning 60 people walk in, each with an 11:00 train to catch. She works flat
+out all morning and about one person catches their train, because she spends
+the rest of it filling in forms for people who already left. Put Ben on the
+door with a clipboard, turning people away once the waiting room is full, and
+the same Dana at the same speed sends home roughly five hundred times as many
+passports. Your service is Dana's desk: offered 60 requests a second when it
+can finish 50, it serves 0.7% of them, not 83%, while its throughput graph
+reads a flat and healthy 50/s. One line of admission control turns that 0.7%
+into 83.6%, and this lab is about which line, and where it goes.</p>
+</blockquote>
+<p>Overload the office yourself in <a href="visualization.html"><code>visualization.html</code></a>, also
+published as <a href="https://claude.ai/code/artifact/175a445a-1314-4caa-b2f8-71cd11134949" target="_blank" rel="noopener">The Overload Desk</a>.
+What this lab is made of, and where every number came from, is stage 17.</p>
+<hr />
+<h1 id="readme-beginner-model--stages-1-to-6">BEGINNER MODEL — stages 1 to 6</h1>
+<h2 id="readme-1-why-does-an-outage-start-when-nothing-has-broken">1. Why does an outage start when nothing has broken?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> More work arrived than the service could finish. No
+component failed, no alert fired, and out of every thousand customers, one got
+an answer.</p>
+</blockquote>
+<p>It is 09:58 and Meera is on call. Her orders service is healthy. It has four
+worker threads. Each request takes about 80 ms, so the service finishes about
+<strong>50 requests per second</strong>. Traffic is 35/s. Median response 82 ms. No errors.</p>
+<p>At 10:00 a promotion goes live and traffic goes to 150/s.</p>
+<p>Nothing crashes. No process dies, no disk fills, no dependency returns an error,
+no deploy went out. Every worker thread stays busy. The throughput graph, the
+one on the wall that the alert is wired to, goes to <strong>50 requests per second and
+stays there, flat and level, for forty minutes</strong>.</p>
+<p>And during those forty minutes, out of every thousand customers who press the
+button, <strong>one</strong> gets an answer.</p>
+<p>Before the whole incident, stop on the least dramatic row of it. Traffic has not
+tripled yet. It has gone up by a fifth.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>The service can finish 50 requests a second. Offer it 60 a
+second — one fifth more work than it can do, sustained. What share of those
+customers get an answer: about 83%, about half, or something else?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>0.7%.</strong></p>
+<p>If you said 83%, you did the arithmetic everyone does, and the arithmetic is
+right about the <em>work</em>: 50 of every 60 requests can be finished, so 10 are
+lost. It is wrong about <em>which</em> 50, because the ten that cannot be finished do
+not politely leave. They join the queue, wait, and push everybody behind them
+past the point where the answer is still wanted. The service finishes 50
+requests a second all morning. Almost none of them belong to a customer who is
+still listening.</p>
+<p>That is a 20% overload producing a 99.3% failure. Stage 6 puts a doorman in
+front of the same service at the same 60/s, and the number becomes <strong>83.6%</strong>.</p>
+</details>
+
+</blockquote>
+<p>Here is the whole incident in one table. Read the third column against the
+second.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>offered load</th>
+  <th>what the throughput graph shows</th>
+  <th>customers who got an answer</th>
+  <th>what the row means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>35/s (normal)</td>
+  <td>34.9/s</td>
+  <td><strong>100.0%</strong></td>
+  <td>spare capacity; everyone served</td>
+</tr>
+<tr>
+  <td>45/s</td>
+  <td>44.9/s</td>
+  <td>99.3%</td>
+  <td>90% of capacity, still comfortable</td>
+</tr>
+<tr>
+  <td>50/s (exactly capacity)</td>
+  <td>50.0/s</td>
+  <td><strong>unstable — see below</strong></td>
+  <td>not an operating point at all</td>
+</tr>
+<tr>
+  <td>55/s</td>
+  <td>50.1/s</td>
+  <td><strong>1.2%</strong></td>
+  <td>10% too much work, almost total loss</td>
+</tr>
+<tr>
+  <td>60/s</td>
+  <td>50.0/s</td>
+  <td><strong>0.7%</strong></td>
+  <td>a fifth too much work, not a fifth of the loss</td>
+</tr>
+<tr>
+  <td>150/s</td>
+  <td>50.1/s</td>
+  <td><strong>0.1%</strong></td>
+  <td>the promotion; one in a thousand</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three things in that table are worth stopping on.</p>
+<p><strong>The throughput column is useless.</strong> It reads 50/s during total success and
+50/s during total failure. It is the single most-watched number in most
+production dashboards, and here it cannot distinguish a healthy service from a
+dead one.</p>
+<p><strong>The collapse is not proportional to the overload.</strong> Going 20% over capacity
+does not cost you 20% of your customers. It costs you 99.3% of them.</p>
+<p><strong>There is no bug to find.</strong> The service is doing exactly what it was built to
+do, as fast as it can, on every single request. That is the problem.</p>
+<p>And one row of that table refuses to hold still. Offer the service exactly what
+it can do, 50 a second against a capacity of 50 a second, and the same
+configuration gives a different answer every time you run it.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>exactly at capacity: twenty runs of one configuration</th>
+  <th>figure</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>best run of the twenty</td>
+  <td><strong>70.6%</strong></td>
+  <td>a good day, decided by luck</td>
+</tr>
+<tr>
+  <td>worst run of the twenty</td>
+  <td><strong>1.1%</strong></td>
+  <td>the same settings, the same load</td>
+</tr>
+<tr>
+  <td>mean over ten minutes</td>
+  <td>28.6%</td>
+  <td>the average is not a promise</td>
+</tr>
+<tr>
+  <td>mean over one hour</td>
+  <td><strong>11.7%</strong></td>
+  <td>the longer it runs, the worse it gets</td>
+</tr>
+</tbody>
+</table></div>
+<p>That spread is not noise in the measurement. It <em>is</em> the answer. Your
+<code>queueing-theory</code> lab named the ratio of arriving work to work you can finish —
+busy-ness, written ρ. At ρ = 1, arrivals and departures balance exactly, so the
+queue is a random walk with nothing pulling it back down. A random walk has no
+steady state to settle into. Whether you are having a good day is decided by
+luck, and the longer the day lasts the worse it gets. Every other figure in this
+lab is a stable mean over five runs. This one cannot be, and that is the point:
+<strong>&quot;we are running at exactly 100% of capacity&quot; is not an operating point. It is
+a coin toss that gets worse with time.</strong></p>
+<p>What goes wrong if you do not know this? You spend the incident looking for a
+component that failed, and there isn't one. You add capacity, which helps, and
+you conclude the answer was capacity. So it happens again next quarter, at a
+different service, at a different scale. Meanwhile the thing that would have
+turned that 0.1% into 33% was a change you could have shipped in an afternoon,
+and it has been available the entire time.</p>
+<h2 id="readme-2-what-happens-at-danas-desk-when-everyone-has-a-train-to-catch">2. What happens at Dana's desk when everyone has a train to catch?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One clerk, sixty people, one train. She works the whole
+morning without a break and almost nobody gets a passport.</p>
+</blockquote>
+<p>Forget servers for a moment. You met <strong>Dana</strong> in your <code>queueing-theory</code> lab, at
+the only desk in a passport office. Today she is on the long form, and we are
+going to break her morning differently.</p>
+<p>Each application takes Dana exactly <strong>4 minutes</strong>. She is fast, accurate, and
+never stops. That is her capacity: <strong>15 people an hour</strong>. It is a fact about
+Dana, and no decision anyone makes today will change it.</p>
+<p>This morning, because of a deadline in the news, <strong>60 people</strong> arrive in the
+first hour. Four times what Dana can do. <strong>Priya</strong> is one of them, and she is
+somewhere in the middle of the crowd.</p>
+<p>There is one more fact, and it is the one that matters most. <strong>Every person here
+has a train to catch at 11:00.</strong> If Priya is still in the queue at 11:00, she
+leaves. She walks out with nothing — no passport, no partial passport, nothing.
+Her hour in your building bought her exactly zero.</p>
+<p>That deadline is not a detail. It is the entire subject. A queue without a
+deadline is a waiting room. A queue with one is a <strong>countdown on every person in
+it</strong>, and the countdown runs whether or not Dana is working hard.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Dana works flat out for the full hour with no breaks and no
+mistakes. She physically processes 15 applications. Of the 60 people who
+walked in, how many walk out with a passport?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>About one.</strong></p>
+<p>Not fifteen. Dana <em>processes</em> fifteen applications, but she processes them in
+the order people arrived. By the time she reaches the fifth person that person
+has been waiting 16 minutes. By the fifteenth they have been waiting nearly an
+hour, and they left for the train some time ago. Dana spends most of her
+morning filling in forms for people who are no longer in the building.</p>
+<p>The service at 3× capacity does the same thing: <strong>0.1% success, 100%
+utilisation, and 100% of its working time spent on requests whose client had
+already given up.</strong></p>
+<p>Hold on to the shape of that: <em>she did all the work, and almost none of it
+counted.</em> Stage 4 walks through exactly how the count gets to one.</p>
+</details>
+
+</blockquote>
+<p><strong>Where this lab takes you.</strong> Stop at any checkpoint and you still have
+something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Stages</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–6</td>
+  <td>say why a fifth too much work serves 0.7%, and what a doorman does about it</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>7–10</td>
+  <td>build the doorman, choose what it looks at, and defend the number you picked</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>11–12</td>
+  <td>name eight ways it goes wrong, and say what you are actually guaranteed</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>13–16</td>
+  <td>ship it in the right order, and put the right things on the dashboard</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-what-is-wrong-with-letting-everyone-in">3. What is wrong with letting everyone in?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The office manager's plan is four decent-sounding rules.
+Your web framework already ships all four as defaults, and together they are
+the outage.</p>
+</blockquote>
+<p>Before we fix anything, let us be fair to the design that fails. It is the
+design almost every system ships with — not through carelessness, but because it
+is the <em>decent</em> thing to do.</p>
+<p><strong>Arjun</strong> manages the office. You met him in <code>queueing-theory</code> writing capacity
+on a whiteboard. Here is his plan for the morning:</p>
+<ol>
+<li>Let everyone in. Turning people away when the desk is <em>right there</em> and Dana
+is <em>willing to work</em> feels like a failure of service.</li>
+<li>Serve them in the order they arrived. That is fair, and everyone understands
+it.</li>
+<li>Keep the queue in the corridor if the waiting room fills. Space is cheap.</li>
+<li>Ask Dana to hurry.</li>
+</ol>
+<p>Every one of those four is defensible on its own. Three of them are things you
+would say out loud in a meeting without anyone objecting.</p>
+<p>Here is what Arjun's plan looks like in a service, and you have almost certainly
+shipped this configuration:</p>
+<div class="code"><pre><code>// A thread pool with an unbounded queue: &quot;let everyone in&quot;
+new ThreadPoolExecutor(4, 4, 0L, MILLISECONDS, new LinkedBlockingQueue&lt;&gt;());
+
+// Spring Boot&#x27;s default task queue capacity
+spring.task.execution.pool.queue-capacity = 2147483647
+</code></pre></div>
+<p><em>(Illustrative, not runnable. <code>LinkedBlockingQueue</code> with no capacity argument is
+unbounded, and that Spring default is <code>Integer.MAX_VALUE</code>. Both are step 3 of
+Arjun's plan, shipped as a default.)</em></p>
+<p>Nobody chose this. It is what you get by not choosing.</p>
+<h2 id="readme-4-where-does-the-mornings-work-actually-go">4. Where does the morning's work actually go?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Dana does every minute of work she is capable of. After
+10:20, not one of those minutes belongs to somebody still in the building.</p>
+</blockquote>
+<p>Let us watch the morning minute by minute. Dana opens at 10:00. Sixty people
+arrive spread over the hour — call it one per minute. Everyone leaves at 11:00.
+Read the third column: it is how long that person has been in the building when
+Dana finally calls them.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>clock</th>
+  <th>who Dana is serving</th>
+  <th>how long they have waited</th>
+  <th>what happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>10:00</td>
+  <td>person 1</td>
+  <td>0 min</td>
+  <td>✅ served, catches the train</td>
+</tr>
+<tr>
+  <td>10:04</td>
+  <td>person 2</td>
+  <td>3 min</td>
+  <td>✅ served</td>
+</tr>
+<tr>
+  <td>10:08</td>
+  <td>person 3</td>
+  <td>6 min</td>
+  <td>✅ served</td>
+</tr>
+<tr>
+  <td>10:20</td>
+  <td>person 6</td>
+  <td>15 min</td>
+  <td>✅ served</td>
+</tr>
+<tr>
+  <td>10:40</td>
+  <td>person 11</td>
+  <td>30 min</td>
+  <td>✅ served</td>
+</tr>
+<tr>
+  <td>10:56</td>
+  <td>person 15</td>
+  <td>42 min</td>
+  <td>✅ served — the last one who makes it</td>
+</tr>
+<tr>
+  <td>11:00</td>
+  <td>—</td>
+  <td>—</td>
+  <td><strong>the other 45 people walk out</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>So far so good. Dana served 15 and 45 left. That is bad, but it is the honest
+arithmetic of 60 people and a 15-person capacity. <strong>Nothing is surprising yet.</strong></p>
+<p>Now change one thing to match reality, and the floor falls out.</p>
+<p>Real queues are not one-per-minute. People arrive in clumps. And crucially, <strong>in
+a real service the deadline belongs to the client, not to the server.</strong> Priya's
+phone gives up after one second and shows her an error. <em>The server never finds
+out.</em> Her request is still sitting in the queue. Its work still gets done. Its
+response is still written, to a connection nobody is listening on.</p>
+<p>So replace &quot;people leave the building&quot; with what actually happens: <strong>Priya
+leaves for her train, and Dana still fills in her form.</strong> Dana has no way to
+know the chair is empty.</p>
+<p>Now walk the morning again. By 10:20 the queue is 20 deep and growing by 45
+people an hour. Anyone joining at 10:20 will not reach the desk until well after
+11:00. So from 10:20 onward, <strong>every single person who joins the queue is
+guaranteed to have gone before Dana reaches them.</strong> Dana keeps working at
+exactly 15 applications an hour, all morning. After 10:20 not one of those
+applications belongs to a person who is still in the building.</p>
+<p>The service does the same thing, and it is worth seeing the exact numbers. This
+is one run at 3× capacity with nobody on the door.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>what you would watch</th>
+  <th>the run at 3× capacity</th>
+  <th>what the number means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>offered</td>
+  <td>150 requests/s</td>
+  <td>what arrived at the door</td>
+</tr>
+<tr>
+  <td><strong>throughput</strong></td>
+  <td><strong>50.1/s</strong> — full capacity, all day</td>
+  <td>requests finished per second</td>
+</tr>
+<tr>
+  <td><strong>goodput</strong></td>
+  <td><strong>0.1/s</strong></td>
+  <td>finished <em>in time to matter</em></td>
+</tr>
+<tr>
+  <td>worker time spent on requests whose client had gone</td>
+  <td><strong>100%</strong></td>
+  <td>Dana's whole morning</td>
+</tr>
+<tr>
+  <td>utilisation</td>
+  <td>100%</td>
+  <td>nobody was idle for a moment</td>
+</tr>
+<tr>
+  <td>queue depth after 10 minutes</td>
+  <td><strong>60,047</strong></td>
+  <td>the corridor, in your heap</td>
+</tr>
+<tr>
+  <td>median latency <strong>of the requests that succeeded</strong></td>
+  <td>532 ms</td>
+  <td>a perfectly healthy-looking number</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read the last row twice. During a total outage, the latency of the requests that
+<em>did</em> succeed looks fine. The only ones that succeed are the lucky few that
+arrived when the queue happened to be short. Your latency dashboard is computed
+over survivors. <strong>A metric computed only over survivors cannot detect that
+everyone else died.</strong></p>
+<p>And here is the part that makes this an emergency rather than a curiosity: <strong>that
+queue of 60,047 is a linked list in your heap.</strong> It grows at 100 entries per
+second, each holding a request object, its headers, its body, its trace context.
+The outage that started as &quot;slow&quot; ends as an <code>OutOfMemoryError</code>, a restart, and a
+cold cache. At which point the still-overloaded traffic hits an empty cache and
+the whole thing happens again, faster.</p>
+<blockquote>
+<p><strong>This is the moment the lesson turns.</strong> Everything up to here is a
+restatement of what <code>queueing-theory</code> proved. What follows is the response.</p>
+</blockquote>
+<h2 id="readme-5-what-are-we-actually-asking-for-in-plain-words">5. What are we actually asking for, in plain words?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> At four times the work she can do, Dana was always going to
+disappoint most of the room. The question is which people, and how long they
+stand there before they find out.</p>
+</blockquote>
+<p>Look at what actually went wrong. It was not that requests were lost. At 150/s
+against a capacity of 50/s, <strong>100 requests per second were always going to be
+lost.</strong> That is arithmetic, not a design flaw. No configuration, no rewrite, no
+language change makes 4 workers finish 150 requests a second.</p>
+<p>What went wrong is <em>which</em> ones were lost, and <em>when</em> they found out.</p>
+<p>Which: the system lost almost all of them, including the ones it had capacity to
+serve. Every request was allowed to consume a share of a resource that none of
+them could get enough of.</p>
+<p>When: Priya found out after a full second of waiting. She had occupied memory
+and a connection the whole time, and in many designs her phone immediately tried
+again.</p>
+<p>So the requirement is this:</p>
+<blockquote>
+<p><strong>When more work arrives than we can finish, decide <em>at the door</em> who is not
+getting served, and tell them <em>immediately</em>. Then spend everything we have
+left on the ones we said yes to, so that the yeses actually complete in
+time.</strong></p>
+</blockquote>
+<p>Three separate demands hide in that sentence, and the rest of the lesson is
+three mechanisms answering them.</p>
+<p><strong>At the door.</strong> The decision must happen <em>before</em> the request consumes a
+worker, a connection, or a megabyte. A rejection that costs as much as the work
+is not a rejection.</p>
+<p><strong>Immediately.</strong> Priya must learn quickly. A client that is still waiting is
+still holding resources on <em>both</em> sides. And a fast &quot;no&quot; is something she can
+act on (fall back, degrade, try elsewhere), while a slow &quot;no&quot; is not.</p>
+<p><strong>The yeses complete.</strong> Admitting fewer requests is only worth doing if the
+admitted ones then succeed. Which means the number you admit must be tied to
+what you can actually finish, and that number changes.</p>
+<p>Now we can name the metric the throughput graph was missing. <strong>Throughput</strong> is
+how much work you finish per second. <strong>Goodput</strong> is how much work you finish per
+second <em>that somebody still wanted</em>. In stage 4's table they were 50.1/s and
+0.1/s. Throughput is a fact about your CPU. <strong>Goodput is a fact about your
+business</strong>, and it is the only one of the two that can tell a healthy service
+from a dead one.</p>
+<h2 id="readme-6-what-does-putting-one-doorman-on-the-door-do-to-the-numbers">6. What does putting one doorman on the door do to the numbers?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ben stands at the door and turns people away once the
+waiting room is full. Dana works no faster. Roughly five hundred times as many
+people catch their train.</p>
+</blockquote>
+<p>Here is the whole idea, and it is genuinely this small:</p>
+<blockquote>
+<p><strong>Before a request is allowed to join the queue, something looks at how backed
+up we already are and says yes or no. A no is returned instantly and costs
+almost nothing.</strong></p>
+</blockquote>
+<p>That is load shedding. The thing making the decision is called an <strong>admission
+controller</strong>. In the office, it is <strong>Ben</strong>, with a clipboard, standing at the
+door.</p>
+<p>The counterintuitive part, the reason this is a lesson and not a footnote, is
+what Ben does to the numbers.</p>
+<p>Same office. Same Dana. Same 4-minute applications. Same 60 people at the door.
+Now Ben turns people away whenever the waiting room already holds more than a
+handful.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>3× overload, capacity 50/s, best achievable = 33.3%</th>
+  <th>goodput</th>
+  <th>success rate</th>
+  <th>queue depth</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>no admission control</td>
+  <td>0.1/s</td>
+  <td><strong>0.1%</strong></td>
+  <td>60,047</td>
+</tr>
+<tr>
+  <td>queue capped at 20</td>
+  <td>50.0/s</td>
+  <td><strong>33.3%</strong></td>
+  <td>20</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Turning away two-thirds of the arrivals increased the number of people served
+by roughly five hundred times.</strong></p>
+<p>And look at the right-hand column of that table. 33.3% is not an improvement on
+the way to something better. 50 requests per second is what the service can
+finish, 150 are arriving, so <strong>33.3% is the mathematical ceiling</strong>. A
+twenty-slot queue reaches it exactly. There is nothing left on the table.</p>
+<p>That is the first counterintuitive result. Here is the second, which is the one
+that changes how you feel about shipping this. Read the two right-hand columns
+against each other at every level of traffic, including the ordinary ones.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>offered load</th>
+  <th>no shedding</th>
+  <th>queue capped at 20</th>
+  <th>what the row settles</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>35/s (normal)</td>
+  <td>100.0%</td>
+  <td><strong>100.0%</strong></td>
+  <td>the doorman costs nothing when it is quiet</td>
+</tr>
+<tr>
+  <td>45/s</td>
+  <td>99.3%</td>
+  <td>98.9%</td>
+  <td>at 90% of capacity, four tenths of a percent</td>
+</tr>
+<tr>
+  <td><strong>60/s (a fifth too much)</strong></td>
+  <td><strong>0.7%</strong></td>
+  <td><strong>83.6%</strong></td>
+  <td>stage 1's headline, answered</td>
+</tr>
+<tr>
+  <td>150/s (3×)</td>
+  <td>0.1%</td>
+  <td><strong>33.3%</strong></td>
+  <td>the ceiling, reached exactly</td>
+</tr>
+</tbody>
+</table></div>
+<p>The 60/s row is the one to remember. The arithmetic ceiling there is 83.3%,
+because 50 of every 60 requests can be finished. The capped queue lands on
+83.6%, which is that ceiling plus the ordinary scatter between runs. The
+unprotected service, same hardware, same traffic, gives 0.7%.</p>
+<p><em>(50/s is left out of that table on purpose — see stage 1: at exactly capacity
+the unshielded number is not a number. The capped column is stable there at
+around 96%, which is itself the point: <strong>admission control gives ρ = 1 a defined
+behaviour it does not otherwise have.</strong>)</em></p>
+<p><strong>Ben costs nothing when the office is not busy.</strong> He is not a big red button
+you press during an incident. He stands there every day, waves everyone through
+every day, and the one morning in two years when he is needed, he is already at
+his post and already calibrated. A shedder that only gets switched on during
+incidents is a shedder that has never been tested, configured by people under
+pressure, on the worst day of their quarter.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>shed</em>, <em>goodput</em> or <em>admission</em>,
+explain to Arjun why turning away two-thirds of the people at the door means
+<em>more</em> people go home with a passport.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;Dana can do fifteen an hour and sixty are coming, so forty-five of them are
+going home empty no matter what we do. The only thing we choose is when they
+find out. If we let them all queue, they all wait. The ones at the front have
+already left for the train by the time Dana calls them, so she fills in forms
+for empty chairs and almost nobody gets served. If we tell forty-five of them
+at the door, they lose two seconds instead of an hour. And everyone still in
+the room is close enough to the front that Dana's work reaches a real person.&quot;</p>
+</details>
+
+</blockquote>
+<blockquote>
+<p><strong>Checkpoint.</strong> You can now explain why load shedding exists, why it
+<em>increases</em> the number of requests served, and why goodput is the metric that
+shows it. What you cannot yet do is build one — because &quot;how backed up are we&quot;
+turns out to be a genuinely hard question with at least four defensible
+answers, three of which break in production. That is the next layer.</p>
+</blockquote>
+<hr />
+<h1 id="readme-intermediate-model--stages-7-to-10">INTERMEDIATE MODEL — stages 7 to 10</h1>
+<h2 id="readme-7-which-five-words-are-being-used-as-if-they-were-one">7. Which five words are being used as if they were one?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five different mechanisms all end with somebody not being
+served. They are not interchangeable, and the difference is the whole design.</p>
+</blockquote>
+<p>Your <code>distributed-rate-limiting</code> lab put <em>&quot;rate limit vs quota vs throttling vs
+load shedding&quot;</em> in a single glossary line. That line was hiding the most
+important distinction in this subject, so let us pull it apart. The question
+that separates them is: <strong>whose interest is it protecting, and what does it
+know?</strong></p>
+<p><strong>Rate limiting</strong> protects <em>you</em> from a <em>particular client</em>. Ben checks a list:
+has this travel agent already brought in 1,000 people this month? That is a
+question about identity and a promise, answered the same way whether the office
+is empty or on fire. It is a <strong>contract</strong>, and its threshold is a business
+decision. It cannot save you from overload, because overload usually arrives as
+a million clients each behaving perfectly.</p>
+<p><strong>Quota</strong> is the same thing over a longer window and usually with money
+attached.</p>
+<p><strong>Throttling</strong> is the general verb for slowing a client down — usually rate
+limiting's enforcement half.</p>
+<p><strong>Load shedding</strong> protects <em>the service</em> from <em>all clients at once</em>. Ben looks
+over his shoulder at the waiting room and asks: can Dana finish what she already
+has? That question is about your own internal state, its answer changes second
+by second, and it has nothing to do with who is asking. Priya is a perfectly
+well-behaved client and Priya gets shed. That feels unfair, and it is. It is
+also the only thing that works, because the alternative is that everyone gets
+nothing.</p>
+<blockquote>
+<p>Rate limiting asks <strong>&quot;are you allowed?&quot;</strong>  Load shedding asks <strong>&quot;can I?&quot;</strong></p>
+<p>A system can have both. It needs both. They fire at different times, for
+different reasons, and a rate limiter tuned tight enough to prevent overload
+would have to be so tight that it rejects your legitimate traffic every day.</p>
+</blockquote>
+<p><strong>Backpressure</strong> is the fourth, and it is shedding's opposite number. It means
+<strong>refusing to accept work and letting the pressure propagate backwards</strong> to
+whoever is producing it. TCP's receive window, a bounded queue that blocks its
+producer, Kafka consumer lag. It is the better answer <em>when it is available</em>,
+because nothing is thrown away; the producer simply slows down. It is available
+when the producer is something that can wait. It is <em>not</em> available when the
+producer is forty thousand phones that will each retry in two seconds.
+<strong>Shedding is what you do when there is nowhere to push back to.</strong></p>
+<p><strong>Admission control</strong> is the neutral, precise name for the machinery: the
+component that decides yes or no at the entrance. Load shedding is what it is
+called when it says no because you are overloaded.</p>
+<p>Here are the five side by side. The last column is where you have already met
+the thing.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>mechanism</th>
+  <th>protects</th>
+  <th>the question it asks</th>
+  <th>fires when</th>
+  <th>first seen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>rate limiting</td>
+  <td>you, from one client</td>
+  <td>are you allowed?</td>
+  <td>a contract is exceeded</td>
+  <td><code>distributed-rate-limiting</code></td>
+</tr>
+<tr>
+  <td>quota</td>
+  <td>the same, over a longer window</td>
+  <td>have you paid for this much?</td>
+  <td>a billing period fills</td>
+  <td><code>distributed-rate-limiting</code></td>
+</tr>
+<tr>
+  <td>throttling</td>
+  <td>the enforcement half of both</td>
+  <td>how do I slow you down?</td>
+  <td>the limiter says no</td>
+  <td><code>distributed-rate-limiting</code></td>
+</tr>
+<tr>
+  <td>load shedding</td>
+  <td>the service, from everyone</td>
+  <td>can I finish what I have?</td>
+  <td>your own queue backs up</td>
+  <td>stage 6, Ben at the door</td>
+</tr>
+<tr>
+  <td>backpressure</td>
+  <td>the whole chain, losing nothing</td>
+  <td>can the producer wait?</td>
+  <td>the producer <em>can</em> be slowed</td>
+  <td><code>queueing-theory</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Four more terms you now need, each introduced because you have already felt the
+thing it names.</p>
+<p><strong>Goodput</strong> — work completed <em>in time to be useful</em>, as opposed to throughput,
+which is work completed. Stage 4's 50.1/s versus 0.1/s.</p>
+<p><strong>Offered load</strong> — what arrives, as opposed to what you serve. In stage 4 the
+offered load was 150/s while throughput was 50/s. The difference is not visible
+anywhere on a server-side graph unless you deliberately count rejections.</p>
+<p><strong>Overload</strong> — the state where offered load exceeds the rate at which you can
+finish work. Note it is defined against your <em>completion</em> rate, not your CPU. A
+service can be 100% overloaded at 3% CPU if its workers are blocked waiting on a
+slow database. This matters enormously in stage 11.</p>
+<p><strong>Deadline</strong> — how long an answer is still worth having. Usually the client's
+timeout. Priya's 11:00 train. Almost always known to the client and unknown to
+the server, which is the single largest missing piece of information in this
+entire subject, and the reason stage 13 spends time on deadline propagation.</p>
+<h2 id="readme-8-which-two-pictures-of-the-doorman-should-you-carry">8. Which two pictures of the doorman should you carry?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One picture is Ben glancing at the waiting room. The other
+is a thermostat. They are the same machine, and the second one tells you what
+to change.</p>
+</blockquote>
+<h3 id="readme-the-simple-picture-what-does-ben-actually-look-at">The simple picture: what does Ben actually look at?</h3>
+<p>One door, one waiting room, one desk. Ben does not know anything about who is
+arriving, why, or how important they are. He knows one thing: <strong>how many people
+are already inside waiting.</strong> If it is more than some number, the next person is
+told &quot;not today&quot; before they sit down, and they are told it in two seconds
+rather than fifty minutes.</p>
+<p>That picture is enough to get every result in stage 6 right, and you should keep
+it.</p>
+<h3 id="readme-the-engineers-picture-why-is-ben-a-control-loop">The engineer's picture: why is Ben a control loop?</h3>
+<p>Ben is a <strong>feedback controller</strong>, the same shape as the thermostat on your wall.
+Naming its four parts is what lets you reason about every design in the rest of
+this lab.</p>
+<div class="code"><pre><code>        ┌─────────────── measured signal ───────────────┐
+        │      (queue depth, queue delay, in-flight)    │
+        ▼                                               │
+   ┌─────────┐                                    ┌──────────┐
+   │ compare │  ── error ──▶  ┌────────────┐      │ THE      │
+   │ against │                │ actuator:  │─────▶│ SERVICE  │
+   │ SET     │                │ admit or   │      │ (queue + │
+   │ POINT   │                │ reject     │      │ workers) │
+   └─────────┘                └────────────┘      └──────────┘
+</code></pre></div>
+<p>The <strong>signal</strong> is what you measure to decide whether you are overloaded. The
+<strong>set point</strong> is the value of that signal you are trying to hold. The
+<strong>actuator</strong> is the only thing this loop can do: admit, or reject. The <strong>plant</strong>
+is the service itself, whose behaviour changes what you measure next.</p>
+<p>Every load-shedding design in production is a choice of <strong>signal</strong> and <strong>set
+point</strong>. That is genuinely all that varies. Stage 10 is four different choices of
+signal, in the order that the failures of each one force the next.</p>
+<h3 id="readme-how-do-the-two-pictures-map-onto-each-other">How do the two pictures map onto each other?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Ben, at the door</th>
+  <th>control loop</th>
+  <th>in a service</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>glances at the waiting room</td>
+  <td>reads the signal</td>
+  <td><code>queue.size()</code>, or a latency measurement</td>
+</tr>
+<tr>
+  <td>&quot;more than 20 in there&quot;</td>
+  <td>set point</td>
+  <td><code>maxQueue = 20</code>, <code>target = 50 ms</code></td>
+</tr>
+<tr>
+  <td>says &quot;not today&quot;</td>
+  <td>actuator</td>
+  <td>returns HTTP 503</td>
+</tr>
+<tr>
+  <td>the waiting room and Dana</td>
+  <td>the plant</td>
+  <td>your queue and your worker pool</td>
+</tr>
+<tr>
+  <td>people leaving for their train</td>
+  <td><em>unmeasured</em> disturbance</td>
+  <td>client timeouts the server never sees</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-the-doorman-story-lie-to-you">Where does the doorman story lie to you?</h3>
+<p>An analogy that is never corrected becomes the learner's actual model, so here
+is where this one stops being true. Each break is a real failure mode later in
+the lab.</p>
+<p><strong>A rejected person goes home. A rejected client comes straight back.</strong> This is
+the big one. Ben's job gets easier as he turns people away. Your shedder's job
+can get <em>harder</em>, because a 503 arrives at a client library configured to retry,
+and a retry is a new arrival. Stage 11 puts a number on it: a correct shedder at
+150 offered requests/s was processing <strong>394 admission decisions per second</strong>.
+Its own rejections had become 62% of its input.</p>
+<p><strong>Ben's &quot;no&quot; is free. Yours is not.</strong> Saying no to an HTTP request still costs a
+TCP accept, a TLS handshake, header parsing, a log line and a response write.
+Small — but multiplied by an overload. Stage 11 shows a service that became
+<em>completely unable to serve anyone</em> purely from the cost of saying no, at an
+offered load it could otherwise have shed comfortably.</p>
+<p><strong>Ben can see the whole waiting room. Your service cannot see the deadline.</strong> He
+knows about the 11:00 train. Your server does not know Priya's timeout unless
+someone sends it. The most valuable single upgrade in this whole lab is deadline
+propagation, in stage 13. It is the act of telling the server what Ben could
+simply see.</p>
+<p><strong>Dana's speed never changes. Yours changes constantly.</strong> A passport takes 4
+minutes today and 4 minutes next year. Your 80 ms request becomes a 400 ms
+request the moment a downstream database gets slower. When it does, your
+capacity silently drops from 50/s to 10/s, and every fixed threshold you
+configured is now wrong by a factor of five. Stage 10's v2 exists entirely
+because of this, and it is where most real shedding configurations fail.</p>
+<h2 id="readme-9-where-can-you-break-the-office-yourself">9. Where can you break the office yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Open the page and watch two counters that normally move
+together come apart. That gap is the whole subject.</p>
+</blockquote>
+<p>Open <code>visualization.html</code> now, before reading the mechanism. It runs the same
+engine that produced every number in this document.</p>
+<p><strong>The one thing to look at:</strong> the page shows <strong>two counters side by side</strong> —
+<em>throughput</em> (work finished) and <em>goodput</em> (work finished in time). Watch them
+during the very first scenario. They start equal. The moment you push offered
+load past capacity, one of them stays flat and the other falls to the floor. If
+you take nothing else from the page, take the sight of those two numbers coming
+apart, because that gap is invisible on every dashboard you currently own.</p>
+<p>The page has five tabs, matched to the stages below. Dana is the worker pool in
+all five; Ben appears in tab 2 onwards.</p>
+<ol>
+<li><strong>The collapse</strong> — a service with no protection, a slider for offered load.
+Find the load at which goodput falls off the cliff. It is closer to normal
+traffic than you expect.</li>
+<li><strong>The four shedders</strong> — the same overload with each signal from stage 10.
+Switch between them live and watch the limit move.</li>
+<li><strong>The queue is a second lever</strong> — order and drop rules with no admission
+control at all. This one contains the most surprising result in the lab.</li>
+<li><strong>Failure injection</strong> — retry storms, expensive rejections, a dependency that
+slows down.</li>
+<li><strong>Priority</strong> — three classes of traffic under one limit.</li>
+</ol>
+<p>Each tab asks you to predict before it runs. Take the predictions seriously; the
+ones people get wrong are tabs 3 and 4.</p>
+<h2 id="readme-10-what-should-the-doorman-actually-look-at">10. What should the doorman actually look at?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ben needs one number to decide on. Four different numbers
+are defensible, each one is broken by a specific morning, and the break is
+what produces the next.</p>
+</blockquote>
+<p>We now build the shedder properly. Each version is a real design that real
+systems ship. Each one is broken by a specific scenario, and every scenario is
+the same office with one thing changed.</p>
+<p>Throughout: <strong>4 workers × 80 ms = capacity 50 requests/s. Client timeout 1
+second. Offered load 150/s unless stated.</strong> At 150/s offered against 50/s
+capacity, <strong>33.3% is the best any design can possibly do.</strong></p>
+<hr />
+<h3 id="readme-v1--what-if-ben-just-counts-the-room">v1 — what if Ben just counts the room?</h3>
+<p>The simplest signal there is: how many requests are waiting? Ben glances at the
+chairs, counts heads, and stops letting people in above some number.</p>
+<div class="code"><pre><code>if (queue.size() &gt;= MAX_QUEUE) return HTTP_503;
+queue.add(request);
+</code></pre></div>
+<p>This is one line, it is available in every framework, and it is genuinely
+excellent. The only question is what <code>MAX_QUEUE</code> should be.</p>
+<p>Your <code>queueing-theory</code> lab derived a rule for exactly this. A request arriving
+behind <code>q</code> others, where there are <code>c</code> workers each taking <code>S</code> seconds, waits
+<code>q·S/c</code>. In words: everybody ahead of you, times how long each takes, shared
+between the desks. For it to finish inside a deadline <code>D</code>:</p>
+<div class="code"><pre><code>q_max = c · (D/S − 1) = 4 × (1000/80 − 1) = 46
+</code></pre></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>We have a formula that says 46. Sweep the cap from 400 down to
+1 at 3× overload, where 33.3% is the ceiling. Which cap wins, and how sharp is
+the peak?</em></p>
+<details><summary>Reveal</summary>
+
+<p>| cap | success rate (ceiling = 33.3%) | median latency of the served |
+|---|---|---|
+| 400 | <strong>0.1%</strong> | 532 ms |
+| 200 | <strong>0.1%</strong> | 532 ms |
+| 100 | <strong>0.1%</strong> | 532 ms |
+| 50 | 12.0% | 918 ms |
+| <strong>46 — the formula's answer</strong> | <strong>18.7%</strong> | 889 ms |
+| 30 | 32.8% | 653 ms |
+| 20 | <strong>33.3%</strong> | 455 ms |
+| 10 | 33.4% | 253 ms |
+| 5 | 33.5% | 151 ms |
+| 2 | 33.1% | 90 ms |
+| 1 | 32.3% | 71 ms |</p>
+<p>Three findings, and all three matter more than the winning number.</p>
+<p><strong>A cap of 100 is worth exactly nothing.</strong> Same 0.1% as no cap at all. This is
+the most common way shedding is shipped and then found not to work. Somebody
+bounds the queue at a number that <em>sounds</em> small next to 60,047. They have
+bounded it at eight times too large. &quot;We have a bounded queue, so we're
+protected&quot; is false. There is a specific number and 100 is not it.</p>
+<p><strong>The formula is a ceiling, not a setting.</strong> 46 is the cap at which the
+<em>average</em> admitted request just barely makes its deadline — which means about
+half of them don't. The sweep says 18.7%, a bit over half of optimal. Any
+deadline-derived cap needs dividing by two or three before use.</p>
+<p><strong>There is no sharp peak — there is a plateau.</strong> Anything from 30 down to 2 is
+within a whisker of optimal. You do not have to tune this well. You have to
+tune it <em>small</em>. Which is <code>queueing-theory</code>'s &quot;shed hard or don't bother&quot;,
+arriving from the other direction.</p>
+</details>
+
+</blockquote>
+<p>Since anything from 2 to 30 wins under overload, choose from the other end: what
+does the cap cost you on an ordinary day, when Dana has time to spare?</p>
+<div class="table"><table><thead>
+<tr>
+  <th>cap</th>
+  <th>success at 35/s (ρ=0.70)</th>
+  <th>success at 45/s (ρ=0.90)</th>
+  <th>success at 150/s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>100</td>
+  <td>100.0%</td>
+  <td>99.3%</td>
+  <td>0.1%</td>
+</tr>
+<tr>
+  <td>30</td>
+  <td>100.0%</td>
+  <td>99.5%</td>
+  <td>32.8%</td>
+</tr>
+<tr>
+  <td><strong>20</strong></td>
+  <td><strong>100.0%</strong></td>
+  <td><strong>98.9%</strong></td>
+  <td><strong>33.3%</strong></td>
+</tr>
+<tr>
+  <td>12</td>
+  <td>99.8%</td>
+  <td>97.2%</td>
+  <td>33.4%</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>99.2%</td>
+  <td>95.0%</td>
+  <td>33.3%</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>95.3%</td>
+  <td>87.9%</td>
+  <td>33.2%</td>
+</tr>
+<tr>
+  <td>1</td>
+  <td>88.7%</td>
+  <td>80.3%</td>
+  <td>32.3%</td>
+</tr>
+</tbody>
+</table></div>
+<p>Now the trade-off is visible and it is a real one. Too large and Ben does
+nothing when you need him. Too small and he turns away healthy traffic during
+ordinary bursts: a cap of 3 throws away 4.7% of a perfectly normal day. <strong>The
+usable window here is roughly 8 to 30</strong>, and 20 sits in the middle of it. That
+window is about 4× wide, which is the honest answer to &quot;how carefully do I have
+to tune this&quot;: not very, but you cannot be off by ten.</p>
+<p><strong>A better way to say the same setting.</strong> Cap the queue and you have capped a
+count of people. What you actually care about is <em>time</em>. Little's Law, which you
+already have, converts between them. To keep the total time inside the service
+under a deadline <code>D</code> when you can finish <code>μ</code> per second, hold the number of
+requests inside the service under <code>μ · D</code>. In words: how many you finish per
+second, times how long the client will wait. Here that is 50/s × 1 s = <strong>50 in
+flight</strong>.</p>
+<p>Counting in-flight work, queued <em>plus</em> being worked on, is strictly better than
+counting queued work alone. It is the quantity Little's Law actually talks
+about, and it does not change meaning when you add workers. It is what the
+production libraries in stage 13 all use. Same behaviour, same plateau:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>in-flight limit</th>
+  <th>35/s</th>
+  <th>45/s</th>
+  <th>150/s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>50 (Little's Law, undivided)</td>
+  <td>100.0%</td>
+  <td>99.7%</td>
+  <td>18.7%</td>
+</tr>
+<tr>
+  <td>30</td>
+  <td>100.0%</td>
+  <td>99.4%</td>
+  <td>33.2%</td>
+</tr>
+<tr>
+  <td><strong>12</strong></td>
+  <td><strong>99.2%</strong></td>
+  <td><strong>95.0%</strong></td>
+  <td><strong>33.3%</strong>, p99 540 ms</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>92.8%</td>
+  <td>85.0%</td>
+  <td>33.1%</td>
+</tr>
+</tbody>
+</table></div>
+<p>v1 is a real, shippable, dramatically effective design. Ship it today if you
+have nothing. Then read the next section, because it has one specific weakness
+and it is the weakness that bites in production.</p>
+<hr />
+<h3 id="readme-what-breaks-v1-the-number-80-was-not-a-constant">What breaks v1? The number 80 was not a constant</h3>
+<p>Every threshold above was derived from <code>S = 80 ms</code>. That number is not a
+property of your code. It is a property of your code <em>and everything it calls</em>.</p>
+<p>So leave the traffic exactly where it is, at a comfortable 60/s, and let a
+downstream database get slower. Replica lag, a bad query plan, a noisy
+neighbour, a GC pause. Service time goes from <strong>80 ms to 400 ms</strong>. Nothing else
+changes; the same requests arrive at the same rate.</p>
+<p>In the office: the passport system starts taking five times as long to load each
+record. Dana is not slower. Her <em>desk</em> is slower, and it happens between one
+person and the next.</p>
+<p>Your capacity just fell from 50/s to <strong>10/s</strong>. You are now at 6× overload and
+nobody sent you any extra traffic.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Your queue cap of 20 was excellent five minutes ago. The
+ceiling is now 16.7%. What does the cap of 20 deliver?</em></p>
+<details><summary>Reveal</summary>
+
+<p>| design | success rate (ceiling = 16.7%) | wasted worker time |
+|---|---|---|
+| nothing at all | 0.0% | 100% |
+| <strong>queue cap 20 — perfect yesterday</strong> | <strong>0.1%</strong> | <strong>100%</strong> |
+| in-flight limit 12 | 7.1% | 82% |
+| in-flight limit 3 — hand-tuned for 400 ms | 11.2% | 27% |</p>
+<p><strong>The shedder that was recovering 500× yesterday is now recovering nothing.</strong>
+A queue of 20 at 400 ms per request is 20 × 400/4 = 2,000 ms of waiting, which
+is twice the client's deadline. So every single admitted request is stale
+before it starts, exactly as if there were no shedder at all.</p>
+<p>Note what did <em>not</em> happen: nothing alerted. The cap is still enforced, the
+rejection metric still shows 83% shed, the config is unchanged and looks
+correct in code review. The setting did not break. <strong>The world moved out from
+under it.</strong></p>
+</details>
+
+</blockquote>
+<p>This is the single most important failure in the lab, because it is not a bug
+you can find by reading the config. Any threshold expressed in <em>units of work</em>,
+such as queue entries, in-flight requests or connections, silently encodes an
+assumption about how long a unit of work takes. <strong>When service time changes,
+every one of those thresholds is wrong by the same factor.</strong></p>
+<p>The fix is to stop counting the proxy and measure the thing you actually care
+about.</p>
+<hr />
+<h3 id="readme-v2--what-if-ben-measures-time-instead-of-heads">v2 — what if Ben measures time instead of heads?</h3>
+<p>You never cared how many people were in the chairs. You cared whether somebody
+joining now would still be there when their turn came. So measure <strong>queue
+delay</strong>: how long are requests currently waiting between being accepted and
+being picked up by a worker?</p>
+<p>Ben stops counting heads. He starts timing how long the last person sat before
+Dana called them.</p>
+<p>That signal is self-correcting by construction. It does not need to know <code>S</code>,
+the time one application takes. If requests get slower, the delay Ben measures
+grows, and he sheds harder, with nobody redeploying anything.</p>
+<p>There are two ways to build it, and the difference is instructive.</p>
+<p><strong>v2a predicts the wait.</strong> Keep a running estimate of service time and multiply:
+<code>predictedWait = queueLength × Ŝ / workers</code>. In words: heads in the room, times
+your best guess of how long each takes, shared between the desks. Reject if that
+exceeds a target. This is v1 with the constant replaced by a measurement.</p>
+<p><strong>v2b measures the wait you already caused.</strong> Don't predict. Look at how long
+the request you <em>just</em> dequeued actually sat there. This is the approach
+<strong>Facebook published in &quot;Fail at Scale&quot;</strong> (ACM Queue, 2015), adapting the CoDel
+algorithm from network queueing. Their rule, paraphrased:</p>
+<blockquote>
+<p>If the queue has been continuously non-empty for a whole interval (say 100 ms),
+it is a <strong>standing queue</strong>: a backlog, not a burst. The tolerated waiting time
+then collapses from the interval down to a small target (say 5 ms). Anything
+that waited longer than the current tolerance is dropped when it reaches the
+front.</p>
+</blockquote>
+<p>The elegance is in the two-mode behaviour. A queue that keeps draining to empty
+is absorbing a burst, and is left alone. A queue that never drains is a backlog,
+and gets cut aggressively. It tells &quot;busy&quot; from &quot;underwater&quot; using a signal that
+costs one timestamp per request.</p>
+<p>Now the test that v1 failed: service time changing from 80 ms to 400 ms under
+constant traffic. The right-hand column is the one that matters — it asks
+whether anybody had to tell the design that the world had changed.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>design</th>
+  <th>success rate (ceiling = 16.7%)</th>
+  <th>told about the change?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>nothing</td>
+  <td>0.0%</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>queue cap 20 (tuned at 80 ms)</td>
+  <td>0.1%</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>in-flight limit 12 (tuned at 80 ms)</td>
+  <td>7.1%</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>in-flight limit 3 (<strong>hand-tuned for 400 ms</strong>)</td>
+  <td>11.2%</td>
+  <td><strong>yes — we told it</strong></td>
+</tr>
+<tr>
+  <td><strong>v2a — predicted wait, target 300 ms</strong></td>
+  <td><strong>13.1%</strong></td>
+  <td>no</td>
+</tr>
+<tr>
+  <td><strong>v2b — adaptive LIFO + CoDel(50, 200)</strong></td>
+  <td><strong>15.4%</strong></td>
+  <td>no</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The self-tuning rules beat the hand-tuned static one.</strong> Read that again. The
+setting we computed by hand, <em>knowing in advance</em> that service time would become
+400 ms, was worse than a rule that found its own way there. And v2b reached 92%
+of the theoretical ceiling with nobody touching anything.</p>
+<p><strong>A static queue cap gives 0.1% and a queue-delay rule gives 15.4% — a 154×
+difference, from exactly the same hardware, at exactly the same load.</strong></p>
+<hr />
+<h3 id="readme-what-breaks-v2-the-target-is-not-portable-and-it-is-not-free">What breaks v2? The target is not portable, and it is not free</h3>
+<p>CoDel has two numbers, and they are not universal constants. That is worth
+saying out loud, because Facebook's specific values get copied into services
+nothing like Facebook's.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>CoDel(target, interval)</th>
+  <th>healthy 35/s (ceiling 100%)</th>
+  <th>mild 60/s (ceiling 83.3%)</th>
+  <th>spike 150/s (ceiling 33.3%)</th>
+  <th>queue left at 3×</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>(5 ms, 100 ms) — Facebook's published values</strong></td>
+  <td><strong>89.9%</strong></td>
+  <td>70.0%</td>
+  <td>32.4%</td>
+  <td>15</td>
+</tr>
+<tr>
+  <td>(20, 100)</td>
+  <td>91.1%</td>
+  <td>71.1%</td>
+  <td>32.9%</td>
+  <td>30</td>
+</tr>
+<tr>
+  <td><strong>(50, 200)</strong></td>
+  <td><strong>95.3%</strong></td>
+  <td>75.5%</td>
+  <td>33.1%</td>
+  <td>58</td>
+</tr>
+<tr>
+  <td>(100, 500)</td>
+  <td>98.4%</td>
+  <td>78.4%</td>
+  <td>33.3%</td>
+  <td>453</td>
+</tr>
+<tr>
+  <td>(300, 1000)</td>
+  <td><strong>99.5%</strong></td>
+  <td>81.1%</td>
+  <td>33.4%</td>
+  <td><strong>60,047</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Two things to take from that table.</p>
+<p><strong>Facebook's numbers cost 10% of your healthy traffic.</strong> Not because they are
+wrong. They are right for Facebook, whose unit of work is on the order of a
+millisecond. A 5 ms tolerance on 80 ms work means a <em>single request already in
+service</em> pushes you over target. Scale the target to your own service time or
+the shedder becomes the outage.</p>
+<p><strong>The last row is the trap in the other direction.</strong> CoDel(300, 1000) is
+essentially free when healthy, at 99.5%, and leaves 60,047 requests in the queue
+under overload, which is where we started. <strong>Every load-shedding parameter is a
+dial between &quot;sheds when it shouldn't&quot; and &quot;doesn't shed when it must&quot;, and
+there is no setting that is zero on both.</strong> Anyone who tells you their shedder is
+free has only measured one end.</p>
+<hr />
+<h3 id="readme-v3--can-the-service-find-its-own-limit">v3 — can the service find its own limit?</h3>
+<p>If a good limit is discoverable from measurements, why configure one at all? Let
+a controller search for it, continuously, the way TCP searches for the right
+window size. Arjun stops giving Ben a number, and Ben starts finding his own.</p>
+<p><strong>AIMD</strong> (additive increase, multiplicative decrease) is the shape you already
+know from TCP congestion control: creep the limit up while things are going
+well, cut it hard the moment they are not.</p>
+<div class="code"><pre><code>on a fast success:   limit += 1/limit      // gentle, additive
+on a congestion hit: limit *= 0.85         // sharp, multiplicative
+</code></pre></div>
+<p>Does it work? Here is the limit it found on its own, through a service-time
+change it was never told about. The right-hand columns are the limit Ben settled
+on and the goodput it bought.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>time</th>
+  <th>what is happening</th>
+  <th>limit it chose</th>
+  <th>goodput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>t=100 s</td>
+  <td>S = 80 ms, capacity 50/s</td>
+  <td>17.7</td>
+  <td>53/s</td>
+</tr>
+<tr>
+  <td>t=290 s</td>
+  <td>still 80 ms</td>
+  <td>19.1</td>
+  <td>56/s</td>
+</tr>
+<tr>
+  <td><strong>t=300 s</strong></td>
+  <td><strong>S jumps to 400 ms, capacity → 10/s</strong></td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>t=330 s</td>
+  <td>30 seconds later</td>
+  <td><strong>3.2</strong></td>
+  <td>5/s</td>
+</tr>
+<tr>
+  <td>t=590 s</td>
+  <td>steady in the slow regime</td>
+  <td>2.6</td>
+  <td>4/s</td>
+</tr>
+<tr>
+  <td><strong>t=600 s</strong></td>
+  <td><strong>S returns to 80 ms</strong></td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>t=630 s</td>
+  <td>30 seconds later</td>
+  <td><strong>11.5</strong></td>
+  <td>45/s</td>
+</tr>
+<tr>
+  <td>t=890 s</td>
+  <td>steady again</td>
+  <td>10.6</td>
+  <td>42/s</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Nobody told it anything.</strong> Capacity dropped by 5× and the limit dropped by 6×,
+within half a minute, and came back when the dependency recovered. That is what
+a control loop buys you over a constant.</p>
+<hr />
+<h3 id="readme-what-breaks-v3-an-absolute-threshold-is-a-disguised-constant">What breaks v3? An absolute threshold is a disguised constant</h3>
+<p>The AIMD above needs to know what &quot;a congestion hit&quot; means, and the obvious
+implementation is a latency threshold: <em>slower than 400 ms means congested.</em></p>
+<p>Which is a constant. With units of time. Chosen when <code>S</code> was 80 ms.</p>
+<p>When <code>S</code> becomes 400 ms, <strong>every completion is slower than 400 ms</strong>. So the
+controller receives a congestion signal on literally every request and grinds
+its limit down to the floor. It delivered 10.1% against a 16.7% ceiling while
+running its workers at only <strong>66% utilisation</strong>. It was shedding requests it had
+the capacity to serve, because it could not tell &quot;I have a backlog&quot; apart from
+&quot;this work is just slower now&quot;.</p>
+<p>The fix production libraries use is to make the signal <strong>relative</strong>: compare the
+service's recent latency to <em>its own</em> longer-run latency. A ratio has no units
+and no built-in assumption about how fast the work is. This is the <strong>gradient</strong>
+family in Netflix's <code>concurrency-limits</code> library:</p>
+<div class="code"><pre><code>gradient   = clamp(longWindowLatency / shortWindowLatency, 0.5, 1.0)
+newLimit   = limit × gradient + sqrt(limit)     // sqrt = the standing queue we allow
+limit      = smooth(limit, newLimit)
+</code></pre></div>
+<p><strong>An honest report on building this.</strong> Three versions of that ratio were tried
+while writing this lab, and the first two were wrong in ways worth knowing
+about.</p>
+<p>The first compares the <em>minimum</em> latency to the <em>mean</em> latency. That looks
+natural and is broken. With realistically variable service times the minimum is
+near zero, so the ratio is pinned at its 0.5 floor and the limit sticks at 4
+forever. Bad at both ends, as the table below shows.</p>
+<p>The second compares a short window to a long window. That fixes the healthy case
+and then <strong>runs away under sustained overload</strong>, because the long window is an
+average of the same bad samples and slowly accepts the overload as normal. The
+gradient converges to 1, the limit grows without bound, and goodput reaches
+zero.</p>
+<p>The third adds a hard multiplicative decrease on an actual drop — a completion
+whose client had already given up. That fixes the runaway. Netflix's library
+does exactly this, and it was not an embellishment.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>version of the ratio</th>
+  <th>healthy 35/s (ceiling 100%)</th>
+  <th>3× overload (ceiling 33.3%)</th>
+  <th>what went wrong</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>minimum vs mean latency</td>
+  <td>82.3%</td>
+  <td>30.3%</td>
+  <td>ratio pinned at its floor, limit stuck at 4</td>
+</tr>
+<tr>
+  <td>short window vs long window</td>
+  <td>99.9%</td>
+  <td>goodput <strong>0</strong></td>
+  <td>limit ran away to <strong>346</strong> under sustained load</td>
+</tr>
+<tr>
+  <td><strong>plus a decrease on a real drop</strong></td>
+  <td><strong>96.9%</strong></td>
+  <td><strong>31.9%</strong></td>
+  <td>behaves everywhere; Netflix ships this</td>
+</tr>
+</tbody>
+</table></div>
+<p>The corrected version also beats absolute-threshold AIMD on the
+changed-service-time test: 14.5% against 10.1%. But it did not beat a
+well-chosen static limit at steady load. And under <em>permanently</em> sustained
+overload it stays pinned at its minimum, because the drop signal never stops
+arriving, and no AIMD-shaped controller can distinguish &quot;I should let more in&quot;
+from &quot;I am still drowning&quot;.</p>
+<p><strong>The honest conclusion, which the marketing for these libraries does not
+volunteer.</strong> Adaptive concurrency control is genuinely better when your service
+time moves, and genuinely harder to get right than a queue-delay rule. Its
+failure modes are subtle enough that all three of the versions above look
+correct in code review. If you are choosing one thing to ship, ship v2b and
+measure queue delay.
+It gets most of the benefit for a fraction of the risk, which is why CoDel-shaped
+designs are what Facebook and Envoy converged on.</p>
+<hr />
+<h3 id="readme-v4--ben-is-fair-to-everyone-is-fair-what-you-want">v4 — Ben is fair to everyone. Is fair what you want?</h3>
+<p>Every design so far treats all requests identically. Under 3× overload they all
+reach the ceiling of 33.3%, which means <strong>one in three checkouts, and one in
+three recommendation-carousel loads.</strong></p>
+<p>That is a terrible allocation. Those two requests are not worth the same amount,
+and your business would trade every carousel in the building for one more
+completed checkout.</p>
+<p>So Arjun gives Ben a guest list. Google's SRE book calls this <strong>criticality</strong>,
+and ships four levels (<code>CRITICAL_PLUS</code>, <code>CRITICAL</code>, <code>SHEDDABLE_PLUS</code>,
+<code>SHEDDABLE</code>). The mechanism is that each level may use a different fraction of
+the limit.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>traffic</th>
+  <th>share of requests</th>
+  <th>fraction of the limit it may use</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>checkout</td>
+  <td>20%</td>
+  <td>100%</td>
+</tr>
+<tr>
+  <td>browse</td>
+  <td>30%</td>
+  <td>60%</td>
+</tr>
+<tr>
+  <td>recommendations</td>
+  <td>50%</td>
+  <td>25%</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Under 3× overload the overall ceiling is still 33.3% — priority
+cannot create capacity. So what does checkout get?</em></p>
+<details><summary>Reveal</summary>
+
+<p>| offered | overall | checkout | browse | recommendations |
+|---|---|---|---|---|
+| 60/s (1.2×) | 63.3% | <strong>100%</strong> | 97% | 28% |
+| 150/s (3×) | 33.0% | <strong>97%</strong> | 43% | 1% |
+| 300/s (6×) | 16.6% | <strong>74%</strong> | 6% | 0% |</p>
+<p>At 3× overload, checkout goes from 33% served to <strong>97% served</strong>. The overall
+number barely moved, 33.0% against 33.3%, because priority does not create
+capacity. It <strong>spends the same capacity on different requests.</strong></p>
+<p>This is the point at which load shedding stops being an availability
+mechanism and becomes a product decision. The numbers in that <code>allow</code> column
+are a statement about what your business is for, and they should not be chosen
+by whoever is on call.</p>
+</details>
+
+</blockquote>
+<hr />
+<h3 id="readme-what-breaks-v4-a-fraction-of-a-constant-is-still-a-constant">What breaks v4? A fraction of a constant is still a constant</h3>
+<p>Look at the same priority scheme at normal, healthy load, on a day when nothing
+is wrong at all:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>offered</th>
+  <th>overall</th>
+  <th>checkout</th>
+  <th>browse</th>
+  <th>recommendations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>35/s (ρ = 0.70, nothing is wrong)</td>
+  <td><strong>79.0%</strong></td>
+  <td>100%</td>
+  <td>100%</td>
+  <td><strong>58%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>We just threw away 42% of the recommendation traffic on a quiet Tuesday. There
+was capacity for all of it. The workers were 69% busy.</p>
+<p>The cause: <code>allow = 0.25</code> of a static limit of 12 is a hard limit of 3, enforced
+at all times, including when nothing is wrong. The class fraction inherited the
+static limit's flaw.</p>
+<p>The fix is to apply the fractions to an <strong>adaptive</strong> limit, so that when the
+service is healthy the limit is large and a quarter of it is still plenty:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>limit type</th>
+  <th>healthy 35/s</th>
+  <th>3× overload: checkout survival</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>static 12, with class fractions</td>
+  <td><strong>79.0%</strong></td>
+  <td>97%</td>
+</tr>
+<tr>
+  <td><strong>adaptive, with the same class fractions</strong></td>
+  <td><strong>95.3%</strong></td>
+  <td>96%</td>
+</tr>
+</tbody>
+</table></div>
+<p>Same protection when it matters, 16 points of healthy traffic recovered.
+<strong>Priority must ride on a limit that moves. Bolted onto a constant it becomes a
+permanent tax.</strong></p>
+<hr />
+<h3 id="readme-v5--what-are-the-other-two-levers">v5 — what are the other two levers?</h3>
+<p>Everything so far controls <strong>who gets in</strong>. Two other decisions are made after
+that. They are independent of admission control, and one of them produces the
+most surprising number in this lab.</p>
+<p><strong>Lever 2 is what order Dana calls people in.</strong> First-come-first-served is fair
+and it is the default everywhere. Under overload it is also the <em>worst possible</em>
+order. The person at the front of a backed-up queue is by definition the one who
+has been waiting longest, which makes them the one most likely to have left for
+the train already. Engineers call that order FIFO, and under overload FIFO
+serves the corpses first. <strong>LIFO</strong> means calling the newest arrival, so it always
+picks the freshest person in the building.</p>
+<p><strong>Lever 3 is who Dana gives up on.</strong> If Priya has been waiting 990 ms and her
+deadline is 1,000 ms, starting 80 ms of work on her form is pure waste. Check
+before you start.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>At 3× overload with <strong>no admission control at all</strong>, so the
+queue is unbounded and nothing is rejected: what does simply switching FIFO to
+LIFO do to the success rate? Baseline is 0.1%, ceiling is 33.3%.</em></p>
+<details><summary>Reveal</summary>
+
+<p>| queue discipline (no admission control anywhere) | success rate | wasted worker time | median latency | queue after 10 min |
+|---|---|---|---|---|
+| FIFO | 0.1% | 100% | 532 ms | 60,047 |
+| FIFO + drop expired, no slack | 3.8% | 99% | 993 ms | 154 |
+| FIFO + drop expired, 80 ms slack | 22.5% | 69% | 943 ms | 143 |
+| FIFO + drop expired, 250 ms slack | 32.1% | 16% | 793 ms | 116 |
+| <strong>LIFO</strong> | <strong>33.4%</strong> | <strong>0%</strong> | <strong>66 ms</strong> | <strong>60,047</strong> |
+| adaptive LIFO + CoDel(5, 100) | 32.4% | 0% | 65 ms | 15 |</p>
+<p><strong>Changing one word, the order you take work off the queue, took a service
+from 0.1% to the theoretical maximum, with no admission control, no rejection,
+and no configuration.</strong> It also cut median latency by 8×, because the request
+being served is always a fresh one.</p>
+<p>But look at the last column, and this is why LIFO is not the answer on its own:
+<strong>the queue is still 60,047.</strong> LIFO fixed goodput and did nothing about memory.
+The service will still die, just with excellent latency on the way.</p>
+<p>And the drop-expired rows contain a detail worth more than it looks. Dropping
+requests whose deadline has <em>already</em> passed recovers almost nothing, 3.8%,
+because in a saturated queue the head is always <em>just</em> under the deadline and
+then spends 80 ms in service and misses anyway. <strong>Drop against <code>deadline − expected service time</code>, not against the deadline.</strong> That one subtraction is
+worth 22.5% instead of 3.8%; a more generous 250 ms of slack is worth 32.1%.</p>
+</details>
+
+</blockquote>
+<p>The design Facebook published pairs these two levers. <strong>Adaptive LIFO</strong> is FIFO
+while the queue is short, because FIFO is fairer and the order barely matters
+when nobody is waiting, and LIFO once the queue is deep. <strong>CoDel</strong> then drops
+whatever has waited too long. That combination gets 32.4% <em>and</em> keeps the queue
+at 15.</p>
+<p>The three levers are independent, and you want all three:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>lever</th>
+  <th>in the office</th>
+  <th>what it controls</th>
+  <th>what it protects</th>
+  <th>what it cannot do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>admission control</strong></td>
+  <td>Ben at the door</td>
+  <td>who gets in</td>
+  <td>memory, and the client's time</td>
+  <td>nothing, if the limit is too high</td>
+</tr>
+<tr>
+  <td><strong>queue order</strong></td>
+  <td>who Dana calls next</td>
+  <td>who is served next</td>
+  <td>goodput and latency</td>
+  <td>bound the queue</td>
+</tr>
+<tr>
+  <td><strong>drop rule</strong></td>
+  <td>the empty chair</td>
+  <td>who is given up on</td>
+  <td>wasted work</td>
+  <td>stop the queue growing</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>Say it back.</strong> Meera says: &quot;Our queue is bounded at 100, so we are
+protected.&quot; Without using the words <em>goodput</em>, <em>deadline</em> or <em>ceiling</em>, tell
+her what her cap actually does at three times capacity.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;A hundred chairs is still fifty minutes of waiting, and our customers give up
+after one second. So the room fills with people who will all be gone before
+Dana reaches them, and she spends her whole day on empty chairs — exactly the
+same as having no cap at all. The number that helps is around twenty, because
+twenty people is a wait short enough that the person at the back is still
+there when they are called. Being bounded is not the point. Being bounded
+small enough that the last person in the room can still be served in time is
+the point.&quot;</p>
+</details>
+
+</blockquote>
+<blockquote>
+<p><strong>Checkpoint.</strong> You can now build a shedder, choose its signal, defend the
+number you chose, and say what happens when service time changes underneath
+it. What remains is everything that goes wrong <em>around</em> it — and every one of
+the next eight failures has taken down a real production system while the
+shedder itself was working perfectly.</p>
+</blockquote>
+<hr />
+<h1 id="readme-engineering-model--stages-11-to-12">ENGINEERING MODEL — stages 11 to 12</h1>
+<h2 id="readme-11-what-are-the-eight-ways-this-goes-wrong-around-a-working-shedder">11. What are the eight ways this goes wrong around a working shedder?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ben is doing his job perfectly in every one of the next
+eight stories. The service still falls over in all eight.</p>
+</blockquote>
+<h3 id="readme-f1--is-a-rejection-really-free">F1 — is a rejection really free?</h3>
+<p>Every design so far assumed a 503 costs nothing. It does not. A TCP accept, a
+TLS handshake, header parsing, a routing decision, a metric increment, an access
+log line, a response write. Call it 2 ms of CPU, a deliberately modest number
+for a JVM service behind TLS.</p>
+<p>In the office: every person Ben turns away still needs greeting, checking and a
+note in the book. It takes him a few seconds. He is one man.</p>
+<p>Four workers give you 4 milliseconds of work per millisecond of wall clock. If a
+rejection costs 2 ms, then <strong>2,000 rejections per second consumes the entire
+machine.</strong> Not 2,000 requests. 2,000 <em>refusals</em>.</p>
+<p>Here is the service with an in-flight limit of 12, doing its job correctly the
+whole way down the table. The last column is what is left for Dana.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>offered load</th>
+  <th>goodput</th>
+  <th>rejections/s</th>
+  <th>share of CPU spent saying &quot;no&quot;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>150/s</td>
+  <td>47.4/s</td>
+  <td>100</td>
+  <td>4%</td>
+</tr>
+<tr>
+  <td>600/s</td>
+  <td>35.8/s</td>
+  <td>627</td>
+  <td>28%</td>
+</tr>
+<tr>
+  <td>1,000/s</td>
+  <td>25.5/s</td>
+  <td>1,083</td>
+  <td>49%</td>
+</tr>
+<tr>
+  <td>1,500/s</td>
+  <td>8.1/s</td>
+  <td>1,653</td>
+  <td>74%</td>
+</tr>
+<tr>
+  <td><strong>1,800/s</strong></td>
+  <td><strong>0.1/s</strong></td>
+  <td>1,995</td>
+  <td><strong>90%</strong></td>
+</tr>
+<tr>
+  <td>2,400/s</td>
+  <td><strong>0.0/s</strong></td>
+  <td>2,223</td>
+  <td><strong>100%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The predicted collapse point is <code>workers ÷ rejectCost</code> = 4 ÷ 0.002 = <strong>2,000
+rejections/s</strong>, and that matches the observed plateau exactly. Past it the service is
+perfectly protected and completely useless. It spends every cycle explaining
+that it is too busy to do anything.</p>
+<p>Halving the cost of a rejection roughly doubles the load you can survive:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>cost per rejection</th>
+  <th>goodput at 1,200/s</th>
+  <th>goodput at 2,400/s</th>
+  <th>goodput at 4,800/s</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0 ms (free)</td>
+  <td>50.0/s</td>
+  <td>50.2/s</td>
+  <td>50.0/s</td>
+</tr>
+<tr>
+  <td>0.5 ms</td>
+  <td>42.7/s</td>
+  <td>35.2/s</td>
+  <td>19.7/s</td>
+</tr>
+<tr>
+  <td>2 ms</td>
+  <td>19.8/s</td>
+  <td>0.0/s</td>
+  <td>0.0/s</td>
+</tr>
+<tr>
+  <td>5 ms</td>
+  <td>0.0/s</td>
+  <td>0.0/s</td>
+  <td>0.0/s</td>
+</tr>
+</tbody>
+</table></div>
+<p>What to do about it. Shed as early in the stack as the decision can be made
+correctly — at the load balancer or gateway, where a rejection is cheaper than
+in your application. Drop before TLS termination if the attack shape warrants
+it. Never log a shed request at INFO with the full request body. And treat &quot;cost
+per rejection&quot; as a number you have actually put a stopwatch on, because your
+capacity to shed is a real capacity with a real ceiling. <strong>A shedder is a
+service, and it can be overloaded.</strong></p>
+<hr />
+<h3 id="readme-f2--what-happens-when-your-own-503s-become-your-traffic">F2 — what happens when your own 503s become your traffic?</h3>
+<p>Return a 503 to a client library configured with three attempts, and you have
+not removed a request. You have scheduled two more.</p>
+<p><strong>Dev</strong> wrote the phone app. His retry policy is three attempts with a 200 ms
+pause, which is the default in most client libraries and looks entirely sensible
+in review. Here is what it does to Ben's door at 150/s offered, with a queue cap
+of 20.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>client retry policy</th>
+  <th>admission decisions/s</th>
+  <th>share shed</th>
+  <th>goodput</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1 attempt</td>
+  <td><strong>150</strong></td>
+  <td>67%</td>
+  <td>50.0/s</td>
+</tr>
+<tr>
+  <td>3 attempts, 200 ms backoff</td>
+  <td><strong>394</strong></td>
+  <td>87%</td>
+  <td>50.0/s</td>
+</tr>
+<tr>
+  <td>3 attempts, 1 s backoff</td>
+  <td>393</td>
+  <td>87%</td>
+  <td>50.0/s</td>
+</tr>
+<tr>
+  <td>3 attempts, 1 s backoff <strong>+ jitter</strong></td>
+  <td>395</td>
+  <td>87%</td>
+  <td>50.0/s</td>
+</tr>
+<tr>
+  <td>3 attempts, <strong>but never retry a 503</strong></td>
+  <td><strong>150</strong></td>
+  <td>67%</td>
+  <td>50.0/s</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two results here, and the second one contradicts advice you have probably given.</p>
+<p><strong>The offered load nearly tripled and goodput did not move.</strong> All that extra
+work is pure overhead. Combined with F1, that is the mechanism: 394 decisions/s
+at 2 ms each is 0.8 of your 4 workers, gone, to no purpose.</p>
+<p><strong>Backoff and jitter made no difference at all.</strong> 393 against 394 against 395.
+This is worth being precise about, because &quot;add exponential backoff with jitter&quot;
+is the standard advice, and it is not wrong. It is aimed at a different problem.
+Backoff and jitter fix <strong>synchronisation</strong>: they stop a thundering herd of
+clients retrying in lockstep at the same instant. Under <em>sustained</em> overload
+there is no herd to de-synchronise. Every client will exhaust its attempts
+eventually, and spreading them over a second rather than 200 ms changes when
+they arrive, not how many. <strong>Jitter is a fix for correlation, not for volume.</strong></p>
+<p>What actually reduced the volume was the last row: <strong>not retrying the rejection
+at all.</strong> Which makes sense once stated plainly. A 503 from a load shedder is
+the one error in your system that carries a guarantee: <em>the work was definitely
+not done, and the service is definitely already at its limit.</em> Retrying it is
+the one case where you know in advance the retry cannot help.</p>
+<p>What to do about it. Distinguish 503-from-overload (<code>Retry-After</code> present, back
+off <em>substantially</em> or fail immediately) from 502/504, which is worth one retry.
+Use a <strong>retry budget</strong> rather than per-request attempt counts, because a budget
+is a global constraint and an attempt count is not. Google's SRE book suggests
+capping retries at ~10% of a client's request volume. And your
+<code>distributed-rate-limiting</code> lab's warning applies with full force here: <strong>a
+dishonest <code>Retry-After</code> makes your own header the thing that synchronises the
+next wave.</strong> If you say 1 second, mean it, and add jitter <em>on the server side</em>
+so that every client you rejected in the same millisecond does not come back in
+the same millisecond.</p>
+<hr />
+<h3 id="readme-f3--why-doesnt-the-outage-end-when-the-cause-does">F3 — why doesn't the outage end when the cause does?</h3>
+<p>This is the failure that makes shedding non-optional, and your <code>queueing-theory</code>
+lab measured its first half.</p>
+<p>A healthy service at 35/s. Workers 69% busy, comfortable. At t = 120 s, in <strong>one
+instant</strong>, 3,000 extra requests arrive at once. A cache expired, a mobile app
+woke up, a partner batch fired. It is a single burst. The traffic rate never
+changes again.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>One burst, over in an instant, into a service with a fifth of
+its capacity spare. Thirteen minutes later, is the queue empty?</em></p>
+<details><summary>Reveal</summary>
+
+<p>It depends on one thing, and it is not the burst. It is whether Dev's clients
+retry.</p>
+<p>| design | queue at t=180 | t=300 | t=600 | t=890 |
+|---|---|---|---|---|
+| no shedding, clients retry 3× | 12,265 | 19,072 | 35,785 | <strong>52,206 and rising</strong> |
+| no shedding, <strong>clients do not retry</strong> | 2,014 | 266 | 1 | <strong>1 — fully absorbed</strong> |
+| <strong>queue cap 20</strong> | 1 | 0 | 1 | <strong>1</strong> |</p>
+<p>If you said &quot;of course it is empty, the burst was one instant and we have
+spare capacity&quot;, you assumed the arrivals were still independent of the
+service's own behaviour. They are not. Every timeout produces a retry, and
+every retry is a new arrival, so the queue feeds itself.</p>
+</details>
+
+</blockquote>
+<p>Read the first two rows against each other. <strong>The same burst, into the same
+service, at the same load. The only difference is whether clients retry.</strong>
+Without retries the system swallows it in about four minutes. With retries the
+burst becomes permanent: thirteen minutes later the queue is 52,206 and growing,
+and the event that caused it ended twelve and a half minutes ago.</p>
+<p>That is a <strong>metastable failure</strong>. The system has two stable states, and the burst
+knocked it from the good one into the bad one, where it now sustains itself. The
+trigger is gone. The outage is not. This is why &quot;we removed the cause and it's
+still down&quot; is such a common and disorienting incident report. It is also why
+turning traffic off and back on works when nothing else does. Turning it off is
+the only way anyone had of draining the queue.</p>
+<p>The third row is the point. <strong>With admission control the burst never becomes an
+event at all.</strong> The queue never exceeds 1. Load shedding is not merely damage
+limitation here. It is what makes the outage <em>end</em>.</p>
+<p>The recovery numbers say the same thing from the other side. Here is a 3× spike
+lasting two minutes, after which traffic returns to normal:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>design</th>
+  <th>back to full goodput after the spike ended</th>
+  <th>peak queue</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>no shedding</td>
+  <td><strong>never</strong> (still degraded 6 minutes later)</td>
+  <td>11,599</td>
+</tr>
+<tr>
+  <td>queue cap 20</td>
+  <td><strong>+5 s</strong></td>
+  <td>20</td>
+</tr>
+<tr>
+  <td>in-flight limit 12</td>
+  <td>+10 s</td>
+  <td>8</td>
+</tr>
+<tr>
+  <td>adaptive LIFO + CoDel</td>
+  <td><strong>+5 s</strong></td>
+  <td>221</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Without shedding, the length of your outage has nothing to do with the length
+of the event that caused it.</strong></p>
+<hr />
+<h3 id="readme-f4--why-is-cpu-the-wrong-signal-when-it-is-the-one-everybody-reaches-for">F4 — why is CPU the wrong signal, when it is the one everybody reaches for?</h3>
+<p>The instinct is to shed on CPU: &quot;if CPU &gt; 90%, start rejecting.&quot; It is available
+on every host and needs no code.</p>
+<p>Be careful here, because the most authoritative source in the field disagrees
+with the simple version of this advice. Google's SRE book, chapter 21, states
+that their per-task overload protection uses <strong>CPU rate</strong> as its primary
+utilisation signal, sometimes combined with memory. CPU rate there means current
+CPU consumption divided by the CPU reserved for the task. So &quot;never shed on CPU&quot;
+would be wrong.</p>
+<p>The reconciliation is in that phrase <em>reserved for the task</em>. Google's signal is
+CPU <strong>against a quota</strong>, on RPC servers whose work is CPU-bound and whose thread
+pools are tightly controlled. In that setting CPU rate <em>is</em> a direct measure of
+how close you are to your capacity to finish work. The failure below is what
+happens when you copy the signal into a setting where that is not true.</p>
+<p><strong>Where CPU cannot see the overload.</strong> A service whose workers are blocked
+waiting on a slow database is <em>completely</em> overloaded, at near-zero CPU. Every
+worker occupied, queue growing, nothing completing. This is exactly the
+v1-breaks scenario in stage 10, where service time went 80 ms → 400 ms: <strong>worker
+occupancy was 100% while the extra 320 ms per request was pure waiting.</strong> Dana
+is sitting at her desk staring at a spinner, and she is as unavailable as if she
+were flat out. A CPU-triggered shedder sits silently through the entire
+incident. Your <code>microservices</code> lab already showed you this shape from the
+caller's side: a slow dependency is far more dangerous than a dead one, and
+every dashboard stays green. <em>(That last claim is reasoning rather than a run;
+stage 17 says exactly which part was observed.)</em></p>
+<p>Most services you will write are IO-bound. A request that calls a database and
+two other services spends the overwhelming majority of its latency waiting. So
+this is the common case, not the exotic one.</p>
+<p><strong>Two further problems, which apply even to CPU-bound work.</strong> CPU is a <strong>lagging
+indicator</strong>: by the time a one-minute load average crosses a threshold, the
+queue has been growing for a minute. Queue delay responds in milliseconds,
+because it <em>is</em> the thing you care about. And CPU is <strong>not monotonic</strong> in what
+you want. GC, a noisy neighbour on the same host, or a co-located sidecar all
+move CPU without moving your capacity to serve.</p>
+<p>What to use instead, in order of preference: <strong>queue delay</strong> first, then
+<strong>in-flight count</strong> against a limit, then <strong>queue depth</strong>. Queue delay is the
+time between accepting a request and starting work on it, and it is the single
+most valuable number to add to a service that has none. Reach for CPU when your
+work is genuinely CPU-bound and measured against a reservation, as Google's is.
+Otherwise treat it as a last-resort backstop with a high threshold, and know
+that it will not fire during the incident you are most likely to have.</p>
+<hr />
+<h3 id="readme-f5--where-should-ben-stand">F5 — where should Ben stand?</h3>
+<p>You have several places to put the doorman, and the choice is not free. <strong>Omar</strong>
+is on the street door of the building; Ben is at the door of Dana's room.</p>
+<p><strong>At the edge</strong> (load balancer, gateway) a rejection is cheapest. F1's ceiling is
+highest here, and you never spend backend capacity on a request you refuse. But
+Omar does not know <em>which</em> room is in trouble, or how expensive a particular
+application is. If one of your six services is sick, an edge shedding 30% of
+everything degrades the five that are fine and still lets through more than the
+sick one can take.</p>
+<p><strong>At the service</strong> the signal is accurate, because it is your own queue. But by
+the time the request arrives you have already spent the edge's accept, the TLS
+handshake, the routing decision, and a network hop. And a service that sheds
+cannot protect the <em>dependency</em> it is hammering.</p>
+<p><strong>In the client, per dependency</strong>, is the third option and the one people
+forget. This is your <code>microservices</code> lab's quartet: a bulkhead caps how much of
+<em>your</em> worker pool one dependency may occupy, and a circuit breaker stops calling
+a dependency that is failing. Those protect <em>you</em>. They do nothing for the
+dependency. A concurrency limit on the <em>outbound</em> side is the piece that
+protects what you are calling.</p>
+<p>The rule that resolves it: <em>shed as early as the decision can be made correctly,
+and no earlier.</em> Concretely, that usually means all three, doing different jobs.
+A coarse global limit at the edge, sized to protect the edge. A per-service
+adaptive limit inside each service, which is where the accurate signal lives.
+And outbound limits per dependency. What you must avoid is two layers
+independently shedding the same traffic against uncoordinated thresholds, which
+multiplies your shed rate and is very hard to see on a dashboard.</p>
+<hr />
+<h3 id="readme-f6--what-if-the-shedder-eats-the-recovery-path">F6 — what if the shedder eats the recovery path?</h3>
+<p>A load shedder that treats all requests identically will, under overload, shed
+the very requests that would have ended the incident.</p>
+<p>It sheds <strong>health checks</strong>. So your load balancer concludes the instance is dead
+and removes it, moving its traffic to the remaining instances, which are now
+more overloaded, and shed harder, and are also removed. That is a cascading
+failure that the mitigation caused.</p>
+<p>It sheds <strong>the configuration or control-plane call</strong> that would have let you
+turn a feature off. It sheds <strong>the deploy or rollback endpoint</strong>.</p>
+<p>And it sheds <strong>the cache-fill request</strong>, so the cache stays cold, so more
+traffic reaches the origin, so the overload deepens. The one request that would
+have reduced future load is the one you rejected.</p>
+<p>Every one of those is a request whose <em>value is negative to shed</em>. This is why
+Google's criticality scheme has a level above &quot;critical&quot;: some traffic must never
+be shed even when everything else is.</p>
+<p>What to do about it: health checks and control-plane endpoints go on a separate
+port, or a separate thread pool, or are explicitly exempt from admission control.
+That is a <strong>bulkhead</strong>, from your <code>microservices</code> lab, applied to the paths that
+are cheap and load-bearing. And your health check must report <em>&quot;am I able to
+serve?&quot;</em> rather than <em>&quot;am I alive?&quot;</em>. A service shedding 90% of its traffic is
+alive and should say so, or the load balancer will make it worse.</p>
+<hr />
+<h3 id="readme-f7--is-a-shedder-that-ignores-identity-actually-fair">F7 — is a shedder that ignores identity actually fair?</h3>
+<p>Load shedding is blind to identity, which was the point. It also means that when
+one tenant sends 80% of your traffic, they get 80% of your admissions, including
+during the overload <em>they</em> caused. Every other customer is degraded so that the
+one who broke it can continue at four-fifths strength.</p>
+<p>This is the exact seam where load shedding needs rate limiting, and where your
+<code>distributed-rate-limiting</code> lab's material becomes load-bearing rather than
+adjacent.</p>
+<p>Rate limiting enforces <em>&quot;you may have 1,000/s&quot;</em> — a promise, per identity,
+independent of your health. It is what stops one tenant from being 80% of the
+offered load in the first place. Load shedding enforces <em>&quot;I can only do 50/s
+right now&quot;</em> — a capability, across everyone, independent of identity.</p>
+<p>Neither substitutes for the other. Rate limits that are loose enough to be
+generous will not prevent overload. A shedder tight enough to protect you will
+not protect <em>tenant B from tenant A</em>. Ship both. If you can only ship one thing
+this quarter, ship the shedder, because it is the one that prevents total loss,
+and know that you have not solved fairness.</p>
+<p>There is a middle option, for when you need fairness under overload without a
+full quota system. Use <strong>per-tenant queues with weighted round-robin</strong>, or key
+the shed decision on <code>(tenant, current share)</code> so that the heaviest sender is
+shed first.</p>
+<hr />
+<h3 id="readme-f8--what-did-the-dashboard-hide-and-what-did-nobody-test">F8 — what did the dashboard hide, and what did nobody test?</h3>
+<p>Two failures that arrive together, because they are two halves of one habit.</p>
+<p><strong>The dashboard.</strong> Stage 4 showed a total outage in which throughput read 50.1/s
+and the median latency of served requests read 532 ms. Both entirely normal
+numbers. Add a correct shedder and throughput is <em>still</em> 50.1/s. Here they are
+side by side, and the only column that moves is the last one:</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>throughput</th>
+  <th>median latency (of served)</th>
+  <th><strong>success rate</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>no shedding at 3× — a total outage</td>
+  <td>50.1/s</td>
+  <td>532 ms</td>
+  <td><strong>0.1%</strong></td>
+</tr>
+<tr>
+  <td>in-flight limit 12 at 3× — optimal</td>
+  <td>50.0/s</td>
+  <td>214 ms</td>
+  <td><strong>33.3%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Throughput cannot tell these apart. Latency-of-served makes the outage look
+<em>better</em>, because during a shed the requests you serve are exactly the ones you
+had capacity for.</strong> A shed 503 is fast, so it improves your average latency. A
+p99 computed over served requests improves during an outage. Every latency
+metric you own is computed over survivors.</p>
+<p>The three numbers that would have caught it: <strong>goodput</strong> (or success rate over
+<em>offered</em>, which requires counting rejections), <strong>queue delay</strong>, and <strong>shed rate
+by priority class</strong>. If you add one, add queue delay.</p>
+<p><strong>The test.</strong> A shedder that has never been exercised is a config file, not a
+mechanism. Here is what turns up the first time somebody actually runs one past
+capacity. Read the right-hand column: it is why none of these were caught
+earlier.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>what the load test found</th>
+  <th>why code review missed it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the threshold was in the wrong units</td>
+  <td>the number looks plausible either way</td>
+</tr>
+<tr>
+  <td>the rejection path allocated more than the success path: F1 at 8 ms per reject rather than 0.5</td>
+  <td>nobody puts a stopwatch on the error path</td>
+</tr>
+<tr>
+  <td>the 503 was logged at INFO with the full request body, so the logging pipeline fell over first</td>
+  <td>one log line looks harmless</td>
+</tr>
+<tr>
+  <td>the health check was shed (F6)</td>
+  <td>the exemption list lives in a different file</td>
+</tr>
+<tr>
+  <td>Dev's client library retried the 503 immediately with no backoff (F2)</td>
+  <td>the retry policy lives in a different repository</td>
+</tr>
+</tbody>
+</table></div>
+<p>None of those are visible in code review. All are visible in one load test that
+goes past capacity, which is the load test almost nobody runs. Load tests are
+usually written to find the <em>maximum sustainable</em> load and then stop, which is
+precisely the boundary at which all of this behaviour begins.</p>
+<hr />
+<h2 id="readme-12-what-are-you-actually-guaranteed">12. What are you actually guaranteed?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four promises, five things people assume are promises and
+are not, and five assumptions that each turn into one of stage 11's failures
+when they stop being true.</p>
+</blockquote>
+<p><strong>What load shedding guarantees</strong>, given the assumptions below:</p>
+<ol>
+<li><strong>Bounded work in progress.</strong> The queue cannot exceed the limit, so memory is
+bounded and the <code>OutOfMemoryError</code> ending of stage 4 cannot happen.</li>
+<li><strong>Bounded latency for admitted work.</strong> If the limit is derived from a deadline
+via Little's Law, admitted requests complete inside it. That is the whole
+content of <code>inflight ≤ μ · D</code>.</li>
+<li><strong>The system stays in a recoverable state.</strong> F3's numbers: with shedding, full
+service returns 5 seconds after the cause ends; without it, never. Shedding is
+what makes the outage's length a function of the event's length.</li>
+<li><strong>A fast, unambiguous answer to the client.</strong> A 503 in 1 ms is information
+Priya can act on. A timeout at 1,000 ms is not. It does not even tell her
+whether the work happened.</li>
+</ol>
+<p><strong>What it does not guarantee</strong>, and these are the ones that get promised anyway:</p>
+<ol>
+<li><strong>It does not create capacity.</strong> Every table in this lab is bounded by
+<code>capacity ÷ offered</code>. Shedding gets you <em>to</em> that ceiling. Only more workers,
+faster work, or less work raise it. A shedder is not a substitute for capacity
+planning; it is what keeps you honest about the plan you have.</li>
+<li><strong>It does not make the shed requests succeed.</strong> They failed. Fast, cheaply, and
+legibly — but they failed, and Priya did not get her passport.</li>
+<li><strong>It does not choose the least valuable requests</strong> unless you told it what
+valuable means (v4). By default it sheds by arrival time, which correlates with
+nothing.</li>
+<li><strong>It does not protect your dependencies.</strong> Admitting 50/s means calling your
+database 50 times a second. If the database is what is overloaded, an inbound
+limit does not help it. You need an outbound one.</li>
+<li><strong>It is not fair</strong> (F7).</li>
+</ol>
+<p>Every one of those guarantees rests on an assumption, and each assumption is a
+failure mode when it is violated. Read the middle column as &quot;the morning where
+this stops being true&quot;.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>assumption</th>
+  <th>violated by</th>
+  <th>consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>rejection is much cheaper than service</td>
+  <td>expensive 503 path</td>
+  <td>F1 — you can only reject</td>
+</tr>
+<tr>
+  <td>clients respect the rejection</td>
+  <td>retry-on-503</td>
+  <td>F2 — your output becomes your input</td>
+</tr>
+<tr>
+  <td>the signal responds faster than the overload grows</td>
+  <td>CPU averages, 1-min metrics</td>
+  <td>F4 — you shed after it matters</td>
+</tr>
+<tr>
+  <td>service time is roughly stable, <em>or</em> the signal is time-based</td>
+  <td>a slow dependency</td>
+  <td>v1 breaks — 154× worse</td>
+</tr>
+<tr>
+  <td>some traffic is exempt</td>
+  <td>shedding health checks</td>
+  <td>F6 — the mitigation cascades</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Safety and liveness, stated properly.</strong> The safety property is <em>&quot;work in
+progress never exceeds the limit&quot;</em>. It holds at every instant, under every load,
+and is trivially checkable. The liveness property is <em>&quot;every admitted request
+eventually completes&quot;</em>. Note that LIFO <strong>violates</strong> it: under permanent
+overload, the person at the bottom of the stack is never called. That is a real
+cost, not a rounding error, and it is why LIFO is an overload <em>mode</em> rather than
+a default.</p>
+<p>The two ways of failing two-thirds of your customers are not equivalent, even
+when the success rate is identical:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>at 3× overload</th>
+  <th>success</th>
+  <th>how the other 67% failed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>LIFO, no admission control</td>
+  <td>33.4%</td>
+  <td>waited the full second, then got nothing</td>
+</tr>
+<tr>
+  <td>queue cap 20, FIFO</td>
+  <td>33.3%</td>
+  <td>told &quot;no&quot; in about a millisecond</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Identical goodput. Completely different product.</strong> The second one lets Priya
+fall back to a cached page, try another region, or see an honest error
+immediately. The first burns a second of her life and a second of the client's
+connection before delivering the same nothing. <strong>Failing fast is a feature you
+are shipping to your callers, not just a saving for yourself.</strong></p>
+<blockquote>
+<p><strong>Say it back.</strong> Two services both fail 67% of their customers. One says &quot;no&quot;
+in a millisecond; the other says nothing for a full second. Without using the
+words <em>safety</em>, <em>liveness</em> or <em>bounded</em>, explain why the first is the better
+product.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;Both of them serve the same people, so the difference is not who wins. It is
+what everyone else gets to do next. A fast no is an answer: the app can show a
+cached page, try the other region, or say sorry while the customer is still
+looking at the screen. A slow nothing is not an answer, and it costs the
+customer a second of their life and us a second of a connection we could have
+used. And nobody can even tell whether their order went through.&quot;</p>
+</details>
+
+</blockquote>
+<hr />
+<h1 id="readme-production-model--stages-13-to-16">PRODUCTION MODEL — stages 13 to 16</h1>
+<h2 id="readme-13-what-do-you-actually-operate-and-in-what-order-do-you-build-it">13. What do you actually operate, and in what order do you build it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The office has one door and one desk. Your system has six
+queues in a row, dozens of instances, and a client whose deadline you cannot
+see. Here is what the real implementations do about that.</p>
+</blockquote>
+<h3 id="readme-what-did-the-lesson-deliberately-leave-out">What did the lesson deliberately leave out?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>simplification here</th>
+  <th>production reality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>one service, one queue</td>
+  <td>five or six queues in series — kernel accept backlog, connection pool, thread pool, per-dependency pool, database. You have configured about one of them</td>
+</tr>
+<tr>
+  <td>requests all cost the same</td>
+  <td>request cost varies 100×; a shedder counting <em>requests</em> under-protects against expensive ones</td>
+</tr>
+<tr>
+  <td>the client's deadline is a fixed 1 s</td>
+  <td>deadlines vary per call and should be <em>propagated</em>, see below</td>
+</tr>
+<tr>
+  <td>one instance</td>
+  <td>dozens, each with its own view, behind a load balancer with its own opinion</td>
+</tr>
+<tr>
+  <td>rejection is instant</td>
+  <td>503 must traverse the same stack it came in on</td>
+</tr>
+<tr>
+  <td>offered load is a smooth rate</td>
+  <td>it is bursty, correlated, and sometimes adversarial</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-do-the-four-production-designs-actually-do">What do the four production designs actually do?</h3>
+<p>These are the real implementations, with what is known about each one.</p>
+<p><strong>Facebook builds Ben out of a stopwatch: adaptive LIFO plus CoDel.</strong> Published
+in <em>&quot;Fail at Scale&quot;</em> (ACM Queue, 2015). Requests are served FIFO while the queue
+is short and <strong>LIFO once a queue starts to form</strong>. CoDel drops requests that have
+waited beyond a tolerance which collapses when the queue stops draining. The
+published constants are <strong>M = 5 ms (target) and N = 100 ms (interval)</strong>,
+described as working well across a wide set of use cases. Implementations exist
+in <strong>HHVM</strong> and in Facebook's <strong>Wangle</strong> library, used by Thrift. This is the
+design stage 10's v2b models, and stage 10's table shows why the 5 ms constant
+needs scaling to your own service time.</p>
+<p><strong>Envoy builds Ben out of a ratio: the adaptive concurrency filter.</strong> It is a
+gradient controller, and its formula is very close to what stage 10 built:</p>
+<div class="code"><pre><code>gradient  = (minRTT + B) / sampleRTT        B = minRTT × buffer_pct
+limit_new = gradient × limit_old + headroom  headroom = sqrt(limit), not configurable
+</code></pre></div>
+<p>Documented defaults: sample latency taken at the <strong>90th percentile</strong>, sampling
+window <strong>100 ms</strong>, minRTT recalculated every <strong>60 seconds</strong> with <strong>10% jitter</strong>,
+using <strong>50 requests</strong>.</p>
+<p>The detail worth stealing is how Envoy solves a problem stage 10 hit head-on.
+This lab found that a <em>minimum</em>-latency baseline is unreliable, because under
+sustained load you never observe an uncontended request. Envoy's answer is to
+<strong>periodically pin the concurrency limit down to <code>min_concurrency</code> in order to
+force an uncontended measurement</strong>. It deliberately creates the idle conditions
+needed to measure minRTT, then goes back to normal. In office terms: Ben empties
+the waiting room for a few seconds so he can time how long one application takes
+when Dana is not rushed. The documentation is candid that this causes a
+noticeable increase in 503s during those windows, and recommends enabling
+retries because of it. That is a real, honest trade: the controller pays a small
+periodic outage to keep its baseline true.</p>
+<p>Envoy also ships a separate <strong>admission control filter</strong>, which sheds based on
+observed success rate rather than latency.</p>
+<p><strong>Netflix ships Ben as a library: <code>concurrency-limits</code>.</strong> A Java library of
+pluggable limit algorithms, gradient and AIMD variants, with interceptors for
+gRPC and servlets. This is where stage 10's v3 comes from, including the
+necessity of a multiplicative decrease on an actual drop alongside the
+gradient's gentle adjustment. This lab found that last part the hard way.</p>
+<p><strong>Google gives Ben a guest list and teaches the callers to stay home:
+criticality plus client-side adaptive throttling.</strong> Chapter 21 of the SRE book.
+Two pieces.</p>
+<p><em>Criticality</em> is carried in the RPC and comes in exactly four levels:
+<strong><code>CRITICAL_PLUS</code>, <code>CRITICAL</code>, <code>SHEDDABLE_PLUS</code>, <code>SHEDDABLE</code></strong>. It propagates
+through the call tree, so a request marked sheddable at the edge is sheddable
+everywhere it goes. That is what stage 10's v4 models, and the propagation is the
+part that is easy to leave out and expensive to omit.</p>
+<p><em>Client-side adaptive throttling</em> is the piece that fixes F2 properly, and it is
+the most under-used idea in this whole subject: <strong>the client throttles itself.</strong>
+Dev's app stops calling before Ben has to say no. Each client tracks <code>requests</code>
+(attempted at the application layer) and <code>accepts</code> (accepted by the backend)
+over a recent window. Once <code>requests</code> exceeds <code>K × accepts</code> it starts rejecting
+its own outbound calls locally, with probability</p>
+<div class="code"><pre><code>max(0, (requests − K × accepts) / (requests + 1))
+</code></pre></div>
+<p>The book recommends <strong>K = 2</strong> as the default, and notes that reducing K to 1.1
+means only one request is rejected by the backend for every ten it accepts.
+Tighter protection for the server, at the cost of the client giving up sooner.</p>
+<p>Why this matters: it moves the cost of rejection <strong>off the overloaded server
+entirely</strong>, which is the only real answer to F1. A server that is shedding has a
+ceiling on how fast it can shed. A client that has stopped calling costs it
+nothing at all.</p>
+<h3 id="readme-deadline-propagation--why-is-it-the-highest-value-thing-to-add">Deadline propagation — why is it the highest-value thing to add?</h3>
+<p>Stage 8's third analogy break was that your server cannot see the client's
+deadline. Ben can see the clock on the wall and knows about the 11:00 train.
+Your service does not. Fix that, and several things become possible at once.</p>
+<p>The mechanism: the caller sends the time remaining with the request. gRPC does
+this natively as the <code>grpc-timeout</code> header, and every service in the chain
+subtracts the time it has already spent before calling the next one.</p>
+<p>What it buys you:</p>
+<ul>
+<li><strong>Drop-on-dequeue becomes correct rather than a guess.</strong> Stage 10 showed that
+dropping against <code>deadline − expected service time</code> is worth 22.5% against
+3.8% for dropping against the deadline, and 32.1% with a healthy slack. With a
+propagated deadline you know the real number instead of estimating it.</li>
+<li><strong>You stop doing work nobody is waiting for</strong>, across the whole call tree at
+once, not just at the entry point.</li>
+<li><strong>Timeouts stop being independently guessed</strong> at every hop. The classic bug
+this removes: service A times out at 1 s and calls B, which has its own 3 s
+timeout and keeps working for two seconds after A gave up.</li>
+</ul>
+<h3 id="readme-what-do-you-configure-and-in-what-order">What do you configure, and in what order?</h3>
+<ol>
+<li><strong>Bound every queue you own.</strong> Start with the accidental ones — an unbounded
+<code>LinkedBlockingQueue</code>, <code>spring.task.execution.pool.queue-capacity</code> at
+<code>Integer.MAX_VALUE</code>, a connection-pool acquire timeout of 30 s (which, as your
+<code>queueing-theory</code> lab put it, is an unbounded queue with a 30× multiplier).
+Stage 10's plateau says the exact number barely matters as long as it is
+small; being off by 10× does.</li>
+<li><strong>Add queue delay as a metric</strong> before you add any controller. You cannot tune
+what you cannot see, and this one number would have caught every failure in
+stage 11.</li>
+<li><strong>Ship a static in-flight limit</strong> derived from Little's Law and then divided by
+two or three. Stage 10 put the undivided value at 18.7% against a 33.3%
+ceiling.</li>
+<li><strong>Make the rejection cheap and make it honest.</strong> Put a stopwatch on your 503
+path. Return <code>Retry-After</code> and mean it. Do not log shed requests at INFO.</li>
+<li><strong>Stop retrying rejections.</strong> Retry budget, not attempt counts; never retry a
+shedder's 503.</li>
+<li><strong>Then</strong> consider criticality classes, remembering they must ride on an
+adaptive limit or they become a permanent tax on your low-priority traffic:
+79.0% against 95.3% at healthy load.</li>
+<li><strong>Then</strong> consider an adaptive controller, knowing what stage 10 found about how
+easy they are to get subtly wrong.</li>
+</ol>
+<h3 id="readme-what-goes-on-the-dashboard-and-what-do-you-alert-on">What goes on the dashboard, and what do you alert on?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>metric</th>
+  <th>why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>goodput / success rate over <em>offered</em></strong></td>
+  <td>the only number that distinguished a total outage from optimal operation in stage 11's F8</td>
+</tr>
+<tr>
+  <td><strong>queue delay (p50 and p99)</strong></td>
+  <td>the fastest, most direct overload signal you can have</td>
+</tr>
+<tr>
+  <td><strong>shed rate, split by criticality class</strong></td>
+  <td>&quot;we shed 40%&quot; is meaningless; &quot;we shed 40% and it was all <code>SHEDDABLE</code>&quot; is a healthy system working exactly as designed</td>
+</tr>
+<tr>
+  <td><strong>the limit itself, if adaptive</strong></td>
+  <td>a controller pinned at its minimum is a silent outage (stage 10's second broken gradient)</td>
+</tr>
+<tr>
+  <td>in-flight count vs limit</td>
+  <td>how much headroom is left</td>
+</tr>
+<tr>
+  <td>rejection cost × rejection rate</td>
+  <td>your distance from F1's ceiling</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Alert on shed rate of <code>CRITICAL</code> traffic, not on shed rate.</strong> A system shedding
+its lowest class is a system working. A system shedding its highest class has run
+out of the capacity it promised, and that is the page.</p>
+<p>And the operational rule that everything else depends on: run a load test that
+goes <em>past</em> capacity, on purpose, regularly. Every failure in stage 11 is
+invisible until you do. Most load tests are written to find the maximum
+sustainable load and then stop, which is exactly the boundary at which all of
+this behaviour begins.</p>
+<blockquote>
+<p><strong>Say it back.</strong> You have one afternoon and a service with nothing. Tell Arjun
+the three things you will do, in order, and what each one buys, without using
+the words <em>adaptive</em>, <em>criticality</em> or <em>control loop</em>.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;First I put a lid on every waiting room we own, and I make it small: about
+twenty, not a hundred. A queue nobody can reach the front of in time is the
+same as no lid at all. Second I start recording how long each request
+sat before a worker picked it up, because that one number tells us we are
+drowning while every other graph still looks fine. Third I make our 'sorry,
+not now' cheap and honest, and I stop our own apps from immediately asking
+again, because our refusals were becoming most of our traffic. After that
+afternoon we can survive a spike. Everything cleverer comes later.&quot;</p>
+</details>
+
+</blockquote>
+<h2 id="readme-14-which-comfortable-sentences-are-wrong">14. Which comfortable sentences are wrong?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight sentences you will hear in an incident review. Each
+one sounds like caution, and each one is contradicted by a number you now
+have.</p>
+</blockquote>
+<blockquote>
+<p><em>&quot;Load shedding means we lose requests, so it's a last resort.&quot;</em></p>
+</blockquote>
+<p>Backwards. Under overload the requests are lost either way. Stage 6 put it at
+0.1% served without it and 33.3% with it, at the same offered load on the same
+hardware. Shedding does not cause the loss. It <em>converts</em> undirected loss into
+directed loss, and directed loss is 500× better. The requests you shed were
+going to fail; the ones you saved were not.</p>
+<blockquote>
+<p><em>&quot;It's the same as rate limiting.&quot;</em></p>
+</blockquote>
+<p>Rate limiting asks <em>are you allowed?</em> — a question about identity and a
+contract, answered identically whether you are idle or on fire. Shedding asks
+<em>can I?</em> — a question about your own state right now, answered identically for
+every client. A rate limiter set tight enough to prevent overload rejects your
+legitimate traffic every day. A shedder does not protect tenant B from tenant A.
+You need both, they fire at different times, and neither is a configuration of
+the other.</p>
+<blockquote>
+<p><em>&quot;We have a bounded queue, so we're protected.&quot;</em></p>
+</blockquote>
+<p>Stage 10 swept caps of 400, 200 and 100, and all three delivered the same
+<strong>0.1%</strong> as no cap at all. The bound must be small enough that a request joining
+at the back can still finish in time, which is a number in the range 8–30 for
+that service, not 100. <em>Bounded</em> and <em>correctly bounded</em> are different claims,
+and only one of them protects you.</p>
+<blockquote>
+<p><em>&quot;We'll set the limit once and it'll be right.&quot;</em></p>
+</blockquote>
+<p>It was right for the service time you had when you chose it. Stage 10's central
+result: the same cap of 20 that recovered 500× at 80 ms per request recovered
+<strong>nothing at all</strong> when a dependency pushed service time to 400 ms. That is 0.1%
+against a 16.7% ceiling, with no config change, no alert, and no traffic
+increase. Any limit in units of work silently encodes an assumption about how
+long work takes.</p>
+<blockquote>
+<p><em>&quot;Throughput looks fine, so we're fine.&quot;</em></p>
+</blockquote>
+<p>This is Meera's sentence from stage 1. Throughput read 50.1/s during a total
+outage and 50.0/s during optimal operation. Median latency read <em>better</em> during
+the outage than under load, because it is computed over survivors. Both of your
+default dashboards are blind to the thing that is happening.</p>
+<blockquote>
+<p><em>&quot;Returning a 503 is free.&quot;</em></p>
+</blockquote>
+<p>Stage 11's F1: at 2 ms per rejection, a four-worker service becomes completely
+unable to serve anyone at around 1,800 requests/s offered, purely from the cost
+of refusing them. Your capacity to shed is a finite capacity. It has a computable
+ceiling, <code>workers ÷ cost per rejection</code>, and past it the shedder is the outage.</p>
+<blockquote>
+<p><em>&quot;Retries make the system more reliable.&quot;</em></p>
+</blockquote>
+<p>They make an individual request more likely to succeed <em>when failures are
+independent</em>. Under overload failures are not independent. They are caused by
+load, and retries are load. A service at 45/s against a capacity of 50/s is
+<strong>comfortably under capacity</strong>. It still dropped to a <strong>24.2% success rate with
+a 38,663-deep queue</strong>, purely because its clients retried three times. And a
+single 3,000-request burst into a healthy system was absorbed in four minutes
+without retries, and had grown to a 52,206-deep queue thirteen minutes later
+with them.</p>
+<blockquote>
+<p><em>&quot;Exponential backoff with jitter fixes retry storms.&quot;</em></p>
+</blockquote>
+<p>It fixes <em>synchronisation</em>, which is a real and different problem. Under
+sustained overload, 200 ms backoff, 1 s backoff, and 1 s backoff with jitter
+produced 394, 393 and 395 attempts per second. Indistinguishable. The thing that
+worked was not retrying the rejection at all, which took the door back to 150/s.
+A shedder's 503 is the one error that guarantees both that the work did not
+happen and that retrying cannot help.</p>
+<blockquote>
+<p><em>&quot;Autoscaling means I don't need this.&quot;</em></p>
+</blockquote>
+<p>Autoscaling responds in minutes. Stage 11's F3 showed a system going from
+healthy to unrecoverable in about sixty seconds. Shedding is what covers the
+gap. And worse, an autoscaler reading the wrong signal will scale <em>down</em> a
+shedding service, because its CPU looks fine and its latency looks great.</p>
+<p>Here are the eight in one place, with the single figure that settles each.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>the comfortable sentence</th>
+  <th>the figure that settles it</th>
+  <th>where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>shedding is a last resort</td>
+  <td>0.1% without it, 33.3% with it</td>
+  <td>stage 6</td>
+</tr>
+<tr>
+  <td>it is the same as rate limiting</td>
+  <td>one asks <em>are you allowed</em>, one asks <em>can I</em></td>
+  <td>stage 7</td>
+</tr>
+<tr>
+  <td>a bounded queue is protection</td>
+  <td>caps of 400, 200 and 100 all give 0.1%</td>
+  <td>stage 10, v1</td>
+</tr>
+<tr>
+  <td>set the limit once</td>
+  <td>cap 20 goes from 500× better to 0.1%</td>
+  <td>stage 10, v1 breaks</td>
+</tr>
+<tr>
+  <td>throughput looks fine</td>
+  <td>50.1/s during the outage, 50.0/s when optimal</td>
+  <td>stage 11, F8</td>
+</tr>
+<tr>
+  <td>a 503 is free</td>
+  <td>dead at 1,800/s offered, from refusals alone</td>
+  <td>stage 11, F1</td>
+</tr>
+<tr>
+  <td>retries add reliability</td>
+  <td>24.2% at 45/s, queue 38,663</td>
+  <td>stage 11, F2</td>
+</tr>
+<tr>
+  <td>backoff and jitter fix it</td>
+  <td>394, 393, 395 attempts per second</td>
+  <td>stage 11, F2</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-15-what-else-does-this-connect-to-and-what-should-you-learn-next">15. What else does this connect to, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four labs you already own were leaning on this one without
+saying so, and six neighbouring ideas are one line each away from being
+confused with it.</p>
+</blockquote>
+<p><strong>Prerequisites you already had.</strong> <code>queueing-theory</code> gave you the cliff at ρ = 1,
+Little's Law, goodput versus throughput, and <code>maxQueue ≈ deadline/S</code>.
+<code>microservices</code> gave you timeouts, bulkheads, breakers, and the slow-dependency
+failure. <code>distributed-rate-limiting</code> gave you the four siblings, <code>429</code> and
+<code>Retry-After</code>, and fail-open versus fail-closed. <code>idempotency</code> becomes mandatory
+the moment a client retries a request that may already have been processed.</p>
+<p><strong>Commonly confused with — one line each.</strong> Every row is something Ben is <em>not</em>
+doing.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>that</th>
+  <th>this</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>rate limiting</strong></td>
+  <td>enforces a <em>promise</em> per identity; shedding enforces a <em>capability</em> across everyone</td>
+</tr>
+<tr>
+  <td><strong>backpressure</strong></td>
+  <td>slows the producer down and throws nothing away; shedding is what you do when the producer cannot be slowed</td>
+</tr>
+<tr>
+  <td><strong>circuit breaker</strong></td>
+  <td>protects the <em>caller</em> from a failing callee; shedding protects the <em>callee</em> from its callers</td>
+</tr>
+<tr>
+  <td><strong>bulkhead</strong></td>
+  <td>reserves a share of a resource so one dependency cannot take it all; shedding decides whether to take work at all</td>
+</tr>
+<tr>
+  <td><strong>autoscaling</strong></td>
+  <td>raises the ceiling in minutes; shedding keeps you alive in the seconds before it arrives</td>
+</tr>
+<tr>
+  <td><strong>timeout</strong></td>
+  <td>how long <em>one</em> caller waits; shedding decides who waits at all</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where to go next</strong>, in the order that will pay off most given what you now
+have:</p>
+<ul>
+<li><code>/learn load-balancing</code> — the layer above the shedder, and the most-requested
+gap in your map (8 labs). Health checks, least-connections vs power-of-two, and
+the fact that a load balancer's job is choosing <em>which</em> queue.</li>
+<li><code>/learn tail-latency-and-hedging</code> — the other half of the deadline story:
+hedged requests, and what it costs to ask twice.</li>
+<li><code>/learn observability-slos</code> — goodput and shed rate belong in an error budget;
+four of your labs assume this and none teach it.</li>
+<li><code>/learn backpressure</code> — the mechanism this lab kept deferring to. Reactive
+streams, TCP windows, and Kafka consumer lag as the same idea in three places.</li>
+<li><code>/learn metastable-failures</code> — F3 as a subject in its own right; the 2021
+HotOS paper &quot;Metastable Failures in Distributed Systems&quot; is the reference.</li>
+</ul>
+<h2 id="readme-16-what-does-each-word-mean">16. What does each word mean?</h2>
+<p>Grouped by what the word is about. Each entry names the stage where you met the
+thing, so a definition you have forgotten is always two clicks from the story
+that earned it.</p>
+<h3 id="readme-what-are-the-words-for-the-thing-you-are-trying-to-see">What are the words for the thing you are trying to see?</h3>
+<p><strong>Throughput</strong> — work completed per second. A fact about your machine. Read 50/s
+during both total success and total failure in stage 1.</p>
+<p><strong>Goodput</strong> — work completed per second <em>that was still wanted when it finished</em>.
+A fact about your business, and the only metric in this lab that could tell a
+healthy service from a dead one.</p>
+<p><strong>Offered load</strong> — requests arriving per second, as opposed to requests served.
+Invisible on server-side graphs unless you count rejections.</p>
+<p><strong>Capacity (μ)</strong> — completions per second the system can sustain. <code>workers ÷ service time</code>. Not a constant: it fell 5× in stage 10 when a dependency slowed.</p>
+<p><strong>Overload</strong> — offered load exceeding capacity. Defined against completion rate,
+not CPU.</p>
+<p><strong>Shed rate</strong> — fraction of arrivals rejected. Meaningless without a criticality
+breakdown.</p>
+<p><strong>Wasted work</strong> — worker time spent on requests whose client had already given up.
+100% of it in stage 4, which is Dana's whole morning.</p>
+<p><strong>Queue depth</strong> — number of requests waiting. A count, and therefore carrying a
+hidden assumption about service time.</p>
+<p><strong>Queue delay (sojourn time)</strong> — how long a request waited between being accepted
+and being started. The best single signal, because it is denominated in the units
+the deadline is denominated in.</p>
+<h3 id="readme-what-are-the-words-for-the-machinery-at-the-door">What are the words for the machinery at the door?</h3>
+<p><strong>Admission control</strong> — the component deciding, at the entrance, whether a request
+joins the queue. <em>Load shedding</em> is what it is called when it says no because you
+are overloaded. Ben, in stage 6.</p>
+<p><strong>Signal / set point / actuator</strong> — the three parts of the control loop that every
+shedder is. Designs differ almost entirely in the choice of signal. Stage 8.</p>
+<p><strong>In-flight / concurrency limit</strong> — a cap on requests inside the service, queued
+plus being worked on. Little's Law's natural variable: <code>inflight ≤ μ × deadline</code>.</p>
+<p><strong>Little's Law</strong> — <code>L = λW</code>. Here it converts a deadline into a concurrency limit.
+An identity, not a model.</p>
+<p><strong>AIMD</strong> — additive increase, multiplicative decrease. TCP's shape, applied to a
+concurrency limit. Stage 10's v3.</p>
+<p><strong>Gradient controller</strong> — an adaptive limit driven by the <em>ratio</em> of recent
+latency to the service's own baseline latency, so that it carries no assumption
+about how fast the work is. Envoy: <code>limit = gradient × limit + sqrt(limit)</code>.</p>
+<p><strong>minRTT</strong> — the uncontended latency baseline a gradient controller compares
+against. Envoy re-measures it every 60 s by deliberately pinning concurrency to
+its minimum.</p>
+<p><strong>Criticality</strong> — a priority class carried in the request and propagated through
+the call tree. Google's four levels: <code>CRITICAL_PLUS</code>, <code>CRITICAL</code>,
+<code>SHEDDABLE_PLUS</code>, <code>SHEDDABLE</code>. Arjun's guest list, in stage 10's v4.</p>
+<p><strong>Client-side adaptive throttling</strong> — the client rejecting its own calls once
+<code>requests &gt; K × accepts</code>, with probability <code>max(0, (requests − K×accepts) / (requests + 1))</code>. Google's default <code>K = 2</code>. Moves the cost of rejection off the
+overloaded server.</p>
+<h3 id="readme-what-are-the-words-for-what-happens-after-the-door">What are the words for what happens after the door?</h3>
+<p><strong>Deadline</strong> — how long an answer is still worth having. Usually the client's
+timeout; usually known to the client and not the server. Priya's 11:00 train.</p>
+<p><strong>CoDel (Controlled Delay)</strong> — a queue rule that tolerates delay while the queue
+keeps draining and cuts hard once it stops. Facebook's published constants:
+target 5 ms, interval 100 ms.</p>
+<p><strong>Standing queue</strong> — a queue that never drains to empty. The distinction CoDel is
+built on: a burst is fine, a backlog is not.</p>
+<p><strong>Adaptive LIFO</strong> — FIFO while the queue is short, LIFO once it forms. Facebook's
+pairing with CoDel; on its own it took goodput from 0.1% to 33.4% in stage 10.</p>
+<p><strong>Drop-on-dequeue</strong> — discarding a request when it reaches the front if it can no
+longer finish in time. Must be evaluated against <code>deadline − expected service time</code>, which is worth 22.5% versus 3.8% for the naive version.</p>
+<p><strong>Deadline propagation</strong> — sending the remaining time budget with the request, so
+every hop can decide whether the work is still worth doing. gRPC's
+<code>grpc-timeout</code>. The thing that would let your server see what Ben can see.</p>
+<h3 id="readme-what-are-the-words-for-what-goes-wrong-and-for-the-neighbours">What are the words for what goes wrong, and for the neighbours?</h3>
+<p><strong>Metastable failure</strong> — a system with two stable states, knocked into the bad one
+by a transient, which then sustains itself after the trigger is gone. Stage 11's
+F3: a burst absorbed in four minutes without retries, permanent with them.</p>
+<p><strong>Retry budget</strong> — a global cap on retries as a fraction of a client's traffic,
+as opposed to a per-request attempt count. The only retry control in this lab
+that reduced offered load.</p>
+<p><strong>Backpressure</strong> — refusing work and letting the pressure travel back to the
+producer, discarding nothing. Shedding is the answer when there is no producer to
+push back on.</p>
+<p><strong>Bulkhead</strong> — a reserved share of a resource, so one dependency or one class
+cannot consume all of it. What keeps health checks from being shed.</p>
+<h2 id="readme-17-about-this-lab--where-did-the-numbers-come-from">17. About this lab — where did the numbers come from?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One document, one simulator, one exercise ladder, and a set
+of numbers checked against the cases where mathematics already knows the exact
+answer.</p>
+</blockquote>
+<h3 id="readme-what-is-this-lab-made-of">What is this lab made of?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document — 16 stages, four depth layers, 6 prediction checkpoints</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td><strong>The Overload Desk</strong> — a service you can overload, then fix, one lever at a time · <a href="https://claude.ai/code/artifact/175a445a-1314-4caa-b2f8-71cd11134949" target="_blank" rel="noopener">https://claude.ai/code/artifact/175a445a-1314-4caa-b2f8-71cd11134949</a></td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code></td>
+  <td>eight rungs, pencil-and-paper plus the visualization</td>
+</tr>
+<tr>
+  <td><code>SOLUTIONS.md</code></td>
+  <td>worked answers</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-this-sit-in-your-other-labs">Where does this sit in your other labs?</h3>
+<p>Five of your labs named this topic as the thing they were missing. Each one hit
+the same wall from a different direction.</p>
+<ul>
+<li><strong><code>queueing-theory</code></strong> proved the cliff exists. It measured that at ρ ≥ 1 a
+queue grows without bound: 1,619 waiting after 30 minutes at just 5% over,
+and goodput of 64 while throughput was 7,711. It ended with the rule <em>&quot;shed
+hard or don't bother&quot;</em> without ever showing you a shedder. <strong>This lab is that
+missing half.</strong> Everything here is downstream of one result you already own:
+<code>W = 1/(μ−λ)</code> has a vertical asymptote, and no amount of engineering moves it.
+It is also where you met Dana, Arjun, Priya and Meera.</li>
+<li><strong><code>distributed-rate-limiting</code></strong> listed shedding as one of the &quot;four siblings&quot;
+(timeout, breaker, bulkhead, shedding) &quot;needed to survive&quot;. Its glossary then
+put <em>rate limit vs quota vs throttling vs load shedding</em> in a single line
+without separating them. Stage 7 separates them properly, and the difference
+turns out to be the whole design.</li>
+<li><strong><code>microservices</code></strong> derived timeouts, retries, bulkheads and breakers from
+Little's Law, and left shedding in the glossary. Stage 13 puts it back where
+it belongs: shedding is the <em>only</em> one of the five that protects the service
+being crushed, rather than the caller watching it die.</li>
+<li><strong><code>work-pressure-and-deadlines</code></strong> found the human version, &quot;yes, and here is
+what comes out&quot;, and priced it. Same mechanism, different queue.</li>
+<li><strong><code>caching</code></strong> and <strong><code>idempotency</code></strong> both assume a system that is still
+answering. This is what keeps it answering.</li>
+</ul>
+<p><strong>New here.</strong> Goodput as the only honest metric. Admission control as a
+continuously-running control loop. The three independent levers: who gets in,
+what order you serve, who you give up on. And the discovery that a static
+setting which is perfect today is worth nothing tomorrow.</p>
+<p><strong>Not here.</strong> Autoscaling, because adding capacity is a different lever with a
+multi-minute time constant, and shedding is what covers the minutes before it
+arrives. Load balancing algorithms, since <code>/learn load-balancing</code> is still open.
+And the queueing mathematics itself, which you already have.</p>
+<h3 id="readme-how-were-the-numbers-produced">How were the numbers produced?</h3>
+<p>Every measured figure in this document comes from a discrete-event simulator: an
+arrival stream, a pool of workers, a queue, clients with deadlines and retry
+policies, and a pluggable admission controller. <strong>The identical engine is
+embedded in <code>visualization.html</code></strong>, so any number here can be reproduced by
+pressing buttons on that page. It was run headlessly on JavaScriptCore.</p>
+<p>Unless a table says otherwise, every figure is the <strong>mean of five seeds</strong> over
+<strong>ten minutes of simulated time</strong>.</p>
+<p>Before any teaching number was taken from it, the engine was checked against the
+cases where mathematics already knows the exact answer — including the specific
+figures your own <code>queueing-theory</code> lab established.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What was checked</th>
+  <th>Known answer</th>
+  <th>Simulator</th>
+  <th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Little's Law, <code>L = λW</code>, at ρ = 0.8 and 0.9</td>
+  <td>identity — must hold</td>
+  <td>agreed to 0.4% and 0.2%</td>
+  <td>✅</td>
+</tr>
+<tr>
+  <td>M/M/1 mean time in system at ρ = 0.5 / 0.8</td>
+  <td>160 / 400 ms</td>
+  <td>165 / 389 ms</td>
+  <td>✅</td>
+</tr>
+<tr>
+  <td>M/M/1 at ρ = 0.8 and 0.9, <strong>mean of 8 seeds</strong></td>
+  <td>400 / 800 ms</td>
+  <td>398.8 / 805.4 ms</td>
+  <td>✅</td>
+</tr>
+<tr>
+  <td>M/D/1 at ρ = 0.8 (identical service times)</td>
+  <td>240 ms</td>
+  <td>240.2 ms</td>
+  <td>✅</td>
+</tr>
+<tr>
+  <td>D/D/1 (perfectly regular everything)</td>
+  <td>80 ms, no waiting at all</td>
+  <td>80.0 ms</td>
+  <td>✅</td>
+</tr>
+<tr>
+  <td>Four servers sharing one line, ρ = 0.8</td>
+  <td>60 ms queueing (<code>queueing-theory</code>'s figure)</td>
+  <td>59.8 ms</td>
+  <td>✅</td>
+</tr>
+<tr>
+  <td>Kingman's approximation, <code>c²ₛ = 4</code>, ρ = 0.8</td>
+  <td>≈ 800 ms queueing</td>
+  <td>813.7 ms</td>
+  <td>✅</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>One honest caveat.</strong> At ρ = 0.95 a single ten-minute run scatters between
+1,450 and 1,670 ms against a theoretical 1,600 ms. That is not a defect in the
+engine. It is the genuine variance of a nearly-saturated queue, and it is why
+every figure in this document is a multi-seed mean.</p>
+<h3 id="readme-what-is-asserted-rather-than-run">What is asserted rather than run?</h3>
+<p>Where a claim is <strong>reasoning</strong> rather than a measurement, the text says so in
+place. There is one such claim, and it is stage 11's F4.</p>
+<p>The simulator models worker occupancy, not processor cycles. The 100% occupancy
+during the slow-dependency scenario was measured; the statement that CPU would
+read low during it is an inference from what those workers are doing, namely
+waiting on a database. Everywhere else, a claim that a number was observed means
+the simulator produced it on the run described beside it.</p>
+<p>The Java and Spring lines in stage 3 are illustrative shapes rather than
+verified runs, as that stage says. <code>LinkedBlockingQueue</code> with no capacity
+argument is unbounded by its own javadoc, and <code>Integer.MAX_VALUE</code> is Spring
+Boot's documented default queue capacity.</p>
+<hr />
+<p><em>Lab built 2026-08-30. Every measured figure produced by the discrete-event
+engine embedded in <code>visualization.html</code>, validated against Little's Law, M/M/1,
+M/D/1, D/D/1, M/M/4 and Kingman before use. Production claims are sourced to the
+Google SRE book chapter 21, Facebook's &quot;Fail at Scale&quot; (ACM Queue, 2015), the
+Envoy adaptive concurrency filter documentation, and Netflix's
+<code>concurrency-limits</code>. Claims that are reasoning rather than measurement are
+marked as such in place.</em></p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-load-shedding--exercises">Load Shedding — Exercises</h1>
+<p>Eight rungs, easiest first. Nothing here asks you to write code. Everything is
+reasoning, tracing, prediction, or design, and most rungs can be checked against
+<code>visualization.html</code>.</p>
+<p><strong>The standing setup</strong>, unless an exercise says otherwise:</p>
+<blockquote>
+<p>A service with <strong>4 workers</strong>, each request taking <strong>80 ms</strong> on average.
+Capacity = <strong>50 requests/second</strong>. Clients give up after <strong>1 second</strong>.</p>
+</blockquote>
+<p>Work them before opening <code>SOLUTIONS.md</code>. Rungs 6, 7 and 8 have no single right
+answer; the solutions give a worked line of reasoning instead.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> In your own words, and without using the word &quot;shed&quot;: why does rejecting
+two-thirds of arriving requests <em>increase</em> the number of customers served?</p>
+<p><strong>1.2</strong> A colleague says: <em>&quot;Load shedding is just rate limiting applied to
+yourself.&quot;</em> Give the sharpest one-sentence correction you can, then name a
+situation where a rate limiter is running correctly and does nothing to prevent
+an overload.</p>
+<p><strong>1.3</strong> Explain to someone who has never heard of it why <strong>throughput</strong> was
+50.1/s during a total outage and 50.0/s during optimal operation, and what number
+they should have been looking at instead.</p>
+<p><strong>1.4</strong> Why is <em>&quot;we're already at capacity, so shedding would only make things
+worse&quot;</em> backwards?</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> For each of these, say which of the three levers it is — <strong>admission
+control</strong>, <strong>queue order</strong>, or <strong>drop rule</strong> — and what it protects:</p>
+<p>a. <code>if (queue.size() &gt;= 20) return 503;</code>
+b. serving the newest request in the queue first
+c. discarding a request at the head whose client gave up 200 ms ago
+d. a connection pool with 10 connections and no acquire timeout
+e. <code>Retry-After: 2</code></p>
+<p><strong>2.2</strong> In the control-loop model, name the <strong>signal</strong>, the <strong>set point</strong> and the
+<strong>actuator</strong> for: (i) a queue cap of 20, (ii) CoDel with target 5 ms, (iii) an
+AIMD concurrency limit.</p>
+<p><strong>2.3</strong> A service reports: throughput 50/s, worker utilisation 100%, median
+latency of served requests 210 ms, queue depth 14, rejection rate 67%. Is this
+service healthy? What single extra number would settle it?</p>
+<p><strong>2.4</strong> Which of these five errors should a client retry, and which not?
+<code>Connection refused</code> · <code>503 with Retry-After from a shedder</code> · <code>504 gateway timeout</code> · <code>429</code> · <code>500 from an unhandled exception</code>.</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Predict first, then check with the visualization.</p>
+<p><strong>3.1</strong> Offered load 60/s against capacity 50/s, no protection. What share of
+customers get an answer? (The arithmetic answer is 83%. The measured answer is
+not.)</p>
+<p><strong>3.2</strong> Same service, offered 150/s. You set the queue cap to <strong>100</strong>, which is
+600× smaller than the 60,000-deep queue you saw without it. What success rate do
+you get?</p>
+<p><strong>3.3</strong> At 150/s with a queue cap of 20 and clients configured for 3 attempts,
+goodput is 50/s. Now the clients switch from 200 ms backoff to 1 second with full
+jitter. What happens to (a) goodput, (b) the number of admission decisions per
+second?</p>
+<p><strong>3.4</strong> A service is at <strong>exactly</strong> 100% utilisation — offered 50/s, capacity
+50/s — with no shedding. You run the same configuration twenty times. How much do
+the results vary, and does running longer make the answer more reliable?</p>
+<p><strong>3.5</strong> At 3× overload, with <strong>no admission control at all</strong>, you change one word
+so the queue is served newest-first. Predict the effect on: success rate, median
+latency, wasted work, and queue depth. (One of those four does not improve.)</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Your queue cap of 20 is measured optimal. A downstream database slows from
+80 ms to 400 ms per request while traffic stays at 60/s. Without re-reading the
+lab: what is the new capacity, what is the new correct cap, and by what factor is
+your configured cap wrong?</p>
+<p><strong>4.2</strong> You double the worker pool from 4 to 8. Which of these settings must
+change, and which are unaffected? (a) a queue cap of 20, (b) an in-flight limit
+of 12, (c) a CoDel target of 50 ms, (d) the client's 1-second timeout.</p>
+<p><strong>4.3</strong> Rejections currently cost 2 ms of CPU each. You move shedding to the
+gateway, where a rejection costs 0.4 ms. By what factor does the offered load you
+can survive change, and what is the new ceiling?</p>
+<p><strong>4.4</strong> Your criticality fractions are checkout 100%, browse 60%, recommendations
+25%, applied to a fixed in-flight limit of 12. Traffic is a healthy 35/s and the
+workers are 69% busy. Recommendations are being rejected. Explain exactly why,
+and give two different fixes — one that changes a number and one that changes the
+design.</p>
+<hr />
+<h2 id="exercises-rung-5--trace">Rung 5 — Trace</h2>
+<p>Work these by hand. Show the state after each step.</p>
+<p><strong>5.1 — the arithmetic of a doomed request.</strong> 4 workers, 80 ms each, client
+deadline 1,000 ms. A request arrives and finds <strong>46 requests</strong> already queued.</p>
+<p>a. How long until a worker picks it up?
+b. When does it complete?
+c. Does its client still care?
+d. The formula <code>q_max = c·(D/S − 1)</code> gives 46 for these numbers. The measured
+best cap is around 20. Reconcile those two facts in one sentence.</p>
+<p><strong>5.2 — where the wasted work comes from.</strong> Offered 150/s, capacity 50/s, no
+shedding, FIFO, run for 60 seconds.</p>
+<p>a. How many requests arrive? How many can be finished?
+b. How long is the queue at t = 60 s?
+c. A request that joins the queue at t = 60 s — when does it reach a worker?
+d. From roughly what time onward is <em>every</em> newly-queued request already
+certain to fail? What does that imply about the fraction of worker time that
+is useful after that moment?</p>
+<p><strong>5.3 — the rejection ceiling.</strong> 4 workers. Each rejection costs 2 ms of worker
+time; each served request costs 80 ms.</p>
+<p>a. How much worker time exists per second?
+b. At an offered load of 1,000/s with an in-flight limit of 12, roughly how
+many rejections per second, and how much worker time do they consume?
+c. At what offered load does rejection alone consume the whole machine?
+d. Now suppose you also want to keep serving 40 requests/s. What is the highest
+offered load at which that is still possible?</p>
+<p><strong>5.4 — the retry multiplier.</strong> 150 user requests/s arrive at a service with a
+queue cap of 20 that admits 50/s and rejects the rest. Clients make up to 3
+attempts and retry both rejections and timeouts.</p>
+<p>a. Attempt 1: how many admitted, how many rejected?
+b. Assume every rejected request retries. Attempt 2: how many arrive?
+c. Continue to attempt 3. What is the total arrival rate at the door?
+d. A first pass usually gives about 317/s. The measured figure is <strong>394/s</strong> —
+<em>higher</em>. What feedback did the first pass leave out?</p>
+<hr />
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p>Each design below is subtly wrong. Find the smallest concrete scenario where it
+fails, and name the guarantee it breaks.</p>
+<p><strong>6.1</strong> <em>&quot;We shed when CPU exceeds 85%. It's a single line in the load balancer
+config and it needs no application changes.&quot;</em></p>
+<p><strong>6.2</strong> <em>&quot;Our shedder is off by default. When we get paged for an overload, the
+on-call engineer sets <code>shedding.enabled=true</code> and picks a threshold appropriate
+to the incident.&quot;</em></p>
+<p><strong>6.3</strong> <em>&quot;We return 503 with <code>Retry-After: 1</code> to everyone we shed. Our client
+library honours <code>Retry-After</code> exactly.&quot;</em></p>
+<p><strong>6.4</strong> <em>&quot;We shed uniformly at the edge — a fixed 30% of all requests during
+overload — so every service downstream gets 30% less traffic. It's fair and it's
+simple.&quot;</em></p>
+<p><strong>6.5</strong> <em>&quot;Our in-flight limit is 50, computed properly from Little's Law:
+capacity 50/s × a 1-second deadline = 50 requests in flight.&quot;</em></p>
+<p><strong>6.6</strong> <em>&quot;We put a load shedder in front of every endpoint, including
+<code>/healthz</code>, so the protection is uniform and there are no gaps.&quot;</em></p>
+<p><strong>6.7</strong> <em>&quot;We use LIFO under overload — the lab measured it reaching the
+theoretical maximum goodput with no configuration at all. So we don't need an
+admission controller.&quot;</em></p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>Design answers, not single values.</p>
+<p><strong>7.1</strong> Your shedder is working: at 3× overload it holds goodput at the ceiling.
+Then the <em>rejections themselves</em> start timing out. What has happened, how would
+you confirm it from metrics, and what are your options — given that you cannot
+add capacity in the next five minutes?</p>
+<p><strong>7.2</strong> A one-off burst knocked your service into overload forty minutes ago. The
+cause is long gone — the batch job that fired it finished, and offered load is
+back to normal — but the service is still failing every request. Explain the
+mechanism precisely, then give the <em>minimum</em> intervention that restores service
+and say why the obvious alternative (waiting) does not work.</p>
+<p><strong>7.3</strong> Service A calls B calls C. C becomes overloaded and starts shedding
+correctly. Describe what each of A and B sees, and where each of these belongs:
+a timeout, a retry, a circuit breaker, a bulkhead, an inbound shedder, an
+outbound concurrency limit. Which of them protects <strong>C</strong>?</p>
+<p><strong>7.4</strong> You ship an adaptive concurrency limit. In staging it is excellent. In
+production it settles at its minimum value of 2 and stays there, and your
+goodput is a fifth of what a fixed limit of 12 achieved. Give three distinct
+hypotheses consistent with the lab's findings, and the measurement that
+distinguishes each.</p>
+<p><strong>7.5</strong> Your load shedder is now the reason a customer's daily 09:00 batch fails.
+They send 20,000 requests in a burst; you shed most of them; they escalate.
+Nothing is broken. What do you actually do — and what is the argument for <em>not</em>
+simply raising the limit?</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — A payments API.</strong> 30,000 requests/minute at peak, of which ~4% are
+payment authorisations and the rest are status polls from merchant dashboards.
+Authorisations call an external card network with a 3-second SLA and a p99 of
+1.2 s; polls read your own database in 15 ms. Design the shedding scheme.
+Address: where shedding happens, what signal, priority classes, what the poll
+traffic should be told, why the two request types cannot share a single limit,
+and what you monitor. Then say what breaks if the card network's latency
+doubles.</p>
+<p><strong>8.2 — Choosing a signal, with evidence.</strong> You have one quarter and can ship
+exactly one of: (a) a static in-flight limit, (b) adaptive LIFO + CoDel, (c) a
+Netflix-style adaptive concurrency limit. Make the case for one, using measured
+figures from the lab, and state the specific circumstances in which your choice
+would be the wrong one.</p>
+<p><strong>8.3 — The dashboard that would have caught it.</strong> An incident review concludes
+&quot;the service was overloaded for 40 minutes and no alert fired.&quot; You are asked for
+the metrics and alerts that would have caught it in under two minutes. Give at
+most four metrics and at most two alerts, and for each metric say which failure
+from stage 11 it detects. Explain why a p99 latency alert would <em>not</em> have
+fired.</p>
+<p><strong>8.4 — Counterfactual.</strong> Load shedding, as a mechanism, is entirely about the
+fact that a server cannot see the client's deadline. Suppose it could — every
+request arrives carrying exactly how many milliseconds of budget it has left, and
+the number is always honest. Redesign the service's overload behaviour from
+scratch. Which of the lab's mechanisms become unnecessary, which become simpler,
+and which are still required? Is admission control still needed at all?</p>
+<p><strong>8.5 — Multi-tenant fairness.</strong> Your shedder is blind to identity by design. One
+customer is 80% of your traffic and causes an overload; every other customer is
+degraded so that one can continue at four-fifths strength. Design a fix. State
+what it costs you when nothing is wrong, and what the failure mode of your fix
+is.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-load-shedding--solutions">Load Shedding — Solutions</h1>
+<p>Rungs 1–5 have checkable answers. Rungs 6–8 are design work; what follows is a
+worked line of reasoning, not the only acceptable one.</p>
+<p>Every number quoted here comes from the lab's simulator and can be reproduced in
+<code>visualization.html</code>.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Because the resource being fought over is <em>time</em>, and time spent on a
+request that nobody is waiting for any more is gone. When everything is let in,
+every request gets a share of a queue too long for any of them to finish inside
+their deadline — so the work is done and thrown away. Turning most of them away
+concentrates the same amount of work on a small enough group that the group
+actually finishes in time. Measured: 0.1% served without it, 33.3% with it,
+identical hardware and identical offered load.</p>
+<p><strong>1.2</strong> <em>&quot;A rate limiter enforces a promise about who you are; a shedder
+enforces a fact about what I can currently do.&quot;</em> The rate limiter's answer does
+not change when the service is on fire, and the shedder's answer does not change
+when the caller is important.</p>
+<p>A rate limiter running correctly and not helping: ten thousand mobile clients,
+each with a limit of 60 requests/minute, each sending 4. Every client is well
+inside its limit; the aggregate is 40,000/minute and it buries you. Overload is
+usually an aggregate phenomenon and rate limits are per-identity.</p>
+<p><strong>1.3</strong> Throughput counts requests the server <em>finished</em>. Under overload the
+server finishes them at full speed — it just finishes them long after the client
+hung up, so they count as work done and nothing delivered. The number to watch is
+<strong>goodput</strong>: completions that arrived before their client gave up. Equivalently,
+successes divided by requests <em>offered</em>, which requires counting rejections and
+timeouts, not just responses.</p>
+<p><strong>1.4</strong> Because it assumes the loss is caused by shedding. At 150/s against a
+50/s capacity, 100 requests/second are lost no matter what anybody does — the
+only question is whether they are lost <em>cheaply and immediately</em> or <em>after
+consuming a worker, a connection and a second of the user's life</em>. Shedding does
+not add loss; it directs it.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>lever</th>
+  <th>protects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a. <code>queue.size() &gt;= 20</code></td>
+  <td>admission control</td>
+  <td>memory, and the client's time</td>
+</tr>
+<tr>
+  <td>b. newest-first</td>
+  <td>queue order</td>
+  <td>goodput and latency</td>
+</tr>
+<tr>
+  <td>c. discard the dead request at the head</td>
+  <td>drop rule</td>
+  <td>wasted work</td>
+</tr>
+<tr>
+  <td>d. 10 connections, no acquire timeout</td>
+  <td><strong>admission control by accident</strong> — and a broken one</td>
+  <td>nothing; it is an unbounded queue with a bound on the wrong thing</td>
+</tr>
+<tr>
+  <td>e. <code>Retry-After: 2</code></td>
+  <td>none of the three</td>
+  <td>it is <em>advice to the client</em>, and the only lever that acts outside your process</td>
+</tr>
+</tbody>
+</table></div>
+<p>(d) is the point of the question: every connection pool, thread pool and
+semaphore in your stack is already an admission controller. The ones you did not
+configure are the dangerous ones.</p>
+<p><strong>2.2</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>signal</th>
+  <th>set point</th>
+  <th>actuator</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>queue cap 20</td>
+  <td>number of requests waiting</td>
+  <td>20</td>
+  <td>admit / 503</td>
+</tr>
+<tr>
+  <td>CoDel target 5 ms</td>
+  <td>measured time each request waited</td>
+  <td>5 ms of standing queue delay</td>
+  <td>drop at the head</td>
+</tr>
+<tr>
+  <td>AIMD limit</td>
+  <td>completions, classified fast or congested</td>
+  <td>implicit — whatever concurrency keeps completions fast</td>
+  <td>admit / 503</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>2.3 Impossible to say, and the missing number is goodput</strong> (or success rate
+over offered). Every figure given is consistent with both a healthy service
+shedding its overflow correctly <em>and</em> a service serving almost nobody. 100%
+utilisation and a 67% rejection rate are what a working shedder looks like.
+Median latency of 210 ms is measured over survivors and cannot help.</p>
+<p><strong>2.4</strong></p>
+<ul>
+<li><code>Connection refused</code> — <strong>retry.</strong> Definitely not received, and cheap for the
+server to have refused.</li>
+<li><code>503 from a shedder</code> — <strong>do not retry</strong>, or retry once after a substantial
+honest delay. It is the one error guaranteeing both that the work did not
+happen and that the service is already at its limit.</li>
+<li><code>504 gateway timeout</code> — the <em>unknown</em> case. Retry only if the operation is
+idempotent or you carry an idempotency key.</li>
+<li><code>429</code> — do not retry before <code>Retry-After</code>. It is a statement about your quota,
+and retrying sooner cannot succeed.</li>
+<li><code>500</code> — also unknown; the request may have been half-applied. Same rule as 504.</li>
+</ul>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1 About 0.7%.</strong> Not 83%. The queue grows by 10 requests/second forever; within
+about a minute everyone joining is already certain to time out, and the server
+keeps doing their work anyway. Wasted work reaches 99%.</p>
+<p><strong>3.2 0.1% — exactly the same as no cap at all.</strong> A queue of 100 at 80 ms across
+4 workers is 2,000 ms of waiting, twice the client deadline. Bounding a queue at a
+number that merely <em>sounds</em> small does nothing. Measured: caps of 400, 200 and 100
+all return 0.1%; the cap has to reach about 30 before anything changes.</p>
+<p><strong>3.3 (a) Goodput does not move — 50/s in every case. (b) Nor do the admission
+decisions: 394/s at 200 ms, 393/s at 1 s, 395/s at 1 s with jitter.</strong></p>
+<p>This is the one most people get wrong. Backoff and jitter fix <em>synchronisation</em> —
+clients retrying in lockstep at the same instant. Under sustained overload there
+is no herd to spread out: every client will exhaust its attempts whenever you
+schedule them. Jitter is a fix for correlation, not for volume. The thing that
+worked was not retrying the rejection: back to 150/s.</p>
+<p><strong>3.4 Enormously, and no.</strong> Twenty runs of the identical configuration produced
+success rates from <strong>1.1% to 70.6%</strong>. And running longer makes it <em>worse</em>, not
+more reliable: mean 28.6% over ten minutes, 11.7% over an hour. At exactly ρ = 1
+the queue is a random walk with nothing pulling it back down, so there is no
+steady state to converge on. &quot;We run at 100% utilisation&quot; is not an operating
+point.</p>
+<p><strong>3.5</strong> Success rate 0.1% → <strong>33.4%, the theoretical ceiling</strong>. Median latency
+532 ms → <strong>66 ms</strong>. Wasted work 100% → <strong>0%</strong>. And <strong>queue depth does not improve
+at all</strong> — still 60,047 and still growing. LIFO fixes who you serve and does
+nothing about memory, which is exactly why the production design pairs it with a
+drop rule.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Capacity <code>4 workers ÷ 0.4 s</code> = <strong>10/s</strong>, down from 50/s — a 5× fall with
+no traffic change. The correct cap scales with the same factor: about <strong>4</strong>, from
+<code>c·(D/S − 1) = 4 × (1000/400 − 1) = 6</code>, then divided down for the same reason the
+original 46 became 20. <strong>Your configured cap of 20 is roughly 5× too large</strong> — and
+it therefore delivers 0.1% against a 16.7% ceiling, the same as having no shedder.</p>
+<p><strong>4.2</strong> Capacity doubles to 100/s.</p>
+<ul>
+<li><strong>(a) queue cap 20 and (b) in-flight limit 12</strong> — both still protect goodput
+perfectly (measured 33.2% and 33.4% against a 33.3% ceiling at 3× the new
+capacity), but they now correspond to <em>half</em> the queueing delay they used to,
+so if you sized them for a latency target you should double them. They are
+counts, and counts are per-worker quantities in disguise.</li>
+<li><strong>(c) CoDel target 50 ms — unchanged.</strong> It is denominated in time, and the time
+you are willing to wait did not change because you bought more machines. This
+is the whole argument for time-based signals in one line.</li>
+<li><strong>(d) the client's 1-second timeout — unchanged.</strong> It is a property of the
+caller's patience, not of your capacity.</li>
+</ul>
+<p><strong>4.3</strong> The ceiling is <code>workers ÷ cost per rejection</code>. At 2 ms: <code>4 ÷ 0.002</code> =
+<strong>2,000 rejections/s</strong>. At 0.4 ms: <code>4 ÷ 0.0004</code> = <strong>10,000/s</strong> — a <strong>5×</strong>
+improvement. Measured: goodput survives to 5,000/s offered (25.0/s) and reaches
+zero between 9,000 and 10,000/s, exactly as predicted.</p>
+<p><strong>4.4</strong> <code>allow = 0.25</code> of a <strong>fixed</strong> limit of 12 is a hard limit of <strong>3
+concurrent recommendation requests, enforced at every moment</strong>, including when
+the workers are 69% busy and there is capacity for everything. The fraction
+inherited the fixed limit's flaw: it encodes &quot;a quarter of capacity&quot; as a
+constant, and a constant cannot know that the service is currently fine.</p>
+<ul>
+<li><em>Changing a number:</em> raise the fractions until they only bind under real
+overload. This works and is fragile — the right value depends on capacity,
+which changes.</li>
+<li><em>Changing the design:</em> apply the fractions to an <strong>adaptive</strong> limit, so when
+the service is fast the limit is large and a quarter of it is plenty. Measured:
+79.0% → <strong>95.3%</strong> at healthy load, with identical protection under overload
+(checkout 96% vs 97% at 3×). This is the right answer.</li>
+</ul>
+<hr />
+<h2 id="solutions-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1</strong>
+a. 46 ahead ÷ 4 workers × 80 ms = <strong>920 ms</strong>.
+b. 920 + 80 = <strong>1,000 ms</strong>.
+c. <strong>Exactly at the deadline</strong> — so roughly half of them miss it, since real
+service times vary around the mean.
+d. <strong>The formula sizes the queue so that the <em>average</em> admitted request just
+barely makes it, which means about half do not.</strong> Measured: a cap of 46
+returns 18.7% against a 33.3% ceiling — a bit over half of optimal. Any
+deadline-derived cap is a ceiling to divide by two or three, not a setting.</p>
+<p><strong>5.2</strong>
+a. 150 × 60 = <strong>9,000 arrive</strong>; 50 × 60 = <strong>3,000 can be finished</strong>.
+b. 9,000 − 3,000 = <strong>6,000 waiting</strong>.
+c. 6,000 ÷ 4 × 80 ms = <strong>120 seconds</strong> — two minutes, against a one-second
+deadline.
+d. The queue reaches 1-second-deep (50 requests) after about half a second of
+overload. <strong>From roughly the first second onward, every newly-queued request
+is already certain to fail</strong>, so essentially 100% of worker time after that
+is spent on work nobody will receive. The measured figure over ten minutes is
+100% wasted, 0.1% served.</p>
+<p><strong>5.3</strong>
+a. 4 workers × 1,000 ms = <strong>4,000 worker-ms per second</strong>.
+b. About 50/s admitted, so ~950/s rejected × 2 ms = <strong>1,900 worker-ms/s</strong>, just
+under half the machine. (Measured 1,083 rejections/s and 49% of CPU — a
+little higher, because the rejection work displaces service, which lets more
+arrivals be rejected.)
+c. <code>4,000 ÷ 2</code> = <strong>2,000 rejections/s</strong>, so roughly <strong>2,050/s offered</strong>.
+Measured: goodput 0.1/s at 1,800/s offered and 0.0 at 2,400/s, with
+rejections plateauing right at 2,000/s.
+d. Serving 40/s costs 40 × 80 = <strong>3,200 worker-ms/s</strong>, leaving 800 for
+rejections = <strong>400 rejections/s</strong>, so <strong>≈ 440/s offered</strong>. Measured at 440/s
+offered: goodput <strong>40.2/s</strong>. The arithmetic is exact.</p>
+<p><strong>5.4</strong>
+a. 50 admitted, <strong>100 rejected</strong>.
+b. All 100 retry: <strong>100 arrive</strong> as attempt 2.
+c. Naively: 150 + 100 + 67 ≈ <strong>317/s</strong>.
+d. <strong>The first pass leaves out the feedback.</strong> It computes the rejection
+probability from the <em>original</em> 150/s, but the retries raise the arrival
+rate, which lowers the admission probability, which rejects more, which
+produces more retries. Solving for the fixed point — <code>A = 150(1 + q + q²)</code>
+with <code>q = 1 − 50/A</code> — gives <strong>396/s</strong>, against a simulated <strong>394/s</strong>.</p>
+<div class="code"><pre><code> This is the whole danger of retries in one calculation: **the amplification
+ factor is not a constant you can multiply by, it is a loop that finds its own
+ level, and the level rises faster than the load does.**</code></pre></div>
+<hr />
+<h2 id="solutions-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p><strong>6.1 CPU cannot see the most common overload.</strong> Smallest failing scenario: your
+database slows from 80 ms to 400 ms. All four workers are occupied waiting on
+network I/O, the queue grows without bound, goodput goes to zero — and CPU is
+near idle the whole time, because waiting is not computing. The shedder never
+fires. Broken guarantee: the signal must respond to <em>inability to finish work</em>,
+and CPU measures something else. (Note the honest exception: Google's SRE book
+<em>does</em> use CPU-against-reservation as its primary signal, for CPU-bound RPC
+servers with controlled thread pools. Copying the signal without that context is
+the error.)</p>
+<p><strong>6.2 A shedder that is off by default has never been tested.</strong> Smallest failing
+scenario: the first time it is switched on, in an incident, the threshold is in
+the wrong units and the value chosen under pressure is 100 — which the lab
+measured as worth 0.1%, identical to nothing. The deeper flaw is that everything
+around it is untested too: the 503 path allocates, the request gets logged at
+INFO with its body, the client retries it immediately, and <code>/healthz</code> is shed.
+None of that is visible in code review. Correct model: shedding runs <strong>always</strong>,
+waving everyone through on a normal day, so that its calibration is a
+steady-state property rather than a decision made at 3 a.m.</p>
+<p><strong>6.3 You have built a synchroniser.</strong> Smallest failing scenario: an overload
+begins; in one 50 ms window you reject 4,000 clients; all 4,000 are told exactly
+1 second; all 4,000 return inside the same 50 ms window one second later. You
+have converted smooth overload into a periodic thundering herd of your own
+manufacture, timed by your own header. Fixes: jitter the value <strong>server-side</strong>,
+and make it honest — if you say 1 second and are still overloaded in 1 second,
+the next wave is worse. This is your <code>distributed-rate-limiting</code> lab's warning
+about <code>Retry-After</code> arriving in a new place.</p>
+<p><strong>6.4 Uniform edge shedding degrades the healthy and does not save the sick.</strong>
+Smallest failing scenario: six services behind the edge, one of them overloaded.
+Shedding 30% of everything cuts the five healthy services' traffic for no reason,
+while the sick one still receives 70% of a load it cannot take — so it is still
+down, and now five other things are worse. The edge's signal is aggregate; the
+overload is local. Broken guarantee: the decision must be made where the accurate
+signal is.</p>
+<p><strong>6.5 The Little's Law number is a ceiling, not a setting</strong> — the same error as
+5.1(d), in the other units. 50 in flight is the concurrency at which the <em>average</em>
+request finishes exactly at the deadline, so half do not. Measured: an in-flight
+limit of 50 returns <strong>18.7%</strong> against a 33.3% ceiling, while 12 returns the full
+33.3%.</p>
+<p><strong>6.6 You have made the mitigation into the outage.</strong> Smallest failing scenario:
+one instance becomes overloaded and sheds; its <code>/healthz</code> is shed too; the load
+balancer marks it dead and moves its traffic to the remaining instances; they
+become more overloaded and shed harder; their health checks are shed; the whole
+pool is removed. Health checks and control-plane endpoints must be exempt — on a
+separate port, pool, or criticality class — and a health check should report <em>&quot;can
+I serve?&quot;</em> rather than <em>&quot;am I alive?&quot;</em>.</p>
+<p><strong>6.7 True about goodput, false about memory, and false about the client.</strong> Two
+smallest failing scenarios:</p>
+<ul>
+<li><strong>Memory:</strong> at 3× overload, LIFO reached 33.4% <em>with a queue of 60,047 and
+growing</em>. The service dies of <code>OutOfMemoryError</code>, restarts cold, and meets the
+same traffic with an empty cache.</li>
+<li><strong>The client:</strong> LIFO and a queue cap deliver the <em>same</em> 33% goodput, but they
+fail the other 67% completely differently — under LIFO they wait a full second
+and get nothing; under a cap they are told &quot;no&quot; in about a millisecond and can
+fall back, degrade, or try another region. Failing fast is a feature you ship
+to your callers.</li>
+</ul>
+<p>Also worth naming: LIFO <strong>violates liveness</strong>. Under permanent overload the
+request at the bottom of the stack is never served at all. It is an overload
+<em>mode</em>, not a default.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> You have hit the <strong>rejection ceiling</strong> (F1): offered load has risen to the
+point where the cost of saying &quot;no&quot; consumes the machine. <code>workers ÷ cost per rejection</code> is your ceiling — 4 ÷ 2 ms = 2,000/s in the lab's service.</p>
+<p><em>Confirming it from metrics:</em> CPU or worker occupancy at 100% while goodput falls
+toward zero and the <strong>rejection rate has plateaued</strong> rather than continuing to
+track offered load. That plateau is the signature — you are refusing as fast as
+you physically can. Compare rejection rate against <code>workers ÷ measured 503 cost</code>.</p>
+<p><em>Options in five minutes,</em> in order of leverage:</p>
+<ol>
+<li><strong>Move the rejection upstream</strong> — shed at the load balancer or CDN, where a
+refusal is far cheaper, or drop before TLS termination.</li>
+<li><strong>Make the rejection cheaper</strong> — turn off access logging for shed requests,
+drop the response body, stop emitting a per-request metric with a high
+cardinality label. Halving the cost doubles the ceiling.</li>
+<li><strong>Client-side adaptive throttling</strong> (Google's <code>max(0, (requests − K·accepts) / (requests + 1))</code>, <code>K = 2</code>) — the only option that removes the cost from your
+machine entirely, because a client that has stopped calling costs you nothing.
+Not deployable in five minutes, which is exactly why it should already be
+there.</li>
+<li>If the traffic is abusive rather than organic, drop at a layer that answers
+with a TCP reset rather than an HTTP response.</li>
+</ol>
+<p><strong>7.2 The mechanism.</strong> The burst pushed the queue past the point where anything in
+it can finish in time. Every request now times out; every timeout produces a
+retry; each retry is a new arrival. <strong>The retries alone are now enough to keep
+offered load above capacity</strong>, so the system sustains its own overload with no
+external cause. This is a metastable failure — two stable states, and you are in
+the bad one. Measured: an identical burst without retries was absorbed in about
+four minutes; with retries the queue was at 52,206 and growing thirteen minutes
+later.</p>
+<p><strong>Waiting does not work</strong> because the input keeping you down is generated by the
+state you are in. There is no decay term.</p>
+<p><strong>Minimum intervention:</strong> break the loop by refusing work cheaply — turn on
+admission control, or if you have none, drop traffic at the load balancer for
+long enough for the queue to drain. That is precisely why &quot;turn it off and on
+again&quot; works on this failure when nothing else does: it is the only tool most
+teams have for emptying a queue. Measured: with a queue cap of 20 in place, the
+same 3,000-request burst never takes the queue above 1.</p>
+<p><strong>7.3</strong> <em>What A and B see:</em> C returns fast 503s. B sees a sharp rise in errors and
+<strong>falling</strong> latency (rejections are quick). A sees whatever B chooses to do — and
+if B retries, A sees B get slower while C gets three times the load.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>mechanism</th>
+  <th>lives in</th>
+  <th>protects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>timeout</td>
+  <td>A→B and B→C</td>
+  <td>the <strong>caller</strong> — bounds how long its worker is held</td>
+</tr>
+<tr>
+  <td>retry (budgeted, not on 503)</td>
+  <td>A and B</td>
+  <td>the <strong>request</strong>, when failures are independent</td>
+</tr>
+<tr>
+  <td>circuit breaker</td>
+  <td>B, keyed on (C, endpoint)</td>
+  <td>the <strong>caller</strong> B — stops holding workers on a dead dependency</td>
+</tr>
+<tr>
+  <td>bulkhead</td>
+  <td>B</td>
+  <td>B's <strong>other endpoints</strong> — caps how much of B's pool C can occupy</td>
+</tr>
+<tr>
+  <td>inbound shedder</td>
+  <td><strong>C</strong></td>
+  <td><strong>C</strong></td>
+</tr>
+<tr>
+  <td>outbound concurrency limit</td>
+  <td>B, per dependency</td>
+  <td><strong>C</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Only the last two protect C.</strong> Everything else is B looking after itself. That
+asymmetry is the point of the exercise: four of the five patterns most teams ship
+protect the caller, and a service that is being crushed is not helped by any of
+them.</p>
+<p><strong>7.4</strong> Three hypotheses, all consistent with what the lab measured while building
+these controllers:</p>
+<ol>
+<li><strong>An absolute latency threshold that is now always exceeded.</strong> If the
+controller calls anything over 400 ms &quot;congested&quot; and production service time
+is 400 ms — because production calls a real database and staging did not — then
+every completion is a congestion signal and the limit grinds to the floor.
+<em>Distinguishing measurement:</em> compare the threshold against the p50 service
+time in production. If p50 is anywhere near it, this is your answer.
+<em>Measured analogue:</em> 10.1% against a 16.7% ceiling at <strong>66% worker
+utilisation</strong> — shedding work it had the capacity to serve.</li>
+<li><strong>A bad latency baseline.</strong> A controller comparing against a <em>minimum</em>
+observed RTT never observes an uncontended request under sustained load, so
+the ratio pins at its floor and the limit sticks. <em>Distinguishing
+measurement:</em> graph the baseline the controller is using; if it never moves,
+or sits implausibly low, it is not being re-measured. <em>Fix:</em> Envoy's approach
+— periodically pin concurrency to its minimum to force an honest measurement.</li>
+<li><strong>A drop signal that never stops.</strong> Under genuinely permanent overload every
+AIMD-shaped controller receives &quot;congested&quot; forever, and the multiplicative
+decrease beats the additive increase indefinitely. The controller is not
+broken; it cannot distinguish &quot;let more in&quot; from &quot;still drowning&quot;.
+<em>Distinguishing measurement:</em> is offered load actually above capacity? If yes,
+the limit is correct and the problem is that you needed a <em>fixed floor</em> under
+it.</li>
+</ol>
+<p>The third is the uncomfortable one, because the fix is to admit that an adaptive
+controller needs a sanity floor — and a floor is a constant, which is what you
+adopted the controller to avoid.</p>
+<p><strong>7.5</strong> <em>What is true:</em> nothing is broken, the shedder is working, and the
+customer's burst genuinely exceeds what you can absorb.</p>
+<p><em>What you do:</em></p>
+<ol>
+<li><strong>Check which class was shed and whether the shedding was correct.</strong> If their
+batch is <code>SHEDDABLE</code> and your checkout traffic survived, the system did its
+job and you should be able to show that.</li>
+<li><strong>Give them a shape they can use.</strong> A burst of 20,000 is a scheduling problem,
+not a capacity problem. Offer an async/batch endpoint, a documented
+requests-per-second ceiling with an honest <code>Retry-After</code>, or a queue they can
+submit to. The best outcome converts a burst into a stream.</li>
+<li><strong>Add jittered scheduling advice</strong> — if fifty customers all fire at 09:00:00,
+the aggregate is the problem, not any one of them.</li>
+<li><strong>Price it.</strong> If they need guaranteed burst capacity, that is a capacity
+commitment, which is a commercial conversation with a reserved-quota answer.</li>
+</ol>
+<p><em>The argument against just raising the limit:</em> the limit is not a preference, it
+is a measurement of what you can finish. Raising it does not create capacity — it
+converts fast, honest rejections into slow timeouts, and the measured cost of
+that conversion is everyone else's traffic. You would take one customer's
+complaint about being refused and turn it into every customer's outage. If they
+genuinely need the capacity, buy the capacity; do not fake it by disabling the
+thing that tells you the truth.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — A payments API</strong></p>
+<p>30,000/min = 500/s, of which ~20/s are authorisations and ~480/s are polls.</p>
+<p><em>The central observation:</em> the two request types differ in service time by nearly
+<strong>two orders of magnitude</strong> (1,200 ms vs 15 ms). A single limit counting requests
+is therefore meaningless — 100 in-flight polls is 1.5 seconds of work, 100
+in-flight authorisations is two minutes of it. <strong>Separate pools, separate limits,
+and no shared thread pool.</strong> This is a bulkhead, and it is not optional.</p>
+<p><em>Where to shed:</em> at the edge for gross protection and cheap rejections; a
+per-pool adaptive limit inside the service, which is where the accurate signal
+lives; and — most importantly — an <strong>outbound concurrency limit on the card
+network</strong>, since it is the real constrained resource and an inbound limit does
+nothing for it.</p>
+<p><em>Signal:</em> queue delay per pool. For authorisations the <em>relative</em> signal matters
+because the card network's latency legitimately varies; an absolute threshold
+would shed correct traffic on a slow day.</p>
+<p><em>Priority:</em> authorisations <code>CRITICAL_PLUS</code> — they are the product and they carry
+money. Polls <code>SHEDDABLE</code>. Note the asymmetry: polls are 96% of traffic and
+approximately 0% of the value.</p>
+<p><em>What to tell the polls:</em> <code>503</code> (or <code>429</code>) with an honest jittered <code>Retry-After</code>,
+plus a <code>Cache-Control</code> so the dashboard shows a slightly stale status rather than
+an error. Better still, move them off polling entirely — webhooks or SSE remove
+the load rather than shedding it, and 480/s of polling for a status that changes
+once is the actual design flaw.</p>
+<p><em>Monitor:</em> authorisation goodput and shed rate (alert on any non-zero
+<code>CRITICAL_PLUS</code> shedding), outbound in-flight against the card network, queue
+delay per pool, and the card network's own latency as an input rather than a
+symptom.</p>
+<p><em>If the card network's latency doubles</em> to 2.4 s: authorisation capacity halves.
+The outbound limit must fall — an adaptive one does this by itself, a fixed one
+does not. The 3-second SLA now has almost no headroom, so <strong>deadline propagation
+matters more than any limit</strong>: a request with 600 ms of budget left should never
+be started. And because polls are on a separate pool, they are unaffected — which
+is the entire return on the bulkhead.</p>
+<p><strong>8.2 — Choosing one</strong></p>
+<p>The defensible answer is <strong>(b) adaptive LIFO + CoDel</strong>, and the case is:</p>
+<ul>
+<li>It self-tunes to service time, which is the failure that actually happens.
+Measured through a 5× dependency slowdown: static cap <strong>0.1%</strong>, hand-tuned
+static limit 11.2%, adaptive LIFO + CoDel <strong>15.4%</strong> against a 16.7% ceiling —
+better than the setting chosen by someone who <em>knew the answer in advance</em>.</li>
+<li>It is far simpler than an adaptive concurrency controller, and this lab
+measured three separate ways to get one of those subtly wrong, all of which
+look correct in code review.</li>
+<li>It has a published production pedigree (Facebook, Wangle, HHVM) and one
+parameter with a clear physical meaning.</li>
+</ul>
+<p><em>When it would be the wrong choice:</em> when your service time is genuinely stable
+and your team has no appetite for a queue-order change — then (a) is 90% of the
+benefit for a tenth of the thought, and shipping (a) this week beats shipping (b)
+next quarter. Also when your work is CPU-bound and uniform, where a fixed limit
+is both correct and provable. And note the measured cost of (b) that (a) does not
+have: at healthy load CoDel with a badly-scaled target shed <strong>10%</strong> of traffic
+that did not need shedding. It is not free, and (a) is.</p>
+<p><strong>8.3 — The dashboard</strong></p>
+<p><em>Metrics (four):</em></p>
+<ol>
+<li><strong>Goodput / success rate over offered</strong> — detects F8, the outage invisible to
+throughput. This is the one that would have caught it.</li>
+<li><strong>Queue delay, p50 and p99</strong> — detects the v1 failure (service time moving) and
+F4 (CPU not firing), and it responds in milliseconds.</li>
+<li><strong>Shed rate split by criticality</strong> — distinguishes &quot;working as designed&quot; from
+&quot;out of promised capacity&quot;, which no aggregate can.</li>
+<li><strong>Rejection rate against <code>workers ÷ 503 cost</code></strong> — detects F1, the rejection
+ceiling.</li>
+</ol>
+<p><em>Alerts (two):</em></p>
+<ol>
+<li><strong>Any sustained shedding of the top criticality class.</strong> Shedding
+<code>SHEDDABLE</code> is a healthy system; shedding <code>CRITICAL</code> means you have run out of
+the capacity you promised.</li>
+<li><strong>Queue delay p99 above the deadline budget for 60 seconds.</strong> Fires before
+goodput collapses rather than after.</li>
+</ol>
+<p><em>Why a p99 latency alert would not have fired:</em> p99 latency is computed over
+requests that <strong>received a response</strong>. During the outage the only requests
+receiving responses in time were the lucky few that arrived when the queue was
+briefly short — so the p99 of that population was <em>better</em> than normal. Once
+shedding is added it improves further, because a 503 is fast. <strong>Every
+latency metric you own is conditioned on survival, and the thing you are trying
+to detect is deaths.</strong></p>
+<p><strong>8.4 — Perfect deadline propagation</strong></p>
+<p><em>Becomes unnecessary:</em></p>
+<ul>
+<li><strong>Guessing the drop threshold.</strong> The lab's measured awkwardness — that dropping
+at the deadline is worth 3.8% while dropping 250 ms <em>before</em> it is worth 32.1%
+— exists only because the server is estimating. With a real budget you compare
+<code>remaining &lt; expected service time</code> and the estimate disappears.</li>
+<li><strong>Deriving a queue cap from an assumed deadline.</strong> Every request carries its
+own.</li>
+</ul>
+<p><em>Becomes simpler:</em></p>
+<ul>
+<li><strong>The signal.</strong> &quot;Would this request make its deadline?&quot; is answerable per
+request rather than inferred from aggregate queue delay. Admission control
+becomes almost trivial: admit if <code>remaining &gt; predicted wait + service time</code>.</li>
+<li><strong>The whole call tree.</strong> Every hop can drop work nobody is waiting for, instead
+of only the entry point knowing.</li>
+<li><strong>Priority.</strong> Deadline and criticality are different axes, but earliest-deadline
+ordering is a well-understood scheduling discipline and becomes available.</li>
+</ul>
+<p><em>Still required:</em></p>
+<ul>
+<li><strong>Admission control — yes, still, and this is the crux of the question.</strong> A
+deadline tells you whether <em>this</em> request can be served; it does not bound how
+many requests are inside your process. Ten thousand requests each with a
+generous 30-second budget are all individually servable and will still exhaust
+your memory. <strong>Deadlines solve the wasted-work problem, not the resource-bound
+problem</strong> — which is why the safety property in stage 12 is stated about work
+in progress and not about time.</li>
+<li><strong>Cheap rejections</strong> (F1 is unaffected — you still have to say no, and saying
+no still costs).</li>
+<li><strong>Retry control</strong> (F2 is unaffected; a deadline does not stop a client asking
+again).</li>
+<li><strong>Priority</strong> — deadlines rank by urgency, and urgency is not value. A
+recommendation carousel with 50 ms left is more urgent and less important than
+a checkout with 2 seconds left.</li>
+</ul>
+<p><strong>8.5 — Multi-tenant fairness</strong></p>
+<p><em>The mechanism to add:</em> make the shed decision a function of <code>(tenant, that tenant's current share of admissions)</code> rather than of arrival order alone. Two
+practical shapes:</p>
+<ol>
+<li><strong>Weighted fair queueing</strong> — a queue per tenant, served round-robin by weight.
+Strong isolation, and the cost is real: per-tenant queues fragment your
+capacity, and your <code>queueing-theory</code> lab measured what that costs — four
+separate lines at 80% busy wait <strong>5.2× longer</strong> than one shared line. You are
+buying fairness with latency.</li>
+<li><strong>Shed the heaviest sender first</strong> — when overloaded, reject in descending
+order of each tenant's share of recent admissions. Much cheaper, no
+fragmentation, and only approximately fair, which is usually enough.</li>
+</ol>
+<p>Prefer (2) unless a contract requires (1).</p>
+<p><em>What it costs when nothing is wrong:</em> option 2 costs essentially nothing — it
+only ranks when the shedder is already firing. Option 1 costs latency <strong>all the
+time</strong> (the pooling result above), which is why &quot;shard the queue per tenant for
+isolation&quot; is so often a latency regression dressed as a feature.</p>
+<p><em>The failure mode of the fix:</em> <strong>tenant identity is an input you do not always
+have or cannot trust.</strong> Unauthenticated traffic, a shared gateway that collapses
+many tenants into one identity, a single tenant behind many API keys, or an
+attacker rotating credentials — all of these defeat share-based shedding, and it
+degrades to the blind version exactly when you need it most. So it is a fairness
+improvement layered <em>on top of</em> an identity-blind shedder, never a replacement
+for one.</p>
+<p>Also worth saying plainly: this exercise is where load shedding hands off to rate
+limiting. A shedder made fair is an approximation of a quota system built under
+duress. If the noisy-neighbour problem is chronic rather than occasional, the
+real fix is per-tenant limits negotiated in advance, and the shedder goes back to
+doing the thing only it can do — surviving.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../57-queueing-theory/notes.html"><small>← Lab 57</small>queueing-theory</a><a href="../59-load-balancing/notes.html" style="text-align:right"><small>Lab 59 →</small>load-balancing</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-an-outage-start-when-nothing-has-broken">1. Why does an outage start when nothing has broken?</a><a href="#readme-2-what-happens-at-danas-desk-when-everyone-has-a-train-to-catch">2. What happens at Dana&#x27;s desk when everyone has a train to catch?</a><a href="#readme-3-what-is-wrong-with-letting-everyone-in">3. What is wrong with letting everyone in?</a><a href="#readme-4-where-does-the-mornings-work-actually-go">4. Where does the morning&#x27;s work actually go?</a><a href="#readme-5-what-are-we-actually-asking-for-in-plain-words">5. What are we actually asking for, in plain words?</a><a href="#readme-6-what-does-putting-one-doorman-on-the-door-do-to-the-numbers">6. What does putting one doorman on the door do to the numbers?</a><a href="#readme-7-which-five-words-are-being-used-as-if-they-were-one">7. Which five words are being used as if they were one?</a><a href="#readme-8-which-two-pictures-of-the-doorman-should-you-carry">8. Which two pictures of the doorman should you carry?</a><a href="#readme-9-where-can-you-break-the-office-yourself">9. Where can you break the office yourself?</a><a href="#readme-10-what-should-the-doorman-actually-look-at">10. What should the doorman actually look at?</a><a href="#readme-11-what-are-the-eight-ways-this-goes-wrong-around-a-working-shedder">11. What are the eight ways this goes wrong around a working shedder?</a><a href="#readme-12-what-are-you-actually-guaranteed">12. What are you actually guaranteed?</a><a href="#readme-13-what-do-you-actually-operate-and-in-what-order-do-you-build-it">13. What do you actually operate, and in what order do you build it?</a><a href="#readme-14-which-comfortable-sentences-are-wrong">14. Which comfortable sentences are wrong?</a><a href="#readme-15-what-else-does-this-connect-to-and-what-should-you-learn-next">15. What else does this connect to, and what should you learn next?</a><a href="#readme-16-what-does-each-word-mean">16. What does each word mean?</a><a href="#readme-17-about-this-lab--where-did-the-numbers-come-from">17. About this lab — where did the numbers come from?</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

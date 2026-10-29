@@ -1,0 +1,2701 @@
+<!doctype html>
+<html lang="en" data-hub-lab="08-isolation-levels">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>8. isolation-levels</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 8 of 71 · Stage 2</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 8 · One Machine, Done Right</p><article id="readme"><h1 id="readme-isolation-levels--what-a-transaction-promises-about-the-neighbours">Isolation levels — what a transaction promises about the neighbours</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Asha has 100 in her account, and two deposits of 10 land
+at the same moment. Devi handles one deposit and Omar handles the other.
+Each of them reads 100, adds 10 and writes 110, so Asha ends with 110 and
+one deposit is simply gone, though every step succeeded and nothing
+complained. An isolation level is the dial that decides which of those
+endings your database is allowed to give you. This lab turns the dial
+through every setting on a real database and shows you what comes out.</p>
+</blockquote>
+<p>Open the ledger at <a href="visualization.html"><code>visualization.html</code></a> or <a href="https://claude.ai/code/artifact/76051a1f-7357-4e66-9c6d-897f76c6004a" target="_blank" rel="noopener">https://claude.ai/code/artifact/76051a1f-7357-4e66-9c6d-897f76c6004a</a>.
+How to run the code, and where this lab sits next to your other labs, is in <a href="#readme-19-about-this-lab">section 19</a>.</p>
+<hr />
+<h2 id="readme-1-why-does-this-problem-exist-at-all">1. Why does this problem exist at all?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two people change the same number at the same moment.
+Each does the sensible thing. Together they can leave the database holding
+a number that was never true, and nothing will complain.</p>
+</blockquote>
+<p>Two things happen to the same data at the same instant. That is not an edge
+case. On any system with more than one user, it is Tuesday.</p>
+<p>Here is what it costs when nobody has thought about it.</p>
+<ul>
+<li>A customer's two deposits arrive together, and one of them silently does
+not exist.</li>
+<li>Two people book the last meeting room, and both get a confirmation.</li>
+<li>A monthly report adds up four account balances and prints a total that no
+moment in history ever had.</li>
+<li>A doctor rota empties itself, because two doctors signed off at once. Each
+had checked that the other was still on.</li>
+</ul>
+<p>Every one of those is a real, common bug. None of them involves a crash, a
+network failure, or a mistake in your code. Every statement succeeded. And in
+almost every case the fix is one word in a configuration file. But only if you
+know which word, and why.</p>
+<p>The first of those four is about to happen to Asha.</p>
+<h2 id="readme-2-what-happens-to-ashas-two-deposits">2. What happens to Asha's two deposits?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two clerks each read Asha's balance, each add 10, and
+each write the answer back. The second write lands on top of the first, and
+one deposit vanishes without a trace.</p>
+</blockquote>
+<p>Asha has 100 in her account. Two deposits of 10 arrive at the same moment.
+Two clerks handle them: Devi takes one, Omar takes the other.</p>
+<p>Each clerk does the obvious thing:</p>
+<blockquote>
+<p>Look up the balance. Add 10. Write the new balance back.</p>
+</blockquote>
+<p>Watch the ledger, moment by moment. Read the last column: it is the number on
+Asha's page after each step.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Moment</th>
+  <th>Devi</th>
+  <th>Omar</th>
+  <th>Asha's balance on the page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>looks up: <strong>100</strong></td>
+  <td></td>
+  <td>100</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td></td>
+  <td>looks up: <strong>100</strong></td>
+  <td>100</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>writes <strong>110</strong></td>
+  <td></td>
+  <td>110</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td></td>
+  <td>writes <strong>110</strong></td>
+  <td>110</td>
+</tr>
+</tbody>
+</table></div>
+<p>Asha has 110. One of her deposits is gone. Not delayed, not queued for retry.
+Gone, with no record that it ever happened. Both clerks did their job
+correctly. Neither made a mistake. Nobody can be blamed, and nothing in the
+system knows anything is wrong.</p>
+<p>The trouble is entirely in the <em>gap</em>. Between Devi looking up the balance and
+Devi writing it back, the world changed underneath her. She had no way to
+notice.</p>
+<p><strong>How deep this goes.</strong> Stop at any checkpoint and you still have something
+whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–9</td>
+  <td>say what a transaction does and does <em>not</em> promise, and read the standard two-column picture of two clerks overlapping</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>10</td>
+  <td>explain the three machines underneath, and why each had to be invented</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>11–14</td>
+  <td>name all eight ways it goes wrong, know which level stops each, and prove it by running it</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>15</td>
+  <td>choose a level per use case, write the retry loop, and read any vendor's isolation docs correctly</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-why-not-just-wrap-it-in-a-transaction">3. Why not just wrap it in a transaction?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> &quot;Make the look-up and the write one unit&quot; sounds like
+exactly the fix. Devi and Omar both do it, both succeed, and Asha still has
+110.</p>
+</blockquote>
+<p>This is what everyone reaches for, and it is not a silly answer:</p>
+<div class="code"><pre><code class="language-sql">BEGIN;
+  SELECT balance FROM acct WHERE id = 1;   -- 100
+  UPDATE acct SET balance = 110 WHERE id = 1;
+COMMIT;
+</code></pre></div>
+<p>A transaction is the database's word for &quot;these statements are one unit&quot;. It
+sounds exactly like what we need. Make the look-up and the write into one
+indivisible act, and the gap disappears.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Devi and Omar now both wrap their work in <code>BEGIN … COMMIT</code>.
+Both transactions commit successfully, with no error. What is Asha's
+balance?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Still 110.</strong> If you said 120, you gave the transaction a promise it never
+made. Do not take it from this page; run it. Eight threads each add 1 to the
+same row forty times. That is 320 increments, every one inside a
+transaction, every transaction committing successfully. The row ends on
+about <strong>60</strong>.</p>
+<div class="code"><pre><code>java -cp ../lib/h2.jar src/Experiments.java increment
+
+                         READ COMMITTED                     ...
+  SELECT then UPDATE    60/320 LOST 260  (0 retries, 131ms)
+</code></pre></div>
+<p>| Number | What it means |
+|---|---|
+| 320 | increments attempted, each inside its own committed transaction |
+| 60 | roughly how many survived on the row |
+| 260 | increments that vanished: about <strong>80% of the work</strong>, and not one error was raised |
+| 131ms | how long the broken version took; section 14 compares it with the fix |
+| 0 retries | nothing was ever refused, so nothing ever asked to try again |</p>
+<p>If that surprises you, you have just found the thing this lab exists to fix.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-4-what-does-a-transaction-promise-and-which-promise-is-missing">4. What does a transaction promise, and which promise is missing?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A transaction promises four things. Two of them are about
+crashes, and Devi gets those for free. The one about Omar running at the
+same time is separate, costs extra, and you have to ask for it by name.</p>
+</blockquote>
+<p><code>BEGIN … COMMIT</code> really does give Devi something. It gives her
+<strong>all-or-nothing</strong>: if the second statement fails, the first is undone. It
+gives her <strong>survives-a-crash</strong>: once the database says committed, the change is
+on disk. Those are worth a great deal. They are what most people mean when they
+say &quot;transaction&quot;.</p>
+<p>Neither of them has anything to do with Omar running at the same time.</p>
+<p>That is a <em>separate</em> promise, and it is the one you have to ask for by name.
+The database does not give it to you by default, because it is expensive. So
+it gives you a cheap approximation and lets you buy more if you say so. Almost
+nobody says so, because almost nobody knows the dial exists.</p>
+<p>The name of that dial is the <strong>isolation level</strong>. The default setting in
+PostgreSQL, SQL Server and Oracle is one that permits exactly the bug Asha
+just suffered.</p>
+<h2 id="readme-5-what-do-we-actually-want-as-if-they-had-queued">5. What do we actually want? &quot;As if they had queued&quot;</h2>
+<blockquote>
+<p><strong>In one breath:</strong> We do not need Devi and Omar to take turns. We only need
+the ending to be one that taking turns <em>could</em> have produced. 120 passes.
+110 fails.</p>
+</blockquote>
+<p>State what we actually want, in plain words:</p>
+<blockquote>
+<p><strong>However the work actually interleaves, the result must be one that could
+have happened if the transactions had run one at a time, in some order.</strong></p>
+</blockquote>
+<p>Note what that does and does not say. It does <em>not</em> demand that Devi go before
+Omar. Either order is fine: Asha ends on 120 both ways. It only forbids
+endings that <strong>no</strong> single-file order could have produced. 110 is such an
+ending, which is exactly why it is a bug.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Order</th>
+  <th>First clerk sees</th>
+  <th>Second clerk sees</th>
+  <th>Asha ends on</th>
+  <th>Allowed?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Devi, then Omar</td>
+  <td>100</td>
+  <td>110</td>
+  <td>120</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>Omar, then Devi</td>
+  <td>100</td>
+  <td>110</td>
+  <td>120</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>both at once, as in section 2</td>
+  <td>100</td>
+  <td>100</td>
+  <td>110</td>
+  <td><strong>no</strong>: no single-file order gives it</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Devi's deposit commits at 10:00:01. Omar's commits at
+10:00:04. Is the database allowed to behave as if Omar went first?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Yes.</strong> The requirement says &quot;in some order&quot;, and it means it. If you said
+no, you are thinking of the rule from the linearizability lab, which has a
+real-time clause: what finished first must count first. Serializability
+drops that clause. It is happy with any single-file story, including one
+that puts your committed transaction after a later one. Section 7 comes back
+to this, because it is the one word that separates the two labs.</p>
+</details>
+
+</blockquote>
+<p>You have met this shape before. In the <a href="../26-linearizability/notes.html#readme">linearizability</a>
+lab the requirement was &quot;there must exist an order of the <em>operations</em> that
+explains what every client was told&quot;. This is the same sentence with one word
+changed: <strong>transactions</strong> instead of operations. That word is doing an
+enormous amount of work. Sections 10 and 12 are about how much.</p>
+<h2 id="readme-6-what-is-the-key-idea-a-ladder-of-partial-promises">6. What is the key idea? A ladder of partial promises</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Making everyone queue would fix Asha's bug and make the
+database serve one user at a time. So the industry sells a ladder instead.
+Each rung forbids more bad endings and costs more. You pick a rung.</p>
+</blockquote>
+<p>Running everything one at a time really would fix this. It would also make
+your database serve one user at a time, which no one will accept.</p>
+<p>So the industry did something pragmatic and slightly regrettable:</p>
+<blockquote>
+<p><strong>Offer a ladder. Each rung forbids more of the bad endings than the rung
+below it, and costs more. You pick a rung.</strong></p>
+</blockquote>
+<p>Two consequences follow, and they cause most of the confusion in this topic:</p>
+<ol>
+<li><strong>The rungs are named after which bad endings they forbid</strong>, not after how
+they work. Two databases can implement the same rung name with completely
+different machinery and give you different behaviour.</li>
+<li><strong>The list of bad endings in the standard is incomplete.</strong> It was written
+in 1992 with three phenomena in mind. The most dangerous ones in practice
+were not on that list. So there is no rung name for stopping them, which is
+why a level called <code>SERIALIZABLE</code> may not be serializable.</li>
+</ol>
+<p>The rest of this lab is: what the bad endings actually are, which rung stops
+each one on your database, and the three mechanisms underneath.</p>
+<h2 id="readme-7-what-do-engineers-call-the-things-in-ashas-story">7. What do engineers call the things in Asha's story?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six words, and you have already watched every one of them
+happen. A transaction is Devi's unit of work. Isolation is how much she may
+pretend Omar is not there. The other four name the order things happened in
+and the endings that are wrong.</p>
+</blockquote>
+<p>Only the words needed to talk about the ladder. The bad endings get their
+names in section 11, where you can watch each one happen.</p>
+<h3 id="readme-what-is-a-transaction-and-what-are-its-four-promises">What is a transaction, and what are its four promises?</h3>
+<p>Devi's &quot;look up, add 10, write back&quot; is a group of statements the database
+treats as one unit. Engineers call that a <strong>transaction</strong>. The word exists to
+name work that must not be half-done. A transfer is the classic case:
+<code>BEGIN; UPDATE acct SET balance = balance - 50 WHERE id = 1; UPDATE acct SET balance = balance + 50 WHERE id = 2; COMMIT;</code>.
+Half of that is money destroyed.</p>
+<p>A transaction makes four promises. Engineers remember them as <strong>ACID</strong>. Read
+the last column: it is what each promise means for that transfer.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Letter</th>
+  <th>The promise</th>
+  <th>For Devi's transfer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>A</strong>tomic</td>
+  <td>all or none</td>
+  <td>both updates happen, or neither does</td>
+</tr>
+<tr>
+  <td><strong>C</strong>onsistent</td>
+  <td>it moves the data from one state satisfying your constraints to another</td>
+  <td>no balance rule is broken by the pair</td>
+</tr>
+<tr>
+  <td><strong>I</strong>solated</td>
+  <td>the next paragraph</td>
+  <td>Omar's work stays out of Devi's</td>
+</tr>
+<tr>
+  <td><strong>D</strong>urable</td>
+  <td>once committed, it survives a crash</td>
+  <td>&quot;committed&quot; means on disk</td>
+</tr>
+</tbody>
+</table></div>
+<p>The A and the D are what the <a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a> lab was
+fighting to preserve across several machines. This lab is entirely about the
+<strong>I</strong>, on one machine.</p>
+<h3 id="readme-what-is-isolation-and-why-is-it-a-dial">What is isolation, and why is it a dial?</h3>
+<p>How much the database lets Devi pretend nobody else is running: that is
+<strong>isolation</strong>. Precisely, it is the degree to which transactions running at
+the same time are prevented from seeing each other's intermediate states, and
+from interfering with each other's decisions.</p>
+<p>It is the one ACID property that is a <em>dial</em> rather than a yes/no. Nobody
+offers &quot;80% atomic&quot;. Everybody offers four or five degrees of isolated. At one
+setting Devi can see a balance Omar has not committed. At another she cannot.
+At another the database refuses to let them both finish.</p>
+<p>The <a href="../47-saga/notes.html#readme">saga</a> lab said sagas &quot;trade atomicity and isolation for
+availability&quot; and left it there. This is the thing being traded.</p>
+<h3 id="readme-what-is-a-schedule">What is a schedule?</h3>
+<p>The order the two clerks' steps actually happened in is the <strong>schedule</strong>.
+Precisely: an interleaving of the operations of several transactions,
+preserving each transaction's own internal order.</p>
+<p>Why does it need a name? Because the <em>statements</em> are fixed and the
+<em>interleaving</em> is not. All the interesting behaviour is a property of the
+interleaving, so it needs a name of its own.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Schedule</th>
+  <th>Asha ends on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Devi reads · Omar reads · Devi writes · Omar writes</code></td>
+  <td>110</td>
+</tr>
+<tr>
+  <td><code>Devi reads · Devi writes · Omar reads · Omar writes</code></td>
+  <td>120</td>
+</tr>
+</tbody>
+</table></div>
+<p>Same two transactions. Only the second one gives Asha her money. The two
+columns in the visualization are a schedule, and the ▲▼ buttons let you change
+it.</p>
+<h3 id="readme-what-is-the-difference-between-serial-and-serializable">What is the difference between serial and serializable?</h3>
+<p><em>Serial</em> means the clerks genuinely ran one after another: no two transactions
+overlap. <em>Serializable</em> means they overlapped, but the result is one that a
+serial run could have produced. Precisely: a schedule is serializable if it is
+equivalent to some serial schedule of the same transactions.</p>
+<p>The two words exist to separate the guarantee (<em>looks</em> single-file) from the
+implementation (<em>is</em> single-file). Only the first is affordable. Devi-then-Omar
+and Omar-then-Devi both give 120. Any schedule giving 120 is serializable. The
+schedule that gives 110 is not.</p>
+<p>You already have this word from <a href="../26-linearizability/notes.html#readme">linearizability</a>. That
+lab's map entry recorded: <em>&quot;linearizability is strict serializability where
+every transaction is a single operation on a single object.&quot;</em> Here the
+transactions are real ones, and the real-time clause is dropped.
+Serializability is happy with <em>any</em> serial order, including one that puts your
+committed transaction after a later one. That is the answer to the Predict in
+section 5.</p>
+<h3 id="readme-what-is-an-anomaly">What is an anomaly?</h3>
+<p>A specific way the ending can be wrong is an <strong>anomaly</strong>, also called a
+<em>phenomenon</em>. Precisely: a pattern of interleaving whose outcome no serial
+schedule could produce. Isolation levels are defined by which patterns they
+forbid.</p>
+<p>Why define levels that way? So the ladder can be specified without specifying
+an implementation. That was a deliberate choice in the SQL standard. It is
+both why the standard is portable and why it is so often misread. Asha's
+missing deposit is the <em>lost update</em> anomaly. Section 11 is a list of eight of
+them, each one runnable.</p>
+<h3 id="readme-the-map-back-to-the-story">The map back to the story</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>In the story</th>
+  <th>Engineers say</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Devi's &quot;look up, add 10, write back&quot; as one unit</td>
+  <td><strong>transaction</strong></td>
+  <td>section 3</td>
+</tr>
+<tr>
+  <td>how much Devi may pretend Omar is not there</td>
+  <td><strong>isolation</strong></td>
+  <td>section 4</td>
+</tr>
+<tr>
+  <td>the order the clerks' steps actually happened in</td>
+  <td><strong>schedule</strong></td>
+  <td>the four-moment table, section 2</td>
+</tr>
+<tr>
+  <td>the clerks genuinely took turns</td>
+  <td><strong>serial</strong></td>
+  <td>&quot;as if they had queued&quot;, section 5</td>
+</tr>
+<tr>
+  <td>they overlapped, but the ending is one that turns could give</td>
+  <td><strong>serializable</strong></td>
+  <td>120 versus 110, section 5</td>
+</tr>
+<tr>
+  <td>a wrong ending, like Asha's vanished deposit</td>
+  <td><strong>anomaly</strong></td>
+  <td>section 2</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-what-picture-should-you-carry-in-your-head">8. What picture should you carry in your head?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nobody rubs anything out. Every change is a new line in
+the ledger with a note saying from when it counts. &quot;What is Asha's balance?&quot;
+becomes &quot;as of when?&quot;, and two clerks who started at different moments can
+both be right.</p>
+</blockquote>
+<p>Carry two pictures. The first is the one you will think in. The second is the
+one you will ship from.</p>
+<h3 id="readme-the-simple-picture-the-ledger-nobody-erases">The simple picture: the ledger nobody erases</h3>
+<p>There is one ledger. Clerks do not rub anything out. A change is a <strong>new
+line</strong>, with a note saying from when it counts. An old line stays on the page
+as long as anyone might still be reading by it.</p>
+<p>So &quot;what is Asha's balance?&quot; is not one question. It is <em>&quot;what is Asha's
+balance as of the moment I started looking?&quot;</em> Devi and Omar started looking at
+different moments, so they are entitled to two different answers, both correct.</p>
+<p>An isolation level is the house rule for three things:</p>
+<ol>
+<li><strong>which line you read</strong>;</li>
+<li><strong>whether you may write a line while someone else's is unfinished</strong>;</li>
+<li><strong>what happens when two clerks' decisions turn out to be incompatible</strong>.</li>
+</ol>
+<h3 id="readme-the-engineering-picture-versions-snapshots-and-three-decisions">The engineering picture: versions, snapshots, and three decisions</h3>
+<p>Now the same ledger in the engineer's words. Each line carries three facts:
+the value, the moment it starts counting, and the moment it stops counting.
+Engineers call each line a <strong>version</strong>, and write it as
+<code>[value, visible-from, visible-until]</code>. Each row of the table is a chain of
+those versions.</p>
+<p>The &quot;moment I started looking&quot; is a timestamp. Engineers call it the
+transaction's <strong>snapshot</strong>. A transaction reads the version whose window
+contains its snapshot. Writes are private until commit. At commit they are
+stamped and become visible.</p>
+<p>A level is then three decisions. Read down each column: it is one level's
+house rule.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Decision</th>
+  <th>Read committed</th>
+  <th>Snapshot</th>
+  <th>Serializable (tracking)</th>
+  <th>Serializable (locking)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>which version do I read?</td>
+  <td>newest committed, <strong>re-decided every statement</strong></td>
+  <td>the one at my start timestamp</td>
+  <td>same as snapshot</td>
+  <td>the current one, under a shared lock</td>
+</tr>
+<tr>
+  <td>may I write over an unfinished change?</td>
+  <td>no — wait</td>
+  <td>no — wait</td>
+  <td>no — wait</td>
+  <td>no — wait for the lock</td>
+</tr>
+<tr>
+  <td>what if two decisions clash?</td>
+  <td>nothing is checked</td>
+  <td>if someone committed my row after my snapshot, <strong>I am refused</strong></td>
+  <td>that, <strong>plus</strong>: if I read something they changed <em>and</em> changed something they read, I am refused</td>
+  <td>it cannot happen; locks made us take turns</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-how-do-the-two-pictures-line-up">How do the two pictures line up?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Ledger picture</th>
+  <th>Engineering model</th>
+  <th>On the screen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a line in the ledger</td>
+  <td>a version <code>[value, from, until]</code></td>
+  <td>a box in the ledger panel</td>
+</tr>
+<tr>
+  <td>&quot;as of when I started looking&quot;</td>
+  <td>the transaction's snapshot timestamp</td>
+  <td>&quot;reading the world as it was at moment 4&quot;</td>
+</tr>
+<tr>
+  <td>a pencilled line not yet inked</td>
+  <td>a buffered write, private to its transaction</td>
+  <td>the dashed box</td>
+</tr>
+<tr>
+  <td>a clerk waiting at the desk</td>
+  <td>blocked on a lock</td>
+  <td>the <em>waiting</em> badge</td>
+</tr>
+<tr>
+  <td>&quot;you two can't both be right — start again&quot;</td>
+  <td>serialization failure, SQLSTATE 40001</td>
+  <td>the <em>refused</em> badge</td>
+</tr>
+</tbody>
+</table></div>
+<p>That last row deserves its own sentence, because your code will meet it
+constantly. When the database decides Devi and Omar cannot both be right, it
+refuses one of them. Engineers call that refusal a <strong>serialization failure</strong>,
+and SQL reports it as the error code <code>40001</code>.</p>
+<h3 id="readme-where-the-story-lies-to-you">Where the story lies to you</h3>
+<p><strong>1. A clerk does not hold a photocopy.</strong> &quot;Snapshot&quot; sounds like a copy taken
+at the start. Nothing is copied. The version <em>chain</em> is shared, and each read
+picks a line out of it using your timestamp. This matters, because it means a
+snapshot costs nothing to take and everything to keep. See section 11, F8.</p>
+<p><strong>2. Read committed re-reads every time, and that is not a compromise, it is
+a different thing.</strong> Under read committed there is no single moment your
+transaction is &quot;as of&quot;. Statement one may be as of 10:00:01 and statement two
+as of 10:00:04. The ledger picture makes it feel like a slightly blurry
+snapshot. It is not a snapshot at all.</p>
+<p><strong>3. The clerks are not peers.</strong> The picture suggests Devi and Omar
+negotiating. In fact the database is free to throw one of them out entirely,
+at commit time, after all the work is done. That is not a failure. At the top
+of the ladder it <em>is</em> the mechanism, and your application is expected to
+handle it. Any mental model that leaves out &quot;and then one of them is simply
+killed&quot; will mislead you about what buying <code>SERIALIZABLE</code> actually costs.</p>
+<h2 id="readme-9-can-you-watch-it-happen">9. Can you watch it happen?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The screen is the textbook picture: time runs down, one
+column per clerk. Step Devi and Omar through their work, then change the
+level and watch the same schedule end differently.</p>
+</blockquote>
+<p>Open <strong><a href="https://claude.ai/code/artifact/76051a1f-7357-4e66-9c6d-897f76c6004a" target="_blank" rel="noopener">https://claude.ai/code/artifact/76051a1f-7357-4e66-9c6d-897f76c6004a</a></strong>
+(or <code>open visualization.html</code>). This is the standard textbook picture: time
+runs down, one column per clerk. Clerk 1 is Devi. Clerk 2 is Omar.</p>
+<p><strong>Do these five things, in order.</strong></p>
+<ol>
+<li><strong>Situation 1 is loaded</strong>: someone reading unfinished work. Answer the
+prediction, then press <strong>Next step</strong> four times. Watch the two &quot;what each
+clerk can see&quot; panels diverge and come back together.</li>
+<li><strong>Open <em>A deposit that vanishes</em></strong> and step to the end at read committed.
+Then click <strong>Snapshot</strong> in the strip. Same schedule, same statements, and
+one clerk is now <em>refused</em>. Read the verdict text: that refusal is the
+guarantee, and it is addressed to your code.</li>
+<li><strong>Open <em>Both doctors go off call</em></strong> and try every level in the strip. Four
+of the five let the rota empty. Then click <strong>Serializable (tracking)</strong> and
+watch the <strong>arrows</strong> appear in the ledger panel. Those are the reads the
+database is remembering, and they are the entire difference.</li>
+<li><strong>Change the schedule.</strong> On <em>A deposit that vanishes</em>, use ▲ to move Clerk
+1's <code>COMMIT</code> above Clerk 2's read. Commit to the prediction below before
+you release the button.</li>
+<li><strong>Open <em>The room booked twice</em></strong> and note that at snapshot level there is
+no row for either clerk to conflict on. That is the case row locks cannot
+reach.</li>
+</ol>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>In step 4 you moved Devi's <code>COMMIT</code> above Omar's first
+read. Nothing about the database changed. At which levels does the deposit
+still vanish?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>None of them.</strong> The anomaly disappears at every level, because the two
+clerks no longer overlap. If you said &quot;still at read uncommitted&quot;, you are
+blaming the level for something the level never caused. <strong>Concurrency is the
+input; the isolation level only decides what to do about it.</strong> The cheapest
+fix in section 14 works the same way: it removes the gap instead of turning
+the dial.</p>
+</details>
+
+</blockquote>
+<h2 id="readme--checkpoint-can-you-say-the-beginner-model-back">✅ Checkpoint: can you say the beginner model back?</h2>
+<p>You can now say what a transaction does <em>not</em> promise, read a two-column
+schedule, and explain why Devi and Omar reading the same row can both be
+right.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>isolation</em>, <em>serializable</em> or
+<em>schedule</em>, explain to a friend why wrapping Devi's and Omar's work in
+<code>BEGIN … COMMIT</code> did not save Asha's second deposit.</p>
+<details><summary>A good answer sounds like</summary>
+"A transaction promises that Devi's two steps both happen or neither does,
+and that they survive a crash. It says nothing about Omar. Both clerks read
+100 inside their own transaction, both wrote 110, and both were telling the
+truth as of the moment they looked. To stop that you have to ask the
+database for a separate promise about neighbours, and the default setting
+does not include it."
+</details>
+
+</blockquote>
+<p>Next up: the three machines underneath (locks, snapshots and read-tracking),
+and why each one had to be invented.</p>
+<h2 id="readme-10-what-is-the-machinery-underneath-three-inventions-each-forced-by-the-last-ones-failure">10. What is the machinery underneath? Three inventions, each forced by the last one's failure</h2>
+<blockquote>
+<p><strong>In one breath:</strong> First idea: lock the row and hold it, which is correct
+and makes everyone wait. Second idea: keep old versions so readers never
+wait, which is superb and misses one bug. Third idea: also remember what was
+read, which catches that bug by throwing a clerk out at the last moment.</p>
+</blockquote>
+<h3 id="readme-101-mechanism-v1-what-if-devi-locks-the-row-and-holds-it-to-the-end">10.1 Mechanism v1: what if Devi locks the row and holds it to the end?</h3>
+<p>The obvious fix for Asha: before reading a row, lock it. Before writing it,
+lock it harder. Hold every lock until you commit. Nobody can slip into your
+gap, because there is no gap.</p>
+<p>Engineers call this <strong>two-phase locking</strong>, or 2PL. There is a growing phase
+where you only acquire locks, then a shrinking phase at commit where you only
+release them. It is genuinely correct. Here is the lab's toy engine doing it
+to Devi and Omar, who appear as transaction 1 (<code>T1</code>) and transaction 2
+(<code>T2</code>). Run <code>java src/MiniLab.java lost-update</code>:</p>
+<div class="code"><pre><code>    T1 begins at snapshot 3
+    T2 begins at snapshot 4
+    T1 reads acct:1 = 100
+    T2 reads acct:1 = 100
+    T1 must wait: T2 holds a read lock on acct:1
+    T2 must wait: T1 holds a read lock on acct:1
+    deadlock: T1 is waiting for T2 and T2 is waiting for T1
+    T2 is thrown out: chosen as the deadlock victim
+    T1 writes acct:1 = 110
+    T1 commits at 5
+</code></pre></div>
+<p>Two things to notice, because both become permanent features of the topic.
+First, the result is correct: one transaction did its work, the other was
+told to try again. Second, <strong>the way it got there was a deadlock</strong>. Each clerk
+was holding what the other needed. Deadlocks are not a bug in locking. They
+are what locking feels like.</p>
+<p>Before the next question, four words the lab's tables use. When a bad ending
+was stopped by making a clerk wait, the table prints <code>safe(wait)</code>. When it was
+stopped by refusing a clerk, <code>safe(err)</code>. When it was stopped at no cost at
+all, <code>safe</code>. When it happened and nobody complained, <code>ALLOWED</code>. Section 11
+has the full legend.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Locking is correct. What is the thing about it that made
+the entire industry go looking for something else?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Readers block writers, and writers block readers.</strong> If you said
+&quot;deadlocks&quot;, that is a real cost, but it is not the one that ended the era.
+Deadlocks are occasional; waiting is constant.</p>
+<p>Run a report that reads a million rows under two-phase locking. It holds a
+shared lock on every one of them until it commits. Nothing can be updated
+for the whole minute your report runs. Meanwhile a single row being updated
+stalls every reader who touches it.</p>
+<p>Look at the toy engine's own matrix: under <code>SERIALIZABLE(2PL)</code> almost every
+row is <code>safe(wait)</code>. Correct, and every single one paid in waiting. On a
+busy OLTP database that is not a tuning problem, it is a non-starter. That
+is why the default level in every mainstream database is <em>not</em> this.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-102-mechanism-v2-what-if-nobody-ever-overwrites-a-row">10.2 Mechanism v2: what if nobody ever overwrites a row?</h3>
+<p>The insight that changed databases: never overwrite a row. Add a new version
+beside it instead. Then a reader does not need a lock at all. It reads the
+version that was current when it started, and writers can carry on.</p>
+<p><strong>Readers never block writers. Writers never block readers.</strong> That sentence
+is the reason <strong>MVCC</strong> won. The letters stand for multi-version concurrency
+control: the version chains from section 8, used for exactly this. It is why
+Postgres, Oracle, MySQL/InnoDB and SQL Server's snapshot modes all work this
+way.</p>
+<p>Run <code>java -cp ../lib/h2.jar src/Experiments.java versions</code> and watch Asha's
+row grow a chain while a report holds an old snapshot open:</p>
+<div class="code"><pre><code>  acct:1: [100 from 1 onwards]
+  after write 1: acct:1: [100 from 1 to 4] [110 from 4 onwards]
+  after write 2: acct:1: [100 from 1 to 4] [110 from 4 to 6] [120 from 6 onwards]
+  ...
+  the report still reads: 100   (its snapshot is older than every one of those versions)
+</code></pre></div>
+<p>Two transactions writing the same row still have to be resolved. The rule is
+<strong>first committer wins</strong>. At commit, if any row you wrote gained a version
+after your snapshot was taken, someone beat you to it and you are refused.
+That refusal is where the <code>40001</code> in the matrix comes from.</p>
+<p>This is <strong>snapshot isolation</strong>, and it is superb. In one move it stops five
+things. A reader seeing unfinished work. The same query returning two
+different answers. Rows appearing mid-count. A report totalling two rows from
+two different moments. And Asha's deposit vanishing. No reader ever waits for
+anything. Look at the toy engine's <code>SNAPSHOT</code> column: five rows of <code>safe</code> and
+<code>safe(err)</code>, and not one <code>safe(wait)</code> on a read.</p>
+<p>Section 11 gives each of those five its proper name and a command that makes
+it happen.</p>
+<h3 id="readme-103-which-failure-forced-v3">10.3 Which failure forced v3?</h3>
+<p>Two doctors are on call. The lab calls them Alice and Bob. The rule is that at
+least one must stay. Each checks the rota, sees two people on call, and signs
+off. In the visualization Devi (Clerk 1) is handling Alice's sign-off and Omar
+(Clerk 2) is handling Bob's.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Both transactions run under snapshot isolation. Each reads
+the rota, sees 2, and updates <strong>its own doctor's row only</strong>. Does
+first-committer-wins catch this?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>No, and it never could.</strong> If you said yes, you have given the check a
+power it does not have. Devi's transaction writes Alice's row (row 1).
+Omar's writes Bob's row (row 2). They wrote <em>different rows</em>, so there is no
+row for the first-committer-wins check to fire on. Both commit. Nobody is on
+call.</p>
+<div class="code"><pre><code>java src/MiniLab.java write-skew        # look at the SNAPSHOT section
+
+    T1 scans [on_call] -&gt; 2 rows  (as of 3)
+    T2 scans [on_call] -&gt; 2 rows  (as of 4)
+    T1 writes doc:1 = 0
+    T2 writes doc:2 = 0
+    T1 commits at 5
+    T2 commits at 6
+  outcome: ALLOWED   final state: 0
+</code></pre></div>
+<p>Snapshot isolation checks <strong>what you wrote</strong>. The information that made this
+wrong is <strong>what you read</strong>, and nobody was keeping that.</p>
+<p>This anomaly is called <strong>write skew</strong>, and it is the reason the last rung of
+the ladder exists.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-104-mechanism-v3-what-if-we-remember-what-was-read-not-just-what-was-written">10.4 Mechanism v3: what if we remember what was read, not just what was written?</h3>
+<p>The fix is to write down the reads too. When a transaction writes a row, look
+for any <em>concurrent</em> transaction that already read that row, or asked a
+question this row would have answered. Record an arrow from the reader to the
+writer. The arrow means: &quot;in any single-file story, the reader has to come
+first, because it did not see this change.&quot; Postgres's documentation calls
+that arrow an <strong>rw-antidependency</strong>. It is the only kind of conflict snapshot
+isolation does not already handle.</p>
+<p>A transaction with an arrow <strong>coming in and an arrow going out</strong> is sitting in
+the middle of a loop that cannot be untangled. That shape is called a
+<strong>pivot</strong>, and refusing it is enough.</p>
+<p>Here is the toy engine doing exactly that to Devi and Omar, arrows and all:</p>
+<div class="code"><pre><code>java src/MiniLab.java write-skew        # the SERIALIZABLE(SSI) section
+
+    T1 scans [on_call] -&gt; 2 rows  (as of 3)
+    T2 scans [on_call] -&gt; 2 rows  (as of 4)
+      ! T2 had read doc:1, T1 is writing it  -&gt;  arrow T2 -&gt; T1
+    T1 writes doc:1 = 0
+      ! T1 had read doc:2, T2 is writing it  -&gt;  arrow T1 -&gt; T2
+    T2 writes doc:2 = 0
+    T1 is refused: it has an arrow in AND an arrow out — it is the pivot of a cycle
+    T2 commits at 5
+
+  outcome: safe(err)   final state: 1
+</code></pre></div>
+<p>One doctor left on call, one transaction told to try again. This is
+<strong>serializable snapshot isolation</strong>, SSI for short. It is how PostgreSQL
+implements <code>SERIALIZABLE</code>, and the reason Postgres can offer real
+serializability without going back to locks.</p>
+<p>Notice what it does <em>not</em> do: it never makes a reader wait. It pays for
+correctness in <strong>refusals at commit time</strong> rather than in waiting, and that is
+the trade. Which is better depends entirely on how contended your data is.
+Experiment 2 in section 14 puts a number on exactly that.</p>
+<p><strong>Three mechanisms, three prices.</strong> There is no fourth option where you pay
+nothing.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Mechanism</th>
+  <th>Pays in</th>
+  <th>Who pays, in the story</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>locking (2PL)</td>
+  <td>waiting</td>
+  <td>Omar stands at the desk until Devi is done</td>
+</tr>
+<tr>
+  <td>snapshot (MVCC)</td>
+  <td>keeping old versions around</td>
+  <td>the ledger grows a line per change, and nobody may tear one out</td>
+</tr>
+<tr>
+  <td>read-tracking (SSI)</td>
+  <td>transactions thrown out at the last moment</td>
+  <td>Devi is refused at commit and must start again</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme--checkpoint-can-you-say-the-intermediate-model-back">✅ Checkpoint: can you say the intermediate model back?</h2>
+<p>You can now explain why MVCC replaced locking, why snapshot isolation cannot
+see write skew, and what read-tracking adds. That is enough to understand any
+database's isolation documentation.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Explain to a friend why the snapshot rule caught Asha's
+vanishing deposit but let both doctors go off call. Do not use the words
+<em>version</em>, <em>predicate</em> or <em>antidependency</em>.</p>
+<details><summary>A good answer sounds like</summary>
+"With the deposit, Devi and Omar both wrote the same row. At commit the
+database saw that Omar's row had changed since he looked, and refused him.
+With the doctors, Devi wrote Alice's row and Omar wrote Bob's. Neither wrote
+a row the other had written, so the check had nothing to look at. What made
+it wrong was what they had *read*, and that rule never looks at reads."
+</details>
+
+</blockquote>
+<p>Next up: all eight anomalies, each one runnable, and the table showing which
+level actually stops each one, including the level that lies.</p>
+<h2 id="readme-11-what-are-the-eight-bad-endings-and-which-rung-stops-each-one">11. What are the eight bad endings, and which rung stops each one?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten scripts, five levels, one real database, one table.
+Read the bottom two rows first: the column called SERIALIZABLE lets both
+doctors go off call.</p>
+</blockquote>
+<p>Before the table, the names. The scripts and the screen use their own labels
+for Asha's world. Here is the key.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In the story</th>
+  <th>In the scripts and on the screen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Devi</td>
+  <td>Clerk 1, <code>T1</code></td>
+</tr>
+<tr>
+  <td>Omar</td>
+  <td>Clerk 2, <code>T2</code></td>
+</tr>
+<tr>
+  <td>Asha's account</td>
+  <td>the row called <code>alice</code>, or <code>acct:1</code></td>
+</tr>
+<tr>
+  <td>the other account in a transfer</td>
+  <td>the row called <code>bob</code></td>
+</tr>
+<tr>
+  <td>the two doctors</td>
+  <td><code>dr alice</code> and <code>dr bob</code>, or <code>doc:1</code> and <code>doc:2</code></td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Before you look: the last column is the level H2 calls
+<code>SERIALIZABLE</code>. What does its write-skew cell say?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong><code>ALLOWED</code>.</strong> Both doctors go off call at every one of the five levels,
+including the one named SERIALIZABLE. If you said <code>safe(err)</code>, you trusted
+the column heading. That is exactly the habit this section exists to break.</p>
+</details>
+
+</blockquote>
+<p>This is the table the whole lab is built around. It comes from running the
+scripts against a real database, H2, not from quoting anyone. Section 19 says
+how the run was done.</p>
+<div class="code"><pre><code>java -cp ../lib/h2.jar src/Matrix.java
+
+anomaly                                   RU           RC           RR           SNAP         SER
+-----------------------------------------------------------------------------------------------------
+Dirty write                               ALLOWED      safe(wait)   safe(wait)   safe(wait)   safe(wait)
+Dirty read                                ALLOWED      safe         safe         safe         safe
+Non-repeatable read                       ALLOWED      ALLOWED      safe         safe         safe
+Phantom read                              ALLOWED      ALLOWED      safe         safe         safe
+Lost update                               ALLOWED      ALLOWED      safe(err)    safe(err)    safe(err)
+Lost update, arithmetic in SQL            safe(wait)   safe(wait)   safe(err)    safe(err)    safe(err)
+Lost update, with SELECT ... FOR UPDATE   safe(wait)   safe(wait)   safe(err)    safe(err)    safe(err)
+Read skew                                 ALLOWED      ALLOWED      safe         safe         safe
+Write skew                                ALLOWED      ALLOWED      ALLOWED      ALLOWED      ALLOWED
+Write skew on rows that do not exist yet  ALLOWED      ALLOWED      ALLOWED      ALLOWED      ALLOWED
+</code></pre></div>
+<p>Read a cell like this:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Cell</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>safe</code></td>
+  <td>prevented, with no cost</td>
+</tr>
+<tr>
+  <td><code>safe(wait)</code></td>
+  <td>prevented by making somebody wait</td>
+</tr>
+<tr>
+  <td><code>safe(err)</code></td>
+  <td><strong>prevented by refusing a transaction, which your code must retry</strong></td>
+</tr>
+<tr>
+  <td><code>ALLOWED</code></td>
+  <td>it happened, both transactions committed, nothing complained</td>
+</tr>
+</tbody>
+</table></div>
+<p>The column headings are the five levels: <code>RU</code> read uncommitted, <code>RC</code> read
+committed, <code>RR</code> repeatable read, <code>SNAP</code> snapshot, <code>SER</code> serializable.</p>
+<p><strong>Read the bottom two rows before anything else.</strong> The column headed <code>SER</code> is
+the level called <code>SERIALIZABLE</code>, and it permits write skew. That is not a bug
+in this lab. H2's own pull request adding these levels says the implementation
+<em>&quot;prevents all three read phenomena, but doesn't ensure equivalence of
+sequential and concurrent execution of transactions&quot;</em>
+(<a href="https://github.com/h2database/h2database/pull/2148/files/891839892fd06e9cf209216276f3edbb3809839f" target="_blank" rel="noopener">h2database#2148</a>).
+The name is aspirational. <strong>This is the single most important habit this lab
+can give you: run the table against your own database instead of trusting the
+column heading.</strong></p>
+<p>Now each bad ending, as it happens to Devi, Omar and Asha. The shared facts
+(which level stops each, what survives, what is lost) are collected in one
+table at the end of the section.</p>
+<h3 id="readme-f1-dirty-write-how-can-120-come-to-rest-on-a-change-that-was-withdrawn">F1. Dirty write: how can 120 come to rest on a change that was withdrawn?</h3>
+<p>Make it happen with <code>java -cp ../lib/h2.jar src/Matrix.java dirty-write</code>.</p>
+<p>Devi (Clerk 1) sets Asha's balance to 110 and does not commit. Omar (Clerk 2)
+sets it to 120 and commits. Then Devi rolls back. Asha's balance is 120, and
+it is resting on a change that was withdrawn. Devi's undo cannot undo what
+Omar has already built on.</p>
+<p>Why did the database allow it? At <code>READ UNCOMMITTED</code>, H2 takes no row locks
+at all. Every other level makes Omar wait until Devi has finished. Nothing is
+kept at RU. What is lost is the ability to roll back meaningfully.</p>
+<p>In production this one is special. Every standard says a dirty write must be
+prevented at every level. H2's <code>READ UNCOMMITTED</code> does not prevent it. That is
+one more reason nobody should ever select that level.</p>
+<h3 id="readme-f2-dirty-read-what-happens-when-omar-reads-a-number-nobody-has-agreed-to">F2. Dirty read: what happens when Omar reads a number nobody has agreed to?</h3>
+<p>Make it happen with <code>src/Matrix.java dirty-read</code>.</p>
+<p>Devi sets Asha's balance to 999 and has not committed. Omar reads 999 and acts
+on it. Seconds later Devi rolls back. Omar acted on a number that never
+existed.</p>
+<p>Why? At RU, reads look inside other transactions' unfinished work. Every level
+above RU reads only committed versions. Nothing is kept at RU. What is lost is
+any meaning at all.</p>
+<p>Here is the production twist. <strong>PostgreSQL will not do this even if you ask.</strong>
+<code>SET TRANSACTION ISOLATION LEVEL READ UNCOMMITTED</code> is accepted and silently
+behaves as <code>READ COMMITTED</code>, because its MVCC design has no way to produce a
+dirty read. Whole categories of advice about &quot;avoiding dirty reads&quot; are
+irrelevant on Postgres.</p>
+<h3 id="readme-f3-non-repeatable-read-how-can-the-same-question-get-two-answers">F3. Non-repeatable read: how can the same question get two answers?</h3>
+<p>Make it happen with <code>src/Matrix.java non-repeatable-read</code>.</p>
+<p>Devi reads Asha's balance twice inside one transaction. She gets 100, then
+200. Omar committed a change in between.</p>
+<p>Why? At read committed, every statement gets a fresh view. Snapshot isolation
+freezes the view at transaction start. What Devi keeps at read committed: she
+never sees uncommitted data. What she loses: internal consistency. Any total
+she computes across two statements may be nonsense.</p>
+<p>In production this is the everyday reason to raise the level for reports.
+Experiment 4 counts it: a report reads four balances while transfers run.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Level</th>
+  <th>Wrong totals</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>read committed</td>
+  <td><strong>96 of 300</strong></td>
+  <td>about one report in three added up numbers from two different moments</td>
+</tr>
+<tr>
+  <td>snapshot</td>
+  <td><strong>0 of 300</strong></td>
+  <td>one moment for all four reads, so the total always existed</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-f4-phantom-read-how-does-a-row-appear-in-the-middle-of-a-question">F4. Phantom read: how does a row appear in the middle of a question?</h3>
+<p>Make it happen with <code>src/Matrix.java phantom-read</code>.</p>
+<p>Devi asks &quot;how many accounts hold more than 50?&quot; and gets 2. She asks again
+and gets 3. In SQL the question is <code>SELECT COUNT(*) WHERE balance &gt; 50</code>. Omar
+inserted a new account between her two questions.</p>
+<p>Why could nothing stop him? The new row did not exist when the first count
+ran, so there was nothing to lock. A snapshot prevents it for free: the new
+version is after Devi's timestamp. Under locking you need <strong>range or
+predicate locks</strong>, which lock the <em>question</em>, not the rows. Existing rows are
+kept stable. What is lost is the meaning of any aggregate.</p>
+<p>In production this is the anomaly the ANSI standard says <code>REPEATABLE READ</code>
+may permit. On most MVCC engines it does not, because their <code>REPEATABLE READ</code>
+is really snapshot isolation. <strong>The level name tells you nothing here; the
+implementation does.</strong></p>
+<h3 id="readme-f5-lost-update-how-many-of-ashas-320-deposits-survive">F5. Lost update: how many of Asha's 320 deposits survive?</h3>
+<p>Make it happen with <code>src/Matrix.java lost-update</code>, and at scale with
+<code>src/Experiments.java increment</code>.</p>
+<p>This is Asha's story from section 2, run 320 times. About 60 of 320
+increments survived at read committed. Read-then-write is two statements with
+a gap, and Omar slips into Devi's gap almost every time. At snapshot and
+above, first-committer-wins refuses the second clerk with <code>40001</code>. At read
+committed nothing is kept. The update is lost, silently.</p>
+<p>In production this is the single most common data-corruption bug in ordinary
+CRUD applications. It has <strong>three fixes</strong>, and experiment 1 runs them side by
+side.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Fix</th>
+  <th>Correct at</th>
+  <th>What it costs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>do the arithmetic in SQL: <code>UPDATE acct SET balance = balance + 10</code></td>
+  <td><em>every</em> level</td>
+  <td><strong>0 retries</strong>, and the fastest of the three</td>
+</tr>
+<tr>
+  <td><code>SELECT ... FOR UPDATE</code> before the read</td>
+  <td>every level</td>
+  <td>pays in waiting</td>
+</tr>
+<tr>
+  <td>raise the level to snapshot or above</td>
+  <td>snapshot and up</td>
+  <td><strong>you must write the retry loop</strong></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-f6-read-skew-how-does-a-report-find-money-that-is-not-there">F6. Read skew: how does a report find money that is not there?</h3>
+<p>Make it happen with <code>src/Matrix.java read-skew</code> and
+<code>src/Experiments.java stability</code>.</p>
+<p>Devi is writing a report. She reads Asha's balance: 100. Omar commits a
+transfer of 50 from Asha to Bob. Devi reads Bob's balance: 150. Her total is
+250, for a pair of accounts that always held 200.</p>
+<p>Why? Two statements, two different moments. A snapshot makes all reads one
+moment. Each individual read was of committed data and was correct; that much
+is kept. What is lost is any invariant across rows.</p>
+<p>In production this is why reporting and batch jobs are the classic customers
+for <code>REPEATABLE READ</code>. It is also why &quot;our nightly reconciliation is off by a
+few pennies and we can never make it happen again&quot; is so often this.</p>
+<h3 id="readme-f7-write-skew-why-does-the-top-rung-exist">F7. Write skew: why does the top rung exist?</h3>
+<p>Make it happen with <code>src/Matrix.java write-skew</code>, <code>src/Experiments.java skew</code>,
+and <code>java src/MiniLab.java write-skew</code> for the mechanism.</p>
+<p>Both doctors signed off. You watched the mechanism in section 10.3. Experiment
+3 runs it on H2 unscripted, 200 rounds at each level.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Level</th>
+  <th>Rounds broken</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>every H2 level, including <code>SERIALIZABLE</code></td>
+  <td><strong>196 to 200 of 200</strong></td>
+  <td>the rota emptied almost every time, and the level name changed nothing</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why? Devi and Omar wrote <em>different rows</em>, so no write-write check can fire.
+The shared thing was a <strong>rule they both read</strong>. Only read-tracking (SSI) or
+locking the predicate can stop it. Every row is individually fine. What is
+lost is the invariant across rows, the thing your business actually cares
+about.</p>
+<p>In production this is the anomaly behind double-spends, over-booked
+resources, two people assigned one seat, and rota holes. The reason it
+survives review is that <strong>the rule lives in an <code>if</code> statement in the
+application, where the database cannot see it.</strong></p>
+<h3 id="readme-f8-the-long-transaction-what-does-the-snapshot-you-took-cost">F8. The long transaction: what does the snapshot you took cost?</h3>
+<p>Make it happen with <code>src/Experiments.java versions</code>.</p>
+<p>Devi opens a snapshot transaction and leaves it open. Every write Omar makes
+after that leaves another version of the row alive, because Devi might still
+read the old one. An old version may not be removed while any transaction
+might still read it. There is no automatic response; the versions accumulate.
+Correctness is kept, perfectly. Disk and scan speed are lost.</p>
+<p>In PostgreSQL this is what <code>VACUUM</code> cleans up, and <strong>one forgotten
+<code>idle in transaction</code> session stops cleanup for the whole database.</strong> Tables
+grow while the row count does not, and queries slow down for reasons that
+look nothing like a transaction bug. The setting
+<code>idle_in_transaction_session_timeout</code> exists precisely for this. It is also
+why long-running analytics against your OLTP primary is an isolation-level
+decision, not just a load decision.</p>
+<h3 id="readme-the-eight-side-by-side">The eight, side by side</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Anomaly</th>
+  <th>Make it happen</th>
+  <th>Stopped by</th>
+  <th>What survives / what is lost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1 dirty write</td>
+  <td><code>Matrix.java dirty-write</code></td>
+  <td>every level above RU, by making Omar wait</td>
+  <td>nothing survives at RU / a meaningful rollback</td>
+</tr>
+<tr>
+  <td>F2 dirty read</td>
+  <td><code>Matrix.java dirty-read</code></td>
+  <td>every level above RU</td>
+  <td>nothing survives at RU / any meaning at all</td>
+</tr>
+<tr>
+  <td>F3 non-repeatable read</td>
+  <td><code>Matrix.java non-repeatable-read</code></td>
+  <td>a snapshot: the view is frozen at start</td>
+  <td>never seeing uncommitted data / totals across two statements</td>
+</tr>
+<tr>
+  <td>F4 phantom</td>
+  <td><code>Matrix.java phantom-read</code></td>
+  <td>a snapshot for free; locking needs predicate locks</td>
+  <td>existing rows stay stable / the meaning of any aggregate</td>
+</tr>
+<tr>
+  <td>F5 lost update</td>
+  <td><code>Matrix.java lost-update</code></td>
+  <td>snapshot and above, by refusing with <code>40001</code>; or either cheaper fix in the F5 table</td>
+  <td>nothing survives at RC / the update, silently</td>
+</tr>
+<tr>
+  <td>F6 read skew</td>
+  <td><code>Matrix.java read-skew</code></td>
+  <td>a snapshot: all reads at one moment</td>
+  <td>each read on its own was correct / any cross-row invariant</td>
+</tr>
+<tr>
+  <td>F7 write skew</td>
+  <td><code>Matrix.java write-skew</code></td>
+  <td>read-tracking (SSI) or predicate locks only</td>
+  <td>every row on its own / the invariant across rows</td>
+</tr>
+<tr>
+  <td>F8 long transaction</td>
+  <td><code>Experiments.java versions</code></td>
+  <td>nothing automatic; cleanup once the snapshot closes</td>
+  <td>correctness, perfectly / disk and scan speed</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-are-you-actually-buying">12. What are you actually buying?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Each rung stops a fixed list of bad endings and permits
+the rest. Isolation is not about crashes, not about replicas, and not a
+substitute for a constraint. What you pay is waiting, or old versions, or
+refusals. The refusals depend on how hot your rows are, not on the level.</p>
+</blockquote>
+<h3 id="readme-what-does-each-level-guarantee">What does each level guarantee?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Level</th>
+  <th>Stops</th>
+  <th>Still permits</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>read uncommitted</td>
+  <td>(in principle, dirty writes — but see F1)</td>
+  <td>everything else</td>
+</tr>
+<tr>
+  <td>read committed</td>
+  <td>dirty reads, dirty writes</td>
+  <td>non-repeatable read, phantom, lost update, read skew, write skew</td>
+</tr>
+<tr>
+  <td>snapshot / most engines' repeatable read</td>
+  <td>+ non-repeatable read, phantom, read skew, lost update</td>
+  <td><strong>write skew</strong></td>
+</tr>
+<tr>
+  <td>serializable (SSI or 2PL)</td>
+  <td>everything above</td>
+  <td>nothing — but you must retry</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-is-isolation-not">What is isolation not?</h3>
+<p>Three things people buy an isolation level for, and get nothing.</p>
+<ul>
+<li><strong>Not atomicity or durability.</strong> Those are about crashes; this is about
+neighbours. Raising the isolation level does nothing for a power cut in the
+middle of Devi's transfer.</li>
+<li><strong>Not a replication guarantee.</strong> Everything here is one node. Reading a
+serializable transaction from a lagging replica gives you a <em>consistent</em>
+view of a <em>stale</em> moment. <a href="../26-linearizability/notes.html#readme">linearizability</a> is the
+axis that covers that, and the two are independent. This is why Spanner
+needs a separate word (<em>external consistency</em>) for having both.</li>
+<li><strong>Not a substitute for a constraint.</strong> Write skew happens because a rule
+lived in application code. A <code>CHECK</code>, a <code>UNIQUE</code> index or an exclusion
+constraint moves that rule into the database, where it holds at <em>every</em>
+level and costs nothing. <strong>The cheapest fix for write skew is usually not
+an isolation level at all.</strong> For the double-booking case,
+<code>UNIQUE (room, day)</code> ends the argument.</li>
+</ul>
+<h3 id="readme-what-do-you-trade">What do you trade?</h3>
+<p><strong>Waiting</strong> is the price of locking. Throughput falls under contention, and
+deadlocks appear. Deadlocks are a <strong>lock ordering</strong> problem, and experiment 6
+shows it with two opposing transfers.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Lock order</th>
+  <th>Retries</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>whatever the transfer needs</td>
+  <td>57</td>
+  <td>the two transfers keep holding each other's second account</td>
+</tr>
+<tr>
+  <td>always the lower id first</td>
+  <td><strong>0</strong></td>
+  <td>no cycle can form; same level, same work</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Version accumulation</strong> is the price of snapshots. That is F8: Devi's open
+snapshot pins every old line in the ledger.</p>
+<p><strong>Refusals</strong> are the price of SSI, and here is the sharpest number in the lab.
+Same level, same code, only the spread of the data changed (experiment 2).</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Experiment 2 spreads the same 320 units of work over 1 hot
+row, then over 16 rows, at the same serializable level. Roughly how many
+retries at each?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>282 on one row; 1 on sixteen.</strong> If you guessed the two counts would be
+similar because the level is the same, that is the misconception the table
+below is here to kill.</p>
+</details>
+
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>Hot rows</th>
+  <th>Retries</th>
+  <th>Time</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>282</td>
+  <td>247 ms</td>
+  <td>every clerk collides with every other on the one row</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>100</td>
+  <td>69 ms</td>
+  <td>half the collisions, at a third of the time</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>29</td>
+  <td>35 ms</td>
+  <td>contention is fading fast</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td>1</td>
+  <td>17 ms</td>
+  <td>almost nobody collides</td>
+</tr>
+<tr>
+  <td>64</td>
+  <td>2</td>
+  <td>27 ms</td>
+  <td>no contention left; the difference from 16 is noise</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Contention is a property of your data access pattern, not of the isolation
+level.</strong> &quot;We turned on serializable and the app fell over&quot; is almost always a
+hot-row problem wearing an isolation-level costume.</p>
+<h3 id="readme-safety-and-liveness-which-one-does-the-retry-loop-protect">Safety and liveness: which one does the retry loop protect?</h3>
+<p>Preventing an anomaly is a <strong>safety</strong> property: nothing bad happens. Every
+mechanism here delivers safety. What they differ in is the <strong>liveness</strong> cost.
+Locking can stall Devi indefinitely, and deadlock. SSI can refuse her
+repeatedly under contention. Neither can corrupt Asha's data by trying too
+hard; both can stop Devi making progress. That asymmetry is why the retry loop
+is not optional decoration but part of the guarantee.</p>
+<h3 id="readme-why-is-the-standards-own-ladder-broken">Why is the standard's own ladder broken?</h3>
+<p>ANSI SQL-92 defined the ladder by three phenomena: dirty read, non-repeatable
+read, phantom. Berenson and colleagues showed in 1995 (<em>A Critique of ANSI SQL
+Isolation Levels</em>) that the definitions are ambiguous. They also showed that
+<strong>snapshot isolation does not fit anywhere on the ladder</strong>. It is stronger
+than <code>REPEATABLE READ</code> (no phantoms) and weaker than <code>SERIALIZABLE</code> (write
+skew). Vendors mapped it onto whichever rung name was closest. That is exactly
+why <code>REPEATABLE READ</code> means different things in PostgreSQL and MySQL, and why
+Oracle's <code>SERIALIZABLE</code> is snapshot isolation
+(<a href="https://vladmihalcea.com/write-skew-2pl-mvcc/" target="_blank" rel="noopener">Mihalcea</a>).</p>
+<p><strong>Do not learn the ladder as a hierarchy of names. Learn it as a list of
+anomalies, and find out which ones your database actually stops.</strong></p>
+<h2 id="readme-13-what-is-in-src-and-which-five-lines-carry-the-idea">13. What is in <code>src/</code>, and which five lines carry the idea?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eleven files and no build tool. Two are the interesting
+ones: a harness that can tell &quot;waiting&quot; from &quot;failed&quot; on a real database,
+and a 250-line engine you can read end to end.</p>
+</blockquote>
+<p>Eleven files, no build tool. The only dependency is <code>../lib/h2.jar</code>, and half
+the lab needs nothing at all.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Db.java is in the lab folder on your laptop"><code>Db.java</code></span></td>
+  <td>JDBC plumbing and level names; <code>-Ddb.url=…</code> points the whole lab at another database</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Step.java is in the lab folder on your laptop"><code>Step.java</code></span></td>
+  <td>one action by one transaction, including one built from what an earlier step read</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Scenario.java is in the lab folder on your laptop"><code>Scenario.java</code></span></td>
+  <td>an anomaly: the story, the schedule, and the question that decides whether it happened</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Anomalies.java is in the lab folder on your laptop"><code>Anomalies.java</code></span></td>
+  <td>the ten scripts</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Runner.java is in the lab folder on your laptop"><code>Runner.java</code></span></td>
+  <td><strong>the interesting one</strong>: plays a schedule against a real database and can tell <em>waiting</em> apart from <em>failing</em></td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Matrix.java is in the lab folder on your laptop"><code>Matrix.java</code></span></td>
+  <td>the table, plus a step-by-step log for any single anomaly</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/MiniDb.java is in the lab folder on your laptop"><code>MiniDb.java</code></span></td>
+  <td><strong>the other interesting one</strong>: a 250-line MVCC engine with all five levels</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/MiniLab.java is in the lab folder on your laptop"><code>MiniLab.java</code></span></td>
+  <td>the same anomalies against MiniDb, with the internals printed</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Retry.java is in the lab folder on your laptop"><code>Retry.java</code></span></td>
+  <td>the retry loop that every high isolation level requires</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Experiments.java is in the lab folder on your laptop"><code>Experiments.java</code></span></td>
+  <td>six measured experiments</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Tests.java is in the lab folder on your laptop"><code>Tests.java</code></span></td>
+  <td>108 checks, including every cell of both matrices</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The lines that carry the concept.</strong> Read these five and you have read the
+lab. Each is a moment in Asha's story, in words first and then in code.</p>
+<ol>
+<li>Which moment does a read see? <code>MiniDb.readTs</code> decides:
+<code>t.level == READ_COMMITTED ? clock : t.startTs</code>. In words: read committed
+looks at the clock now; everything else looks at the moment Devi started.
+One ternary, and it is the entire difference between read committed and a
+snapshot.</li>
+<li>Did someone beat me to this row? The first-committer-wins loop in
+<code>MiniDb.commit</code> asks <code>if (v.begin &gt; t.startTs)</code>. In words: if a version of
+this row began after my snapshot, I am refused. This is where <code>40001</code> is
+born.</li>
+<li>Where is a read remembered? <code>MiniDb.noteReadWriteConflicts</code> is the only
+place a <strong>read</strong> is written down. Delete this method and
+<code>SERIALIZABLE(SSI)</code> becomes snapshot isolation, and both doctors go off
+call again.</li>
+<li>Who gets thrown out? <code>MiniDb.isPivot</code> returns <code>in &amp;&amp; out</code>. In words: an
+arrow coming in and an arrow going out. The whole of SSI's decision rule.</li>
+<li>How does the harness know Omar is <em>waiting</em> rather than done or failed?
+<code>Runner.play</code>'s submit-then-move-on loop. Without this the matrix cannot
+tell <code>safe(wait)</code> from <code>safe</code>.</li>
+</ol>
+<p><strong>Deliberate simplifications, flagged.</strong> MiniDb stores one integer per key.
+That is enough: every anomaly here is about <em>when</em> you see a value, never its
+type. Its 2PL locks the whole table for a predicate read, where a real engine
+locks index ranges: coarser, same idea. Its SSI aborts on the pivot shape
+without the full read-only-transaction optimisations Cahill's algorithm has.
+So it can refuse a transaction a real implementation would let through; it
+never lets a bad one through.</p>
+<p>The browser page runs an independent port of the same engine. Section 19 says
+how the two are checked against each other.</p>
+<h2 id="readme-14-what-do-the-six-experiments-prove">14. What do the six experiments prove?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six commands, each answering one question with a number.
+The headline: moving Asha's read <em>into</em> the write beats every isolation
+level, with zero retries.</p>
+</blockquote>
+<p><code>java -cp ../lib/h2.jar src/Experiments.java</code> lists them. The numbers are from
+one run; section 19 says how much they move between runs.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Command</th>
+  <th>Question</th>
+  <th>What you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><code>increment</code></td>
+  <td>do transactions fix lost update?</td>
+  <td><strong>~60 of 320</strong> survive at read committed; SQL arithmetic gives 320 with <strong>0 retries</strong>; higher levels give 320 with ~80–250 retries</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>contention</code></td>
+  <td>what does serializable cost?</td>
+  <td>282 retries on 1 hot row, <strong>1 retry</strong> on 16 — same level, same code</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>skew</code></td>
+  <td>is <code>SERIALIZABLE</code> serializable?</td>
+  <td><strong>196–200 of 200 rounds broken at every H2 level</strong>, including the one named SERIALIZABLE</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>stability</code></td>
+  <td>why raise the level for reports?</td>
+  <td><strong>96 of 300</strong> reports wrong at read committed; <strong>0 of 300</strong> under snapshot</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>versions</code></td>
+  <td>what does a long transaction cost?</td>
+  <td>the version chain grows with every write while one reader sits open</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>deadlock</code></td>
+  <td>are deadlocks an isolation problem?</td>
+  <td>57 retries with arbitrary lock order, <strong>0</strong> with a consistent one</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict, before running experiment 1:</strong> <em>you keep <code>READ COMMITTED</code> but
+change <code>SELECT balance; UPDATE SET balance = &lt;v+10&gt;</code> into the single
+statement <code>UPDATE SET balance = balance + 10</code>. How many of Asha's 320
+increments survive?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>All 320, with zero retries, and faster than every other option.</strong> If you
+said &quot;still about 60, because the level did not change&quot;, you have the wrong
+culprit: the level was never what lost the deposits.</p>
+<p>| Version | Survived | Retries | Time | What it means |
+|---|---|---|---|---|
+| <code>SELECT</code> then <code>UPDATE</code> | ~60 of 320 | 0 | 131ms | the gap between the two statements swallowed the rest |
+| single <code>UPDATE … + 10</code> | 320 of 320 | 0 | 26ms | no gap, nothing to refuse, and the fastest of all |</p>
+<p>The reason is worth internalising. A single <code>UPDATE</code> takes the row lock and
+<em>then</em> reads the current value. There is no gap for anyone to slip into,
+because the read and the write are the same statement. The lost update was
+never really about the isolation level. It was about the application
+holding a value across a gap it did not own.</p>
+<p><strong>Before you raise an isolation level, check whether the read can simply
+move into the write.</strong> It is the cheapest correct answer in this lab, and it
+needs no retry loop.</p>
+</details>
+
+</blockquote>
+<h2 id="readme--checkpoint-can-you-say-the-engineering-model-back">✅ Checkpoint: can you say the engineering model back?</h2>
+<p>You can now name every anomaly, say which mechanism stops it and what that
+costs, and, most importantly, you know not to trust a level name without
+running the table.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without naming any isolation level, explain to a friend why
+Devi's &quot;same question, two answers&quot; (F3) and &quot;both doctors go off call&quot; (F7)
+need different machinery to stop.</p>
+<details><summary>A good answer sounds like</summary>
+"The first is fixed by giving Devi one moment to read from. Freeze the
+ledger at the moment she started, and both answers come off the same page.
+The second cannot be fixed by freezing, because Devi and Omar both froze the
+same page and still wrote different rows. To catch it the database has to
+remember what each clerk *read*, notice that each wrote something the other
+had read, and throw one of them out."
+</details>
+
+</blockquote>
+<p>Next up: what each real database actually does, and how to choose.</p>
+<h2 id="readme-15-what-happens-in-production">15. What happens in production?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The toy engine is the shape of Postgres. Real engines add
+cleanup, index locks and decades of tuning. You choose the level per
+transaction, not per database, and every level above the default needs a
+retry loop or it is a bug.</p>
+</blockquote>
+<h3 id="readme-from-this-lab-to-an-on-call-morning">From this lab to an on-call morning</h3>
+<p><code>MiniDb</code> is structurally what Postgres does: versioned rows, a snapshot
+timestamp per transaction, first-committer-wins, and read-tracking at the top
+level. What real engines add is everything around it: durability, cleanup,
+index-level locking, and decades of tuning.</p>
+<ul>
+<li><strong>This lab:</strong> versions in a <code>HashMap</code>, cleaned up never.</li>
+<li><strong>Real:</strong> versions in the heap pages themselves, with <code>VACUUM</code> (Postgres)
+or a separate undo/rollback segment (Oracle, InnoDB) reclaiming them.</li>
+<li><strong>Architecture:</strong> the level is chosen <strong>per transaction</strong>, not per
+database. Devi's monthly report gets a snapshot; Asha's payment path gets
+serializable; the feed page gets read committed.</li>
+<li><strong>On-call:</strong> you watch deadlock rate, serialization-failure rate,
+long-running transaction age, and table bloat. A spike in <code>40001</code> is not an
+incident by itself. It is contention, and it is telling you which row is
+hot.</li>
+</ul>
+<h3 id="readme-what-does-each-real-database-actually-do">What does each real database actually do?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>On MySQL/InnoDB at its default level, Devi's plain <code>SELECT</code>
+reads a snapshot. What does her <code>UPDATE</code> in the same transaction read?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>The latest committed row, not her snapshot.</strong> If you said &quot;the snapshot,
+obviously, same transaction&quot;, you have just met the split personality that
+surprises everyone. It is why read-then-write behaves differently on InnoDB
+and on Postgres at the same named level. The table below has the rest.</p>
+</details>
+
+</blockquote>
+<p>Everything in this table is from vendor documentation and the sources linked
+below. None of it was run in this lab; section 19 says exactly what was. The
+whole point of <code>Matrix.java</code> is that you can settle it yourself in one
+command:</p>
+<div class="code"><pre><code class="language-bash">java -cp ../lib/h2.jar:postgresql.jar \
+     -Ddb.url=jdbc:postgresql://localhost/test -Ddb.user=me -Ddb.pass=secret \
+     src/Matrix.java
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Database</th>
+  <th>What its levels really are</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>PostgreSQL</strong></td>
+  <td><code>READ UNCOMMITTED</code> silently means read committed — it cannot produce a dirty read. <code>READ COMMITTED</code> (default) = per-statement snapshot. <code>REPEATABLE READ</code> = <strong>snapshot isolation</strong>: no phantoms, but <strong>write skew is allowed</strong>. <code>SERIALIZABLE</code> = <strong>SSI</strong>, the real thing, and it raises <code>40001</code> that you must retry.</td>
+</tr>
+<tr>
+  <td><strong>MySQL / InnoDB</strong></td>
+  <td>Default <code>REPEATABLE READ</code>. Plain <code>SELECT</code> reads a snapshot; <strong><code>SELECT … FOR UPDATE</code>, <code>UPDATE</code> and <code>DELETE</code> read the latest committed row instead</strong> — a split personality that surprises everyone, and the reason read-then-write behaves differently here than on Postgres. Gap/next-key locks stop phantoms for <em>locking</em> reads. <code>SERIALIZABLE</code> turns every plain <code>SELECT</code> into a locking read, i.e. back to 2PL.</td>
+</tr>
+<tr>
+  <td><strong>Oracle</strong></td>
+  <td>Offers only <code>READ COMMITTED</code> and <code>SERIALIZABLE</code>, and <strong>its <code>SERIALIZABLE</code> is snapshot isolation — write skew is permitted</strong> (<a href="https://vladmihalcea.com/write-skew-2pl-mvcc/" target="_blank" rel="noopener">Mihalcea</a>). If you need real serializability on Oracle you enforce it yourself with <code>SELECT … FOR UPDATE</code> or a constraint.</td>
+</tr>
+<tr>
+  <td><strong>SQL Server</strong></td>
+  <td>Default <code>READ COMMITTED</code> using <em>locks</em>, unless <code>READ_COMMITTED_SNAPSHOT</code> is on, which switches it to MVCC — a database-wide setting that changes your application's concurrency behaviour without changing a line of code. Its <code>SERIALIZABLE</code> is 2PL with range locks: genuinely serializable, and it blocks.</td>
+</tr>
+<tr>
+  <td><strong>CockroachDB</strong></td>
+  <td><code>SERIALIZABLE</code> by default; <code>READ COMMITTED</code> added later as an opt-out for migrating applications.</td>
+</tr>
+<tr>
+  <td><strong>H2 (this lab)</strong></td>
+  <td><code>READ UNCOMMITTED</code> allows dirty writes. <code>REPEATABLE READ</code>, <code>SNAPSHOT</code> and <code>SERIALIZABLE</code> are all snapshot-based and <strong>all three permit write skew</strong> — vendor-confirmed (<a href="https://github.com/h2database/h2database/pull/2148/files/891839892fd06e9cf209216276f3edbb3809839f" target="_blank" rel="noopener">h2database#2148</a>).</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-how-does-this-look-in-a-spring-boot-application">How does this look in a Spring Boot application?</h3>
+<div class="code"><pre><code class="language-java">// The level is per transaction. Choose it where you know the use case.
+@Transactional(isolation = Isolation.REPEATABLE_READ, readOnly = true)
+public MonthlyReport build(YearMonth month) { … }        // needs a stable view
+
+@Transactional(isolation = Isolation.SERIALIZABLE)
+public void assignOnCall(Long doctorId) { … }            // an invariant across rows
+</code></pre></div>
+<p>Three things that bite in practice:</p>
+<ol>
+<li><strong><code>@Transactional(isolation = …)</code> without a retry is a bug.</strong> Spring will
+not retry a <code>CannotAcquireLockException</code> for you. Wrap the <em>whole</em>
+transaction, with <code>@Retryable</code> or an explicit loop. The retry must re-run
+the method, not just the failed statement, because the data Devi's
+decision was based on has changed. See <span class="missing" title="Not in the hub: src/Retry.java is in the lab folder on your laptop"><code>Retry.java</code></span>.</li>
+<li><strong>JPA's <code>@Version</code> is the same idea in the application.</strong> Optimistic
+locking raises <code>OptimisticLockException</code> on exactly the situation
+first-committer-wins catches, and it works at read committed. This is the
+same <code>expected-version</code> check you met in
+<a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>: one pattern, three names.</li>
+<li><strong>Watch out for the read that escapes the transaction.</strong> A lazy-loaded
+association fetched after the transaction closes is a new transaction with
+a new snapshot. None of your isolation guarantees apply to it.</li>
+</ol>
+<h3 id="readme-which-level-for-which-job-choosing-in-one-page">Which level for which job? Choosing, in one page</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Use case</th>
+  <th>Level</th>
+  <th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>ordinary CRUD, one row at a time</td>
+  <td>read committed</td>
+  <td>it is enough, and it never refuses anything</td>
+</tr>
+<tr>
+  <td>a report or export reading many rows</td>
+  <td>repeatable read / snapshot, read-only</td>
+  <td>one consistent moment; experiment 4 is the argument</td>
+</tr>
+<tr>
+  <td>read-modify-write on one row</td>
+  <td>read committed <strong>+ arithmetic in SQL</strong></td>
+  <td>correct, no retries, fastest (experiment 1)</td>
+</tr>
+<tr>
+  <td>a claim on one row (&quot;take this job&quot;)</td>
+  <td>read committed + <code>SELECT … FOR UPDATE</code>, or a conditional <code>UPDATE … WHERE status='free'</code></td>
+  <td>one row, one lock, no cleverness</td>
+</tr>
+<tr>
+  <td><strong>an invariant across several rows</strong></td>
+  <td><strong>serializable + retry</strong>, or a constraint</td>
+  <td>this is write skew; nothing below the top rung sees it</td>
+</tr>
+<tr>
+  <td>uniqueness (&quot;one booking per room per day&quot;)</td>
+  <td>any level + a <code>UNIQUE</code> constraint</td>
+  <td>cheaper and stronger than any isolation level</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-does-this-lab-leave-out">What does this lab leave out?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted</th>
+  <th>What real systems do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>durability and recovery</td>
+  <td>the WAL from <a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a>; isolation and durability are independent axes</td>
+</tr>
+<tr>
+  <td>version cleanup</td>
+  <td><code>VACUUM</code>, undo segments, purge threads — F8 is the symptom, not the mechanism</td>
+</tr>
+<tr>
+  <td>index-level locking</td>
+  <td>real 2PL locks index ranges (next-key locks), not whole tables</td>
+</tr>
+<tr>
+  <td>lock escalation</td>
+  <td>row locks becoming page or table locks under memory pressure</td>
+</tr>
+<tr>
+  <td>read-only transaction optimisations</td>
+  <td>real SSI can prove a read-only transaction is safe and skip the tracking</td>
+</tr>
+<tr>
+  <td>distributed transactions</td>
+  <td><a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a> and <a href="../47-saga/notes.html#readme">saga</a></td>
+</tr>
+<tr>
+  <td>replicas</td>
+  <td>reading a replica adds staleness on top of everything here</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme--checkpoint-can-you-say-the-production-model-back">✅ Checkpoint: can you say the production model back?</h2>
+<p>You can read any vendor's isolation documentation and know what is really
+being promised, choose a level per use case with the cost in mind, and write
+the retry loop that makes the choice real.</p>
+<blockquote>
+<p><strong>Say it back.</strong> A colleague wants to set the whole database to
+<code>SERIALIZABLE</code> &quot;so we never have to think about Asha's deposit again&quot;. In
+three sentences, what do you tell them?</p>
+<details><summary>A good answer sounds like</summary>
+"The level is chosen per transaction, not per database: Devi's report wants
+a snapshot, the payment path wants serializable, and the feed page is fine
+at read committed. Serializable on Postgres means some transactions are
+refused with 40001 and must be re-run from the top, so every path that uses
+it needs a retry loop or it is a bug waiting for load. And check the cheaper
+fixes first: arithmetic inside the UPDATE, a UNIQUE constraint, or SELECT …
+FOR UPDATE on one row solve most cases without a refusal in sight."
+</details>
+
+</blockquote>
+<h2 id="readme-16-where-are-the-exercises">16. Where are the exercises?</h2>
+<p>See <a href="notes.html#exercises">EXERCISES.md</a>: eight rungs, from &quot;say it back in your own
+words&quot; to designing the concurrency strategy for a payments ledger. Devi, Omar
+and the doctors appear throughout. Answers in <a href="notes.html#solutions">SOLUTIONS.md</a>;
+attempt first.</p>
+<h2 id="readme-17-what-else-does-this-connect-to-and-where-should-you-go-next">17. What else does this connect to, and where should you go next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Asha's vanishing deposit is the same failure the
+linearizability lab ended on, seen from the other side. Everything below is
+either what this lab stood on or what it makes possible.</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+  LIN[&quot;linearizability&lt;br&gt;&lt;i&gt;learned&lt;/i&gt;&quot;] --&gt; ISO
+  TPC[&quot;two-phase-commit&lt;br&gt;&lt;i&gt;learned&lt;/i&gt;&quot;] --&gt; ISO
+  BT[&quot;btree-and-lsm&lt;br&gt;&lt;i&gt;learned&lt;/i&gt;&quot;] --&gt; ISO
+  ISO[&quot;&lt;b&gt;isolation levels&lt;/b&gt;&lt;br&gt;what a transaction promises&lt;br&gt;about the neighbours&quot;]
+  ISO --&gt; MV[&quot;mvcc-and-vacuum?&lt;br&gt;the cost of keeping versions&quot;]
+  ISO --&gt; LOCK[&quot;database-locking?&lt;br&gt;gap locks, escalation, deadlocks&quot;]
+  ISO --&gt; IDX[&quot;database-indexing?&lt;br&gt;where range locks live&quot;]
+  ISO --&gt; DIST[&quot;distributed-transactions?&lt;br&gt;percolator, spanner&quot;]
+  ISO --&gt; OPT[&quot;optimistic-vs-pessimistic?&lt;br&gt;the same choice, application side&quot;]
+</pre>
+<p><strong>What this built on</strong></p>
+<ul>
+<li><strong><a href="../26-linearizability/notes.html#readme">linearizability</a></strong>: its <code>AtomicInteger</code> experiment
+<em>is</em> the lost update anomaly, and its closing line (&quot;read-then-write is two
+operations&quot;) is Asha's story in section 2 of this lab. The two labs are the
+two axes. Linearizability is about <em>many machines, one operation</em>; isolation
+is about <em>one machine, many operations</em>. Spanner's <em>external consistency</em> is
+the corner where you buy both.</li>
+<li><strong><a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a></strong>: its blocking problem is 2PL's
+blocking problem, one level up: participants holding locks after voting yes.</li>
+<li><strong><a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a></strong>: MVCC version chains are stored in
+the pages that lab built, and its <code>mvcc-and-vacuum?</code> suggestion is now
+earned. Section 11, F8 is why vacuum exists.</li>
+<li><strong><a href="../50-event-sourcing/notes.html#readme">event-sourcing</a></strong>: <code>expected-version</code> is
+first-committer-wins implemented in the application. Same rule, same
+failure, same retry.</li>
+<li><strong><a href="../47-saga/notes.html#readme">saga</a></strong>: &quot;trades atomicity and isolation for availability&quot; now
+has content. A saga's intermediate states are visible, which is dirty reads
+and read skew by design, and <em>semantic locks</em> are how you claw some back.</li>
+</ul>
+<p><strong>Where to go next</strong></p>
+<div class="code"><pre><code>/learn mvcc-and-vacuum          # the storage cost of every snapshot you take
+/learn database-locking         # gap locks, next-key locks, escalation, deadlock graphs
+/learn optimistic-vs-pessimistic-locking   # the same choice, made in your code
+/learn distributed-transactions # percolator and spanner: isolation across machines
+</code></pre></div>
+<p><strong>Commonly confused with</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Confused with</th>
+  <th>The one sentence that separates them</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>atomicity</strong></td>
+  <td>atomicity is about your <em>own</em> transaction being all-or-nothing; isolation is about <em>other people's</em></td>
+</tr>
+<tr>
+  <td><strong>linearizability</strong></td>
+  <td>that is one operation on one object across machines; this is many operations on many rows on one machine</td>
+</tr>
+<tr>
+  <td><strong>locking</strong></td>
+  <td>locking is one <em>mechanism</em> for delivering isolation; snapshots and read-tracking are two others</td>
+</tr>
+<tr>
+  <td><strong><code>REPEATABLE READ</code></strong></td>
+  <td>the ANSI name permits phantoms; almost every real implementation of it is snapshot isolation, which does not</td>
+</tr>
+<tr>
+  <td><strong>snapshot isolation</strong></td>
+  <td>not a rung on the ANSI ladder at all — stronger than repeatable read, weaker than serializable, and the gap is exactly write skew</td>
+</tr>
+<tr>
+  <td><strong>optimistic locking</strong></td>
+  <td>the same first-committer-wins rule, enforced by your application with a version column instead of by the engine</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-18-glossary">18. Glossary</h2>
+<p>In order of appearance in Asha's story.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>transaction</strong></td>
+  <td>a group of statements the database treats as one unit</td>
+</tr>
+<tr>
+  <td><strong>ACID</strong></td>
+  <td>atomic, consistent, isolated, durable — the four promises, of which only isolation is a dial</td>
+</tr>
+<tr>
+  <td><strong>isolation level</strong></td>
+  <td>how much your transaction pretends nobody else is running</td>
+</tr>
+<tr>
+  <td><strong>schedule</strong></td>
+  <td>the order two transactions' steps actually interleaved in</td>
+</tr>
+<tr>
+  <td><strong>serial</strong></td>
+  <td>the transactions genuinely ran one after another</td>
+</tr>
+<tr>
+  <td><strong>serializable</strong></td>
+  <td>the result is one that some serial order could have produced</td>
+</tr>
+<tr>
+  <td><strong>anomaly (phenomenon)</strong></td>
+  <td>a specific pattern of interleaving whose outcome no serial order could produce</td>
+</tr>
+<tr>
+  <td><strong>two-phase locking (2PL)</strong></td>
+  <td>acquire locks as you go, release them all at commit; correct, and it blocks</td>
+</tr>
+<tr>
+  <td><strong>deadlock</strong></td>
+  <td>two transactions each holding what the other needs; broken by throwing one out</td>
+</tr>
+<tr>
+  <td><strong>MVCC</strong></td>
+  <td>never overwrite a row — add a version beside it, so readers never block writers</td>
+</tr>
+<tr>
+  <td><strong>version</strong></td>
+  <td>one value of one row, alive between two moments</td>
+</tr>
+<tr>
+  <td><strong>snapshot</strong></td>
+  <td>the timestamp a transaction reads by, so it sees one consistent moment</td>
+</tr>
+<tr>
+  <td><strong>snapshot isolation</strong></td>
+  <td>read from one frozen moment, and the first committer wins any write clash</td>
+</tr>
+<tr>
+  <td><strong>first committer wins</strong></td>
+  <td>at commit, if a row you wrote changed after your snapshot, you are refused</td>
+</tr>
+<tr>
+  <td><strong>serialization failure</strong></td>
+  <td>SQLSTATE <code>40001</code> — the database refusing you so your retry can succeed</td>
+</tr>
+<tr>
+  <td><strong>dirty write</strong></td>
+  <td>overwriting a change nobody has committed</td>
+</tr>
+<tr>
+  <td><strong>dirty read</strong></td>
+  <td>reading a change nobody has committed</td>
+</tr>
+<tr>
+  <td><strong>non-repeatable read</strong></td>
+  <td>the same row read twice in one transaction, with two different values</td>
+</tr>
+<tr>
+  <td><strong>phantom</strong></td>
+  <td>a row appearing inside a question that had already been answered</td>
+</tr>
+<tr>
+  <td><strong>predicate lock</strong></td>
+  <td>locking the <em>question</em> rather than the rows, which is what stops phantoms under locking</td>
+</tr>
+<tr>
+  <td><strong>lost update</strong></td>
+  <td>two read-modify-writes on one row; one of them silently vanishes</td>
+</tr>
+<tr>
+  <td><strong>read skew</strong></td>
+  <td>two rows read either side of someone's transaction, giving a total that never existed</td>
+</tr>
+<tr>
+  <td><strong>write skew</strong></td>
+  <td>two transactions read a shared rule, then write <em>different</em> rows, and break it</td>
+</tr>
+<tr>
+  <td><strong>SSI</strong></td>
+  <td>serializable snapshot isolation: snapshot reads plus tracking of what was read</td>
+</tr>
+<tr>
+  <td><strong>rw-antidependency</strong></td>
+  <td>the arrow from a transaction that read a row to one that then wrote it</td>
+</tr>
+<tr>
+  <td><strong>pivot</strong></td>
+  <td>a transaction with an arrow in and an arrow out — the one SSI refuses</td>
+</tr>
+<tr>
+  <td><strong>vacuum / bloat</strong></td>
+  <td>removing versions nobody can still need, and what happens when you cannot</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<h3 id="readme-where-this-sits-next-to-your-last-lab">Where this sits next to your last lab</h3>
+<p><a href="../26-linearizability/notes.html#readme">linearizability</a> was about <strong>one operation on one
+object</strong>, and it ended on one measurement. <code>AtomicInteger</code> is a linearizable
+register, and eight threads doing <code>get</code>-then-<code>set</code> still lost most of their
+increments.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Number</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>87%</td>
+  <td>the share of increments lost by eight threads doing <code>get</code>-then-<code>set</code> on an <code>AtomicInteger</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Nothing was violated. Read-then-write is <em>two</em> operations, and linearizability
+says nothing about a pair. That lab called this &quot;the boundary between
+linearizability and serializability&quot; and stopped there.</p>
+<p><strong>This is the other side of that boundary.</strong> Same failure, one machine, one
+database, and a much longer menu of half-guarantees than the distributed
+world offers. You met that exact vanishing increment again in section 3, in
+SQL, as Asha's deposit.</p>
+<h3 id="readme-how-to-run-it">How to run it</h3>
+<div class="code"><pre><code class="language-bash">java -cp ../lib/h2.jar src/Tests.java            # 108 checks
+java -cp ../lib/h2.jar src/Matrix.java           # THE TABLE: 10 anomalies x 5 levels, on a real database
+java -cp ../lib/h2.jar src/Matrix.java write-skew  # every step of one of them
+java src/MiniLab.java                            # the same anomalies on an engine you can read
+java src/MiniLab.java write-skew                 # ...including the internals
+java -cp ../lib/h2.jar src/Experiments.java      # six measured experiments
+</code></pre></div>
+<p>The interactive ledger is <a href="visualization.html"><code>visualization.html</code></a>, also
+published at <a href="https://claude.ai/code/artifact/76051a1f-7357-4e66-9c6d-897f76c6004a" target="_blank" rel="noopener">https://claude.ai/code/artifact/76051a1f-7357-4e66-9c6d-897f76c6004a</a>.
+What is in <code>src/</code> is listed in section 13.</p>
+<h3 id="readme-how-the-numbers-were-produced">How the numbers were produced</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>What</th>
+  <th>How it was produced</th>
+  <th>What that means for you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the matrix in section 11</td>
+  <td>measured on H2 2.4.240, deterministic across five consecutive runs</td>
+  <td>you can quote any cell of it; the same command reproduces it</td>
+</tr>
+<tr>
+  <td>the experiments in section 14</td>
+  <td>numbers from one representative run; exact retry counts move by 10–20% between runs, the shapes do not</td>
+  <td>quote the shapes and the orders of magnitude, not the last digit</td>
+</tr>
+<tr>
+  <td>the vendor table in section 15</td>
+  <td>vendor documentation and the linked sources; <strong>not</strong> run in this lab. Measured here: H2 only</td>
+  <td>run <code>Matrix.java</code> against your own database before relying on any row</td>
+</tr>
+<tr>
+  <td>the toy engine and the browser page</td>
+  <td>the browser page runs an independent port of the same engine; <code>./validate-visualization.sh</code> runs both and prints the two matrices side by side; all forty shared cells agree</td>
+  <td>the picture on screen and the code you can read were cross-checked, not asserted</td>
+</tr>
+<tr>
+  <td>the test suite</td>
+  <td><code>Tests.java</code>, 108 checks, including every cell of both matrices</td>
+  <td>every claim about the toy engine and the H2 matrix is verified by a test you can run</td>
+</tr>
+</tbody>
+</table></div>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--isolation-levels">Exercises — isolation levels</h1>
+<p>Eight rungs. Rungs 1–3 need only the README and the visualization. Rungs 4–7 need
+the code. Rung 8 needs a whiteboard.</p>
+<p>Answers in <a href="notes.html#solutions">SOLUTIONS.md</a>. Attempt first — especially the
+predictions, where being wrong is the point.</p>
+<p>Shorthand: <code>T1 read alice → 100</code> means transaction 1 read Alice's balance and
+got 100. Levels are abbreviated <code>RU · RC · RR · SNAP · SER</code>.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> A colleague wraps the deposit code in <code>BEGIN … COMMIT</code> and closes the
+bug. In three sentences, explain what they have fixed and what they have not.</p>
+<p><strong>1.2</strong> Explain, with no notation, what &quot;serializable&quot; means and why the answer
+is not simply &quot;run the transactions one at a time&quot;.</p>
+<p><strong>1.3</strong> One sentence each, separating:
+isolation from atomicity · isolation from linearizability ·
+snapshot isolation from serializable · optimistic locking from
+first-committer-wins.</p>
+<p><strong>1.4</strong> Why is write skew harder to prevent than lost update? Answer in terms of
+what the database can <em>see</em>, not in terms of isolation levels.</p>
+<p><strong>1.5</strong> Your database refuses a transaction with SQLSTATE <code>40001</code>. Is that an
+error, a warning, or a feature? Justify it in one sentence you could say to a
+product manager.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Name the anomaly in each schedule:</p>
+<div class="code"><pre><code>(a) T1 read alice → 100 · T2 set alice = 200 · T2 COMMIT · T1 read alice → 200 · T1 COMMIT
+(b) T1 read alice → 100 · T2 read alice → 100 · T1 set alice = 110 · T2 set alice = 110 · both COMMIT
+(c) T1 count on-call → 2 · T2 count on-call → 2 · T1 sets doc1 off · T2 sets doc2 off · both COMMIT
+(d) T1 read alice → 100 · T2 transfer 50 alice→bob · T2 COMMIT · T1 read bob → 150 · T1 COMMIT
+(e) T1 set alice = 999 · T2 read alice → 999 · T1 ROLLBACK
+</code></pre></div>
+<p><strong>2.2</strong> Open the visualization on <em>Both doctors go off call</em> at <strong>Snapshot</strong>.
+Point at the two versions each clerk is reading. Then answer: the engine's
+first-committer-wins check runs at commit — why does it not fire for either
+clerk?</p>
+<p><strong>2.3</strong> In <span class="missing" title="Not in the hub: src/MiniDb.java is in the lab folder on your laptop"><code>src/MiniDb.java</code></span>, find:</p>
+<ul>
+<li>the single expression that decides read committed versus a snapshot,</li>
+<li>the loop that implements first-committer-wins,</li>
+<li>the only place in the whole engine where a <strong>read</strong> is written down,</li>
+<li>the two-line rule that decides who gets refused under SSI.</li>
+</ul>
+<p><strong>2.4</strong> In the H2 matrix, list every cell marked <code>safe(err)</code>. What one thing must
+the application have, for every one of those cells, before the guarantee is real?</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Write your answer down before running anything.</p>
+<p><strong>3.1</strong> You keep <code>READ COMMITTED</code> and change
+<code>SELECT balance; UPDATE SET balance = &lt;v+10&gt;</code> into the single statement
+<code>UPDATE SET balance = balance + 10</code>. Out of 320 increments across 8 threads,
+how many survive, and how many retries does it cost?
+Check: <code>java -cp ../lib/h2.jar src/Experiments.java increment</code></p>
+<p><strong>3.2</strong> Predict the whole <code>write-skew</code> row of the H2 matrix — all five levels —
+before running <code>java -cp ../lib/h2.jar src/Matrix.java</code>. If you got it wrong,
+write one sentence about what that means for reading vendor documentation.</p>
+<p><strong>3.3</strong> In experiment 2, the same 320 units of work are spread across more and
+more rows, at a fixed isolation level. Predict the retry count at 1 row and at
+16 rows, to the nearest order of magnitude.</p>
+<p><strong>3.4</strong> Predict the verdict of the <em>double-booking</em> scenario at all five toy
+levels, then run <code>java src/MiniLab.java double-booking</code>. Which level first stops
+it, and what is it doing that the level below cannot?</p>
+<p><strong>3.5</strong> In the visualization, load <em>A deposit that vanishes</em> at read committed,
+then use ▲ to move <code>T1 COMMIT</code> above <code>T2</code>'s read. Predict the verdict before you
+release the button.</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> In <code>MiniDb.noteReadWriteConflicts</code>, add <code>if (true) return;</code> as the first
+line, then run <code>java src/MiniLab.java</code>. Exactly one cell of the matrix changes.
+Predict which one first. What has <code>SERIALIZABLE(SSI)</code> become?</p>
+<p><strong>4.2</strong> In <code>MiniDb.readTs</code>, replace the body with <code>return t.startTs;</code> — so read
+committed now reads from its own start timestamp. Run the matrix. Three cells
+change and one conspicuously does not. Which, and why does that one not move?</p>
+<p><strong>4.3</strong> In the read-skew scenario the transfer is <em>already</em> one atomic
+transaction, and read skew happens anyway. Explain why making the writer more
+atomic can never fix it, and name the two things that can.</p>
+<p><strong>4.4</strong> Set <code>Runner.stepTimeoutMs = 1</code> and re-run the H2 matrix. Which
+distinction becomes unreliable, and which stays completely trustworthy? What
+does that tell you about which parts of the table you could quote in a design
+review from a run on a loaded laptop?</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> Add <code>SELECT … FOR UPDATE</code> to the toy engine: a method
+<code>getForUpdate(Tx, key)</code> that takes an exclusive lock <strong>at every level</strong>, not
+just under 2PL. Add a scenario proving it fixes lost update at
+<code>READ_COMMITTED</code>, and add the expected row to <code>Tests.MINI_EXPECTED</code>. Compare
+your result with the H2 row <code>Lost update, with SELECT ... FOR UPDATE</code>.</p>
+<p><strong>5.2</strong> Add a <code>UNIQUE</code>-style constraint to the toy engine: a check at commit
+that no two live rows match a given predicate. Add a <em>double-booking</em> variant
+that uses it, and show it is <code>safe</code> at <strong>every</strong> level, including read
+uncommitted. Then write two sentences on when a constraint beats an isolation
+level.</p>
+<p><strong>5.3</strong> Give <code>Retry</code> an exponential backoff with a cap and a jittered first
+sleep, and record attempts-per-success. Re-run experiment 2 and say what the
+backoff did to the wall-clock time at 1 hot row, and what it did at 16.</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> In <code>MiniDb.commit</code>, change the first-committer-wins test from
+<code>v.begin &gt; t.startTs</code> to <code>v.begin &gt;= t.startTs</code>. Run the matrix and the tests.
+<strong>Nothing changes.</strong> Explain precisely why the altered branch is unreachable,
+and then either write a test that would catch it or argue that no such test can
+exist in this engine.</p>
+<p><strong>6.2</strong> In <code>MiniDb.isPivot</code>, drop the <code>status != Status.ABORTED</code> filter from both
+lines. Two tests fail. What is the final state of the doctors table now, and why
+is this a <strong>waste</strong> rather than a <strong>safety bug</strong>? What would the equivalent
+mistake cost in a real database under load?</p>
+<p><strong>6.3</strong> In <code>MiniDb.blockIfSomeoneElseIsWriting</code>, change <code>u.status == Status.ACTIVE</code> to <code>u.status == Status.COMMITTED</code>. Three tests fail. Which
+anomaly has been unlocked, and why is it the one anomaly that every isolation
+standard says must be prevented at every level?</p>
+<p><strong>6.4</strong> A colleague says: <em>&quot;We switched to SERIALIZABLE and now transactions
+randomly fail with 40001 under load. The database is broken — we're rolling
+back.&quot;</em> Write the reply. Include what they should measure before changing
+anything.</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> <code>Retry.inTransaction</code> retries the <strong>whole</strong> transaction. Someone
+proposes retrying only the statement that failed, to save work. Construct a
+concrete two-transaction example where that produces a wrong answer, and state
+the general rule it violates.</p>
+<p><strong>7.2</strong> Your retry loop has a budget of 20 attempts and a transaction exhausts
+it. Raising the budget is the obvious move and it is wrong. Give three better
+responses, in the order you would try them, and say what each one costs.</p>
+<p><strong>7.3</strong> A nightly job takes <code>SELECT … FOR UPDATE</code> on two accounts per transfer
+and deadlocks under load. Fix it <strong>without</strong> changing the isolation level, and
+prove your fix with <code>java -cp ../lib/h2.jar src/Experiments.java deadlock</code>.</p>
+<p><strong>7.4</strong> You raise a report to <code>REPEATABLE READ</code> and it now runs for 40 minutes
+over month-end. A week later the DBA says the database has doubled in size and
+queries are slower. Explain the connection, and give the two settings you would
+look at.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — A payments ledger.</strong> For each of these, choose the isolation level <em>and</em>
+the mechanism, and justify the cost:</p>
+<ul>
+<li>checking a balance and debiting it, in one request;</li>
+<li>the idempotency-key check that decides whether a payment has already been
+taken;</li>
+<li>the monthly statement, reading tens of thousands of rows;</li>
+<li>the rule <em>&quot;a customer may have at most one active subscription&quot;</em>;</li>
+<li>a promotion code valid for its first 1,000 redemptions;</li>
+<li>the fraud model's feature lookup on the hot path.</li>
+</ul>
+<p>Then: which of these would you protect with a database <strong>constraint</strong> instead,
+and why is that usually the better answer?</p>
+<p><strong>8.2 — Two engines.</strong> Your product must run on PostgreSQL and MySQL/InnoDB.
+Which of the assumptions you made in 8.1 stop being true when you move between
+them? Name at least three concrete differences and say what you would do about
+each.</p>
+<p><strong>8.3 — Not an isolation problem.</strong> Name a case in a payments system where the
+right answer is <em>not</em> to raise the isolation level at all, even though the
+symptom looks exactly like an isolation bug. Say what you would do instead and
+what you would give up.</p>
+<p><strong>8.4 — Prove it.</strong> You have inherited a production database and nobody knows
+what its isolation behaviour really is. Describe, in five steps, how you would
+find out — and what you would put in the runbook afterwards.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--isolation-levels">Solutions — isolation levels</h1>
+<p>Every measured number here came from running the code in this lab against H2
+2.4.240 or the toy engine. Where something is reasoning or vendor documentation
+rather than a measurement, it says so.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> They have fixed <em>half-done work</em>: if the second statement fails, the
+first is undone, and once it commits it survives a crash. They have not fixed
+anything about the other clerk, because &quot;one unit&quot; says nothing about who else
+is running at the same time. Isolation is a separate promise with its own dial,
+and the default setting of that dial permits exactly the bug they closed —
+measured, roughly <strong>60 of 320 increments survive</strong> at read committed, every
+transaction committing successfully.</p>
+<p><strong>1.2</strong> Serializable means: <em>however the work actually overlapped, the ending is
+one that could have been reached by doing the transactions one at a time, in
+some order.</em> It does not say which order, and it does not say they actually ran
+one at a time.</p>
+<p>Running them genuinely one at a time is not the answer because it means serving
+one user at a time. The whole field exists to get the appearance without the
+cost.</p>
+<p><strong>1.3</strong></p>
+<ul>
+<li><strong>Isolation vs atomicity</strong> — atomicity is about <em>your</em> transaction being
+all-or-nothing across a failure; isolation is about <em>other people's</em>
+transactions being invisible to yours.</li>
+<li><strong>Isolation vs linearizability</strong> — linearizability is one operation on one
+object, across machines, with a real-time rule; isolation is many operations
+on many rows, on one machine, with no real-time rule at all.</li>
+<li><strong>Snapshot isolation vs serializable</strong> — snapshot checks what you <em>wrote</em>;
+serializable also checks what you <em>read</em>. The gap between them is exactly
+write skew.</li>
+<li><strong>Optimistic locking vs first-committer-wins</strong> — the same rule, enforced in
+different places: your application comparing a version column, versus the
+engine comparing version timestamps.</li>
+</ul>
+<p><strong>1.4</strong> Because the database can see every row you touched, but it cannot see
+the <strong>rule you were checking</strong>. Lost update is two transactions writing <em>the
+same row</em>, which the engine notices for free. Write skew is two transactions
+writing <em>different rows</em> after both reading a shared condition — and that
+condition lives in an <code>if</code> statement in your application, somewhere the database
+has never looked. The only way to catch it is to record what was <strong>read</strong>, which
+is the one thing snapshot isolation does not do.</p>
+<p><strong>1.5</strong> It is a feature, and the sentence is: <em>&quot;The database noticed that two
+requests would have corrupted each other, stopped one of them before any damage
+was done, and told us to run it again — which we do automatically.&quot;</em> If you
+cannot say the last clause truthfully, you have bought the isolation level and
+thrown away what it bought you.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> (a) non-repeatable read · (b) lost update · (c) write skew ·
+(d) read skew · (e) dirty read.</p>
+<p>The one worth dwelling on is (c): it is the only one where the two transactions
+never touch the same row, which is why it is the only one that survives snapshot
+isolation.</p>
+<p><strong>2.2</strong> Clerk 1 reads the version of <code>dr alice</code> and <code>dr bob</code> valid at moment 3;
+Clerk 2 reads the versions valid at moment 4 — in this scenario the same two
+versions, because nothing has been committed in between.</p>
+<p>The first-committer-wins check does not fire because <strong>it only looks at the rows
+you wrote</strong>. Clerk 1 wrote <code>dr alice</code>; no version of <code>dr alice</code> appeared after
+Clerk 1's snapshot. Clerk 2 wrote <code>dr bob</code>; same story. Each check passes
+honestly. The information that would have condemned them — that each had <em>read</em>
+the row the other was about to change — was never recorded.</p>
+<p><strong>2.3</strong></p>
+<ul>
+<li>read committed versus snapshot: <code>MiniDb.readTs</code>, the single line
+<code>return t.level == Level.READ_COMMITTED ? clock : t.startTs;</code></li>
+<li>first-committer-wins: the loop in <code>MiniDb.commit</code> guarded by
+<code>if (v.begin &gt; t.startTs)</code></li>
+<li>the only place a read is recorded: <code>MiniDb.noteReadWriteConflicts</code> (fed by the
+<code>t.readKeys.add(key)</code> and <code>t.readPreds.add(...)</code> lines in <code>get</code> and <code>scan</code>,
+both of which run <strong>only</strong> under <code>SERIALIZABLE_SSI</code>)</li>
+<li>who gets refused: <code>MiniDb.isPivot</code> — <code>return in &amp;&amp; out;</code></li>
+</ul>
+<p><strong>2.4</strong> In the H2 matrix, <code>safe(err)</code> appears in the <code>RR</code>, <code>SNAP</code> and <code>SER</code>
+columns for all three lost-update rows — nine cells.</p>
+<p>What the application must have for every one of them: <strong>a retry loop around the
+whole transaction</strong>, keyed on SQLSTATE <code>40001</code> (and <code>40P01</code> for deadlocks).
+Without it, <code>safe(err)</code> is not &quot;safe&quot; from the user's point of view — it is a
+500. See <span class="missing" title="Not in the hub: src/Retry.java is in the lab folder on your laptop"><code>src/Retry.java</code></span>.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> <strong>All 320 survive, with zero retries</strong> — and it is the fastest option
+measured (26 ms, against 131 ms for the broken read-then-write version).</p>
+<p>A single <code>UPDATE</code> takes the row lock and <em>then</em> reads the current value, so
+there is no gap for anyone to slip into. The lost update was never really about
+the isolation level; it was about the application holding a value across a gap
+it did not own. <strong>Check whether the read can move into the write before you
+reach for the dial.</strong></p>
+<p><strong>3.2</strong> <code>ALLOWED</code> at all five levels — including the one called <code>SERIALIZABLE</code>.</p>
+<p>What that means for vendor documentation: <strong>a level name is a label, not a
+specification.</strong> H2's own pull request adding these levels says the
+implementation &quot;prevents all three read phenomena, but doesn't ensure
+equivalence of sequential and concurrent execution of transactions.&quot; The
+behaviour is documented; it is just not documented in the name. Run the table
+against your own database.</p>
+<p><strong>3.3</strong> Measured: <strong>282 retries on 1 hot row, 1 retry on 16.</strong> Roughly two
+orders of magnitude, for identical work at an identical isolation level. Wall
+clock went from 247 ms to 17 ms.</p>
+<p><strong>3.4</strong> <code>ALLOWED · ALLOWED · ALLOWED · safe(err) · safe(err)</code>.</p>
+<p><code>SERIALIZABLE(SSI)</code> is the first to stop it. What it is doing that snapshot
+cannot: it recorded the <strong>question</strong> each clerk asked (&quot;is room 1 free on
+Monday?&quot;), and when the other clerk inserted a row, it checked that row against
+every remembered question. Snapshot isolation only compares row versions — and
+when both clerks looked, <strong>there was no row to compare</strong>. That is why row locks
+are no help here either: you cannot lock a row that does not exist.</p>
+<p><strong>3.5</strong> The anomaly disappears, at every level.</p>
+<p>That is the most important control on the page. Nothing about the database
+changed — the two transactions simply stopped overlapping. <strong>Concurrency is the
+input; the isolation level only decides what to do about it.</strong> The cheapest fix
+for a contention problem is often to stop the two things being concurrent at
+all.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Exactly one cell changes: <strong>write skew at <code>SERIALIZABLE(SSI)</code> goes from
+<code>safe(err)</code> to <code>ALLOWED</code>.</strong> (Double-booking too, if you count it — both write-skew
+rows.) <code>SERIALIZABLE(SSI)</code> has become <strong>snapshot isolation</strong>.</p>
+<p>That is the whole of SSI in one method. Everything else — snapshots,
+first-committer-wins, version chains — is shared with the level below. The
+difference between &quot;prevents everything&quot; and &quot;prevents everything except the
+dangerous one&quot; is a single piece of bookkeeping about reads.</p>
+<p><strong>4.2</strong> Three cells change, all in the <code>READ COMMITTED</code> column: <strong>non-repeatable
+read, phantom read and read skew all go from <code>ALLOWED</code> to <code>safe</code>.</strong> Read
+committed has become snapshot isolation, because that ternary <em>was</em> the only
+difference.</p>
+<p>The one that does not move is <strong>lost update</strong>, still <code>ALLOWED</code> at read
+committed. A frozen view does not help you: both transactions read 100 from
+their snapshots and both write 110. What fixes lost update at the snapshot level
+is not the snapshot — it is the <em>first-committer-wins check at commit</em>, and this
+edit did not touch that. Two independent mechanisms, often confused because they
+arrive together in the same level.</p>
+<p><strong>4.3</strong> Read skew is a property of the <strong>reader</strong>, not the writer. The transfer
+is already atomic — it commits both updates together, and no reader ever sees
+half of it. The problem is that the <em>reader</em> took two separate looks at the
+world, and the atomic transfer landed between them. Making the writer more
+atomic cannot help, because the writer was never the one that was split.</p>
+<p>The two things that fix it: give the reader <strong>one snapshot</strong> for both statements
+(raise its level), or make the reader ask <strong>one question</strong> instead of two
+(<code>SELECT SUM(balance) FROM acct WHERE id IN (1,2)</code> — a single statement is a
+single moment at every level).</p>
+<p><strong>4.4</strong> Unreliable: the distinction between <code>safe</code>, <code>safe(wait)</code> and
+<code>safe(err)</code>, because it is inferred from how long a step took. At a 1 ms
+timeout, ordinary statements get misreported as blocked.</p>
+<p>Completely trustworthy: <strong><code>ALLOWED</code> versus everything else.</strong> That verdict is
+computed from the values the transactions were actually given and the final
+state of the table, neither of which depends on a clock.</p>
+<p>So: you can quote the <code>ALLOWED</code> cells from any machine, in any state. If you
+want to claim &quot;this level prevents it <em>by waiting</em>&quot; rather than just &quot;prevents
+it&quot;, run it on a quiet machine and raise the timeout.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> The method is a lock acquisition plus an ordinary read:</p>
+<div class="code"><pre><code class="language-java">Integer getForUpdate(Tx t, String key) {
+    check(t);
+    lockExclusive(t, key);          // at EVERY level, not just 2PL
+    if (t.writes.containsKey(key)) return t.writes.get(key);
+    return versionAt(key, db.clock);  // the newest committed, not your snapshot
+}
+</code></pre></div>
+<p>Two details carry the whole idea. The lock is taken <strong>at every level</strong> — that is
+what &quot;pessimistic locking&quot; means, and it is why <code>SELECT … FOR UPDATE</code> works even
+at read committed. And it reads the <strong>newest committed</strong> value rather than your
+snapshot, because reading your stale snapshot under a lock would give you a
+correctly-locked wrong number.</p>
+<p>Expect <code>safe(wait)</code> at <code>READ_UNCOMMITTED</code> and <code>READ_COMMITTED</code>, and <code>safe(err)</code>
+at snapshot and above — which is exactly the H2 row
+<code>Lost update, with SELECT ... FOR UPDATE</code>: <code>safe(wait) safe(wait) safe(err) safe(err) safe(err)</code>. Two independent implementations, same answer.</p>
+<p><strong>5.2</strong> At commit, before stamping the writes, scan the rows this transaction is
+adding and reject if another <strong>committed</strong> row already matches the predicate.</p>
+<p>When a constraint beats an isolation level: whenever the rule can be expressed
+about the <em>data</em> rather than about the <em>decision</em>. A constraint is checked on
+every path into the table — including the migration script, the admin console
+and the colleague's psql session — costs nothing at read committed, and cannot
+be forgotten by a future caller. An isolation level protects only the code paths
+that remember to ask for it.</p>
+<p><strong>5.3</strong> Expected shape: backoff <strong>increases</strong> wall-clock time at 1 hot row (you
+are deliberately sleeping) but <strong>reduces total retries</strong>, because retrying
+instantly into the same collision is what produced 282 attempts. At 16 rows it
+changes almost nothing, because there was barely any contention to back off
+from.</p>
+<p>The lesson worth writing down: backoff trades latency for throughput, and it is
+only worth it where contention is real. Measure before adding it.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> Nothing changes because <strong>no version can ever have <code>begin == startTs</code></strong>.
+Both values come from the same <code>clock++</code> counter, so every timestamp in the
+engine is unique: a version's <code>begin</code> and a transaction's <code>startTs</code> are two
+different draws from the same sequence and can never collide. The <code>&gt;=</code> branch
+is unreachable.</p>
+<p>Could a test catch it? Not without breaking the invariant that makes it
+unreachable — you would have to hand-construct a version and a transaction
+sharing a timestamp, which the public API does not let you do. So the honest
+answer is: <strong>the bug is invisible because a stronger invariant holds elsewhere</strong>,
+and the right response is to write that invariant down as a comment next to the
+counter, not to write a test for an impossible state.</p>
+<p>This is worth internalising, because the reverse case is what kills you: a
+&quot;harmless&quot; change becomes a real bug the day someone makes timestamps
+non-unique — for example by taking them from a wall clock.</p>
+<p><strong>6.2</strong> The doctors table ends with <strong>2 on call instead of 1</strong>, and both
+transactions are refused. Failing tests: <code>ssi_leaves_exactly_one_doctor_on_call</code>
+and <code>ssi_refuses_exactly_one_transaction</code>.</p>
+<p>It is a <strong>waste, not a safety bug</strong>: no incorrect state was ever committed. Once
+Clerk 1 has been thrown out, its arrows describe a transaction that never
+happened, so Clerk 2 is no longer part of any cycle and could safely have
+committed. Counting the dead transaction's arrows refuses it for nothing.</p>
+<p>In production this is the difference between one retry and two under
+contention — and because each retry re-enters the same contention, the cost is
+worse than linear. Real SSI implementations spend considerable effort on exactly
+this: refusing as few transactions as possible while still refusing enough.</p>
+<p><strong>6.3</strong> <strong>Dirty write</strong> — writing over a change nobody has committed. Failing
+tests: <code>dirty-write</code> at <code>READ_COMMITTED</code>, <code>SNAPSHOT</code> and <code>SERIALIZABLE_SSI</code>.</p>
+<p>It is the one anomaly every standard forbids at every level because it breaks
+something more basic than isolation: it breaks <strong>rollback</strong>. If Clerk 2 can
+build on Clerk 1's uncommitted value, then Clerk 1's <code>ROLLBACK</code> cannot restore
+the world — the undo would have to reach into a transaction that has already
+committed. Atomicity itself stops being well-defined. Everything else on the
+ladder is a matter of degree; this one is a matter of the model working at all.</p>
+<p><strong>6.4</strong> Something like:</p>
+<blockquote>
+<p>Nothing is broken — <code>40001</code> is what serializable <em>is</em>. It means the database
+caught two transactions that would have corrupted each other and stopped one
+before any damage was done. The fix is a retry loop around the whole
+transaction, not around the failing statement, and not a lower isolation
+level.</p>
+<p>Before changing anything, measure two things. First, <strong>which rows</strong> the
+failures cluster on: in our own measurements, the same workload spread over 1
+row versus 16 rows went from 282 retries to 1 — with no change to the
+isolation level. Contention is a data-access-pattern problem wearing an
+isolation costume. Second, <strong>the retry rate per transaction type</strong>: if one
+endpoint is responsible for all of it, fix that endpoint.</p>
+<p>And check the cheaper fixes first: can the read move into the write
+(<code>SET n = n + 1</code>)? Can the rule become a <code>UNIQUE</code> constraint? Both are free
+and neither needs serializable at all.</p>
+</blockquote>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> Two transactions, both under snapshot isolation, transferring out of the
+same account with an overdraft rule:</p>
+<div class="code"><pre><code>T1 read balance → 100          T2 read balance → 100
+T1 checks 100 &gt;= 80, OK        T2 checks 100 &gt;= 80, OK
+T1 UPDATE balance = 20
+                               T2 UPDATE balance = 20   -&gt; refused, 40001
+</code></pre></div>
+<p>Retrying only the failed <code>UPDATE</code> re-runs <code>balance = 20</code>, which succeeds this
+time — and the account has paid out 160 from a balance of 100. <strong>The decision
+<code>100 &gt;= 80</code> was made against data that is no longer true, and re-running the
+statement carries that stale decision forward.</strong></p>
+<p>The general rule: <strong>a serialization failure invalidates everything your
+transaction read, not just the statement that failed.</strong> The retry must go back to
+the reads, which means re-running the whole transaction — which in turn means
+your transaction body must be a pure function of the data it reads, with no
+side effects outside the database. That last clause is what makes retry loops
+hard in real applications: the email you sent halfway through does not roll back.</p>
+<p><strong>7.2</strong> In order:</p>
+<ol>
+<li><strong>Reduce the contention.</strong> Find the hot row. Shard the counter, batch the
+updates, or move the read into the write. This is nearly always the real fix
+and it costs a code change, not throughput.</li>
+<li><strong>Lower the level for this transaction and protect it differently</strong> — a
+<code>UNIQUE</code> constraint, a conditional <code>UPDATE … WHERE status = 'free'</code>, or
+<code>SELECT … FOR UPDATE</code> on one row. Costs some correctness surface, which you
+must be able to name.</li>
+<li><strong>Shed or queue the load.</strong> If a hundred requests genuinely need the same row,
+they are going to take turns whatever you do; a queue makes the waiting
+explicit and fair instead of turning it into retries and timeouts. Costs
+latency and a component.</li>
+</ol>
+<p>Raising the budget is wrong because retries <em>are</em> the contention: each attempt
+re-enters the same collision, so more attempts make the collision worse. You are
+adding load to a system that is failing from load.</p>
+<p><strong>7.3</strong> Lock the two accounts in a <strong>fixed order</strong> — always the lower id first —
+regardless of the direction of the transfer. Then no two transactions can hold
+what the other one wants, so the cycle cannot form.</p>
+<p>Measured (<code>Experiments.deadlock</code>, 60 rounds of two opposing transfers):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>lock order</th>
+  <th>retries</th>
+  <th>gave up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>whatever the transfer needs</td>
+  <td>57</td>
+  <td>0</td>
+</tr>
+<tr>
+  <td>always lowest id first</td>
+  <td><strong>0</strong></td>
+  <td>0</td>
+</tr>
+</tbody>
+</table></div>
+<p>Same isolation level, same work. <strong>Deadlocks are a lock-ordering bug, not an
+isolation-level problem</strong>, and this is the fix that costs no throughput.</p>
+<p><strong>7.4</strong> The report holds an open snapshot for 40 minutes. Every version of every
+row that anything overwrites during those 40 minutes must be kept, because your
+report might still read it. Cleanup cannot advance past the oldest open
+transaction, so 40 minutes of the whole database's writes accumulate as dead
+versions — and they stay accumulated after your report finishes, until cleanup
+catches up. The table grows while the row count does not, and every scan reads
+the bloat.</p>
+<p>The two settings: <strong><code>idle_in_transaction_session_timeout</code></strong> (kill sessions
+holding a snapshot open while doing nothing) and <strong>autovacuum's aggressiveness</strong>
+(<code>autovacuum_vacuum_cost_limit</code>, <code>autovacuum_naptime</code>). The structural fix is to
+run long reports against a replica or a separate analytical copy so their
+snapshots never pin the primary's cleanup — which is the point at which an
+isolation-level decision becomes an architecture decision.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p>One defensible position, with the reasoning exposed.</p>
+<h3 id="solutions-81--a-payments-ledger">8.1 — A payments ledger</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Job</th>
+  <th>Level and mechanism</th>
+  <th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>balance check + debit</td>
+  <td>read committed + <strong>conditional update</strong>: <code>UPDATE acct SET balance = balance - :amt WHERE id = :id AND balance &gt;= :amt</code>, then check rows-affected</td>
+  <td>one statement, one row, no gap. The rule is <em>inside</em> the write, so there is nothing to skew. No retries, no locks held across a round trip</td>
+</tr>
+<tr>
+  <td>idempotency-key check</td>
+  <td>read committed + <strong><code>UNIQUE</code> constraint</strong> on the key, insert-first</td>
+  <td>the constraint decides the race, not the isolation level. A duplicate insert fails with a key violation you can catch, at every level, forever</td>
+</tr>
+<tr>
+  <td>monthly statement</td>
+  <td><code>REPEATABLE READ</code>, read-only, <strong>on a replica</strong></td>
+  <td>it needs one consistent moment across thousands of rows; on a replica so its snapshot cannot pin the primary's cleanup (7.4)</td>
+</tr>
+<tr>
+  <td>at most one active subscription</td>
+  <td><strong>serializable + retry</strong>, or a partial unique index on <code>(customer_id) WHERE status = 'active'</code></td>
+  <td>this is textbook write skew: two requests read &quot;no active subscription&quot;, then insert <em>different rows</em>. Prefer the index — it is free and cannot be forgotten</td>
+</tr>
+<tr>
+  <td>promo code, first 1,000 redemptions</td>
+  <td>serializable + retry, or a counter row updated with <code>UPDATE … SET used = used + 1 WHERE used &lt; 1000</code></td>
+  <td>the conditional update turns a cross-row rule into a single-row one. Expect contention on the counter near the limit; shard it if the promo is large</td>
+</tr>
+<tr>
+  <td>fraud feature lookup</td>
+  <td>read committed, or no transaction at all</td>
+  <td>it is a model input, already approximate. Paying for consistency here buys nothing and costs latency on the hot path</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Which would I make constraints instead?</strong> The idempotency key, the single
+active subscription, and any uniqueness rule. The reason is not performance —
+it is <strong>reach</strong>. An isolation level protects the code paths that remember to ask
+for it; a constraint protects the table. Six months from now, the data migration
+and the support engineer's manual <code>INSERT</code> will both go through the constraint
+and neither will go through your <code>@Transactional</code> annotation.</p>
+<h3 id="solutions-82--postgresql-and-mysqlinnodb">8.2 — PostgreSQL and MySQL/InnoDB</h3>
+<p><em>(Vendor behaviour, from documentation — not measured in this lab.)</em></p>
+<ol>
+<li><strong><code>REPEATABLE READ</code> does not mean the same thing.</strong> On Postgres it is
+snapshot isolation throughout. On InnoDB, plain <code>SELECT</code> reads a snapshot but
+<strong><code>SELECT … FOR UPDATE</code>, <code>UPDATE</code> and <code>DELETE</code> read the latest committed
+row.</strong> So a read-modify-write behaves differently on the two engines at the
+same named level. <em>What I would do:</em> never rely on <code>REPEATABLE READ</code> for a
+read-modify-write on either engine — use the conditional update, which is
+identical on both.</li>
+<li><strong><code>SERIALIZABLE</code> is a different mechanism.</strong> Postgres uses SSI: it never
+blocks readers, and it fails at commit with <code>40001</code>. InnoDB turns every plain
+<code>SELECT</code> into a locking read: it blocks, and fails with lock-wait timeouts
+and deadlocks. <em>What I would do:</em> make the retry loop catch <strong>both</strong> families
+of error — serialization failure and deadlock — because which one you get
+depends on the engine, not on your code.</li>
+<li><strong>Phantom prevention comes from different places.</strong> Postgres gets it from the
+snapshot; InnoDB gets it from gap and next-key locks on <em>locking</em> reads,
+which also means InnoDB can deadlock on ranges where Postgres would not.
+<em>What I would do:</em> prefer constraints for uniqueness rules so neither
+mechanism is load-bearing.</li>
+</ol>
+<p>The general lesson: <strong>write the application against anomalies, not against level
+names.</strong> &quot;This transaction must not lose an update&quot; ports; &quot;this transaction
+uses REPEATABLE READ&quot; does not.</p>
+<h3 id="solutions-83--not-an-isolation-problem">8.3 — Not an isolation problem</h3>
+<p><strong>A customer-facing balance that looks briefly stale after a payment.</strong> The
+symptom is identical to a read skew or a non-repeatable read complaint — &quot;I paid
+and the balance is wrong&quot; — and raising the isolation level will not fix a
+single one of them, because the read is coming from a <strong>replica</strong> that is
+seconds behind, or from a <strong>cache</strong>. Isolation is a one-node property; staleness
+across nodes is the axis the <a href="../26-linearizability/notes.html#readme">linearizability</a> lab covers,
+and no isolation level touches it.</p>
+<p>What I would do instead: route the read that follows a write to the primary for
+a short window (or pass the write's log position and wait for the replica to
+reach it), and show an &quot;as of&quot; timestamp in the UI. What I give up: some of the
+read-replica offload I bought the replica for, and a little latency on exactly
+the requests that matter most.</p>
+<p>The reason this belongs in the exercises: the two axes have almost identical
+symptoms and completely different fixes, and reaching for the isolation dial
+when the problem is replication is a very common and very expensive mistake.</p>
+<h3 id="solutions-84--proving-what-you-have">8.4 — Proving what you have</h3>
+<ol>
+<li><strong>Run the matrix.</strong> <code>java -cp ../lib/h2.jar:&lt;driver&gt;.jar -Ddb.url=… src/Matrix.java</code>
+against a scratch schema on a copy of the real database, at the real version.
+Ten anomalies, five levels, one command.</li>
+<li><strong>Check the defaults you actually get</strong> — not just the server default but
+what your connection pool, ORM and framework set. <code>SHOW transaction_isolation</code>
+from inside a real application transaction, not from psql.</li>
+<li><strong>Find the write skews.</strong> Grep the codebase for the shape: a <code>SELECT</code> whose
+result feeds an <code>if</code>, followed by an <code>UPDATE</code>/<code>INSERT</code> of a <em>different</em> row.
+Every one of those is a candidate, and no level below serializable protects
+any of them.</li>
+<li><strong>Check for the retry loop.</strong> If any code path uses a level above read
+committed and there is no retry on <code>40001</code>, that path is already broken and
+nobody has noticed yet, because it only fails under load.</li>
+<li><strong>Measure contention</strong> on the rows those paths touch, so you know what
+raising a level would cost before you raise it.</li>
+</ol>
+<p><strong>In the runbook:</strong> the matrix output with the database version next to it; the
+list of transactions that run above read committed and where their retry loop
+lives; the invariants currently protected by application code rather than
+constraints (the write-skew candidates); and the alert thresholds for
+serialization-failure rate, deadlock rate, and oldest-open-transaction age.</p>
+<p>Re-run step 1 on every major database upgrade. <strong>These behaviours change between
+versions, and the level names do not.</strong></p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../07-acid/notes.html"><small>← Lab 7</small>acid</a><a href="../09-mvcc-and-vacuum/notes.html" style="text-align:right"><small>Lab 9 →</small>mvcc-and-vacuum</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-problem-exist-at-all">1. Why does this problem exist at all?</a><a href="#readme-2-what-happens-to-ashas-two-deposits">2. What happens to Asha&#x27;s two deposits?</a><a href="#readme-3-why-not-just-wrap-it-in-a-transaction">3. Why not just wrap it in a transaction?</a><a href="#readme-4-what-does-a-transaction-promise-and-which-promise-is-missing">4. What does a transaction promise, and which promise is missing?</a><a href="#readme-5-what-do-we-actually-want-as-if-they-had-queued">5. What do we actually want? &quot;As if they had queued&quot;</a><a href="#readme-6-what-is-the-key-idea-a-ladder-of-partial-promises">6. What is the key idea? A ladder of partial promises</a><a href="#readme-7-what-do-engineers-call-the-things-in-ashas-story">7. What do engineers call the things in Asha&#x27;s story?</a><a href="#readme-8-what-picture-should-you-carry-in-your-head">8. What picture should you carry in your head?</a><a href="#readme-9-can-you-watch-it-happen">9. Can you watch it happen?</a><a href="#readme--checkpoint-can-you-say-the-beginner-model-back">✅ Checkpoint: can you say the beginner model back?</a><a href="#readme-10-what-is-the-machinery-underneath-three-inventions-each-forced-by-the-last-ones-failure">10. What is the machinery underneath? Three inventions, each forced by the last one&#x27;s failure</a><a href="#readme--checkpoint-can-you-say-the-intermediate-model-back">✅ Checkpoint: can you say the intermediate model back?</a><a href="#readme-11-what-are-the-eight-bad-endings-and-which-rung-stops-each-one">11. What are the eight bad endings, and which rung stops each one?</a><a href="#readme-12-what-are-you-actually-buying">12. What are you actually buying?</a><a href="#readme-13-what-is-in-src-and-which-five-lines-carry-the-idea">13. What is in src/, and which five lines carry the idea?</a><a href="#readme-14-what-do-the-six-experiments-prove">14. What do the six experiments prove?</a><a href="#readme--checkpoint-can-you-say-the-engineering-model-back">✅ Checkpoint: can you say the engineering model back?</a><a href="#readme-15-what-happens-in-production">15. What happens in production?</a><a href="#readme--checkpoint-can-you-say-the-production-model-back">✅ Checkpoint: can you say the production model back?</a><a href="#readme-16-where-are-the-exercises">16. Where are the exercises?</a><a href="#readme-17-what-else-does-this-connect-to-and-where-should-you-go-next">17. What else does this connect to, and where should you go next?</a><a href="#readme-18-glossary">18. Glossary</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

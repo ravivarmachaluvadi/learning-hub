@@ -1,0 +1,997 @@
+<!doctype html>
+<html lang="en" data-hub-lab="27-linearizability-vs-serializability">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>27. linearizability-vs-serializability</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 27 of 71 · Stage 4</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 27 · Why Distribution Is Hard</p><article id="readme"><h1 id="readme-linearizability-vs-serializability--two-words-for-consistent-that-answer-different-questions">Linearizability vs Serializability — two words for &quot;consistent&quot; that answer different questions</h1>
+<blockquote>
+<p><strong>Lab shape (no code):</strong> this lab is this document + an interactive
+visualization (<code>visualization.html</code> — same page as the published artifact)</p>
+<ul>
+<li><code>EXERCISES.md</code>/<code>SOLUTIONS.md</code>. Every claim marked <strong>[measured]</strong> cites a
+number you already produced in a previous lab; nothing here asks you to run
+anything new.</li>
+</ul>
+<p><strong>What you already know that this lab stands on:</strong> the
+<a href="../26-linearizability/notes.html#readme">linearizability</a> lab (the single-copy illusion, the
+real-time rule, the draggable-bars checker) and the
+<a href="../08-isolation-levels/notes.html#readme">isolation-levels</a> lab (anomalies, write skew, the
+SERIALIZABLE level). The <a href="../46-distributed-transactions/notes.html#readme">distributed-transactions</a>
+lab already used the phrase &quot;external consistency = strict serializability&quot; —
+this lab is where that equation is finally earned.</p>
+</blockquote>
+<hr />
+<h2 id="readme-layer-guide">Layer guide</h2>
+<blockquote>
+<p><strong>BEGINNER MODEL</strong> (§1–§9) → <strong>INTERMEDIATE MODEL</strong> (§10) →
+<strong>ENGINEERING MODEL</strong> (§11–§12) → <strong>PRODUCTION MODEL</strong> (§13)</p>
+</blockquote>
+<hr />
+<h2 id="readme-1-why--one-review-meeting-two-confident-sentences-both-wrong">1. WHY — one review meeting, two confident sentences, both wrong</h2>
+<p>You will sit in design reviews where someone says <em>&quot;the database is
+serializable, so users can never see stale data&quot;</em> and someone else says
+<em>&quot;the key-value store is linearizable, so the transfer can't double-spend.&quot;</em>
+Both sentences sound airtight. Both are false — and each bug slips through
+exactly the gap the <em>other</em> guarantee would have covered. These are the two
+most-confused words in distributed systems: even vendor documentation mixes
+them up, and a level literally named <code>SERIALIZABLE</code> can ship without
+serializability (your isolation-levels lab <strong>[measured]</strong> H2 allowing write
+skew at every level including SERIALIZABLE, and Oracle's SERIALIZABLE is
+snapshot isolation by design). If you can't take the two words apart, you
+can't read a database's guarantee page, and you can't tell which of your
+bugs a stronger setting would actually fix.</p>
+<h2 id="readme-2-problem--the-deposit-that-vanished-and-the-overdraft-that-wasnt">2. PROBLEM — the deposit that vanished and the overdraft that wasn't</h2>
+<p>Priya and Omar run the backend of a small bank. Two incidents land in the
+same week.</p>
+<p><strong>Incident 1 — &quot;my deposit disappeared.&quot;</strong> A customer deposits ₹5,000 at a
+teller. The teller's screen says <strong>done</strong>. The customer opens the mobile app
+<em>eight seconds later</em> — balance unchanged. Support escalates. Priya checks
+the database: the deposit is there, committed, safe. The mobile app's read
+had gone to a lagging replica. Nothing was lost; something <em>old</em> was shown
+<strong>after</strong> something new was acknowledged. The database is configured
+<code>SERIALIZABLE</code>. The team's question: <em>how can a serializable database show
+yesterday's balance?</em></p>
+<p><strong>Incident 2 — the double withdrawal.</strong> The same bank keeps account balances
+in a strongly consistent key-value store — every single read and write is
+perfect, instant-looking, never stale. The withdrawal code does: read
+balance (₹1,000), check ≥ 800, write balance = 200. Two ATMs run it at the
+same moment. Both read ₹1,000. Both check. Both write 200. The customer
+withdrew ₹1,600 from a ₹1,000 account, and the store faithfully,
+<em>correctly</em>, recorded every operation. The team's question: <em>how can a store
+where no read is ever stale lose money?</em></p>
+<p>Same week, same bank, opposite bugs: one system showed the <strong>past</strong>, the
+other let two <strong>groups of steps</strong> interleave. Keep both incidents in hand —
+they are the two halves of this whole lesson.</p>
+<h2 id="readme-3-naive-solution--both-mean-one-at-a-time-so-pick-the-stronger-word">3. NAIVE SOLUTION — &quot;both mean 'one at a time', so pick the stronger word&quot;</h2>
+<p>The reasonable first belief — the one almost everyone holds — goes:
+<em>linearizable</em> means &quot;behaves like one copy handling one request at a time&quot;,
+<em>serializable</em> means &quot;behaves like transactions ran one at a time&quot;, one-at-a-time
+is one-at-a-time, so these are two dialects of the same guarantee; buy
+whichever the vendor prints in bigger letters, and both incidents are covered.</p>
+<h2 id="readme-4-failure--each-incident-walks-straight-through-the-other-words-guarantee">4. FAILURE — each incident walks straight through the other word's guarantee</h2>
+<p>Hold incident 1 against <strong>serializability</strong>. Serializability promises only:
+the outcome is <em>as if</em> the transactions ran in <strong>some</strong> one-at-a-time order.
+Watch it defend the vanished deposit — this is a hand trace, three lines:</p>
+<ul>
+<li>T1 (teller): write balance = 6,000. Committed, acknowledged at 10:00:00.</li>
+<li>T2 (mobile app, begins 10:00:08): read balance → returns <strong>1,000</strong> (old).</li>
+<li>The judge asks: is there ANY serial order explaining this? Yes: <strong>T2
+first, then T1</strong>. In that order T2 correctly sees 1,000. Verdict:
+<strong>serializable. No violation.</strong></li>
+</ul>
+<p>The serial order the judge accepted runs <em>backwards in wall-clock time</em> —
+T2 started eight real seconds after T1 finished, and the explanation
+pretends T2 came first. Serializability's definition <strong>never mentions the
+clock on the wall</strong>. &quot;Some order&quot; includes orders that put the present
+before the past. A stale read is not an isolation anomaly; it's an
+isolation <em>non-event</em>.</p>
+<p>Now hold incident 2 against <strong>linearizability</strong>. Linearizability promises:
+each <strong>single operation</strong> on each <strong>single object</strong> looks like it happened
+at one instant, instants consistent with real time. Trace the double
+withdrawal:</p>
+<ul>
+<li>read(balance)→1000 by ATM-A: happened at some instant. Legal.</li>
+<li>read(balance)→1000 by ATM-B: happened at some instant, before any write. Legal.</li>
+<li>write(balance=200) by A: an instant. Legal. write(balance=200) by B: an
+instant. Legal.</li>
+<li>Verdict: <strong>linearizable. No violation</strong> — you watched this exact shape in
+the linearizability lab <strong>[measured]</strong>: <code>AtomicInteger</code>, a linearizable
+register the JDK ships, lost 87% of 160,000 read-then-write increments
+(21,051 survived) while violating nothing.</li>
+</ul>
+<p>Linearizability's promise is per-operation. The bank's invariant lived
+across <strong>two operations</strong> (the read and the write) — and nobody told the
+store those two belonged together. There is no transaction here to protect.</p>
+<p>So the naive belief dies on both sides at once: serializability says nothing
+about <strong>time</strong>, and linearizability says nothing about <strong>groups</strong>.</p>
+<h2 id="readme-5-the-real-requirement--know-which-question-each-word-answers">5. THE REAL REQUIREMENT — know which question each word answers</h2>
+<p>What we actually need is not a winner between the two words. We need to see
+that &quot;is the system consistent?&quot; hides <strong>two independent questions</strong>:</p>
+<ol>
+<li><strong>The scope question:</strong> what is the unit being protected — one operation
+on one object, or a declared <em>group</em> of operations across many objects?</li>
+<li><strong>The time question:</strong> must the explaining order respect the real
+wall-clock order of non-overlapping work, or is <em>any</em> order acceptable?</li>
+</ol>
+<p>A guarantee is an answer to a (scope, time) pair. Confusing the two words
+means answering the wrong question — and shipping the bug the right answer
+would have caught.</p>
+<h2 id="readme-6-key-idea">6. KEY IDEA</h2>
+<p><strong>Linearizability and serializability sit on different axes.</strong>
+Linearizability = <em>single-operation</em> scope + <em>real-time</em> order: one object
+at a time must look like one copy touched at one instant. Serializability =
+<em>transaction</em> scope + <em>any</em> order: declared groups of operations must be
+explainable by some one-at-a-time sequence, with no reference to the clock.
+Neither implies the other; a system can have either, both, or neither. The
+combination — transaction scope AND real-time order — has its own name:
+<strong>strict serializability</strong>.</p>
+<h2 id="readme-7-terminology--realigning-words-you-already-own-plus-three-new-ones">7. TERMINOLOGY — realigning words you already own, plus three new ones</h2>
+<p>Most of this lab's vocabulary you already earned elsewhere; what's new is
+where each word <em>sits on the two axes</em>.</p>
+<p><strong>Linearizability</strong> <em>(known — linearizability lab)</em>. One-object,
+one-operation, real-time. The full machinery — histories, invocation/response
+bars, linearization points, the real-time rule (&quot;if A was answered before B
+was sent, A explains first&quot;) — is that lab's content; here it is one of the
+two judges.</p>
+<p><strong>Serializability</strong> <em>(named in the isolation lab; full treatment now)</em>.
+Plain meaning: the outcome of running transactions concurrently equals the
+outcome of running them one at a time in <em>some</em> order. Precise meaning: a
+concurrent schedule is serializable iff it is equivalent to <strong>some serial
+schedule</strong> of the same transactions. <em>Why the term exists:</em> database people
+in the 1970s (Eswaran, Gray; formalized by Papadimitriou 1979) needed a
+correctness bar for interleaving transactions that didn't dictate <em>how</em> to
+interleave — &quot;equivalent to some serial run&quot; judges outcomes, not
+mechanisms, which is why 2PL, snapshot-based SSI, and single-threaded
+execution can all honestly claim the same word. Concrete example: the
+vanished-deposit trace above — T2-then-T1 is a serial order, so the schedule
+passes. Connection: it is the <strong>I</strong> in ACID, the top of the
+isolation-levels ladder; every anomaly in that lab (dirty read, write skew,
+lost update…) is a way of <em>failing</em> it.</p>
+<p><strong>Real-time order</strong> <em>(known)</em>. The constraint serializability deliberately
+lacks: if operation/transaction A completed before B began — provable with a
+wall clock — A must come before B in the explanation.</p>
+<p><strong>Strict serializability</strong> <em>(named in distributed-transactions; earned
+now)</em>. Plain meaning: serializability that also respects the wall clock.
+Precise meaning: the schedule is equivalent to a serial order that is
+consistent with the real-time order of non-overlapping transactions. <em>Why
+the term exists:</em> to name the guarantee people <em>think</em> &quot;serializable&quot; means
+— once you see that plain serializability legally time-travels, you need a
+word for the version that doesn't. Concrete example: under strict
+serializability the vanished-deposit history is <strong>rejected</strong> — T1 finished
+before T2 began, so only T1-then-T2 may explain, and T2's read of 1,000 has
+no explanation. Connection: <strong>Spanner's &quot;external consistency&quot; is exactly
+this</strong> — the distributed-transactions lab <strong>[measured]</strong> its loss (10 stale
+snapshots at clock skew 8) and its price (commit-wait, ack latency 6.7 →
+24.8 ticks). Also: strict serializability restricted to one-operation
+transactions collapses to linearizability — the two axes meet at the top.</p>
+<p><strong>Recency / staleness</strong> <em>(new, minor)</em>. A <strong>recency guarantee</strong> promises
+reads reflect completed writes. Linearizability is a recency guarantee;
+serializability is not — &quot;stale&quot; is a real-time word, invisible to a judge
+with no clock.</p>
+<p><strong>The C in CAP vs the I in ACID</strong> <em>(new framing)</em>. CAP's C <strong>is
+linearizability</strong> — Gilbert &amp; Lynch's proof of the theorem defines
+consistency as linearizability (&quot;atomic consistency&quot;), a fact the cap-theorem
+lab recorded. It is <em>not</em> serializability; CAP says nothing about
+transactions. The two words come from two research communities — shared
+memory/distributed computing (Herlihy &amp; Wing, 1990) vs databases
+(Papadimitriou, 1979) — which is <em>why</em> two words exist for
+&quot;one-at-a-time-ish&quot; and why they mismatch: each community formalized the
+threat it faced. Distributed computing's threat was <strong>replicas and time</strong>;
+databases' threat was <strong>interleaved multi-step programs</strong>.</p>
+<p><strong>One-copy serializability (1SR)</strong> <em>(new, minor)</em>. Serializability for a
+replicated database: equivalent to a serial run on a <em>single copy</em>. Still no
+real-time clause — a replicated system can be 1SR and serve stale reads.</p>
+<h2 id="readme-8-mental-models--the-notary-and-the-auditor">8. MENTAL MODELS — the notary and the auditor</h2>
+<p><strong>Simple model.</strong> Two inspectors examine the bank's day:</p>
+<ul>
+<li>The <strong>notary</strong> sits in the lobby with a wall clock, watching <em>single
+events</em>. Their one rule: the official record must never contradict what a
+bystander could have witnessed — if Mrs. Rao's deposit was stamped DONE at
+10:00 and Mr. Iyer asked for the balance at 10:00:08, the answer must
+include her deposit. The notary doesn't care whether a <em>procedure</em> of
+five steps made sense together; they care that no single answer betrays
+the clock.</li>
+<li>The <strong>auditor</strong> arrives at midnight with the ledger and <em>no clock</em>. Their
+one rule: the books must read as if each multi-step procedure (a transfer:
+debit here, credit there) ran start-to-finish alone, in some order the
+auditor is free to choose. The auditor will happily reorder the whole day
+— afternoon before morning — if that makes the books coherent. But they
+will catch two procedures whose steps interleaved into nonsense, which
+the notary (staring at innocent single events) never sees.</li>
+</ul>
+<p><strong>Engineering model.</strong> A history of invocation/response bars, some bars
+grouped into transactions. Judge L (per object): choose one linearization
+point inside every bar such that reading points in order reproduces every
+answer, with real-time between non-overlapping <em>bars</em> respected. Judge S:
+choose one position per <em>transaction</em> group in a serial order such that every
+read sees the latest preceding write, real time ignored. Judge SS: judge S's
+procedure plus real-time between non-overlapping <em>transactions</em>. Verdict =
+does a valid choice exist.</p>
+<p><strong>Mapping.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Story</th>
+  <th>Engineering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The notary</td>
+  <td>The linearizability judge</td>
+</tr>
+<tr>
+  <td>The notary's wall clock</td>
+  <td>The real-time order constraint</td>
+</tr>
+<tr>
+  <td>A single stamped event</td>
+  <td>One operation's bar; its stamp instant = linearization point</td>
+</tr>
+<tr>
+  <td>The auditor</td>
+  <td>The serializability judge</td>
+</tr>
+<tr>
+  <td>A multi-step procedure</td>
+  <td>A transaction</td>
+</tr>
+<tr>
+  <td>&quot;The books read coherently in some order&quot;</td>
+  <td>Equivalence to some serial schedule</td>
+</tr>
+<tr>
+  <td>The auditor reordering afternoon before morning</td>
+  <td>A serial order that inverts real time (legal!)</td>
+</tr>
+<tr>
+  <td>An inspector hired to do <strong>both</strong> jobs</td>
+  <td>Strict serializability</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the analogy breaks.</strong> (1) The notary sounds weaker than the auditor
+— &quot;just single events&quot; — but neither inspector is stronger: each certifies
+days the other condemns; you built both counterexamples in §4. (2) The real
+notary stamps events <em>as they happen</em>; the linearizability judge works
+after the fact from the recorded history alone, and an operation's &quot;instant&quot;
+is <em>chosen by the judge</em> anywhere inside its bar — a real system never emits
+visible timestamps. (3) The auditor analogy suggests checking is easy
+bookkeeping; in truth deciding serializability of a recorded history is
+NP-complete (Papadimitriou), just as the linearizability lab <strong>[measured]</strong>
+its checker exploding to 79 million states — real systems <em>provide</em> the
+guarantee cheaply by construction rather than <em>verifying</em> it.</p>
+<h2 id="readme-9-visualization--one-history-three-judges">9. VISUALIZATION — one history, three judges</h2>
+<p>Open <strong><code>visualization.html</code></strong> (also published as the artifact
+<a href="https://claude.ai/code/artifact/db063242-8532-475f-9c60-ace03d84f0f0" target="_blank" rel="noopener"><strong>&quot;One History, Three Judges&quot;</strong></a>). What to look at: a timeline of operation bars per client —
+the same spatial language as the linearizability lab's page — with colored
+outlines grouping bars into transactions, and <strong>three verdict panels that
+judge the SAME history simultaneously</strong>: Linearizable (per object)?
+Serializable? Strictly serializable? Each verdict is a full sentence naming
+the order it found or the contradiction that blocks every order.</p>
+<p>The three interactions that carry the lesson:</p>
+<ul>
+<li><strong>Drag a bar in time.</strong> The serializability verdict is immune (its judge
+has no clock); the linearizability and strict verdicts flip. Time is an
+input to two judges and invisible to the third — you can <em>feel</em> the axis.</li>
+<li><strong>Toggle transaction grouping.</strong> The double-withdrawal history judged as
+loose single operations: everything green. Group each read+write into its
+transaction: the auditor turns red, the notary stays green. Scope is the
+other axis, under your finger.</li>
+<li><strong>Predict-then-run scenario cards</strong> — the five stories of §11, each asking
+for your prediction before the judges rule.</li>
+</ul>
+<h2 id="readme-10-actual-mechanism--how-each-judge-decides-by-hand">10. ACTUAL MECHANISM — how each judge decides, by hand</h2>
+<blockquote>
+<p><strong>CHECKPOINT — you now hold the beginner model.</strong> You can explain <em>why</em>
+two different words exist and place each incident under the judge that
+catches it. Next: the actual deciding procedure, executed by hand on one
+worked example — and why the auditor's missing clock is a <em>choice</em>, not
+an oversight.</p>
+</blockquote>
+<p>One history, small enough to fully judge on paper. Two objects, <code>x</code> and <code>y</code>,
+both starting 0. Time runs left to right; <code>[</code> is invocation, <code>]</code> is
+response.</p>
+<div class="code"><pre><code>wall time  ─────────────────────────────────────────────▶
+Client P:  [ T1: write x=1, write y=1 ]
+Client Q:                                 [ T2: read x→1, read y→0 ]
+</code></pre></div>
+<p>T1 commits (both writes acknowledged) <em>before</em> T2 begins. T2 then reads
+x = 1 but y = 0.</p>
+<p><strong>Judge L, object by object</strong> (locality — the linearizability lab
+<strong>[measured]</strong> per-object checking composes, 300/300). Object x: write x=1
+then later read x→1. Pick the write's point, then the read's point — legal.
+<strong>x: linearizable.</strong> Object y: write y=1 completes, <em>then</em> read y→0 begins.
+Real-time rule forces write-then-read; a register read after write y=1 must
+return 1, not 0. No valid points exist. <strong>y: NOT linearizable.</strong></p>
+<p><strong>Judge S, whole transactions, no clock.</strong> Try T1→T2: T2 must read y=1; it
+read 0. Fail. Try T2→T1: T2 reads x and y before any write — must see x=0;
+it read 1. Fail. Both orders exhausted. <strong>NOT serializable</strong> — this is
+<em>read skew / a fractured read</em>, the isolation lab's anomaly and the
+distributed-transactions lab's atomic-visibility failure, now expressed as
+&quot;no serial order exists.&quot;</p>
+<p><strong>Judge SS.</strong> Stricter than S; S already failed. <strong>Not strict.</strong> Verdicts:
+L(x) ✓, L(y) ✗, S ✗, SS ✗ — one history, four different rulings, every
+ruling derivable by hand.</p>
+<p><strong>Mechanism v1 — &quot;fix the auditor by giving them a clock.&quot;</strong> Seeing
+serializability time-travel in §4, the obvious repair is: always require the
+serial order to match real time — i.e., make <em>strict</em> serializability the
+only definition and drop the weak one.</p>
+<p><strong>🔮 Predict:</strong> <em>Databases had that option and refused it — every SQL
+standard isolation level, Postgres SSI included, promises only clock-free
+serializability. What do they buy by refusing?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>The freedom to serve reads from the past — which is the freedom that makes
+MVCC, snapshots, and replicas usable.</strong> A read-only transaction on a
+snapshot taken a moment ago (Postgres <code>REPEATABLE READ</code>'s consistent
+snapshot; a report on a lagging replica; a backup) is <em>explainable as if it
+ran slightly earlier</em> — legal under serializability, criminal under strict
+serializability. Requiring real-time order means every read must first
+coordinate to prove nothing newer exists: on one machine that's cheap
+(single-node serializable databases are strict &quot;by accident&quot; — commit order
+is real-time order); across replicas and shards it costs a round of
+coordination per read (the ABD write-back's 11.7 → 24.4 ticks in the
+linearizability lab) or Spanner's commit-wait (6.7 → 24.8 in
+distributed-transactions), both <strong>[measured]</strong>. The weak definition is not
+sloppiness. It's a priced decision: databases sold <strong>isolation between
+programs</strong>, and let <strong>freshness</strong> be bought separately — which is exactly
+why the word &quot;serializable&quot; on the box never promised your deposit shows up
+on the next read.</p>
+</details>
+
+<h2 id="readme-11-failure-scenarios--the-five-confusions-one-per-scenario-card">11. FAILURE SCENARIOS — the five confusions, one per scenario card</h2>
+<blockquote>
+<p><strong>CHECKPOINT — intermediate model.</strong> You can now execute all three judges
+by hand. Next: the catalogue of real-world confusions, each a history you
+can replay in the visualization (cards 1–5), each with the exact guarantee
+that holds and the exact one that fails.</p>
+</blockquote>
+<p><strong>F1 — The stale read (&quot;serializable means fresh&quot;).</strong> Create: commit T1
+(deposit), then start read-only T2 on a lagging replica (drag T2 fully after
+T1). Watch: card 1. What happens: T2 returns the old balance. Why: the only
+explaining order is T2-before-T1, which serializability accepts (no clock)
+and strict rejects. System response: none — no error, no retry; the
+serializable database is <em>working as specified</em>. Intact: serializability.
+Lost: linearizability, strict serializability, recency. Production: this is
+every read-replica, every cache in front of a correct store (the
+linearizability lab <strong>[measured]</strong> a one-tick cache creating 332/600
+violations), and Postgres/MySQL replica reads at any isolation level; fix
+by paying for freshness (read from primary/leader, <code>sync()</code>-style barriers,
+causal/session tokens from the causal-consistency lab) — <strong>not</strong> by raising
+the isolation level; the isolation lab called stale-replica symptoms
+misdiagnosed as isolation bugs &quot;the most expensive misdiagnosis.&quot;</p>
+<p><strong>F2 — The lost update outside any transaction (&quot;linearizable means no lost
+money&quot;).</strong> Create: two clients each read x then write x+... withdrawal
+shape; keep operations ungrouped. Watch: card 2, grouping toggle OFF. What
+happens: every judge is green and ₹600 vanished. Why: per-operation, every
+read and write is individually explainable; with each operation its own
+tiny transaction, the serial order R_A, R_B, W_A, W_B explains all reads.
+The invariant lived <em>between</em> operations no one declared as a group.
+Response: none — nothing was violated. Intact: everything you asked for.
+Lost: everything you meant. Production: this is <code>get</code>-then-<code>set</code> on
+Redis/etcd/any KV store, and the JDK <code>AtomicInteger</code> 87%-lost result
+<strong>[measured]</strong>; the fix is making the group real — a transaction, or a
+single conditional operation (<code>compareAndSet</code>, <code>UPDATE … WHERE version=?</code> —
+the optimistic-locking lab's whole subject).</p>
+<p><strong>F3 — The same history, grouped.</strong> Create: card 2, toggle grouping ON.
+What happens: serializability flips red (T_A→T_B fails: T_B read 1000 but
+T_A already wrote 200; T_B→T_A symmetric), linearizability per operation
+<em>stays green</em>. Why this pair of verdicts matters: it is the cleanest proof
+that the two guarantees inspect different units — identical bars, one
+changed declaration, opposite rulings. Production: this is why
+<code>@Transactional</code> on the method (plus a serializable level or a version
+check) fixes what no storage upgrade can — the boundary is <em>declared by the
+application</em>, and the guarantee cannot protect a group it was never told
+about.</p>
+<p><strong>F4 — Write skew (&quot;each row is perfect, the rule is dead&quot;).</strong> Create: card
+4 — the isolation lab's two doctors: T1 reads both on-call flags, unsets
+doctor A; T2 reads both, unsets doctor B; disjoint writes. What happens:
+L green per object, S red (T1→T2: T2 would see A already off and the
+<code>≥ 1 on call</code> check fails — its actual read saw both on; symmetric other
+way). Why: the shared thing was a <em>predicate spanning objects</em>, precisely
+what per-object real-time instants cannot express. Intact: linearizability.
+Lost: serializability. Production: the isolation lab <strong>[measured]</strong> H2
+permitting this at all five levels; Postgres SSI catches it via
+rw-antidependency pivots; under snapshot-isolation-called-SERIALIZABLE
+(Oracle) the app must force conflicts (the optimistic-locking lab's
+force-increment fix).</p>
+<p><strong>F5 — The causal reverse (&quot;serializable, and time still runs backwards&quot;).</strong>
+Create: card 5 — T1 writes x, commits; after it fully ends, T2 writes y
+(disjoint key), commits; T3 then reads y→new but x→old. What happens: S
+green — order T2, T3, T1 works because disjoint-key T1 and T2 never
+conflict, so the judge freely slides T1 to the end; SS red (T1 preceded T2
+in real time). Why it's insidious: unlike F1 this needs no lagging replica
+snapshot of <em>everything</em> — only x served stale; a downstream system seeing
+y's effect can act on x's pre-state. Production: this is CockroachDB's
+documented <strong>causal reverse</strong> — CockroachDB is serializable but <em>not</em>
+strict, and its consistency docs use exactly this shape; Spanner eliminates
+it by paying commit-wait ε on every write ack <strong>[measured]</strong> in the
+distributed-transactions lab (stale snapshots 10 → 0, ack 6.7 → 24.8).</p>
+<h2 id="readme-12-correctness--the-map-the-composition-asymmetry-and-the-prices">12. CORRECTNESS — the map, the composition asymmetry, and the prices</h2>
+<p><strong>The two-axis map.</strong> Signpost: every guarantee you have learned across
+seven labs sits in one grid; find the row and column, and the guarantee's
+behavior follows.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th><strong>Any order allowed</strong> (no clock)</th>
+  <th><strong>Real-time respected</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Single operations</strong></td>
+  <td>Sequential consistency</td>
+  <td><strong>Linearizability</strong> (CAP's C)</td>
+</tr>
+<tr>
+  <td><strong>Transactions</strong></td>
+  <td><strong>Serializability</strong> (ACID's I)</td>
+  <td><strong>Strict serializability</strong> (Spanner's &quot;external consistency&quot;)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Moving <strong>right</strong> buys recency; the currency is coordination on the read/ack
+path. Moving <strong>down</strong> buys multi-object groups; the currency is conflict
+detection across whole programs (2PL's waiting, SSI's refusals, SI's
+versions — the isolation lab's &quot;no fourth option that costs nothing&quot;).
+Diagonal neighbors share nothing: linearizability and serializability are
+the off-diagonal pair, which is <em>why</em> neither implies the other. Below and
+left of this grid the causal-consistency lab's ladder continues downward.</p>
+<p><strong>Composition asymmetry — the deepest structural difference.</strong>
+Linearizability is <em>local</em>: every object independently linearizable ⇒ the
+whole system is (<strong>[measured]</strong> 300/300 merged pairs) — so you can shard a
+KV store per key with zero cross-key coordination and keep the guarantee.
+Serializability is <strong>not</strong> local: hand trace — bank X serializable, bank Y
+serializable; transfer T1 debits at X, credits at Y; audit T2 reads both.
+Interleave so X orders T1→T2 and Y orders T2→T1: each bank's local history
+is perfectly serializable, the global history has no serial order (T2 saw
+the debit but not the credit — §10's fractured read, across systems).
+Guaranteeing a <em>global</em> serial order across independently-correct
+serializable stores is exactly the problem 2PC and the whole
+distributed-transactions lab exist to solve. <strong>Locality is why linearizable
+stores scale by sharding while serializable transactions across shards
+require a protocol.</strong></p>
+<p><strong>What each guarantee still doesn't give you.</strong> Linearizability: no groups
+(F2), and nothing below the object grain. Serializability: no freshness
+(F1, F5), no protection for undeclared groups (F2), nothing across systems
+(above), and — from the optimistic-locking lab — nothing across
+<em>conversations</em> (read in one request, write in another: each transaction
+individually harmless at SERIALIZABLE). Strict serializability: everything
+above, at the price of both currencies at once — and still nothing across
+conversations.</p>
+<h2 id="readme-13-production--reading-a-guarantee-page-without-being-fooled">13. PRODUCTION — reading a guarantee page without being fooled</h2>
+<blockquote>
+<p><strong>CHECKPOINT — engineering model.</strong> You can place any guarantee on the
+grid, prove the off-diagonal words independent with two counterexamples,
+and explain why one composes and the other doesn't. Last layer: what real
+systems actually put in each cell, and the on-call symptoms each cell
+mismatch produces.</p>
+</blockquote>
+<p><strong>Where real systems sit</strong> (facts carried from prior labs unless noted):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>System</th>
+  <th>What it actually gives</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Spanner</td>
+  <td>Strict serializability, marketed as &quot;external consistency&quot;; bought with TrueTime commit-wait</td>
+</tr>
+<tr>
+  <td>CockroachDB</td>
+  <td>Serializable, <strong>not</strong> strict — the causal-reverse (F5) is its documented gap; no stale reads <em>per key</em> in the common case</td>
+</tr>
+<tr>
+  <td>FoundationDB</td>
+  <td>Strict serializability (single ordering authority for commits)</td>
+</tr>
+<tr>
+  <td>Postgres <code>SERIALIZABLE</code></td>
+  <td>Real serializability (SSI); on a single primary, commit order ≈ real time, so it <em>behaves</em> strictly — until a replica or pooler serves the read (F1 returns)</td>
+</tr>
+<tr>
+  <td>Oracle <code>SERIALIZABLE</code></td>
+  <td>Snapshot isolation — write skew (F4) permitted; the name is on the wrong grid cell</td>
+</tr>
+<tr>
+  <td>etcd</td>
+  <td>Linearizable reads by default (read-index); per-key cell top-right; its <code>Txn</code> gives small strict transactions on one Raft group</td>
+</tr>
+<tr>
+  <td>ZooKeeper</td>
+  <td>Linearizable writes, <strong>stale-allowed reads</strong> unless <code>sync()</code> — one system straddling two cells</td>
+</tr>
+<tr>
+  <td>Redis single node</td>
+  <td>Linearizable per key (single-threaded); groups only via Lua/MULTI on that one node</td>
+</tr>
+<tr>
+  <td>Any DB + read replica / cache</td>
+  <td>Whatever the primary promised <strong>minus the right column</strong> — the replica subtracts real time, never isolation</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>On-call symptom table</strong> — the practical payoff; the misdiagnosis in each
+row wastes a week:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Symptom</th>
+  <th>Wrong reflex</th>
+  <th>Right cell</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>&quot;User saved, refreshed, sees old data&quot;</td>
+  <td>Raise isolation level</td>
+  <td>Recency (right column): read-your-writes via primary reads / session token — F1</td>
+</tr>
+<tr>
+  <td>&quot;Invariant across two rows broke, no errors logged&quot;</td>
+  <td>Blame replication/staleness</td>
+  <td>Scope (bottom row): transaction + serializable or app-level version check — F4</td>
+</tr>
+<tr>
+  <td>&quot;Money lost on concurrent updates to one key&quot;</td>
+  <td>&quot;Store isn't strongly consistent&quot;</td>
+  <td>Grouping was never declared: conditional write / transaction — F2/F3</td>
+</tr>
+<tr>
+  <td>&quot;Downstream saw effect B but not its cause A&quot;</td>
+  <td>&quot;Impossible, we're serializable&quot;</td>
+  <td>Strictness gap: F5 — you need the bottom-right cell or a causality token</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What this lesson's model omits</strong> (the honest list): real checkers don't
+enumerate permutations (Jepsen's Elle infers cycles from returned versions);
+real serializability theory distinguishes conflict- vs view-serializability
+(judges here are view-style, brute-force); commit ≠ response subtleties
+(a transaction's real-time interval properly runs to commit
+acknowledgment); session guarantees (the middle ground F1 usually actually
+wants — causal-consistency lab); and recovery/durability interactions
+(strictness under crash-restore).</p>
+<h2 id="readme-14-exercises">14. EXERCISES</h2>
+<p>Eight rungs, pencil-and-paper + visualization only — see
+<a href="notes.html#exercises"><code>EXERCISES.md</code></a>, answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<h2 id="readme-15-knowledge-map--next-steps">15. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">graph TD
+    LIN[linearizability ✅] --&gt; THIS[linearizability vs serializability]
+    ISO[isolation-levels ✅] --&gt; THIS
+    DTX[distributed-transactions ✅] --&gt; THIS
+    CAP[cap-theorem ✅] --&gt; THIS
+    THIS --&gt; JEPSEN[&quot;/learn jepsen — checking these guarantees on real systems&quot;]
+    THIS --&gt; SESSION[&quot;session guarantees — causal-consistency ✅ already covers&quot;]
+    THIS --&gt; CALVIN[&quot;/learn deterministic-databases — order first, then execute&quot;]
+    CONF1[sequential consistency — lin minus real time ✅] -.confused with.- THIS
+    CONF2[snapshot isolation — SI ≠ serializable ✅] -.confused with.- THIS
+</pre>
+<ul>
+<li>Commonly confused, one sentence each: <strong>sequential consistency</strong> is
+linearizability minus the clock (single ops), NOT serializability minus
+anything; <strong>snapshot isolation</strong> is a mechanism-flavored level <em>below</em>
+serializability (write skew lives in the gap); <strong>strong consistency</strong> is
+a marketing phrase — make the page say which cell.</li>
+<li>Ready to type next: <code>/learn jepsen</code> (how Elle finds F1–F5 in the wild),
+<code>/learn deterministic-databases</code>, <code>/learn mvcc-and-vacuum</code>.</li>
+</ul>
+<h2 id="readme-16-glossary">16. GLOSSARY</h2>
+<p><em>(order of appearance; ✅ = owned by an earlier lab, re-anchored here)</em></p>
+<ul>
+<li><strong>Linearizability</strong> ✅ — single operations on single objects explainable
+by real-time-respecting instants; CAP's C.</li>
+<li><strong>Serializability</strong> — concurrent transactions equivalent to <em>some</em> serial
+order; ACID's I; no clock.</li>
+<li><strong>Serial schedule</strong> ✅ — transactions strictly one after another.</li>
+<li><strong>Real-time order</strong> ✅ — completed-before-begun must order the
+explanation.</li>
+<li><strong>Strict serializability</strong> — serializability + real-time order between
+non-overlapping transactions; Spanner's &quot;external consistency&quot;.</li>
+<li><strong>Recency guarantee</strong> — a promise that reads reflect acknowledged writes;
+right-column property.</li>
+<li><strong>Stale read</strong> ✅ — a read returning an older value than an acknowledged
+write; legal under serializability (F1).</li>
+<li><strong>One-copy serializability (1SR)</strong> — serializability of a replicated
+database against an imagined single copy; still clock-free.</li>
+<li><strong>Locality / composability</strong> ✅ — per-object guarantees implying the
+global one; linearizability has it, serializability does not.</li>
+<li><strong>Causal reverse</strong> — serializable-but-not-strict anomaly on disjoint keys
+(F5); CockroachDB's documented gap.</li>
+<li><strong>Sequential consistency</strong> ✅ — linearizability minus real time.</li>
+<li><strong>Write skew</strong> ✅ — disjoint writes under a shared read predicate; the
+canonical SI-vs-serializable gap (F4).</li>
+<li><strong>Snapshot isolation</strong> ✅ — reads from one snapshot,
+first-committer-wins; below serializability.</li>
+<li><strong>External consistency</strong> ✅ — Spanner's name for strict serializability.</li>
+</ul>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--linearizability-vs-serializability">Exercises — linearizability vs serializability</h1>
+<p>All pencil-and-paper or visualization work; nothing to run. Attempt each
+before opening <code>SOLUTIONS.md</code>. &quot;Card N&quot; = scenario card in
+<code>visualization.html</code>.</p>
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> In your own words, no notation: what question does linearizability
+answer, what question does serializability answer, and why can a system pass
+one while failing the other?</p>
+<p><strong>1.2</strong> A colleague says &quot;CAP's C means you can't have transactions under a
+partition.&quot; What did they confuse, and what does CAP's C actually name?</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Open card 1 (the vanished deposit). Which judge panel goes red, and
+what sentence does the green serializability panel give as its explaining
+order? Point at the exact thing that makes that order legal for one judge
+and illegal for another.</p>
+<p><strong>2.2</strong> In card 4 (write skew), identify: the objects, the transactions, the
+shared <em>thing</em> the two transactions both depend on — and say which judge is
+structurally unable to see that thing, and why.</p>
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> History: T1 = <code>write x=1</code> commits at 10:00. T2 = <code>read x → 0</code>,
+running 10:00:05–10:00:06. Predict all three verdicts (L for object x, S,
+SS). Check with card 1 (drag T2 fully after T1).</p>
+<p><strong>3.2</strong> Card 2, grouping OFF: two clients each do <code>read x→1000</code> then
+<code>write x=200</code>, interleaved. Predict the three verdicts. Now predict what
+changes when you toggle grouping ON — which single panel flips? Check.</p>
+<p><strong>3.3</strong> Card 5: T1 writes x and <em>finishes</em>; T2 then writes y; T3 reads
+y→new, x→old. Before running: which serial order will the S judge print,
+and which pair of transactions does the SS judge refuse to reorder?</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> In card 1, drag T2 leftward until it <em>overlaps</em> T1. At what point
+does the strict-serializability verdict change, and why exactly there? What
+does this tell you about which histories real-time order actually
+constrains?</p>
+<p><strong>4.2</strong> In card 5, give T2 a second write: besides <code>y=1</code>, T2 also writes
+<code>x=2</code> (so T1 and T2 now conflict on x). T3 still reads <code>y→1, x→0</code>. Derive
+by hand: does the serializability verdict survive, and precisely which
+freedom did the S judge lose?</p>
+<h2 id="exercises-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1</strong> By hand, all three judges, showing every candidate order: objects
+<code>x</code>,<code>y</code> start 0; T1 = <code>write x=1; write y=1</code>; T2, overlapping T1, reads
+<code>y→0</code> first, then <code>x→1</code> — the same answers as §10 (new x, old y) but read
+in the <strong>reverse order</strong>, with these bars: <code>wx[1,2] wy[3.5,4.5]</code>,
+<code>ry[2.2,3] rx[5,6]</code>. Which verdicts change vs §10, and which stay? Check
+with card 6.</p>
+<p><strong>5.2</strong> Trace the §12 cross-bank composition example concretely: X and Y
+each a register; T1 = <code>write X=debit; write Y=credit</code>; T2 = <code>read X; read Y</code>. Write the interleaving in which each bank <em>locally</em> sees a serial
+order but no global one exists, and name what T2 read.</p>
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p><strong>6.1</strong> A vendor claims: &quot;Our store is linearizable per key. Therefore any
+program that only ever touches one key per operation is fully correct —
+no transactions needed.&quot; Construct the smallest concrete counterexample
+history (real values) and name the guarantee that silently did the work in
+their claim.</p>
+<p><strong>6.2</strong> An architect proposes: &quot;We'll get strict serializability cheaply:
+run serializable Postgres, and route every read to the nearest replica —
+replicas apply the exact same committed transactions in the exact same
+order, so serializability is preserved.&quot; Two flaws hide here — one about
+which guarantee replicas preserve, one about what 'preserved' even means
+for strictness. Give a concrete failing history for each.</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> The mobile app of incident 1 must never show a balance older than
+the customer's own last acknowledged deposit, but the business refuses to
+pay for linearizable reads on every request. Design the cheapest fix on
+paper: what token flows where, who checks it, and which grid cell have you
+actually landed in (it is not the top-right)?</p>
+<p><strong>7.2</strong> Your payment service runs on Oracle <code>SERIALIZABLE</code> (you now know
+what that really is). The invariant &quot;an account's holds may never exceed
+its balance&quot; spans many rows. Without changing databases, make write skew
+impossible for this invariant — name the mechanism from a prior lab, the
+exact statement shape, and what new failure mode you accepted in trade.</p>
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1</strong> Design the consistency story for a brokerage: (a) trade execution
+(debit cash, credit shares — must never fracture), (b) the portfolio
+screen (must reflect the user's own just-completed trade), (c) the
+end-of-day compliance report (must be a coherent snapshot, may be an hour
+old). For each: name the grid cell it needs, the cheapest mechanism that
+buys that cell and nothing more, and the concrete anomaly you accepted by
+not buying more. Then answer: where in this design would buying Spanner
+change anything, and where would it be wasted money?</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<h2 id="solutions-rung-1">Rung 1</h2>
+<p><strong>1.1</strong> Linearizability answers: <em>does each single operation on each single
+object look like it happened at one instant, and do those instants respect
+the wall clock?</em> Serializability answers: <em>can the outcome of my declared
+groups of operations be explained by running the groups one at a time in
+some order — any order?</em> They are independent because each ignores the
+other's axis: serializability has no clock, so an acknowledged write may be
+&quot;explained&quot; as happening after a later read (stale read passes);
+linearizability has no groups, so two operations whose combination breaks an
+invariant each pass individually (lost update / write skew passes). One
+guarantee inspects <em>time</em> at operation grain; the other inspects <em>grouping</em>
+with no time.</p>
+<p><strong>1.2</strong> They confused CAP's C with ACID's I/serializability. Gilbert &amp;
+Lynch's proof defines CAP's C as <strong>linearizability</strong> — a single-object,
+real-time recency property. CAP says nothing about transactions; a
+partitioned system could still offer (non-strict) serializable transactions
+within a partition, and a CP system may have no transactions at all.</p>
+<h2 id="solutions-rung-2">Rung 2</h2>
+<p><strong>2.1</strong> Red: Linearizability (object <code>balance</code>) and Strict serializability.
+Green: Serializability, with explanation &quot;order: T2, T1&quot; — the mobile read
+placed <em>before</em> the deposit. What makes it legal for the S judge and
+illegal for the others is the empty <strong>gap of real time</strong> between T1's
+response and T2's invocation: the S judge cannot see gaps (no clock); the L
+and SS judges treat that gap as a hard ordering constraint.</p>
+<p><strong>2.2</strong> Objects: the two on-call flags, one per doctor. Transactions: T1
+(read both flags, unset A's), T2 (read both flags, unset B's). The shared
+thing: the <strong>predicate</strong> &quot;at least one flag is on&quot; — a rule spanning both
+objects that both transactions <em>read</em>. The linearizability judge cannot see
+it because it rules per object: each flag's own reads and writes are
+perfectly explainable by instants; the predicate exists only across
+objects, i.e., at transaction scope.</p>
+<h2 id="solutions-rung-3">Rung 3</h2>
+<p><strong>3.1</strong> L(x): <strong>fail</strong> — write acknowledged before the read began;
+real-time forces write-then-read; a register can't then return 0. S:
+<strong>pass</strong> — order T2, T1. SS: <strong>fail</strong> — the only order S found violates
+real time.</p>
+<p><strong>3.2</strong> Grouping OFF: L pass (every operation individually explainable), S
+pass (each op its own tiny transaction; order R_A, R_B, W_A, W_B explains
+every read), SS pass. Grouping ON: <strong>only S flips red</strong> (T_A→T_B fails
+because T_B read 1000 after T_A wrote 200; T_B→T_A symmetric); SS red
+follows automatically (stricter than S). L stays green — the bars never
+changed.</p>
+<p><strong>3.3</strong> S prints <strong>T2, T3, T1</strong> (the only working order: T3 after T2 to see
+new y, before T1 to see old x — legal only because T1 and T2 touch
+disjoint keys and never conflict). SS refuses to reorder <strong>T1 and T2</strong>: T1
+completed before T2 began, so T1 must precede T2, and then T3 (which must
+follow T2 to see y) can no longer precede T1 to justify old x.</p>
+<h2 id="solutions-rung-4">Rung 4</h2>
+<p><strong>4.1</strong> The SS (and L) verdict flips to green the moment T2's invocation
+slides to or before T1's response — i.e., the instant the bars <strong>overlap</strong>.
+Real-time order only constrains <strong>non-overlapping</strong> pairs; concurrent
+operations/transactions may be explained in either order under every judge.
+That is why &quot;stale&quot; is only meaningful for reads that <em>begin after</em> the
+write's acknowledgment.</p>
+<p><strong>4.2</strong> Serializability <strong>dies</strong>. T3's read <code>y→1</code> still forces T3 after T2
+in any serial order. But T2 now also wrote <code>x=2</code>, and a serial order runs
+whole transactions atomically — so any T3 placed after T2 must read x as 2
+(or a later value), never 0. Every candidate order fails; no clock needed.
+The freedom the S judge lost: in the original, T1 and T2 were <strong>disjoint</strong>,
+so the judge could slide T1 past T3 to the end of the order at no cost.
+Welding a second write onto T2 makes T2's writes travel together
+(transaction atomicity), and the sliding trick can no longer separate
+&quot;T3 sees T2's y&quot; from &quot;T3 sees T2's x&quot;. The causal reverse (F5) lives
+exclusively in the disjoint-key gap — which is why it is subtle in
+production: the keys that expose it are precisely the ones no conflict
+detector links.</p>
+<h2 id="solutions-rung-5">Rung 5</h2>
+<p><strong>5.1</strong> Judge L, per object. Object y: <code>wy[3.5,4.5]</code>, <code>ry[2.2,3]→0</code> — the
+read <em>ended before the write began</em>, so real time forces read-then-write;
+a read before the write correctly returns 0. <strong>y: linearizable.</strong> Object
+x: <code>wx[1,2]</code>, <code>rx[5,6]→1</code> — write completed before the read began; the
+read returns the written value. <strong>x: linearizable.</strong> Judge S: T1→T2 needs
+<code>ry→1</code>, saw 0 — fail; T2→T1 needs <code>rx→0</code>, saw 1 — fail. <strong>Not
+serializable.</strong> SS: stricter, fail. Versus §10: <strong>the L verdict flips from
+fail to pass</strong> — same answers, merely read in the other order at friendlier
+times — while S/SS stay failed. The lesson: a <em>torn read</em> (seeing half of
+T1) is a transaction-scope defect that per-object judges can only catch
+<em>by luck of timing</em>; here every single object's story is impeccable and the
+group's story is still nonsense. This is exactly why the
+distributed-transactions lab needed &quot;atomic visibility&quot; as its own
+requirement on top of perfectly linearizable per-key storage.</p>
+<p><strong>5.2</strong> Interleaving: T1 executes <code>write X=debit</code> at bank X; <strong>T2 then
+reads X (sees debit) and reads Y (sees no credit)</strong>; T1 then executes
+<code>write Y=credit</code>. Bank X's local history: T1's write then T2's read —
+serial order T1, T2 ✓. Bank Y's local history: T2's read then T1's write —
+serial order T2, T1 ✓. Each bank is locally serializable with those orders;
+globally the two orders contradict, and indeed T2 read {X=debit, Y=no
+credit} — the fractured audit no single serial order explains.</p>
+<h2 id="solutions-rung-6">Rung 6</h2>
+<p><strong>6.1</strong> Counterexample: one key <code>x=1000</code>; client A <code>read x→1000</code>, client B
+<code>read x→1000</code>, A <code>write x=200</code>, B <code>write x=200</code> (two withdrawals of 800).
+Every operation touches one key and the history is linearizable — and 1600
+left a 1000 account. The silent worker in the vendor's claim: <strong>grouping</strong>.
+&quot;Only one key per operation&quot; ignores that <em>programs</em> are multi-operation;
+correctness of read-then-write needs transaction scope or a conditional
+write, which linearizability never promised.</p>
+<p><strong>6.2</strong> Flaw 1 — replicas preserve the <em>serial order</em>, not <em>recency</em>: a
+replica legitimately applies that order with lag, so <code>T1 deposit commits; read on replica returns pre-deposit balance</code> is serializable
+(order read-first) yet stale — F1; strictness is destroyed even though
+&quot;the same transactions in the same order&quot; is perfectly true. Flaw 2 —
+'preserved' conflates the global system with each replica: strictness is a
+property of the <strong>whole system's</strong> history (all clients, all endpoints);
+even if each replica individually replays a serial order, the union of
+primary-writes and replica-reads is the history being judged, and it now
+contains real-time inversions. Concrete: T1 commits at primary 10:00; T2
+reads replica 10:00:05 → old value; global history not strict (nor
+linearizable), regardless of the replica's internal orderliness.</p>
+<h2 id="solutions-rung-7">Rung 7</h2>
+<p><strong>7.1</strong> Session/causality token (causal-consistency lab): on every
+acknowledged write, the primary returns a monotonically increasing position
+(commit index / LSN); the app stores the user's latest token; every read
+carries it, and a replica serves the read only once it has applied ≥ that
+position (else waits or forwards). Checker: the replica. Cell landed in:
+none of the four — this is a <strong>session guarantee</strong> (read-your-writes),
+below linearizability: <em>other</em> users' newer deposits may still be
+invisible, and cross-user real-time order is still unprotected. That's the
+point: the incident only required the user's own writes, so buy only that.</p>
+<p><strong>7.2</strong> Mechanism: the optimistic-locking lab's <strong>force-increment on a
+shared version row</strong> (JPA <code>OPTIMISTIC_FORCE_INCREMENT</code> on the account
+aggregate): every transaction whose decision <em>reads</em> the invariant also
+executes <code>UPDATE account_version SET v=v+1 WHERE account_id=? AND v=?</code>
+(the read value). Two concurrent rule-readers now collide on a write-write
+conflict, which snapshot isolation <em>does</em> detect (first-committer-wins);
+the second aborts. Trade accepted: false conflicts — <em>all</em> rule-dependent
+transactions on that account serialize through one row, so throughput on a
+hot account drops and you must add the retry loop (and its starvation
+risk, per that lab's measurements).</p>
+<h2 id="solutions-rung-8">Rung 8</h2>
+<p><strong>8.1 (worked discussion)</strong></p>
+<ul>
+<li><strong>(a) Trade execution</strong> — needs the bottom row: atomic multi-object
+transaction (serializable); if cash and shares live on one primary,
+Postgres SERIALIZABLE + retry suffices, and single-primary commit order
+makes it strict in practice. Accepted anomaly: none within the pair —
+but cross-<em>conversation</em> races (quote shown, then trade placed) remain
+and need a version check on the quoted price. Buying more (Spanner)
+changes nothing while both rows share a shard.</li>
+<li><strong>(b) Portfolio screen</strong> — needs the user's own trades visible:
+read-your-writes via session token or route-to-primary for N seconds
+after a trade. Cell: session guarantees, deliberately below top-right.
+Accepted anomaly: another session/device may lag; other users' trades
+may appear late. Linearizable reads for every portfolio view would be
+paying the right-column coordination price for freshness nobody
+demanded.</li>
+<li><strong>(c) Compliance report</strong> — needs the <strong>left</strong> column done properly: a
+single consistent snapshot (one MVCC snapshot / <code>AS OF</code> timestamp), so
+the report is internally coherent — serializable as a read-only
+transaction ordered in the past, <em>stale on purpose</em>. Accepted anomaly:
+staleness, which the requirement explicitly permits. This is the
+clearest case where demanding strictness is pure waste.</li>
+<li><strong>Spanner verdict:</strong> it earns its cost only if execution (a) must span
+shards/regions with the no-fracture requirement intact — cross-shard
+strict serializability is precisely its product. For (b) it's overkill
+wearing a session token's job; for (c) it's irrelevant — the report
+<em>wants</em> the past.</li>
+</ul>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../26-linearizability/notes.html"><small>← Lab 26</small>linearizability</a><a href="../28-eventual-consistency/notes.html" style="text-align:right"><small>Lab 28 →</small>eventual-consistency</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-layer-guide">Layer guide</a><a href="#readme-1-why--one-review-meeting-two-confident-sentences-both-wrong">1. WHY — one review meeting, two confident sentences, both wrong</a><a href="#readme-2-problem--the-deposit-that-vanished-and-the-overdraft-that-wasnt">2. PROBLEM — the deposit that vanished and the overdraft that wasn&#x27;t</a><a href="#readme-3-naive-solution--both-mean-one-at-a-time-so-pick-the-stronger-word">3. NAIVE SOLUTION — &quot;both mean &#x27;one at a time&#x27;, so pick the stronger word&quot;</a><a href="#readme-4-failure--each-incident-walks-straight-through-the-other-words-guarantee">4. FAILURE — each incident walks straight through the other word&#x27;s guarantee</a><a href="#readme-5-the-real-requirement--know-which-question-each-word-answers">5. THE REAL REQUIREMENT — know which question each word answers</a><a href="#readme-6-key-idea">6. KEY IDEA</a><a href="#readme-7-terminology--realigning-words-you-already-own-plus-three-new-ones">7. TERMINOLOGY — realigning words you already own, plus three new ones</a><a href="#readme-8-mental-models--the-notary-and-the-auditor">8. MENTAL MODELS — the notary and the auditor</a><a href="#readme-9-visualization--one-history-three-judges">9. VISUALIZATION — one history, three judges</a><a href="#readme-10-actual-mechanism--how-each-judge-decides-by-hand">10. ACTUAL MECHANISM — how each judge decides, by hand</a><a href="#readme-11-failure-scenarios--the-five-confusions-one-per-scenario-card">11. FAILURE SCENARIOS — the five confusions, one per scenario card</a><a href="#readme-12-correctness--the-map-the-composition-asymmetry-and-the-prices">12. CORRECTNESS — the map, the composition asymmetry, and the prices</a><a href="#readme-13-production--reading-a-guarantee-page-without-being-fooled">13. PRODUCTION — reading a guarantee page without being fooled</a><a href="#readme-14-exercises">14. EXERCISES</a><a href="#readme-15-knowledge-map--next-steps">15. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-16-glossary">16. GLOSSARY</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

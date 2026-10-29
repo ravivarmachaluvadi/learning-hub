@@ -1,0 +1,2582 @@
+<!doctype html>
+<html lang="en" data-hub-lab="32-crdts">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>32. crdts</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 32 of 71 · Stage 4</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 32 · Why Distribution Is Hard</p><article id="readme"><h1 id="readme-crdts--how-two-phones-with-no-signal-still-hold-the-same-list">CRDTs — how two phones with no signal still hold the same list</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Amira is on the Tube and Ben is on a plane, and both add an
+item to the same shopping list while neither phone has signal. Most apps
+quietly destroy one of those two changes, because whichever phone syncs last
+replaces the whole list. A CRDT fixes that by changing what the phone stores
+and sends. Not &quot;here is my list&quot;, but &quot;here is every event I know about&quot;,
+combined by a rule that ignores order, grouping and repeats. Do that and the
+phones end up identical with no server, no leader and no vote.
+The price is that a list built this way can never refuse anything.</p>
+</blockquote>
+<p><strong>Play with it:</strong> <a href="visualization.html"><code>visualization.html</code></a> — <em>Merge Without a
+Referee</em> (<a href="https://claude.ai/code/artifact/fea9c00f-2004-4f4f-a867-7d6048751fdc" target="_blank" rel="noopener">https://claude.ai/code/artifact/fea9c00f-2004-4f4f-a867-7d6048751fdc</a>).</p>
+<hr />
+<h2 id="readme-1-why-cant-the-app-just-wait-for-a-signal">1. Why can't the app just wait for a signal?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Phones lose signal constantly. An app that freezes when the
+bars disappear gets deleted. So the app keeps working offline — and now two
+people can change the same thing without seeing each other.</p>
+</blockquote>
+<p>Asha writes the shopping-list app. Her users are on phones. Phones go into
+tunnels, onto planes, and into buildings with thick walls.</p>
+<p>People keep tapping anyway. An app that freezes the moment the bars vanish is an
+app they delete that evening.</p>
+<p>So Asha does the obvious thing. The app accepts the change locally, keeps it on
+the phone, and sends it up when the signal returns.</p>
+<p>That one decision creates this whole lab. Two people can now change the same
+shopping list, the same document, the same order, while neither can see what the
+other is doing. Somebody's change has to be dealt with.</p>
+<p>Here is how almost every app deals with it. Whichever change reaches the server
+last replaces the other one.</p>
+<p>Nobody wrote that rule down. It is simply what happens when nobody makes a
+decision. And it means real work that a real person did stops existing. There is
+no error message. There is no way for anyone to notice.</p>
+<p>This lab is about the other road. Design the data so that both changes survive
+on their own, without asking anyone for permission.</p>
+<h2 id="readme-2-what-happens-when-amira-and-ben-both-edit-the-list">2. What happens when Amira and Ben both edit the list?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two people add different things to one list while both are
+offline. They are not disagreeing about anything. There is an obviously right
+answer, and the app is about to get it wrong.</p>
+</blockquote>
+<p>Amira is on the London Underground. Ben is on a plane to Berlin. Meera is at
+home on wifi, and her phone matters from section 7 onwards.</p>
+<p>Amira and Ben share a shopping list in Asha's app. Right now both phones show
+the same thing:</p>
+<div class="code"><pre><code>bread
+</code></pre></div>
+<p>Amira, underground, adds <strong>milk</strong>. Ben, over the North Sea, adds <strong>eggs</strong>.
+Neither phone has signal, so both changes sit in a pocket for forty minutes.</p>
+<p>Then they land. Both phones connect. Both send their list up.</p>
+<p>Hold on to this: <strong>the two phones are not disagreeing about anything.</strong> Amira
+wants milk on the list. Ben wants eggs on the list. Those wishes are completely
+compatible.</p>
+<p>There is a right answer, <code>bread, milk, eggs</code>, and everybody would accept it.
+The only reason the app might get it wrong is the way it stores and sends the
+list.</p>
+<p><strong>Where this lab takes you.</strong> Stop at any checkpoint and you still have
+something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner model</strong></td>
+  <td>1–9</td>
+  <td>explain why two offline edits normally destroy each other, and what &quot;design the merge instead of the value&quot; buys</td>
+</tr>
+<tr>
+  <td><strong>Intermediate model</strong></td>
+  <td>10</td>
+  <td>derive every type in the family — counter, set, register, text — from the failure of the one before it</td>
+</tr>
+<tr>
+  <td><strong>Engineering model</strong></td>
+  <td>11–14</td>
+  <td>reason about the failure modes, state the guarantee precisely, and say out loud what is <em>not</em> guaranteed</td>
+</tr>
+<tr>
+  <td><strong>Production model</strong></td>
+  <td>15</td>
+  <td>read the Shapiro paper, Riak's data-type docs and Automerge's internals, and know what you are looking at</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-what-naive-solution-does-everyone-write-first">3. What naive solution does everyone write first?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Each phone keeps the whole list, sends it up with the time,
+and the server keeps the newest one. It is simple, easy to test, and perfect
+for exactly one user.</p>
+</blockquote>
+<p>Asha's first design is the one you would write too:</p>
+<blockquote>
+<p>Each phone keeps the list. When you edit it, send the whole list up with the
+current time. The server keeps whichever list has the newest time.</p>
+</blockquote>
+<p>There is nothing stupid about this. It is a naive solution in the precise sense
+of the word: correct for the case in front of you, and silent about the case
+that is coming.</p>
+<p>One person, one phone, one list? Flawless. Two people, one of them in a tunnel?
+Read on.</p>
+<h2 id="readme-4-what-actually-arrives-and-who-gets-told">4. What actually arrives, and who gets told?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two whole lists arrive. The server keeps the newer one.
+Milk stops existing, and because nothing failed, nothing is reported.</p>
+</blockquote>
+<p>Amira's phone sends <code>[bread, milk]</code>, stamped 14:32:07.
+Ben's phone sends <code>[bread, eggs]</code>, stamped 14:32:09.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> What does the list hold afterwards, and who is told about it?</p>
+<details><summary>Reveal</summary>
+
+<p><code>[bread, eggs]</code>. Milk is gone. Nobody is told anything, because from the
+server's point of view nothing went wrong: it received two lists, it kept the
+newer one, exactly as designed.</p>
+<p>If you guessed &quot;the server notices that the two lists differ&quot;, look again at
+what it is holding. It has two complete lists and two clock readings. Nothing
+in either message says which items were <em>decisions</em>.</p>
+<p>The deep problem is in the <em>shape of the message</em>. Ben's phone sent a complete
+list that happened not to contain milk. The server cannot tell the difference
+between <strong>&quot;Ben deleted milk&quot;</strong> and <strong>&quot;Ben has never heard of milk&quot;</strong> — because
+a list of items does not record which of them were decisions. The message
+threw away the information needed to combine the two.</p>
+<p>Scene 1 of <code>java src/Sim.java</code> shows exactly this. Experiment 1 runs it at
+scale: over 1,000 rounds with 3 phones editing offline, users made <strong>8,992</strong>
+changes and <strong>2,971</strong> survived. <strong>67% of all work was destroyed</strong>, and every
+single round &quot;succeeded&quot;.</p>
+</details>
+
+</blockquote>
+<p>Two more things break the same way, and it is worth seeing that the break is the
+same one.</p>
+<p><strong>A retry duplicates work.</strong> Ben's phone never gets an acknowledgement, so it
+sends again. If the message had been <code>add 1 to the counter</code>, the counter is now
+2. The transport is at-least-once — you met that in the
+<a href="../48-transactional-outbox/notes.html#readme"><code>transactional-outbox</code></a> and
+<a href="../02-communication-protocols/notes.html#readme"><code>communication-protocols</code></a> labs. So this is not
+a rare case. It is Tuesday.</p>
+<p><strong>The clock decides.</strong> Ben won because his phone's clock said a bigger number.
+If Amira's phone were 60 seconds fast, Amira would win every argument for the
+next minute, regardless of who actually acted later. Experiment 8 runs this: a
+clock 60 seconds fast destroyed <strong>1,000 of 1,000</strong> genuinely-newer writes.</p>
+<h2 id="readme-5-what-does-asha-really-need-with-no-technology-in-it">5. What does Asha really need, with no technology in it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four plain sentences say what the app needs. Two of them
+look like a flat contradiction, and almost every system you have studied
+resolves it by quietly giving up the first one.</p>
+</blockquote>
+<p>Write down the requirement in plain words, with no technology in it:</p>
+<ol>
+<li>Each machine can change its own copy immediately, with no permission from
+anyone. Otherwise the app freezes in the tunnel.</li>
+<li>Machines exchange information in any order, any number of times, with any
+amount of it lost along the way, and it must not matter.</li>
+<li>Once two machines have exchanged the same information, they must hold
+<strong>exactly the same thing</strong> — not &quot;close enough&quot;, not &quot;eventually if a repair
+job runs&quot;.</li>
+<li>No change that a person actually made may be silently thrown away.</li>
+</ol>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Requirements 1 and 3 look contradictory. Which of the two do
+the systems you have already built give up, and what does that cost Amira in
+the tunnel?</p>
+<details><summary>Reveal</summary>
+
+<p>They give up requirement 1. A leader, a coordinator, a quorum or a lock is a
+referee who decides, and asking a referee means waiting for one.</p>
+<p>You have built three of those:
+<a href="../45-two-phase-commit/notes.html#readme"><code>two-phase-commit</code></a>, <a href="../39-paxos/notes.html#readme"><code>paxos</code></a> and
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a>. You know what they
+cost: when the referee is unreachable, work stops. For Amira that is a frozen
+app forty metres under Oxford Circus.</p>
+<p>If you guessed they give up requirement 3, that is the <em>other</em> well-known
+road — plain eventual consistency, with a repair job that picks a winner
+later. That road loses requirement 4 as well, which is exactly the 67% you
+just watched disappear.</p>
+</details>
+
+</blockquote>
+<p>This lab keeps requirement 1 and gets requirement 3 anyway.</p>
+<h2 id="readme-6-what-key-idea-makes-both-changes-survive">6. What key idea makes both changes survive?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Stop sending the answer. Send the evidence, and design the
+combining rule so that combining evidence is boring.</p>
+</blockquote>
+<p>Two halves, both load-bearing.</p>
+<p><strong>Send evidence, not conclusions.</strong> Not &quot;the list is <code>[bread, eggs]</code>&quot;, but &quot;an
+event named <code>ben#1</code> says eggs is on the list&quot;. Evidence from two phones is not in
+conflict. It is just more evidence.</p>
+<p><strong>Make the combining rule immune to the network.</strong> Design the rule so that
+combining in a different order gives the same result. So that combining in
+different groupings gives the same result. So that combining the same evidence
+twice changes nothing.</p>
+<p>A network that reorders, regroups and duplicates then has nothing left to break.</p>
+<p>Everything else in this lab is working out what that combining rule has to look
+like. For a counter, for a set, for a single field, and for a piece of text.</p>
+<h2 id="readme-7-which-words-do-you-now-need-and-what-does-each-name">7. Which words do you now need, and what does each name?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five words carry the whole lab. Every one of them names
+something you have already watched happen to Amira and Ben, so nothing here is
+new. Only the labels are.</p>
+</blockquote>
+<h3 id="readme-what-is-a-replica-and-why-not-just-say-the-data">What is a replica, and why not just say &quot;the data&quot;?</h3>
+<p>Amira's phone holds a list. Ben's phone holds a list. The server holds a list.
+Three copies, all editable, all allowed to differ.</p>
+<p>Engineers call each one a <strong>replica</strong>: an independently updatable copy. The word
+exists to stop you saying &quot;the data&quot;. There is no &quot;the data&quot; here. There are only
+copies, and at any moment they may all be different.</p>
+<p>At this exact moment Amira's replica holds <code>[bread, milk]</code>, Ben's holds
+<code>[bread, eggs]</code>, and the server's still holds <code>[bread]</code>.</p>
+<p>You used the same word in
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a>. The difference here
+is sharp. A replica in this lab may accept a write with no quorum, no
+coordinator and no permission at all.</p>
+<h3 id="readme-what-is-a-merge-and-what-is-it-forbidden-to-do">What is a merge, and what is it forbidden to do?</h3>
+<p>The rule for combining two copies into one is called a <strong>merge</strong>. Written as
+code it is a pure function, <code>merge(a, b)</code>: it takes two complete states, returns
+a state, and never changes either input.</p>
+<p>The word exists to keep it apart from &quot;apply&quot;, &quot;write&quot; and &quot;resolve&quot;. A merge
+does not decide who was right.</p>
+<p>It is not allowed to prefer the caller over the argument. It is not allowed to
+prefer the newer over the older. Unless that preference is written into the
+function itself, on purpose, and you can point at the line.</p>
+<p>Everything interesting in this lab is a choice about what <code>merge</code> does. For the
+scoreboard you meet in section 8, <code>merge({a:3}, {b:2})</code> = <code>{a:3, b:2}</code>.</p>
+<p>It is the counterpart of the <code>transform</code> function in
+<a href="../71-google-docs-system-design/notes.html#readme"><code>google-docs-system-design</code></a>. Same job,
+reconciling two independent edits. Completely different strategy.</p>
+<h3 id="readme-what-three-abuses-must-the-merge-survive">What three abuses must the merge survive?</h3>
+<p>Meera's phone has been offline all afternoon. When it reconnects, three things
+happen to it in the space of a second.</p>
+<p>First it receives Amira's news and Ben's news, in whichever order the network
+felt like delivering them. Then a retry hands it Amira's news a second time.
+Then a relay delivers Ben's and Amira's news bundled together, rather than
+separately.</p>
+<p>Three abuses. The network commits all three, every day. Take them one at a time.</p>
+<p><strong>The order did not matter.</strong> Meera combined Amira's news with Ben's, and she
+would have got the same list combining Ben's with Amira's. A rule with that
+property is <strong>commutative</strong>.</p>
+<p><strong>The grouping did not matter.</strong> Meera could combine Amira's and Ben's news
+first and then her own, or combine her own with Amira's first and then Ben's.
+Same list. A rule with that property is <strong>associative</strong>.</p>
+<p><strong>The repeat did not matter.</strong> The second copy of Amira's news changed nothing
+at all. A rule with that property is <strong>idempotent</strong>.</p>
+<p>Now, and only now, the symbols. Write the combining rule as an operator, <code>⊔</code>.
+Read <code>a⊔b</code> as &quot;the copy you get by combining copy <code>a</code> with copy <code>b</code>&quot;.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Law</th>
+  <th>In words</th>
+  <th>In symbols</th>
+  <th>The network fault it kills</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Commutative</strong></td>
+  <td>order of combining doesn't matter</td>
+  <td><code>a⊔b = b⊔a</code></td>
+  <td>messages arriving out of order</td>
+</tr>
+<tr>
+  <td><strong>Associative</strong></td>
+  <td>grouping doesn't matter</td>
+  <td><code>(a⊔b)⊔c = a⊔(b⊔c)</code></td>
+  <td>messages batched or relayed differently</td>
+</tr>
+<tr>
+  <td><strong>Idempotent</strong></td>
+  <td>combining twice changes nothing</td>
+  <td><code>a⊔a = a</code></td>
+  <td>messages delivered more than once</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why exactly these three? Because they are exactly the abuses an unreliable
+network commits. Survive all three and the network has no move left.</p>
+<p>That is not an analogy. Experiment 3 delivers seven pending messages in <strong>all
+5,040 possible orders</strong> and gets <strong>1</strong> distinct final state.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Suppose the merge added two phones' counters together instead
+of taking the larger. Which of the three laws breaks, and what does the
+counter read after one duplicated message?</p>
+<details><summary>Reveal</summary>
+
+<p>Idempotence breaks, and only idempotence. Adding is still commutative and
+still associative, so a reordered or rebatched delivery is fine.</p>
+<p>If you guessed commutativity, notice that <code>3 + 2</code> and <code>2 + 3</code> are equal.
+Addition was never the problem. Repetition was.</p>
+<p>One duplicated message now invents a count that never happened. Experiment 2
+delivers the same message ten times: the adding merge reads <strong>11</strong> where the
+true answer is <strong>2</strong>.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-what-does-converge-promise-and-why-the-word-strong">What does &quot;converge&quot; promise, and why the word &quot;strong&quot;?</h3>
+<p>Everyone ends up holding the same thing. That is convergence, and the precise
+name for the promise in this lab is <strong>strong eventual consistency</strong>, or SEC.</p>
+<p>Say it fully: any two replicas that have received the same <em>set</em> of updates are
+in the same state, immediately, with no further coordination.</p>
+<p>Notice the word <em>set</em>, not <em>sequence</em>. The order the updates arrived in is not
+part of the promise, because it does not need to be.</p>
+<p>Why &quot;strong&quot;? Plain eventual consistency, from
+<a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a>, <a href="../28-eventual-consistency/notes.html#readme"><code>eventual-consistency</code></a>
+and <a href="../51-cqrs/notes.html#readme"><code>cqrs</code></a>, only promises that things settle down <em>somehow</em>.
+Usually a background repair job resolves conflicts by picking a winner.</p>
+<p>SEC is stronger and cheaper at the same time. Sameness is a property of the
+merge function itself. So there is no repair job, no conflict-resolution step,
+and no window in which two replicas that have seen the same updates disagree.</p>
+<p>Be careful with one thing. Converging is not the same as being <em>right</em>. Section
+10 shows you a design where all three phones converge perfectly onto an answer
+that is wrong.</p>
+<h3 id="readme-what-is-a-crdt-and-what-does-the-name-promise">What is a CRDT, and what does the name promise?</h3>
+<p>A data type built so that copies of it can be merged without a referee. Its full
+name is <strong>conflict-free replicated data type</strong>: a type whose merge is
+commutative, associative and idempotent, so replicas reach strong eventual
+consistency with no coordination.</p>
+<p>The term exists to name a shift. Not <em>resolving</em> conflicts — <em>not having</em> them.
+In a CRDT there is no conflict to resolve, because two concurrent updates are,
+by construction, both representable in the merged state.</p>
+<p>The name is a promise about where the work went. It went into the design of the
+type, so it does not have to happen at runtime.</p>
+<p>There are two families, both called CRDTs. <strong>State-based</strong> ones, also called
+<em>CvRDT</em> for &quot;convergent&quot;, ship whole states and merge them. <strong>Op-based</strong> ones,
+also called <em>CmRDT</em> for &quot;commutative&quot;, ship individual operations.</p>
+<p>This lab builds state-based ones, because they demand nothing at all from the
+network. Section 11 shows exactly what op-based ones demand instead.</p>
+<h3 id="readme-where-did-each-word-come-from">Where did each word come from?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>The thing in the story</th>
+  <th>Where you watched it happen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>replica</strong></td>
+  <td>Amira's phone, Ben's phone, the server</td>
+  <td>section 2</td>
+</tr>
+<tr>
+  <td><strong>merge</strong></td>
+  <td>the rule that combines two phones' copies</td>
+  <td>the piece missing from section 3</td>
+</tr>
+<tr>
+  <td><strong>the three laws</strong></td>
+  <td>order, grouping and repeats not mattering to Meera</td>
+  <td>section 7, Meera's reconnect</td>
+</tr>
+<tr>
+  <td><strong>strong eventual consistency</strong></td>
+  <td>both phones identical the moment they hold the same news</td>
+  <td>section 5, requirement 3</td>
+</tr>
+<tr>
+  <td><strong>CRDT</strong></td>
+  <td>the type that gets all of the above by construction</td>
+  <td>the rest of the lab</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-which-mental-models-should-you-carry-and-where-do-they-lie">8. Which mental models should you carry, and where do they lie?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two mental models of the same machine. A wall scoreboard
+that nobody may rub out, and a hill you can only climb. The first one gets you
+a long way, and then it lies to you in three specific places.</p>
+</blockquote>
+<h3 id="readme-the-simple-model--what-if-it-is-a-scoreboard-nobody-can-rub-out">The simple model — what if it is a scoreboard nobody can rub out?</h3>
+<p>Asha pins a scoreboard on the wall, with one row for Amira, one for Ben and one
+for Meera. Three rules, and that is the whole thing:</p>
+<ol>
+<li>You may only ever <strong>raise your own row</strong>.</li>
+<li>To combine two scoreboards, take the <strong>higher number in each row</strong>.</li>
+<li>The score is the <strong>sum of all rows</strong>.</li>
+</ol>
+<p>Amira and Ben raising their own rows in a tunnel cannot destroy each other's
+work, because they are writing in different rows. Overwriting somebody else's
+row is not an action the rules allow.</p>
+<p>Combining is taking the larger number in each row. Taking the larger of a row
+you already hold changes nothing. So a scoreboard you have already copied can be
+copied again, ten times, in any order, harmlessly.</p>
+<h3 id="readme-the-engineering-model--what-is-a-lattice-you-can-only-climb">The engineering model — what is a lattice you can only climb?</h3>
+<p>Now the same picture in the language of the papers.</p>
+<p>A replica's state is a point in a <strong>join-semilattice</strong>. That is a set of states
+with a partial order. The order is written <code>≤</code> and read here as &quot;is at least as
+old as&quot;. In such a set, any two states have a <strong>least upper bound</strong>: the
+smallest state sitting at or above both of them.</p>
+<p>The merge <em>is</em> that least upper bound. It is written <code>⊔</code> and pronounced &quot;join&quot;.</p>
+<p>Read the arrows below as &quot;climbs to&quot;.</p>
+<pre class="mermaid">graph BT
+  E[&quot;{ }&lt;br/&gt;empty&quot;] --&gt; A[&quot;{amira: 1}&quot;]
+  E --&gt; B[&quot;{ben: 1}&quot;]
+  A --&gt; AB[&quot;{amira: 1, ben: 1}&lt;br/&gt;= merge of both&quot;]
+  B --&gt; AB
+  AB --&gt; AB2[&quot;{amira: 2, ben: 1}&quot;]
+  style AB fill:#DCEFE9,stroke:#0C6A5B
+  style AB2 fill:#DCEFE9,stroke:#0C6A5B
+</pre>
+<p>Amira and Ben go their own way, so they climb into different branches. Merging
+is finding the lowest point above both of them.</p>
+<p>There is always exactly one such point. And a local update also only ever climbs,
+a property called <strong>monotonicity</strong>. Together those two facts mean replicas can
+never reach a state from which they cannot rejoin.</p>
+<p>That single picture explains the three laws rather than assuming them. A least
+upper bound is symmetric in its arguments, which is commutativity. The least
+upper bound of three elements is the same however you bracket it, which is
+associativity. The least upper bound of a thing with itself is the thing, which
+is idempotence.</p>
+<h3 id="readme-how-do-the-two-pictures-line-up">How do the two pictures line up?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Scoreboard</th>
+  <th>Engineering</th>
+  <th>In the Java</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the whole board</td>
+  <td>one replica's state</td>
+  <td><code>GCounter</code> instance</td>
+</tr>
+<tr>
+  <td>one row</td>
+  <td>one replica's contribution</td>
+  <td>an entry in <code>rows</code></td>
+</tr>
+<tr>
+  <td>raising your own row</td>
+  <td>a local, uncoordinated update</td>
+  <td><code>increment(replica, n)</code></td>
+</tr>
+<tr>
+  <td>taking the higher of each row</td>
+  <td>the join / least upper bound</td>
+  <td><code>merge</code></td>
+</tr>
+<tr>
+  <td>the total at the bottom</td>
+  <td>the value the user sees</td>
+  <td><code>value()</code></td>
+</tr>
+<tr>
+  <td>&quot;you can never rub out&quot;</td>
+  <td>monotonicity</td>
+  <td>no code path lowers a row</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-the-scoreboard-lie-to-you">Where does the scoreboard lie to you?</h3>
+<p>The analogy breaks in three places, and each break is a whole section later on.</p>
+<p><strong>You cannot lower a row.</strong> Ben cannot subtract by writing a smaller number,
+because merge would immediately restore the bigger one. The scoreboard has no way
+to go down at all. Section 10 shows the actual fix.</p>
+<p><strong>Rows are for counting, not for identity.</strong> Amira's shopping list is not a
+number per person. Sets need a different construction, and <em>deletion</em> in a set is
+the hardest thing in this lab.</p>
+<p><strong>The board grows forever.</strong> Real CRDTs accumulate evidence. One row per replica
+that ever touched the data, one record per deletion, and nothing in the algorithm
+ever cleans any of it up. Experiment 7 counts it: a shopping cart with <strong>10</strong>
+visible items was storing <strong>500</strong> records, <strong>50 per item</strong>.</p>
+<h2 id="readme-9-what-should-you-watch-on-the-page-before-reading-the-mechanism">9. What should you watch on the page before reading the mechanism?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every design shows the user the same green list. The
+difference between the designs is in the second box, the one showing what is
+actually stored. Watch that box.</p>
+</blockquote>
+<p><strong><a href="visualization.html"><code>visualization.html</code></a> — <em>Merge Without a Referee</em></strong>
+(<a href="https://claude.ai/code/artifact/fea9c00f-2004-4f4f-a867-7d6048751fdc" target="_blank" rel="noopener">https://claude.ai/code/artifact/fea9c00f-2004-4f4f-a867-7d6048751fdc</a>)</p>
+<p>Three phones hold one shopping list: Amira's, Ben's and Meera's. Each phone card
+shows two boxes, and the whole lesson is the difference between them:</p>
+<ul>
+<li>the <strong>green box</strong> — what the person sees;</li>
+<li>the <strong>dashed box</strong> — what is actually stored.</li>
+</ul>
+<p>Watch the dashed box. The green box is the same in every design. The dashed box
+<em>is</em> the design.</p>
+<p>What to do, in order:</p>
+<ol>
+<li>Start on <strong>Receipts</strong>, the default. The page also prints its technical name,
+OR-Set; section 10 is where that name gets earned. Press <em>add milk</em> on Amira,
+then <em>Sync to everyone</em>. Notice that syncing does <strong>not</strong> deliver. The
+messages sit on the wire until you deliver them, one at a time, in any order,
+or duplicate them, or throw them away. That is the experiment.</li>
+<li>Switch to <strong>Whole list, newest wins</strong> and do the same thing on two phones.
+Watch Amira's item disappear, with no error anywhere.</li>
+<li>Use the <strong>guess-first situations</strong> at the bottom. Each one poses a question
+with two or three answers, then plays the sequence out with a full-sentence
+narration of every step. Being wrong is the point. The explanation only lands
+after you have committed.</li>
+<li>When something surprises you, use <strong>Step back</strong> and change one thing. Whose
+clock is fast. Which phone is cut off. Which message gets delivered first.
+Every arbitrary choice on that page is a control, deliberately.</li>
+</ol>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-beginner-model">✅ Checkpoint — end of the beginner model</h3>
+<p>You can now explain why two offline edits normally destroy each other, why the
+fix is to change the message rather than add a resolution step, and what the
+three laws buy. <strong>Next:</strong> deriving the actual types — and every strange detail
+in them will arrive as the fix to something you just watched break.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>merge</em>, <em>commutative</em> or <em>replica</em>,
+tell a friend why Amira's milk vanished and Ben's eggs did not.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;Both phones sent up the entire list, and the server kept whichever list
+arrived with the later time on it. Ben's list had eggs on it and no milk, so
+keeping his list meant losing her milk. The server never knew milk had been
+deleted, because nobody ever told it that milk existed as a separate thing. It
+only ever saw two whole lists and two clock readings.&quot;</p>
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-10-how-does-the-mechanism-grow-one-broken-design-at-a-time">10. How does the mechanism grow, one broken design at a time?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nine designs. Each one is what a careful engineer builds
+next, given what just broke. Every strange detail in the final design is the
+scar of one specific failure.</p>
+</blockquote>
+<p>Nothing below is presented as finished. Asha builds v1, watches it fail, and
+builds v2. You are watching her think.</p>
+<h3 id="readme-v1--what-if-a-counter-is-just-a-number">v1 — what if a counter is just a number?</h3>
+<p>Amira and Ben share a counter. Both phones show <code>5</code>. Amira taps +1, Ben taps +1.
+Amira's copy says 6, Ben's says 6. Merge takes the larger: <strong>6</strong>.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Two people each added one. What should the counter read, and
+what does it read?</p>
+<details><summary>Reveal</summary>
+
+<p>It should read 7. It reads 6. One increment is gone.</p>
+<p>If you guessed the merge is at fault, look one level down. The bug is in the
+<em>state</em>. A single number cannot record who did what. So two different
+histories, <code>5+1</code> and <code>5+1+1</code>, produce the same number and become
+indistinguishable.</p>
+<p><strong>The state has thrown away the information the merge needs.</strong> That sentence is
+the whole design method for the rest of this lab: when a merge cannot do its
+job, add to the state, don't add to the merge.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v2--what-if-everybody-gets-their-own-row">v2 — what if everybody gets their own row?</h3>
+<p>Keep a <strong>row per replica</strong>. You may only raise your own row. Merge takes the
+higher number in each row. The value is the sum of the rows.</p>
+<div class="code"><pre><code>Amira:  {amira: 1}                Ben: {ben: 1}
+merge:  {amira: 1, ben: 1}   -&gt; value 2   ✔
+</code></pre></div>
+<p>Amira and Ben are writing in different rows, so they cannot overwrite each other.
+Overwriting is not a thing you can do to somebody else's row. That is
+<code>GCounter.java</code>, and the merge is one line:</p>
+<div class="code"><pre><code class="language-java">other.rows.forEach((replica, count) -&gt; next.merge(replica, count, Math::max));
+</code></pre></div>
+<p>Duplicates become harmless for free, because <code>max(1,1) = 1</code>. Run
+<code>java src/Experiments.java 2</code>: the same message delivered ten times still reads
+2, where an adding merge reads 11.</p>
+<p>The name is <strong>G-Counter</strong>, G for <em>grow-only</em>. Which is also its problem.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Ben wants to subtract 3. His row says 4, so he writes 1 into it
+and syncs with Amira, whose copy still says <code>{ben: 4}</code>. What does the counter
+read afterwards?</p>
+<details><summary>Reveal</summary>
+
+<p><code>{ben: 4}</code> — the decrement is gone. Merge takes the larger number, so a smaller
+number looks exactly like older news, and older news is what merge exists to
+discard.</p>
+<p>If you guessed the sync would carry the 1 across, remember what merge is: a
+least upper bound. It climbs. It has no way to descend.</p>
+<p>Run <code>java src/Experiments.java 4</code> for the printed before and after. The general
+rule this teaches: <strong>in this family, the state may only ever climb.</strong> Any
+operation that moves it down is not implementable as written. It must be
+re-expressed as something that moves it up.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v3--how-do-you-subtract-when-nothing-may-go-down">v3 — how do you subtract when nothing may go down?</h3>
+<p>Re-express the decrement. Keep <strong>two</strong> grow-only counters. <code>P</code> holds everything
+ever added. <code>N</code> holds everything ever taken away. The value is <code>sum(P) − sum(N)</code>.</p>
+<p>Both halves still only climb, so both halves still merge by taking the larger
+number in each row.</p>
+<div class="code"><pre><code>P{amira: 6, ben: 4}   N{ben: 3}   -&gt;   10 − 3 = 7   ✔
+</code></pre></div>
+<p>That is <code>PNCounter.java</code>, eleven lines of real code. One pattern recurs
+everywhere in this family: <em>if the operation goes the wrong way, add a second
+monotonic pile to hold it</em>.</p>
+<h3 id="readme-v4--what-if-the-thing-is-a-list-not-a-number">v4 — what if the thing is a list, not a number?</h3>
+<p>Amira's shopping list is not a number. So try the simplest possible design: a
+set, and merge is union.</p>
+<p>Union is commutative, associative and idempotent for free. This converges with no
+machinery at all. That is <code>GSet.java</code>.</p>
+<p>It cannot remove anything. Removing means the set gets smaller, and smaller is
+down the lattice.</p>
+<h3 id="readme-v5--can-a-second-pile-hold-the-removals">v5 — can a second pile hold the removals?</h3>
+<p>Same trick as the PN-Counter. Add a second grow-only pile. One set of things
+added, one set of things removed, and the list you see is <em>adds minus removes</em>.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Amira removes milk, changes her mind in the dairy aisle, and
+adds milk again. Is milk on the list?</p>
+<details><summary>Reveal</summary>
+
+<p>No — and it never can be again. The removes pile contains the word &quot;milk&quot;. The
+new add lands in the adds pile, where the removes pile cancels it, forever.</p>
+<p>If you guessed the second add would win because it came later, notice that
+neither pile records <em>when</em>. They record <em>whether</em>.</p>
+<p>Experiment 5 runs 100 add-remove-add cycles, with
+<code>java src/Experiments.java 5</code>. This design has the item in <strong>0 of 100</strong> carts.
+Try it yourself in the visualization under <em>Adds plus a blacklist</em>.</p>
+<p>Now notice what kind of failure this is. All three phones agree completely. The
+merge obeys all three laws. It converges beautifully — onto the wrong answer.
+<strong>Convergence is a property of the merge; correctness is a property of the
+design.</strong> Nothing in the algebra will ever warn you about this.</p>
+</details>
+
+</blockquote>
+<p>The diagnosis is the same one as v1. The state threw away information. &quot;Milk was
+removed&quot; is not enough. Asha needs to know <strong>which</strong> milk.</p>
+<p>The name is <strong>2P-Set</strong>, for two-phase: a thing can be added, then removed, and
+that is the end of its life.</p>
+<h3 id="readme-v6--what-if-a-remove-tears-up-receipts-instead-of-words">v6 — what if a remove tears up receipts instead of words?</h3>
+<p>This is the central idea of the lab, and it is one sentence:</p>
+<blockquote>
+<p><strong>An add is not a value. It is a unique event — and a remove destroys events,
+never values.</strong></p>
+</blockquote>
+<p>Every add mints a <strong>dot</strong>: a globally unique name for one event, made with no
+coordination at all. A dot is <em>(which replica, how many things that replica has
+done)</em>. So <code>amira#3</code> is the 3rd action ever taken on Amira's phone, and no
+machine anywhere can accidentally produce that name.</p>
+<p>That is <code>Dot.java</code>. It is the same idea as the site-id tie-break in
+<a href="../71-google-docs-system-design/notes.html#readme"><code>google-docs-system-design</code></a>, and it is one
+entry of a version vector from
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a>.</p>
+<p>The state becomes two piles, and the visualization's dashed box shows exactly
+these:</p>
+<div class="code"><pre><code>live:  milk -&gt; {amira#3}      the adds still standing, with their receipts
+torn:  {amira#1, ben#2}       tombstones: receipts that have been destroyed
+</code></pre></div>
+<p>A <strong>tombstone</strong> is a record that something was deleted. It is kept because
+&quot;absent&quot; and &quot;deleted&quot; have to be told apart. You met the word for deleted rows
+in <a href="../05-btree-and-lsm/notes.html#readme"><code>btree-and-lsm</code></a> and
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a>; here it names a dead
+receipt rather than a dead row.</p>
+<p>Removing milk does not blacklist the word &quot;milk&quot;. It tears up <strong>exactly the
+receipts for milk that this replica has actually seen</strong>. Which is why the type is
+called an <strong>observed-remove set</strong>, or OR-Set. In words: the merge keeps every
+receipt either side has torn up, and keeps every standing add that no torn
+receipt names.</p>
+<div class="code"><pre><code class="language-java">torn = torn(a) ∪ torn(b)
+live = (live(a) ∪ live(b)) minus every receipt in torn
+</code></pre></div>
+<p>Re-adding now works. Amira's second add mints <code>amira#9</code>, and no torn receipt
+names <code>amira#9</code>. In the same experiment that gave the 2P-Set 0 of 100, this gets
+<strong>100 of 100</strong> carts.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Both phones hold milk with receipt <code>amira#1</code>. The network is
+cut. Ben deletes milk; at the same moment Amira, in the dairy aisle, adds milk
+again. They sync. Is milk on the list — and does the answer depend on which
+message arrives first?</p>
+<details><summary>Reveal</summary>
+
+<p>Milk stays, and no, the order makes no difference.</p>
+<p>Ben's delete names one receipt: <code>amira#1</code>. Amira's new add mints <code>amira#4</code>,
+which Ben has never seen and therefore cannot have meant to destroy. The merge
+tears up <code>amira#1</code> and leaves <code>amira#4</code> standing.</p>
+<p>If you guessed &quot;it depends who syncs last&quot;, that was true of every design
+before this one. It stopped being true the moment removes started naming
+receipts instead of words.</p>
+<p>Experiment 6 runs 1,000 randomly-ordered merges: the add won <strong>1,000</strong> times.</p>
+</details>
+
+</blockquote>
+<p>The same events as a message trace, with Amira's phone and Ben's phone as the two
+participants:</p>
+<pre class="mermaid">sequenceDiagram
+    participant A as Amira
+    participant B as Ben
+    Note over A,B: both hold  live{milk: amira#1}
+    Note over A,B: — network cut —
+    B-&gt;&gt;B: remove milk&lt;br/&gt;tears up amira#1
+    A-&gt;&gt;A: add milk&lt;br/&gt;mints amira#4
+    Note over A,B: — network heals, they sync —
+    A--&gt;&gt;B: live{milk: amira#4}, torn{}
+    B--&gt;&gt;A: live{}, torn{amira#1}
+    Note over A,B: torn = {amira#1}&lt;br/&gt;live = {milk: amira#1, amira#4} − torn&lt;br/&gt;= {milk: amira#4}  → milk stays
+</pre>
+<p><strong>&quot;Add wins&quot; is a policy, not an accident.</strong> It falls out of &quot;you may only remove
+what you have observed&quot;.</p>
+<p>It was chosen for a reason. A stray item in Amira's cart annoys her. An item that
+refuses to be deleted becomes a support ticket for Omar — or a privacy incident.
+Remove-wins sets exist too. The thing that matters professionally is knowing
+which one you bought.</p>
+<h3 id="readme-v7--what-about-a-field-that-must-hold-exactly-one-value">v7 — what about a field that must hold exactly one value?</h3>
+<p>A counter merges by adding evidence. A set merges by unioning it. But what about
+a field that is <em>supposed</em> to hold exactly one value — a delivery address, a
+display name?</p>
+<p><strong>LWW-Register</strong> (<code>LwwRegister.java</code>) keeps the value, plus a timestamp, plus the
+replica id. Merge keeps the bigger <code>(timestamp, replicaId)</code> pair.</p>
+<p>It is a perfectly legal CRDT. All three laws hold. And the tie-break on replica
+id is load-bearing, not decoration.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Amira and Ben write different addresses in the same
+millisecond, and the tie-break on replica id has been deleted so ties keep
+whichever copy merge was called on. What goes wrong, and how would you ever
+notice?</p>
+<details><summary>Reveal</summary>
+
+<p>Commutativity breaks. Amira merging Ben's copy keeps her own value; Ben merging
+Amira's copy keeps his. The two phones now disagree permanently, and no further
+sync repairs it, because each one keeps winning its own merge.</p>
+<p>If you guessed &quot;one of them wins, which is unfair but consistent&quot;, that is the
+answer with the tie-break in place. Without it there is no winner at all, only
+two replicas that will never agree again.</p>
+<p>You would notice almost never in testing, because same-millisecond writes are
+rare on a quiet machine and constant on a busy fleet. Run
+<code>java src/Tests.java broken</code>, which plants exactly this bug and catches it.</p>
+</details>
+
+</blockquote>
+<p>The LWW-Register converges by throwing one of the two writes in the bin, and your
+wall clock picks which one. Experiment 8 makes that concrete: a replica whose
+clock is 60 seconds fast destroyed <strong>1,000 of 1,000</strong> genuinely-newer writes,
+silently.</p>
+<p><strong>MV-Register</strong> (<code>MvRegister.java</code>) refuses to pick. It keeps every candidate
+that nothing else supersedes, and hands the set to whoever reads it.</p>
+<p>Each candidate carries the <strong>version vector</strong> it was written against. That is the
+same structure you used in
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> and, not
+coincidentally, the same lattice as a G-Counter.</p>
+<p>A write joins every vector it can see and bumps its own entry. That is how it
+<em>earns</em> the right to replace what it saw.</p>
+<p>Merge drops any candidate strictly dominated by another. A dominated candidate is
+not a rival opinion. It is an ancestor whose author has already been overruled by
+somebody who read it.</p>
+<p>Two survivors are exactly what Riak and Dynamo call <strong>siblings</strong>. The trade is
+plain. LWW never bothers the application and sometimes loses data. MV never loses
+data and sometimes hands Asha's application a decision it must be written to
+handle.</p>
+<h3 id="readme-v8--how-do-you-merge-order-itself">v8 — how do you merge order itself?</h3>
+<p>Text is a set with a <em>position</em>, and position is exactly the thing that stops
+being true the moment somebody else edits.</p>
+<p>&quot;Insert at index 3&quot; was correct when Amira wrote it and wrong when it ran. That is
+the failure the <a href="../71-google-docs-system-design/notes.html#readme"><code>google-docs-system-design</code></a>
+lab spent its whole length on.</p>
+<p><strong>RGA</strong> stands for replicated growable array, and it lives in <code>Rga.java</code>. It
+applies the OR-Set trick to order. Never name a position; name an identity.</p>
+<p>Every character gets a dot. An insert says <em>&quot;this character goes immediately after
+that character&quot;</em>. Two concurrent inserts after the same character are ordered by
+their dots, bigger first — a rule both phones can apply without talking. Deletes
+are tombstones, so a delete may safely arrive before the character it deletes.</p>
+<p>Merge is union of characters plus union of tombstones, so the three laws hold for
+free.</p>
+<p>One catch bit this lab during construction, and it is worth carrying. Union-merge
+makes RGA <strong>converge</strong> whatever dot numbers you use. But it only produces the
+order a human expected if the dot counters are <strong>Lamport counters</strong> — every new
+dot numbered higher than every dot its author has seen.</p>
+<p>With plain per-replica 1, 2, 3… all replicas still agree. They just agree on
+<code>HATSC</code> instead of <code>CHATS</code>. <strong>Convergence and intention preservation are two
+different properties, and only one of them is free.</strong></p>
+<h3 id="readme-v9--why-not-ship-the-operation-instead-of-the-whole-state">v9 — why not ship the operation instead of the whole state?</h3>
+<p>Everything so far ships a whole snapshot on every sync. For a 10,000-item set that
+is absurd.</p>
+<p>The obvious economy is to ship the operation instead of the state: &quot;add milk
+with receipt amira#3&quot;. That is the <strong>op-based</strong> family, and it is what Automerge,
+Yjs and most collaborative editors actually do.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> An op-based set sends two operations: <code>add milk (amira#1)</code> and
+then <code>remove milk (amira#1)</code>. Meera receives them in that order; Ben receives
+them backwards. Do the two replicas end up the same?</p>
+<details><summary>Reveal</summary>
+
+<p>No. Experiment 9 prints it: add-then-remove gives <code>[]</code>, remove-then-add gives
+<code>[milk]</code>. Ben's remove arrived when there was nothing to remove, did nothing,
+and then the add landed with nothing left to cancel it.</p>
+<p>If you guessed yes because &quot;the operations commute&quot;, they do not. A remove is
+only meaningful once its add has landed.</p>
+<p>Op-based CRDTs need <strong>causal delivery</strong>: an operation may not be applied before
+the operations it depends on. Somebody has to build that layer: sequence
+numbers, buffering, exactly-once. It is not free. This is the same bug the
+google-docs lab hit in its own CRDT: a delete arriving before its character was
+silently lost, in 428 of 500 runs.</p>
+<p>The state-based version has no such requirement, because it never applies a bare
+&quot;remove&quot;. It merges a whole snapshot with the tombstones included. Same
+experiment: both orders give <code>[]</code>.</p>
+</details>
+
+</blockquote>
+<p>The honest summary of the trade:</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>State-based (CvRDT)</th>
+  <th>Op-based (CmRDT)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>ships</td>
+  <td>the whole state</td>
+  <td>one operation</td>
+</tr>
+<tr>
+  <td>bandwidth</td>
+  <td>large, grows with the data</td>
+  <td>small, grows with activity</td>
+</tr>
+<tr>
+  <td>needs from the network</td>
+  <td><strong>nothing</strong> — drop, duplicate, reorder freely</td>
+  <td>causal order, exactly-once delivery</td>
+</tr>
+<tr>
+  <td>a wiped replica</td>
+  <td>repairs itself on the next ordinary sync</td>
+  <td>needs someone to keep and replay the log</td>
+</tr>
+<tr>
+  <td>used by</td>
+  <td>Riak data types, Redis Enterprise CRDBs, Akka Distributed Data</td>
+  <td>Automerge, Yjs, most collaborative editors</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>δ-state CRDTs</strong> are the modern middle. State-based semantics, but a sync ships
+only the <em>part</em> of the lattice that changed. That part is called a &quot;delta&quot;, and
+it merges by exactly the same rule. You get op-based bandwidth with state-based
+network requirements.</p>
+<p>Riak, Akka and most current research systems are delta-based. This lab ships full
+states because they make the algebra visible. Deltas are an optimisation on top,
+not a different idea.</p>
+<h3 id="readme-how-do-the-eight-types-compare-side-by-side">How do the eight types compare, side by side?</h3>
+<p>Read the last column first. It is the reason the next row exists.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Type</th>
+  <th>What one replica stores</th>
+  <th>How merge combines two copies</th>
+  <th>What it still cannot do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>G-Counter</strong></td>
+  <td>one row per replica, counts only rising</td>
+  <td>larger number in each row; value is the sum</td>
+  <td>go down — a smaller number reads as older news</td>
+</tr>
+<tr>
+  <td><strong>PN-Counter</strong></td>
+  <td>two G-Counters, <code>P</code> added and <code>N</code> taken away</td>
+  <td>each half by row-wise larger; value is <code>sum(P) − sum(N)</code></td>
+  <td>keep the value inside a bound, such as never below zero</td>
+</tr>
+<tr>
+  <td><strong>G-Set</strong></td>
+  <td>the things ever added</td>
+  <td>union</td>
+  <td>remove anything at all</td>
+</tr>
+<tr>
+  <td><strong>2P-Set</strong></td>
+  <td>an adds pile and a removes pile</td>
+  <td>union of both piles; you see adds minus removes</td>
+  <td>re-add anything it has ever removed</td>
+</tr>
+<tr>
+  <td><strong>OR-Set</strong></td>
+  <td>live receipts per value, plus torn receipts</td>
+  <td>union both, then drop every receipt that is torn</td>
+  <td>free its tombstones, which grow forever</td>
+</tr>
+<tr>
+  <td><strong>LWW-Register</strong></td>
+  <td>one value with <code>(timestamp, replicaId)</code></td>
+  <td>keep the bigger pair</td>
+  <td>survive a wrong clock — the loser dies silently</td>
+</tr>
+<tr>
+  <td><strong>MV-Register</strong></td>
+  <td>every candidate with its version vector</td>
+  <td>union, then drop candidates another one dominates</td>
+  <td>decide — it hands siblings to the application</td>
+</tr>
+<tr>
+  <td><strong>RGA</strong></td>
+  <td>characters with dots, plus tombstones</td>
+  <td>union of characters and of tombstones</td>
+  <td>preserve intention without Lamport-numbered dots</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-intermediate-model">✅ Checkpoint — end of the intermediate model</h3>
+<p>You can now derive the whole family from first principles. Every type is a
+monotonic state plus a join. Every awkward-looking detail is the scar of a
+specific failure you have now watched: two piles, a receipt per add, a
+tie-break on replica id, Lamport-numbered dots. <strong>Next:</strong> what breaks in
+production, and the precise sentence describing what a CRDT does <em>not</em> promise.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Amira removed milk and then added it again. Explain to a
+friend why the 2P-Set loses her milk forever and the OR-Set does not, without
+using the words <em>tombstone</em>, <em>dot</em> or <em>idempotent</em>.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;The first design wrote the word 'milk' on a blacklist, and there is no way to
+take a word off a blacklist when nobody is in charge. The second design gave
+every single act of adding its own receipt number. Deleting only ever tears up
+the receipts you have actually seen. Her new add came with a brand-new receipt
+that nobody had torn up, so it stood.&quot;</p>
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-11-which-ten-failure-scenarios-should-you-be-able-to-name">11. Which ten failure scenarios should you be able to name?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten things go wrong. Six of them turn out to be nothing at
+all, which is the point of the design. The other four are the ones that put
+Priya on a call at 3am.</p>
+</blockquote>
+<p>Priya is on call for Asha's app. Here is what each failure does to Amira, Ben and
+Meera, and what Priya sees while it happens.</p>
+<p><strong>1 · The same message is delivered five times.</strong>
+The transport retries, so Meera's phone receives Amira's news five times.
+Nothing happens. Taking the larger of a row you already hold is a no-op, and
+unioning a receipt you already have is a no-op. That is idempotence doing its
+job. In production this is why CRDT syncs can ride at-least-once transports with
+no deduplication layer at all: gossip, Kafka, a retrying HTTP client. That is a
+real operational saving. Contrast the adding merge: same duplicates, and the
+counter reads <strong>11</strong> instead of 2. Cause it with <code>java src/Experiments.java 2</code>,
+or press <em>Duplicate</em> on any message in the visualization.</p>
+<p><strong>2 · Messages arrive in a scrambled order.</strong>
+Ben's news overtakes Amira's on the wire. Nothing happens, because the merge is
+commutative and associative. Seven pending messages delivered in all <strong>5,040</strong>
+orders produce <strong>1</strong> distinct final state. In production this means no sequencer
+and no per-connection ordering requirement — the exact opposite of the <em>ordered
+per-client channel</em> that
+<a href="../71-google-docs-system-design/notes.html#readme"><code>google-docs-system-design</code></a> needed, and whose
+violation threw immediately. Cause it with <code>java src/Experiments.java 3</code>, or
+<em>Deliver in reverse</em> on the page.</p>
+<p><strong>3 · Messages are lost.</strong>
+Meera's phone misses a sync entirely. She stays behind, then catches up on the
+next sync that gets through. Every sync carries the <strong>whole</strong> state, so a later
+message subsumes every earlier one that was lost. Losing a message costs latency,
+never data. In production this is why anti-entropy is a background loop rather
+than a retry queue — see <a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a>. The tests
+run at <strong>30–50%</strong> loss with 46/46 passing. Cause it with <code>Cluster.dropRate = 0.4</code>
+in the tests, or <em>Drop</em> on the page.</p>
+<p><strong>4 · The network splits, then heals.</strong>
+Amira and Ben are on one side, Meera on the other. During the split the two sides
+genuinely show different lists; <code>Sim</code> prints 2 distinct views. After healing they
+agree in <strong>1</strong> sync round, with 76 messages dropped and 55 duplicated along the
+way. Merge does not care how old the news is. Availability survived, because
+everyone kept working. What was lost was <strong>agreement, temporarily</strong>. During the split
+Amira and Meera are looking at different lists and neither is wrong. In
+production this is the AP corner of <a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a>, chosen on
+purpose. Priya's job is to make the disagreement window visible, as sync lag per
+replica, rather than to prevent it. Cause it with Scene 4 of <code>java src/Sim.java</code>,
+or the <em>Cut the group in half</em> situation on the page.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Meera's phone is wiped and restarts completely empty. It syncs
+once with Amira. What does it read, and does the answer depend on whether the
+app is state-based or op-based?</p>
+<details><summary>Reveal</summary>
+
+<p>State-based: it reads 0, and after one ordinary sync round it reads <strong>60</strong>
+again, fully repaired. Every replica carries complete evidence, so a healthy
+peer's snapshot restores the wiped one with no special recovery path.</p>
+<p>Op-based: it reads <strong>0</strong> forever, unless somebody replays a log. An op-based
+replica that consumed and discarded its operations has nothing to rebuild from.</p>
+<p>If you guessed the answer is the same either way, you have found the strongest
+single argument for state-based CRDTs. Run <code>java src/Experiments.java 10</code>.</p>
+</details>
+
+</blockquote>
+<p><strong>5 · A replica is wiped and restarts empty.</strong>
+That is the prediction above, and it is worth naming the connection. This exact
+event broke the quorum argument in
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a>: there, two
+rebuilt-empty replicas satisfied <code>R=2</code> and returned nothing. Here the same event
+is a non-event.</p>
+<p><strong>6 · One machine's clock is wrong.</strong>
+Under an LWW-Register, Ben's fast phone wins every argument: <strong>1,000 of 1,000</strong>
+genuinely-newer writes destroyed. The wall clock has become the
+conflict-resolution algorithm. Everyone still agrees — on the wrong value. What
+is lost is the newer write, with no error, no log line and no metric for Priya to
+alert on. In production you have two honest choices. Accept it explicitly for
+data where losing a write is fine, such as a &quot;last seen at&quot; field. Or use an
+MV-Register and write the application code that handles siblings. NTP skew is not a
+hypothetical. It is the normal state of a fleet. Cause it with
+<code>java src/Experiments.java 8</code>, or the <em>clock accurate / +60s fast</em> toggle.</p>
+<p><strong>7 · The data grows forever.</strong>
+Amira's cart shows <strong>10</strong> items and stores <strong>500</strong> records — <strong>50 per item</strong>, 250
+of them tombstones. A 206-character document stores <strong>403</strong> cells. Every add is
+remembered as an event, every delete is remembered as a tombstone, and nothing in
+the algorithm ever frees either. Correctness is untouched. Nothing logical is
+lost. This is a cost, not a bug — and it is the single biggest operational
+concern with CRDTs. Freeing a tombstone requires knowing that <strong>every</strong> replica
+has seen the delete, a condition called <em>causal stability</em>, which is itself a
+distributed agreement problem. So real systems either run a stability tracker, or
+bound the number of replicas, or redesign the representation so version vectors
+replace most per-element tombstones. That last route is Riak's ORSWOT and
+Automerge's compaction. Cause it with <code>java src/Experiments.java 7</code>.</p>
+<p><strong>8 · Operations arrive before the operations they depend on.</strong>
+An op-based set diverges permanently: <code>[]</code> on Meera's phone, <code>[milk]</code> on Ben's.
+The remove had nothing to remove yet, so it did nothing, and the add later landed
+uncancelled. Nothing is intact here. What is lost is strong eventual consistency
+itself. In production, op-based systems ship a causal delivery layer, plus
+exactly-once delivery on top. That layer is vector clocks plus a buffer for
+operations whose dependencies have not arrived. If you adopt an op-based library, that layer is part
+of what you are adopting. Check it exists before you trust it. Cause it with
+<code>java src/Experiments.java 9</code>.</p>
+<p><strong>9 · A replica moves <em>down</em> the lattice.</strong>
+Somebody restores Ben's phone from an old backup, or a bad deploy resets a row.
+The invariant &quot;state only ever climbs&quot; is gone, and merges start producing
+different answers depending on direction. The join is only well defined over a
+lattice you climb. A state that goes backwards can be re-introduced by a peer and
+then removed again, forever. Nothing reliable is intact; convergence is lost. In
+production, restoring a CRDT replica from an old backup is not a neutral act. It
+is a non-monotonic move, and the safe procedure is to bootstrap the replica empty
+and let it re-merge, exactly as in failure 5. The three planted bugs in
+<code>Broken.java</code> are all this failure in disguise, and <strong>3 of 3</strong> are caught by the
+law checks alone. Cause it with <code>java src/Tests.java broken</code>, bugs 1 and 3.</p>
+<p><strong>10 · Everything converges and the result is still wrong.</strong>
+Arjun runs the warehouse in Pune, Dev runs the one in Delhi, and the link between
+them drops. There are 10 bags of flour. Each warehouse sells 6. The merged stock
+level is <strong>−2</strong>. Or the Bayou classic, in Amira's own cart: a 2P-Set converges on
+&quot;the cart is empty&quot; after a re-add, in <strong>0 of 100</strong> carts. The merge faithfully
+recorded everything that happened. Nothing in it was ever asked whether the
+result was <em>allowed</em>. Convergence is intact; what is lost is any rule spanning
+replicas. In production this is the failure that gets people fired, and section
+12 is about drawing the line before it happens. Cause it with Scene 5 of
+<code>java src/Sim.java</code>, and <code>java src/Tests.java</code>'s
+<code>pncounter_cannot_keep_the_value_above_zero</code>.</p>
+<p>The same ten, as one table. The last two columns are the ones to memorise.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>How to cause it</th>
+  <th>What Priya sees</th>
+  <th>Still guaranteed</th>
+  <th>Lost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>duplicate any message</td>
+  <td>nothing</td>
+  <td>everything</td>
+  <td>nothing</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>deliver in reverse</td>
+  <td>nothing</td>
+  <td>everything</td>
+  <td>nothing</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>dropRate = 0.4</code></td>
+  <td>replicas lag, then catch up</td>
+  <td>convergence, once anything arrives</td>
+  <td>nothing permanent</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>cut the group in half</td>
+  <td>two sides show different lists</td>
+  <td>availability</td>
+  <td>agreement, temporarily</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>wipe a replica's disk</td>
+  <td>0, then 60 after one sync</td>
+  <td>everything, state-based only</td>
+  <td>nothing state-based; all of it op-based</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>a clock 60s fast</td>
+  <td>the newer address silently gone</td>
+  <td>convergence</td>
+  <td>the newer write</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>add and delete for a month</td>
+  <td>metadata climbing with no plateau</td>
+  <td>correctness</td>
+  <td>nothing logical — this is a cost</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>op-based, out of causal order</td>
+  <td><code>[]</code> here, <code>[milk]</code> there</td>
+  <td>nothing</td>
+  <td>strong eventual consistency itself</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>restore from an old backup</td>
+  <td>merges answer differently by direction</td>
+  <td>nothing reliable</td>
+  <td>convergence</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>two warehouses, one link down</td>
+  <td>stock reads −2</td>
+  <td>convergence</td>
+  <td>every rule spanning replicas</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-does-correctness-mean-here-and-where-is-the-edge">12. What does correctness mean here, and where is the edge?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A CRDT promises that everyone ends up agreeing. It promises
+nothing at all about whether what they agree on was ever allowed. Knowing
+exactly where that line falls is the whole professional skill.</p>
+</blockquote>
+<h3 id="readme-what-is-actually-guaranteed">What is actually guaranteed?</h3>
+<ul>
+<li><strong>Strong eventual consistency.</strong> Any two replicas that have received the same
+<em>set</em> of updates hold identical state. Not &quot;eventually&quot;, not &quot;after a repair
+job&quot; — immediately, as a property of the merge function.</li>
+<li><strong>No lost updates in the type's own terms.</strong> Every update that reaches a
+replica is represented in the merged state. A G-Counter loses no increments. An
+OR-Set loses no add that was not observed-and-removed.</li>
+<li><strong>Total availability for writes.</strong> Any replica accepts any update at any time,
+including alone in a tunnel. There is no quorum to gather and no leader to
+find.</li>
+<li><strong>Immunity to the network.</strong> Loss, duplication, reordering, regrouping and
+partition cost latency, never correctness — for state-based types.</li>
+<li><strong>Monotonic progress.</strong> Replica state only climbs the lattice, so replicas can
+never reach a state from which they cannot rejoin.</li>
+</ul>
+<h3 id="readme-what-is-explicitly-not-guaranteed">What is explicitly not guaranteed?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Arjun has 10 bags of flour and Dev has the same 10 bags in his
+copy. Could a cleverer CRDT, or any CRDT at all, stop the two of them selling
+12 bags between them while the link is down?</p>
+<details><summary>Reveal</summary>
+
+<p>No. Not a cleverer one, not any one. Two replicas that cannot see each other
+cannot both check a rule about the total. Accepting a write with no
+coordination <em>is</em> giving up the ability to refuse it.</p>
+<p>If you guessed &quot;an OR-Set of reservations would fix it&quot;, it would not. It would
+record all 12 reservations perfectly and converge on all 12. Recording is not
+refusing.</p>
+<p>The measured result: <strong>−2</strong> bags of flour.</p>
+</details>
+
+</blockquote>
+<ul>
+<li><strong>No global invariant.</strong> <code>stock ≥ 0</code>, <code>balance ≥ 0</code>, &quot;this username is
+unique&quot;, &quot;at most 5 members&quot; — none of these can be enforced. This is not a
+weakness of a particular type. It follows directly from accepting writes
+without coordination, and it is the reason CRDTs and consensus coexist rather
+than compete.</li>
+<li><strong>No linearizability, no total order.</strong> There is no &quot;the order in which things
+happened&quot;. Concurrent updates are genuinely unordered, and read-your-own-writes
+holds only on your own replica.</li>
+<li><strong>No atomicity across objects.</strong> Two CRDTs merge independently. There is no
+transaction spanning them, so Meera can see one merged and the other not.</li>
+<li><strong>No semantic conflict resolution.</strong> The type decides <em>mechanically</em>, by its
+own rule — add-wins, last-writer-wins, keep-both. Whether that rule matches
+what a human would have wanted is your problem, not the algorithm's. A CRDT
+guarantees that everyone agrees. It does not guarantee that what they agree on
+is sensible.</li>
+<li><strong>No free garbage collection.</strong> Metadata grows with the number of operations,
+not the size of the data.</li>
+</ul>
+<h3 id="readme-what-was-traded-away-to-get-it">What was traded away to get it?</h3>
+<p>Coordination — and with it, the ability to say no.</p>
+<p>A referee-based system can reject a write. &quot;Insufficient stock.&quot; &quot;Name already
+taken.&quot; That rejection is precisely what a CRDT gives up in exchange for working
+in Amira's tunnel.</p>
+<h3 id="readme-where-does-the-line-fall-in-practice">Where does the line fall in practice?</h3>
+<p>Follow the questions down. The left branch is where Arjun's flour belongs; the
+right branch is where Amira's shopping list belongs.</p>
+<pre class="mermaid">flowchart TD
+  Q1{&quot;Must a rule about the&lt;br/&gt;TOTAL always hold?&lt;br/&gt;(stock ≥ 0, uniqueness)&quot;}
+  Q1 --&gt;|yes| C[&quot;Consensus / quorum&lt;br/&gt;paxos, raft, R+W&gt;N with CAS&lt;br/&gt;— you must be able to say NO&quot;]
+  Q1 --&gt;|no| Q2{&quot;May a concurrent update&lt;br/&gt;be silently discarded?&quot;}
+  Q2 --&gt;|yes, it&#x27;s cheap| L[&quot;LWW-Register&lt;br/&gt;simplest thing that works&lt;br/&gt;— but your clock decides&quot;]
+  Q2 --&gt;|no| Q3{&quot;What shape is the data?&quot;}
+  Q3 --&gt;|a count| PN[&quot;PN-Counter&quot;]
+  Q3 --&gt;|a collection| OR[&quot;OR-Set / ORSWOT&lt;br/&gt;(pick add-wins or remove-wins&lt;br/&gt;on purpose)&quot;]
+  Q3 --&gt;|one field| MV[&quot;MV-Register&lt;br/&gt;+ application code&lt;br/&gt;that handles siblings&quot;]
+  Q3 --&gt;|ordered text| RGA[&quot;RGA / Yjs / Automerge&quot;]
+  style C fill:#F6E2E6,stroke:#A2384F
+  style OR fill:#DCEFE9,stroke:#0C6A5B
+</pre>
+<p>The single sentence to be able to say in an interview or a design review, when
+Omar asks whether the cart can be a CRDT:</p>
+<blockquote>
+<p><strong>CRDTs guarantee that everyone ends up agreeing. They do not guarantee that
+what everyone agrees on was ever allowed.</strong></p>
+</blockquote>
+<h3 id="readme-what-does-it-cost--state-merge-and-wire">What does it cost — state, merge and wire?</h3>
+<p>The rows that matter are the ones with &quot;ever&quot; in them. Those are the ones that
+grow while Amira sleeps.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>state size</th>
+  <th>merge cost</th>
+  <th>wire cost per sync</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>G/PN-Counter</td>
+  <td>O(replicas)</td>
+  <td>O(replicas)</td>
+  <td>O(replicas)</td>
+</tr>
+<tr>
+  <td>OR-Set (this lab)</td>
+  <td>O(adds ever)</td>
+  <td>O(adds + tombstones)</td>
+  <td>O(state)</td>
+</tr>
+<tr>
+  <td>ORSWOT (production)</td>
+  <td>O(elements + replicas)</td>
+  <td>O(elements + replicas)</td>
+  <td>O(state), or O(δ) with deltas</td>
+</tr>
+<tr>
+  <td>RGA</td>
+  <td>O(characters ever typed)</td>
+  <td>O(cells)</td>
+  <td>O(state), or O(δ)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-13-in-what-order-should-you-read-the-code">13. In what order should you read the code?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Seventeen short files, no dependencies. Read the types
+first, then the ones that pick a single value or an order, then the harness
+that abuses them.</p>
+</blockquote>
+<p>Every file is short. Read them in the order below.</p>
+<p>Start with the shape of the idea, then the counters and sets Amira's list is
+built from:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+  <th>The line that matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Replicated.java</code></td>
+  <td>the one-method interface</td>
+  <td>the three laws, stated as a comment contract</td>
+</tr>
+<tr>
+  <td><code>Dot.java</code></td>
+  <td>a globally unique event name</td>
+  <td><code>record Dot(String replica, long counter)</code></td>
+</tr>
+<tr>
+  <td><code>GCounter.java</code></td>
+  <td>grow-only counter</td>
+  <td><code>next.merge(replica, count, Math::max)</code> — the whole idea, one line</td>
+</tr>
+<tr>
+  <td><code>PNCounter.java</code></td>
+  <td>up and down</td>
+  <td><code>decrement</code> calls <code>minus.increment</code> — a decrement is an increment in the other pile</td>
+</tr>
+<tr>
+  <td><code>GSet.java</code> / <code>TwoPSet.java</code></td>
+  <td>the naive sets</td>
+  <td><code>next.removeAll(removed.value())</code> — converges, and is wrong</td>
+</tr>
+<tr>
+  <td><code>OrSet.java</code></td>
+  <td>the set that works</td>
+  <td><code>nextKilled.addAll(observed)</code> — removes only what was observed</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then the four that hold one value, or an order:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+  <th>The line that matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>LwwRegister.java</code></td>
+  <td>last writer wins</td>
+  <td><code>wins()</code> — a <strong>total</strong> order, including the replica tie-break</td>
+</tr>
+<tr>
+  <td><code>VersionVector.java</code></td>
+  <td>causal context</td>
+  <td><code>strictlyDominatedBy</code> — how a candidate is proved to be an ancestor</td>
+</tr>
+<tr>
+  <td><code>MvRegister.java</code></td>
+  <td>keep both</td>
+  <td><code>assign</code> joins every visible clock before bumping its own</td>
+</tr>
+<tr>
+  <td><code>Rga.java</code></td>
+  <td>replicated text</td>
+  <td><code>insertAfter</code> names an identity, never a position</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then the harness — the part that plays the hostile network Amira and Ben are
+actually on:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+  <th>The line that matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Cluster.java</code></td>
+  <td>the hostile network</td>
+  <td><code>dropRate</code>, <code>duplicateRate</code>, <code>shuffle</code>, <code>partition</code></td>
+</tr>
+<tr>
+  <td><code>Sim.java</code></td>
+  <td>the narrated story</td>
+  <td>five scenes</td>
+</tr>
+<tr>
+  <td><code>Tests.java</code></td>
+  <td>46 asserted guarantees</td>
+  <td><code>laws()</code> on fixed samples, <strong>plus</strong> a 50,000-triple randomised law fuzz</td>
+</tr>
+<tr>
+  <td><code>Broken.java</code></td>
+  <td>three planted bugs</td>
+  <td>each breaks exactly one law</td>
+</tr>
+<tr>
+  <td><code>YourMerge.java</code></td>
+  <td>exercise 5 — <code>merge()</code> blanked out</td>
+  <td>self-checking: starts at 2/5, correct at 5/5</td>
+</tr>
+</tbody>
+</table></div>
+<p>The load-bearing pattern is visible in every type: <strong>the state is the evidence,
+the merge is a least upper bound, and no code path ever moves the state down.</strong></p>
+<p>Grep for <code>Math::max</code>, <code>addAll</code> and <code>putAll</code>. That is where all the convergence
+lives. There is no conflict-resolution function anywhere in the lab, because
+there is nothing to resolve.</p>
+<p><strong>A bug this lab found in itself, worth keeping.</strong> The hand-written law check
+uses five sample states, and five samples are not a proof.</p>
+<p>So this lab added a randomised law fuzz: 50,000 triples of replicas that share a
+history and then diverge. It failed immediately. <code>a.merge(a) != a</code> on 995 of them.</p>
+<p>The cause was in <code>OrSet.add</code>. Presenting a dot that had already been torn up put
+it back into <code>live</code> while it was still in <code>killed</code>, and merge then subtracted it
+again. One guard line fixed it.</p>
+<p>The lesson generalises past this lab. <strong>For a CRDT, the laws are the
+specification, so test them on generated states, not on states you chose while
+thinking about the happy path.</strong></p>
+<p>Output of <code>java src/Tests.java</code>:</p>
+<div class="code"><pre><code>== The three laws — checked on every type in the lab
+  PASS  G-Counter: commutative / associative / idempotent
+  ... (all 7 types)
+  PASS  OR-Set laws over 50000 random triples (comm/assoc/idem broken: 0/0/0)
+== Sets
+  PASS  2P-Set: &#x27;milk&#x27; is dead forever after one remove
+  PASS  concurrent add vs remove: the add wins
+  PASS  ...and it wins in both merge directions
+== Text
+  PASS  500 random 3-editor sessions, 30% loss + 30% duplication: 0 diverged
+46 passed, 0 failed
+</code></pre></div>
+<h2 id="readme-14-which-experiments-break-it-and-can-you-call-them-first">14. Which experiments break it, and can you call them first?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten commands. Each is predict-first: read the question,
+commit to an answer out loud, then run it. Being wrong is how the number
+sticks.</p>
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Question to answer before you run it</th>
+  <th>Command</th>
+  <th>What you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Of 9,000 offline edits, how many survive last-writer-wins?</td>
+  <td><code>java src/Experiments.java 1</code></td>
+  <td><strong>67% destroyed</strong> (2,971 of 8,992 survive); G-Counter loses 0</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>A message is delivered 10 times. Sum-merge vs max-merge?</td>
+  <td><code>…2</code></td>
+  <td><strong>11</strong> vs <strong>2</strong></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Seven messages, every possible order. How many outcomes?</td>
+  <td><code>…3</code></td>
+  <td>5,040 orders, <strong>1</strong> outcome</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Can you decrement by writing a smaller number?</td>
+  <td><code>…4</code></td>
+  <td>No — merge restores the bigger one</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Add, remove, add again: is it there?</td>
+  <td><code>…5</code></td>
+  <td>2P-Set <strong>0/100</strong>, OR-Set <strong>100/100</strong></td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Concurrent delete and re-add — who wins, and is it stable?</td>
+  <td><code>…6</code></td>
+  <td>Add wins <strong>1000/1000</strong>, both merge directions</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>How much metadata per visible item?</td>
+  <td><code>…7</code></td>
+  <td><strong>50 records per cart item</strong>; 2 cells per character</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>A clock 60s fast, against genuinely newer writes</td>
+  <td><code>…8</code></td>
+  <td><strong>1000/1000</strong> newer writes destroyed</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>Op-based, delivered out of causal order</td>
+  <td><code>…9</code></td>
+  <td><code>[]</code> vs <code>[milk]</code> — permanent divergence</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>A replica's disk is wiped</td>
+  <td><code>…10</code></td>
+  <td>State-based recovers in one sync; op-based never</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two more are worth doing by hand.</p>
+<p>Open <code>Tests.java</code>, set <code>dropRate = 0.9</code> in
+<code>rga_fuzz_three_editors_never_diverge</code>, and re-run. Convergence should still be 0
+diverged, because losing messages costs time, not data. Then set
+<code>Cluster.settle</code>'s <code>maxRounds</code> to 1 and watch it start failing. That is the
+difference between <em>cannot converge</em> and <em>has not converged yet</em>.</p>
+<p>Then run <code>java src/Tests.java broken</code> and, before reading the output, predict
+which law each of the three bugs violates.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-engineering-model">✅ Checkpoint — end of the engineering model</h3>
+<p>You can now name the failure modes, state the guarantee and its exact edge, and
+defend a design choice between add-wins and remove-wins, LWW and MV.
+<strong>Next:</strong> what real systems actually run, and everything this lab left out.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Omar asks why Asha's team cannot just make the warehouse stock
+level a PN-Counter and be done with it. Answer him without using the words
+<em>invariant</em>, <em>coordination</em> or <em>lattice</em>.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;A counter like that records everything anyone does and adds it all up
+afterwards, which is exactly what we want for a shopping list. But Arjun in
+Pune and Dev in Delhi both need to know the stock will never go below zero.
+Neither of them can check that on their own while the line between them is
+down. The counter will happily record both sales and tell everyone the honest
+total is minus two. It is very good at agreeing and it has no way to say no.&quot;</p>
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-15-what-does-a-real-production-system-add">15. What does a real production system add?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four things, in order of how much they matter: ship less on
+each sync, store less per element, put it on disk, and work out when it is safe
+to throw metadata away.</p>
+</blockquote>
+<h3 id="readme-what-is-the-chain-from-this-lab-to-a-running-system">What is the chain from this lab to a running system?</h3>
+<p><strong>This lab</strong> is a single JVM, in memory, full-state syncs, a hand-driven network,
+one CRDT at a time. It exists to make the algebra visible.</p>
+<p><strong>A real implementation</strong> adds four things, in roughly this order of importance.</p>
+<p>First, <strong>deltas</strong>. Nobody ships a 10,000-element set on every sync. δ-state CRDTs
+ship only the part of the lattice that changed and merge it with the same join.
+Riak, Akka Distributed Data and most current systems are delta-based.</p>
+<p>Second, <strong>a smaller representation</strong>. The OR-Set in this lab keeps one tombstone
+per deleted element forever. Riak's <strong>ORSWOT</strong> stands for observed-remove set
+without tombstones. It replaces most of them with a version vector per replica,
+which is O(replicas) instead of O(deletes-ever). Automerge and Yjs do the equivalent for
+sequences, plus run-length encoding of adjacent characters.</p>
+<p>Third, <strong>persistence and compaction</strong>. State on disk, snapshot plus subsequent
+deltas, periodic rewrite. That is structurally the same problem as
+<a href="../05-btree-and-lsm/notes.html#readme"><code>btree-and-lsm</code></a> compaction and
+<a href="../50-event-sourcing/notes.html#readme"><code>event-sourcing</code></a> snapshots.</p>
+<p>Fourth, <strong>garbage collection with a stability rule</strong>. A tombstone may only be
+dropped once every replica has certainly seen the delete. Tracking that is called
+<em>causal stability</em>, and it needs membership and liveness. That is what
+<a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a> provides.</p>
+<p><strong>A production architecture</strong> looks like this. A set of replicas discovered and
+health-checked by gossip. Anti-entropy sync between them on a timer, gossip
+again. Client requests routed to any replica, often the nearest, sometimes sticky
+so Amira can read her own writes. And a completely separate path for the small
+number of operations that need to be able to say no: a quorum write, a leader, a
+database transaction.</p>
+<h3 id="readme-what-does-the-on-call-engineer-watch">What does the on-call engineer watch?</h3>
+<p>These are Priya's five dashboard panels, in the order she checks them.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Signal</th>
+  <th>Why</th>
+  <th>What it looks like when bad</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>metadata size per key</td>
+  <td>tombstones and dots never shrink on their own</td>
+  <td>one key at 4 MB; merges slow; sync timeouts cascade</td>
+</tr>
+<tr>
+  <td>sync lag between replicas</td>
+  <td>the disagreement window is a real user-visible thing</td>
+  <td>&quot;my colleague can't see my edit&quot;</td>
+</tr>
+<tr>
+  <td>tombstone / GC backlog</td>
+  <td>GC blocked by one unreachable replica</td>
+  <td>steady growth with no plateau</td>
+</tr>
+<tr>
+  <td>sibling count (MV / Riak)</td>
+  <td>conflicts the application must resolve</td>
+  <td>sibling explosion — a value with 10,000 siblings, a classic Riak outage</td>
+</tr>
+<tr>
+  <td>clock skew (only if LWW)</td>
+  <td>the clock <em>is</em> the conflict resolver</td>
+  <td>silent data loss, discovered by a customer</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-who-actually-runs-this">Who actually runs this?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>System</th>
+  <th>What it uses</th>
+  <th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Riak</strong></td>
+  <td>G/PN-Counter, ORSWOT, MV-Register, maps of CRDTs</td>
+  <td>the reference production implementation; siblings are visible to your code</td>
+</tr>
+<tr>
+  <td><strong>Redis Enterprise (CRDB)</strong></td>
+  <td>LWW + counters + sets, geo-distributed active-active</td>
+  <td>plain open-source Redis has <strong>no</strong> CRDTs; this is the commercial product</td>
+</tr>
+<tr>
+  <td><strong>Azure Cosmos DB</strong></td>
+  <td>LWW by default, pluggable merge in multi-region write mode</td>
+  <td>LWW-Register semantics, with all that implies</td>
+</tr>
+<tr>
+  <td><strong>Automerge / Yjs</strong></td>
+  <td>op-based sequence CRDTs (RGA-family)</td>
+  <td>what you would actually use to build a collaborative editor today</td>
+</tr>
+<tr>
+  <td><strong>Apple Notes, Figma-adjacent tools</strong></td>
+  <td>CRDT-style merge for offline editing</td>
+  <td>offline-first is the killer use case</td>
+</tr>
+<tr>
+  <td><strong>Akka Distributed Data</strong></td>
+  <td>delta-CRDTs over cluster gossip</td>
+  <td>JVM, and the closest thing to this lab's code in production form</td>
+</tr>
+<tr>
+  <td><strong>Phoenix Presence</strong></td>
+  <td>ORSWOT over Erlang distribution</td>
+  <td>tracks who is online across a cluster with no coordinator</td>
+</tr>
+<tr>
+  <td><strong>SoundCloud Roshi</strong></td>
+  <td>LWW-element-set over Redis</td>
+  <td>a whole storage service built from one CRDT</td>
+</tr>
+</tbody>
+</table></div>
+<p>Notice the pattern in that list: counters, sets, presence, flags, carts and text.
+Not ledgers, not stock levels, not usernames.</p>
+<p>That boundary is section 12's line, drawn by the industry rather than by theory.
+Arjun's flour is on the far side of it, and always was.</p>
+<h3 id="readme-what-does-this-lab-deliberately-leave-out">What does this lab deliberately leave out?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted</th>
+  <th>Why it matters</th>
+  <th>How real systems do it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Deltas</strong></td>
+  <td>full-state sync is O(data) per round</td>
+  <td>δ-CRDTs; ship the changed join-irreducible part</td>
+</tr>
+<tr>
+  <td><strong>Tombstone GC</strong></td>
+  <td>metadata grows without bound</td>
+  <td>causal stability tracking; ORSWOT-style redesign</td>
+</tr>
+<tr>
+  <td><strong>Persistence</strong></td>
+  <td>everything here is in-memory</td>
+  <td>append + snapshot + compaction</td>
+</tr>
+<tr>
+  <td><strong>Real transport</strong></td>
+  <td><code>Cluster</code> is hand-driven</td>
+  <td>gossip / anti-entropy, see the sibling lab</td>
+</tr>
+<tr>
+  <td><strong>Membership changes</strong></td>
+  <td>replica set is fixed at 3–4</td>
+  <td>gossip membership; a new replica's dots must not collide</td>
+</tr>
+<tr>
+  <td><strong>Maps of CRDTs</strong></td>
+  <td>real data is nested (a cart <em>of</em> counters)</td>
+  <td>Riak maps; recursive merge, with a policy for the container</td>
+</tr>
+<tr>
+  <td><strong>Security</strong></td>
+  <td>any replica can mint any dot</td>
+  <td>CRDTs assume non-byzantine replicas; a malicious one can corrupt state permanently</td>
+</tr>
+<tr>
+  <td><strong>Undo</strong></td>
+  <td>genuinely hard in this model</td>
+  <td>Automerge and Yjs implement it as new inverse operations, not as removal</td>
+</tr>
+<tr>
+  <td><strong>Compression / encoding</strong></td>
+  <td>500 dots is 500 objects here</td>
+  <td>run-length encoding of dot ranges; columnar formats (Automerge)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The security row deserves a sentence rather than a cell. <strong>There is no defence in
+a CRDT against a replica that lies.</strong></p>
+<p>Every replica trusts every dot it receives. That is fine inside Asha's own
+cluster. It is dangerous the moment untrusted clients are replicas — which is
+exactly the situation in a peer-to-peer or local-first app, and an open research
+area.</p>
+<hr />
+<blockquote>
+<p><strong>Say it back.</strong> Priya is handed this system on her first on-call shift. Name
+the one dashboard panel that will page her most often, and say why it grows
+even when nothing is wrong.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;Metadata size per key. Every time somebody adds an item the system remembers
+that act forever, and every time somebody deletes one it remembers the deletion
+forever too. Neither of those is a bug — it is how the thing manages to agree
+without a referee. But it means a busy key keeps growing whether or not anyone
+is misbehaving, and the only way to free any of it is to prove every single
+replica has already seen the deletion.&quot;</p>
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-16-which-exercises-should-you-attempt-now">16. Which exercises should you attempt now?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, from explaining it in your own words to
+designing an offline-first cart for a payments system and naming the parts that
+must not be a CRDT.</p>
+</blockquote>
+<p>Rung 2 puts you back on Amira's and Ben's phones in the visualization. Rung 8
+hands you Asha's job: design the whole cart, and say which pieces belong on
+Arjun's side of section 12's line.</p>
+<p><a href="notes.html#exercises"><code>EXERCISES.md</code></a> has eight rungs. They start at &quot;explain it in your
+own words&quot;. They pass through implementing a missing merge rule and finding a
+planted bug. They end at designing an offline-first cart for a payments-adjacent
+system, and saying precisely which parts must <em>not</em> be a CRDT.</p>
+<p>Answers are in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Attempt first.</p>
+<h2 id="readme-17-where-does-this-sit-and-what-should-you-learn-next">17. Where does this sit, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four labs pointed here, and four point onwards. The contrast
+arrows matter as much as the arrows in: Paxos is the referee this lab refuses
+to hire, and it is the one thing that could have saved Arjun's flour.</p>
+</blockquote>
+<pre class="mermaid">graph TD
+  CAP[&quot;cap-theorem&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&quot;] --&gt; CRDT
+  QR[&quot;quorums-and-replication&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&lt;br/&gt;version vectors, siblings, LWW&quot;] --&gt; CRDT
+  GD[&quot;google-docs-system-design&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&lt;br/&gt;OT, RGA, convergence&quot;] --&gt; CRDT
+  GOSS[&quot;gossip-protocols&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&lt;br/&gt;anti-entropy transport&quot;] --&gt; CRDT
+  CRDT[&quot;&lt;b&gt;CRDTs&lt;/b&gt;&lt;br/&gt;merge without a referee&quot;]
+  CRDT --&gt; LOCAL[&quot;local-first-software?&quot;]
+  CRDT --&gt; LAMPORT[&quot;lamport-clocks&lt;br/&gt;and vector-clocks?&quot;]
+  CRDT --&gt; CAUSAL[&quot;causal-consistency?&quot;]
+  CRDT --&gt; AUTO[&quot;automerge / yjs internals?&quot;]
+  CRDT -.contrast.-&gt; PAXOS[&quot;paxos&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&lt;br/&gt;the referee&quot;]
+  CRDT -.contrast.-&gt; ES[&quot;event-sourcing&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&lt;br/&gt;refuse the conflict&quot;]
+  style CRDT fill:#DCEFE9,stroke:#0C6A5B,stroke-width:2px
+</pre>
+<p><strong>Commonly confused with — one sentence each.</strong></p>
+<p><strong>CRDT versus operational transformation.</strong> Both make concurrent edits converge.
+OT <em>rewrites</em> an operation against the ones it did not know about, and needs a
+server to fix the official order. A CRDT changes the data so no rewriting is
+needed and no server is required. OT is cheaper on the wire and in memory, which
+is why a product that already has a central server picks it — the
+<a href="../71-google-docs-system-design/notes.html#readme"><code>google-docs-system-design</code></a> lab built both.</p>
+<p><strong>CRDT versus eventual consistency.</strong> Eventual consistency says replicas settle
+down somehow, usually via a conflict-resolution step. A CRDT says replicas that
+have seen the same updates are <em>already</em> identical, because sameness is a
+property of the merge. Start at <a href="../28-eventual-consistency/notes.html#readme"><code>eventual-consistency</code></a>
+if that distinction is still fuzzy.</p>
+<p><strong>CRDT versus a version vector.</strong> A version vector <em>detects</em> concurrency and hands
+you siblings. A CRDT <em>resolves</em> it by construction. A version vector is a
+component inside several CRDTs, not an alternative to them.</p>
+<p><strong>CRDT versus consensus.</strong> Consensus picks one value and can therefore refuse a
+write. A CRDT keeps all values and can never refuse. Systems need both, for
+different data.</p>
+<p><strong>CRDT versus &quot;last write wins&quot;.</strong> LWW is a CRDT, the simplest one, not the
+opposite of one. The interesting question is never &quot;CRDT or not&quot;. It is &quot;which
+merge rule, and what does it throw away&quot;.</p>
+<p><strong>Suggested next.</strong> The nearest neighbour is
+<a href="../29-causal-consistency/notes.html#readme"><code>causal-consistency</code></a>, which is the model op-based
+CRDTs need and this lab sidesteps.</p>
+<div class="code"><pre><code>/learn lamport-clocks          the ordering machinery under dots, version vectors and causal delivery
+/learn causal-consistency      the consistency model that op-based CRDTs need and this lab sidesteps
+/learn local-first-software    the product philosophy CRDTs were built to serve
+/learn raft                    the referee, done properly — the other half of section 12&#x27;s decision tree
+</code></pre></div>
+<h2 id="readme-18-glossary--what-does-each-word-mean-precisely">18. Glossary — what does each word mean, precisely?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> In order of first appearance, with the place in Amira and
+Ben's story where each one was earned.</p>
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>replica</strong></td>
+  <td>one machine's independently updatable copy of the data — Amira's phone, section 2</td>
+</tr>
+<tr>
+  <td><strong>merge</strong></td>
+  <td>the pure function combining two replica states into one, section 7</td>
+</tr>
+<tr>
+  <td><strong>commutative</strong></td>
+  <td><code>a⊔b = b⊔a</code>; order of combining doesn't matter — kills reordering</td>
+</tr>
+<tr>
+  <td><strong>associative</strong></td>
+  <td><code>(a⊔b)⊔c = a⊔(b⊔c)</code>; grouping doesn't matter — kills rebatching</td>
+</tr>
+<tr>
+  <td><strong>idempotent</strong></td>
+  <td><code>a⊔a = a</code>; combining twice changes nothing — kills duplicate delivery</td>
+</tr>
+<tr>
+  <td><strong>converge</strong></td>
+  <td>all replicas end up holding the same state</td>
+</tr>
+<tr>
+  <td><strong>strong eventual consistency (SEC)</strong></td>
+  <td>replicas that received the same <em>set</em> of updates are identical, with no coordination step</td>
+</tr>
+<tr>
+  <td><strong>CRDT</strong></td>
+  <td>a data type whose merge is commutative, associative and idempotent, giving SEC</td>
+</tr>
+<tr>
+  <td><strong>state-based / CvRDT</strong></td>
+  <td>ships whole states; needs nothing from the network</td>
+</tr>
+<tr>
+  <td><strong>op-based / CmRDT</strong></td>
+  <td>ships individual operations; needs causal, exactly-once delivery</td>
+</tr>
+<tr>
+  <td><strong>join-semilattice</strong></td>
+  <td>the algebraic structure: states ordered so any two have a least upper bound, section 8</td>
+</tr>
+<tr>
+  <td><strong>least upper bound / join (⊔)</strong></td>
+  <td>the smallest state at or above two given states — this is what merge computes</td>
+</tr>
+<tr>
+  <td><strong>monotonic</strong></td>
+  <td>state only ever climbs the lattice; nothing moves it down</td>
+</tr>
+<tr>
+  <td><strong>G-Counter</strong></td>
+  <td>grow-only counter: one row per replica, merge by per-row max — Ben's row, section 10</td>
+</tr>
+<tr>
+  <td><strong>PN-Counter</strong></td>
+  <td>two G-Counters, P and N; value is <code>sum(P) − sum(N)</code></td>
+</tr>
+<tr>
+  <td><strong>G-Set</strong></td>
+  <td>grow-only set; merge is union</td>
+</tr>
+<tr>
+  <td><strong>2P-Set</strong></td>
+  <td>adds pile plus a removes pile; converges, but re-adding is impossible</td>
+</tr>
+<tr>
+  <td><strong>dot</strong></td>
+  <td>a globally unique name for one event: <code>(replica, counter)</code>, such as Amira's <code>amira#3</code></td>
+</tr>
+<tr>
+  <td><strong>tombstone</strong></td>
+  <td>a stored record that something was deleted, kept so &quot;absent&quot; and &quot;deleted&quot; differ</td>
+</tr>
+<tr>
+  <td><strong>OR-Set (observed-remove set)</strong></td>
+  <td>adds mint dots; a remove destroys only the dots it has observed — so re-add works and add wins</td>
+</tr>
+<tr>
+  <td><strong>add-wins / remove-wins</strong></td>
+  <td>the two possible biases for concurrent add-vs-remove; a policy you choose</td>
+</tr>
+<tr>
+  <td><strong>LWW-Register</strong></td>
+  <td>one value plus <code>(timestamp, replicaId)</code>; merge keeps the larger pair</td>
+</tr>
+<tr>
+  <td><strong>version vector</strong></td>
+  <td>per-replica counts of &quot;how much of your history I have seen&quot;</td>
+</tr>
+<tr>
+  <td><strong>MV-Register</strong></td>
+  <td>keeps every candidate not superseded by another; hands the set to the application</td>
+</tr>
+<tr>
+  <td><strong>sibling</strong></td>
+  <td>one of the surviving candidates in an MV-Register (Riak / Dynamo's word)</td>
+</tr>
+<tr>
+  <td><strong>RGA</strong></td>
+  <td>sequence CRDT: characters carry dots and are inserted <em>after an identity</em>, never at a position</td>
+</tr>
+<tr>
+  <td><strong>Lamport counter</strong></td>
+  <td>a counter numbered above everything its author has seen; needed for RGA's <em>order</em>, not its convergence</td>
+</tr>
+<tr>
+  <td><strong>intention preservation</strong></td>
+  <td>the result matching what the humans meant, as distinct from merely converging</td>
+</tr>
+<tr>
+  <td><strong>causal delivery</strong></td>
+  <td>applying an operation only after everything it depends on — required by op-based CRDTs</td>
+</tr>
+<tr>
+  <td><strong>δ-state CRDT</strong></td>
+  <td>ships only the changed part of the lattice; state-based semantics at op-based bandwidth</td>
+</tr>
+<tr>
+  <td><strong>ORSWOT</strong></td>
+  <td>Riak's observed-remove set that replaces most tombstones with a version vector</td>
+</tr>
+<tr>
+  <td><strong>causal stability</strong></td>
+  <td>knowing every replica has seen an update — the precondition for freeing a tombstone</td>
+</tr>
+<tr>
+  <td><strong>global invariant</strong></td>
+  <td>a rule about the whole dataset (<code>stock ≥ 0</code>); the thing CRDTs provably cannot enforce — Arjun's flour, section 11</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-19-about-this-lab--what-is-in-it-and-where-do-the-numbers-come-from">19. About this lab — what is in it, and where do the numbers come from?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Seventeen Java files, one simulator, one test suite, ten
+experiments and a page you can click. Every figure quoted above is printed by
+one of them.</p>
+</blockquote>
+<h3 id="readme-how-do-you-run-it">How do you run it?</h3>
+<div class="code"><pre><code class="language-bash">java src/Sim.java             # one narrated afternoon: two phones, one shopping list
+java src/Tests.java           # 46 guarantees, asserted
+java src/Tests.java broken    # three planted bugs, and which law each one breaks
+java src/Experiments.java     # ten measurements
+java src/Experiments.java 6   # ...or just experiment 6
+java src/YourMerge.java       # exercise 5: implement merge yourself (2/5 -&gt; 5/5)
+</code></pre></div>
+<p>No build tool, no dependencies. JDK 22+ compiles the whole <code>src/</code> directory
+straight from source.</p>
+<h3 id="readme-where-do-the-numbers-come-from">Where do the numbers come from?</h3>
+<p>Every figure in this lab is printed by the code in <code>src/</code>, run headlessly on one
+machine, one representative run per experiment. Nothing was estimated or rounded
+by hand.</p>
+<p>The eight scripted situations in <code>visualization.html</code> were verified against the
+test suite, so every outcome on that page is the same outcome the Java produces.
+Amira's milk disappears in the browser for exactly the reason it disappears in
+<code>Sim.java</code>.</p>
+<p>The randomised law fuzz is the one number worth naming twice. It runs 50,000
+triples of replicas that share a history and then diverge. It caught a real bug
+in this lab's own <code>OrSet</code>, described in section 13.</p>
+<h3 id="readme-what-did-you-already-have-before-this-lab">What did you already have before this lab?</h3>
+<p>You arrived with three of the four pieces.</p>
+<p><a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> measured that
+last-write-wins silently discarded 1,000 of 1,000 concurrent updates, and showed
+you version vectors and siblings.
+<a href="../71-google-docs-system-design/notes.html#readme"><code>google-docs-system-design</code></a> built an RGA as the
+alternative to operational transformation.
+<a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a> built the anti-entropy transport
+that CRDTs ride on.</p>
+<p>This lab is the thing all three were pointing at. Ben's eggs and Amira's milk are
+the smallest example that needs every one of them.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--crdts">Exercises — CRDTs</h1>
+<p>Eight rungs, easiest first. Attempt each before opening
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Rungs 7 and 8 have no single right answer —
+the solution is a worked discussion to compare yours against.</p>
+<p>Everything runs with no build tool:</p>
+<div class="code"><pre><code class="language-bash">java src/Sim.java · java src/Tests.java · java src/Tests.java broken
+java src/Experiments.java [n] · java src/YourMerge.java
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> In three sentences, with no jargon at all, explain to a colleague who
+has never heard the term why an app that works offline cannot just &quot;send the
+list up and keep the newest one&quot;.</p>
+<p><strong>1.2</strong> Explain the key idea of a CRDT without using the words <em>lattice</em>,
+<em>commutative</em>, <em>associative</em> or <em>idempotent</em>.</p>
+<p><strong>1.3</strong> Someone says: &quot;CRDTs solve conflicts automatically.&quot; Correct them in
+one sentence. What is actually happening?</p>
+<p><strong>1.4</strong> Why is it <em>idempotence</em> specifically that makes CRDTs safe to run over
+an at-least-once transport? Name the network fault each of the other two laws
+kills.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a> and switch to <strong>Receipts</strong>.
+Press <em>add milk</em> on Amira, <em>add eggs</em> on Ben, then <em>Sync to everyone</em> on both,
+then deliver only ONE of the four messages.</p>
+<p><strong>2.1</strong> Read the dashed box on each phone. Which phone holds which receipts?</p>
+<p><strong>2.2</strong> How many distinct versions does the verdict banner report, and why is
+that not yet a failure?</p>
+<p><strong>2.3</strong> Now switch to <strong>Whole list, newest wins</strong> and do the same thing. Which
+number in the dashed box decides the outcome, and which piece of information
+that the OR-Set has is simply absent here?</p>
+<p><strong>2.4</strong> In <code>OrSet.java</code>, find the single line that implements
+&quot;observed-remove&quot;. Which test would fail if you changed it to tear up every dot
+for that value, seen or not?</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Commit to an answer, then run the command.</p>
+<p><strong>3.1</strong> A G-Counter reads <code>{amira: 3, ben: 2}</code>. Ben's phone is restored from a
+backup taken when his row was 1, and then merges with Amira's copy. What does
+the counter read? Is any data lost?</p>
+<p><strong>3.2</strong> Two replicas hold an OR-Set containing <code>milk</code> with dots
+<code>{amira#1, ben#1}</code> — both added it independently. Ben removes milk. Amira does
+nothing. They sync. Is milk on the list? (<code>java src/Tests.java</code>, look for the
+observed-remove tests.)</p>
+<p><strong>3.3</strong> <code>java src/Experiments.java 2</code> delivers the same message ten times. A
+sum-merge counter reads 11 and a max-merge reads 2. What would a <em>min</em>-merge
+read, and would it still be a CRDT?</p>
+<p><strong>3.4</strong> In an MV-Register, Amira writes &quot;Elm Rd&quot; and Ben writes &quot;Oak Rd&quot;
+concurrently, then Cara reads the pair and writes &quot;Oak Rd, Flat 3&quot;. Amira's old
+copy is later re-delivered. What does the register hold? (<code>java src/Tests.java</code>)</p>
+<p><strong>3.5</strong> Two edits to <code>rga_fuzz_three_editors_never_diverge</code>, run separately.</p>
+<p>(a) Set <code>dropRate = 0.9</code> and re-run <code>java src/Tests.java</code>. Does it still pass?</p>
+<p>(b) Put <code>dropRate</code> back to 0.9 <em>and</em> replace the <code>c.settle(60)</code> line with two
+lossy rounds and no healthy ones:</p>
+<div class="code"><pre><code class="language-java">for (int k = 0; k &lt; 2; k++) { c.gossipRound(); c.deliverAll(); }
+if (!c.converged()) diverged++;
+</code></pre></div>
+<p>How many of the 500 sessions now &quot;diverge&quot;? Explain in one sentence why (a) and
+(b) are not in conflict — and what word in the test's name is wrong for (b).</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Try to make the OR-Set <strong>remove-wins</strong> instead of add-wins by changing
+<code>merge</code> alone — when the other side has tombstoned a value, drop it. Run
+<code>java src/Tests.java</code>. Then answer the real question: <em>why can this not be
+fixed inside <code>merge</code>?</em> What would a genuine remove-wins set have to store that
+this one does not, and which sentence in §10 of the README told you so before
+you started?</p>
+<p><strong>4.2</strong> In <code>GCounter.merge</code>, change <code>Math::max</code> to <code>Long::sum</code>. Run
+<code>java src/Tests.java</code>. Exactly which checks fail, and which law do they
+correspond to? Now run it with <code>dropRate = 0</code> and <code>duplicateRate = 0</code> — does it
+pass? What does that tell you about testing CRDTs on a healthy network?</p>
+<p><strong>4.3</strong> Delete the replica-id tie-break from <code>LwwRegister.wins()</code> so that ties
+keep <code>this</code>. Which law breaks, and what is the smallest scenario that exposes
+it? (<code>java src/Tests.java broken</code> has the answer, but derive it first.)</p>
+<p><strong>4.4</strong> In the visualization, run the <em>One phone's clock is a minute fast</em>
+situation. Then use <strong>Step back</strong>, turn Amira's clock back to accurate, and
+replay. Which single number in the dashed box changed the outcome?</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> <code>src/YourMerge.java</code> is an OR-Set with <code>merge()</code> removed. Implement it.</p>
+<div class="code"><pre><code class="language-bash">java src/YourMerge.java     # starts at 2/5; you are done at 5/5
+</code></pre></div>
+<p>Two hints, in escalating order — try without them first:</p>
+<ul>
+<li>There are two piles to combine. The order in which you combine them matters.</li>
+<li>Check 1 (commutativity) failing while 2 and 3 pass almost always means you
+subtracted one side's tombstones before you had learned the other side's.</li>
+</ul>
+<p><strong>5.2</strong> Add a <code>PNCounter.metadataCells()</code>-style method to <code>OrSet</code> that reports
+the <em>bytes</em> it would ship, and use it to reproduce experiment 7's &quot;50 records
+per visible item&quot; from your own code.</p>
+<p><strong>5.3</strong> Implement a <strong>G-Counter-backed unique-visitor set</strong> — a set that only
+ever grows and reports its size — and then explain in one line why you cannot
+build a <em>shrinking</em> one the same way.</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><code>src/Broken.java</code> contains three plausible, wrong CRDTs. Run
+<code>java src/Tests.java broken</code> only <em>after</em> you have answered:</p>
+<p><strong>6.1</strong> <code>SummingCounter</code> merges rows with <code>Long::sum</code>. Which of the three laws
+does it break? Write the shortest sequence of events that produces a wrong
+number, and say what the wrong number is.</p>
+<p><strong>6.2</strong> <code>LeakyOrSet.merge</code> subtracts only the tombstones it already had before
+learning the other side's. Which law breaks? Construct two replicas where
+<code>a.merge(b)</code> and <code>b.merge(a)</code> differ, and say which of the two answers is the
+correct one.</p>
+<p><strong>6.3</strong> <code>TielessLww</code> resolves equal timestamps by keeping <code>this</code>. Why is this
+bug almost invisible in a test suite and almost certain in production?</p>
+<p><strong>6.4</strong> A colleague proposes a fourth &quot;bug fix&quot;: make <code>OrSet.remove</code> also
+tombstone every dot <em>it can predict the other replicas will mint</em>, so removes
+are never overruled. Why is this not implementable, and what would you have to
+add to the system to make something like it work?</p>
+<hr />
+<h2 id="exercises-rung-7--handle-a-failure-the-lab-does-not">Rung 7 — Handle a failure the lab does not</h2>
+<p><strong>7.1 — Tombstone garbage collection.</strong> <code>java src/Experiments.java 7</code> shows a
+cart with 10 visible items storing 500 records. Design a scheme that frees
+tombstones safely. State precisely: what fact must be true before a tombstone
+can be dropped, what mechanism establishes that fact, what happens if you drop
+one too early, and what happens if one replica is permanently unreachable.
+Then implement the <em>check</em> (not the transport): a method
+<code>boolean safeToDrop(Dot d, List&lt;VersionVector&gt; whatEveryoneHasSeen)</code>.</p>
+<p><strong>7.2 — A replica restored from backup.</strong> Experiment 10 shows a <em>wiped</em> replica
+recovering. Show that a replica restored to an <em>older non-empty</em> state can, with
+a badly-designed type, cause permanent divergence — and explain why <code>OrSet</code> and
+<code>GCounter</code> survive it. What operational rule follows for restoring CRDT
+replicas from backup?</p>
+<p><strong>7.3 — Sibling explosion.</strong> An MV-Register accumulates one sibling per
+concurrent write, and nothing collapses them until someone writes a value that
+saw them all. Sketch what a client must do so that a write-heavy workload does
+not produce a value with 10,000 siblings, and name the read-side behaviour that
+makes this problem worse if you get it wrong.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — Offline-first shopping cart for a payments product.</strong>
+Three data centres, 80ms apart. Mobile clients that are offline for hours. The
+cart holds items with quantities; the checkout takes payment and decrements
+stock.</p>
+<p>Produce: which pieces are CRDTs and which type each one is; which pieces must
+<strong>not</strong> be CRDTs and what they use instead; where the boundary between the two
+sits and what crosses it; what the user sees when the two disagree; and the
+three metrics you would put on a dashboard before launch.</p>
+<p>Be explicit about the one thing that would get you fired if you got it wrong.</p>
+<p><strong>8.2 — Choosing between CRDT and OT for a document editor.</strong>
+You already built the OT side in
+<a href="../71-google-docs-system-design/notes.html#readme"><code>google-docs-system-design</code></a>. Given a product
+that must work offline for a week on a laptop, argue the choice in six
+sentences, and name the measured cost you are accepting.</p>
+<p><strong>8.3 — A CRDT you should not build.</strong>
+Someone proposes a CRDT for &quot;seat reservations in a cinema&quot; so the app works
+offline. Write the two-paragraph reply: why the mechanism cannot do it, and
+what to build instead that still gives most of the offline experience.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--crdts">Solutions — CRDTs</h1>
+<p>Every number below came from running the lab. Where an answer is a design
+discussion rather than an output, it is marked as such.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Your phone doesn't send &quot;I added milk&quot;; it sends the whole list, and the
+list it sends happens not to contain the item your colleague added while you
+were both offline. The server cannot tell &quot;she deleted eggs&quot; from &quot;she never
+heard of eggs&quot;, so keeping the newest list quietly destroys the other person's
+work. Nothing errors, because from the server's point of view nothing went
+wrong.</p>
+<p><strong>1.2</strong> Store the evidence rather than the conclusion, and make the rule for
+combining evidence one that doesn't care about order, grouping or repetition.
+Then two machines that have seen the same events are automatically holding the
+same thing, without anyone having to decide who was right.</p>
+<p><strong>1.3</strong> Wrong verb: CRDTs don't <em>resolve</em> conflicts, they make the state
+<em>unable to conflict</em>. Two concurrent updates are both representable in the
+merged state by construction, so there is no resolution step at runtime — the
+work was done at design time, in the shape of the data.</p>
+<p><strong>1.4</strong> Idempotence (<code>a⊔a = a</code>) is what makes a re-delivered message a no-op, and
+at-least-once transports re-deliver by definition. Commutativity kills
+out-of-order arrival; associativity kills different batching/relaying paths.
+Measured: sum-merge (idempotence broken) reads <strong>11</strong> where the truth is <strong>2</strong>,
+after ten deliveries of one message — <code>java src/Experiments.java 2</code>.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Amira holds <code>milk(amira#1)</code>; Ben holds <code>eggs(ben#1)</code>. Whoever received
+the one delivered message holds both. The receipts are the point: they are two
+independent facts, not two versions of one fact.</p>
+<p><strong>2.2</strong> Two (or three) distinct versions, and it is not a failure because
+strong eventual consistency only promises sameness <em>once the same set of updates
+has been received</em>. Three messages are still on the wire; the promise has not
+come due yet.</p>
+<p><strong>2.3</strong> The clock reading decides. What is absent is any record of <em>which items
+were decisions</em>: the list <code>[bread, eggs]</code> cannot distinguish &quot;milk was deleted&quot;
+from &quot;milk was never seen&quot;, which is exactly the information the receipts carry.</p>
+<p><strong>2.4</strong> <code>OrSet.remove</code>:</p>
+<div class="code"><pre><code class="language-java">if (observed != null) nextKilled.addAll(observed);   // INVARIANT: observed-remove
+</code></pre></div>
+<p>If it tombstoned every dot for the value, past and future, it could not — dots
+that other replicas have not minted yet do not exist to be named. If you
+approximate it by blacklisting the <em>value</em>, you have rebuilt the 2P-Set and
+<code>orset_readd_after_remove_works</code> fails. (See 4.1 and 6.4.)</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> It reads <strong>5</strong> again, and nothing is lost. Ben's row comes back as
+<code>max(1, 2) = 2</code>. This is the point of experiment 10 in a smaller form: a
+state-based replica is repaired by an ordinary merge, because a healthy peer's
+snapshot dominates the stale one. It works <em>because</em> the restore moved Ben's
+state down and the merge moved it straight back up — which is also why the
+opposite (restoring a replica whose peers have all been wiped) is not
+recoverable at all.</p>
+<p><strong>3.2</strong> Milk is <strong>gone</strong>. Ben's remove tore up both <code>amira#1</code> and <code>ben#1</code>,
+because both were dots Ben had observed. Observed-remove is about <em>what you
+have seen</em>, not <em>who added it</em>. Contrast with the concurrent case, where
+Amira's new dot is unobserved and therefore survives.</p>
+<p><strong>3.3</strong> A min-merge is still commutative, associative and idempotent — it is a
+perfectly good join on the <em>reversed</em> order. So yes, it converges. But the local
+update (increment) now moves the state <em>down</em> that order, which breaks
+<strong>monotonicity</strong>: every increment a replica makes is subsequently undone by the
+next merge, and the counter converges toward the minimum. The lesson: the three
+laws guarantee <em>convergence</em>, and convergence alone tells you nothing about
+whether the thing converges to something useful. You need the laws <strong>and</strong> local
+updates that climb the same order.</p>
+<p><strong>3.4</strong> It holds <strong><code>[&quot;Oak Rd, Flat 3&quot;]</code></strong>, alone. Cara's write joined both
+version vectors and bumped her own entry, so its clock strictly dominates both
+siblings; re-delivering Amira's old copy adds a candidate that is immediately
+dropped as an ancestor. Verified by
+<code>mvregister_a_write_that_saw_both_collapses_them</code>.</p>
+<p><strong>3.5</strong>
+(a) <strong>Still passes</strong> — 500/500 converge with 90% of messages dropped. Losing
+messages costs latency, never data, because every sync carries the whole state
+and a later message subsumes every lost earlier one.
+(b) <strong>481 of 500 &quot;diverge&quot;</strong> — with only two lossy rounds and no healthy ones,
+most sessions simply have not finished exchanging yet.</p>
+<p>They are not in conflict, and the wrong word is <strong>&quot;diverge&quot;</strong>. (a) measures
+<em>cannot ever converge</em>; (b) measures <em>has not converged yet</em>. Confusing those
+two is the single most common misreading of an eventually-consistent system, and
+the same mistake in monitoring produces alerts that fire on healthy clusters.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Measured, with the naive patch in place (drop the whole value if any of
+its dots is tombstoned):</p>
+<ul>
+<li>The scenario test <code>concurrent add vs remove: the add wins</code> fails — which is
+not a bug, it is the behaviour you asked for.</li>
+<li>The <em>fixed-sample</em> law check (the five hand-written states) passes it
+completely.</li>
+<li>The randomised law check breaks: <strong>associativity fails on 1,696 of 50,000
+random triples.</strong> Commutativity and idempotence survive.</li>
+</ul>
+<p>Two lessons, and the second is the more valuable one:</p>
+<ol>
+<li>It really is broken — just not in the sample states a hand-written law check
+happens to use. A fixed handful of samples is not a proof. (<code>Tests.java</code>
+runs a 50,000-triple randomised law check for exactly this reason, and that
+check also found a genuine idempotence gap in the lab's own <code>OrSet.add</code> —
+see the INVARIANT comment there.)</li>
+<li>The real answer: <strong>it cannot be fixed inside <code>merge</code>, because the information
+isn't there.</strong> Add-wins falls out of <em>&quot;a remove may only destroy adds it has
+observed&quot;</em>. Remove-wins requires the opposite — a remove must be able to kill
+adds it has <strong>never seen</strong>, including ones minted after it. To express that, the
+state must record the remove as a <em>causal claim</em> (&quot;everything for this value up
+to version V is dead&quot;), not as a list of specific dead dots — which means a
+version vector per removed element rather than a tombstone per dot. Riak's
+ORSWOT uses exactly this machinery, which is also how it avoids storing one
+tombstone per delete.</li>
+</ol>
+<p>The README sentence that told you: <em>&quot;An add is not a value. It is a unique event
+— and a remove destroys events, never values.&quot;</em> Remove-wins needs a remove that
+destroys something other than events.</p>
+<p><strong>4.2</strong> Measured: <strong>5 failures</strong> out of 45.</p>
+<div class="code"><pre><code>FAIL  G-Counter: idempotent
+FAIL  PN-Counter: idempotent
+FAIL  the same message five times still says 2
+FAIL  +5 then -2 across two replicas = 3
+FAIL  stock goes NEGATIVE (-2) — no global invariant
+</code></pre></div>
+<p>Note what still passes: <strong>commutative and associative</strong>. Sum is a perfectly good
+commutative, associative operation — it is <em>only</em> idempotence that breaks, which
+is why this bug is invisible until a message is delivered twice.</p>
+<p>And that is the answer to the second half: on a healthy network with no
+duplicates, the broken counter passes. <strong>A CRDT test suite that does not
+duplicate messages is not testing the property that matters.</strong> The law checks
+catch it without any network at all, which is why <code>Tests.java</code> runs them first.</p>
+<p><strong>4.3</strong> <strong>Commutativity</strong> breaks. Smallest scenario: two writes with the <em>same</em>
+timestamp and different values — <code>x = &quot;blue&quot;@100</code>, <code>y = &quot;green&quot;@100</code>. Then
+<code>x.merge(y)</code> = blue and <code>y.merge(x)</code> = green, forever. <code>java src/Tests.java broken</code> prints exactly that. The reason it matters: &quot;same millisecond&quot; is not
+rare on a busy service, and the divergence is permanent and silent.</p>
+<p><strong>4.4</strong> The <strong>clock reading</strong> in Amira's dashed box (<code>clock=…</code>). With the skew
+on, her stamp is 60,000 higher than real time, and merge compares nothing else
+first. That single number is the entire conflict-resolution algorithm — which is
+why &quot;we'll just use last-write-wins&quot; is a decision to let NTP decide your data
+model.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> The blank starts at <strong>2 / 5</strong> (associativity and idempotence pass
+trivially for <code>return this</code>). The reference implementation:</p>
+<div class="code"><pre><code class="language-java">@Override public YourMerge merge(YourMerge other) {
+    TreeSet&lt;Dot&gt; nextTorn = new TreeSet&lt;&gt;(torn);
+    nextTorn.addAll(other.torn);                       // 1. learn ALL tombstones first
+
+    TreeMap&lt;String, SortedSet&lt;Dot&gt;&gt; nextLive = copy(live);
+    other.live.forEach((item, dots) -&gt;                 // 2. union the live receipts
+        nextLive.computeIfAbsent(item, k -&gt; new TreeSet&lt;&gt;()).addAll(dots));
+
+    nextLive.values().forEach(d -&gt; d.removeAll(nextTorn));   // 3. THEN subtract
+    nextLive.values().removeIf(Set::isEmpty);
+    return new YourMerge(nextLive, nextTorn);
+}
+</code></pre></div>
+<p><strong>5 / 5.</strong> The ordering of steps 1 and 3 is the whole exercise: subtract before
+you have learned the other side's tombstones and you get <code>Broken.LeakyOrSet</code>,
+whose result depends on merge direction.</p>
+<p><strong>5.2</strong> Reproduces experiment 7: <strong>10 visible items, 500 dots stored (250 of
+them tombstones), 50.0 records per item.</strong> The number to internalise is that it
+scales with <em>operations ever performed</em>, not with data size — a long-lived,
+frequently-edited cart is unbounded.</p>
+<p><strong>5.3</strong> A grow-only unique-visitor set is a <code>GSet</code> of visitor ids (or, for real
+scale, a HyperLogLog — which is itself a CRDT: merge is per-register max, and it
+obeys all three laws). You cannot build a shrinking one the same way because
+removal moves the state <em>down</em> the order, and merge would restore it. Removal
+requires either the two-pile trick (and its permanent-death problem) or
+per-event identities (and their metadata cost). There is no third option.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1 <code>SummingCounter</code></strong> breaks <strong>idempotence</strong>. Shortest wrong answer: Amira
++1, Ben +1, sync once = 2 (correct), deliver the same message once more = <strong>3</strong>.
+After ten deliveries: <strong>11</strong>.</p>
+<p><strong>6.2 <code>LeakyOrSet</code></strong> breaks <strong>commutativity</strong>. Two replicas: <code>a</code> holds
+<code>milk(amira#1)</code>; <code>b</code> is <code>a</code> after <code>remove(&quot;milk&quot;)</code>. Then
+<code>b.merge(a)</code> = <code>[]</code> and <code>a.merge(b)</code> = <code>[milk]</code>. The correct answer is <strong><code>[]</code></strong>
+— the remove observed <code>amira#1</code>, so it must stick. The bug is subtracting
+tombstones you knew about before unioning in the ones you just learned.</p>
+<p><strong>6.3 <code>TielessLww</code></strong> breaks <strong>commutativity</strong>, but only on exact timestamp
+ties. A test suite with hand-written distinct timestamps never triggers it; a
+production service doing thousands of writes per second per millisecond triggers
+it constantly. This is the general shape of CRDT bugs: they are invisible on the
+happy path and permanent when they fire, which is why the <em>law</em> checks matter
+more than the scenario tests. All <strong>3 of 3</strong> planted bugs are caught by the laws
+alone, with no network simulation.</p>
+<p><strong>6.4</strong> Not implementable: the dots another replica <em>will</em> mint do not exist
+yet, and a replica cannot name them without coordinating — which is the one
+thing this whole family gives up. To do something like it you would need a
+causal claim rather than a list of dots (&quot;everything for <code>milk</code> up to my version
+7 is dead&quot;), which is precisely 4.1's answer and precisely what ORSWOT stores.</p>
+<hr />
+<h2 id="solutions-rung-7--worked-design-discussions">Rung 7 — Worked design discussions</h2>
+<h3 id="solutions-71-tombstone-garbage-collection">7.1 Tombstone garbage collection</h3>
+<p><strong>The fact that must be true:</strong> every replica that will ever merge this state
+has already seen the tombstone. That is <strong>causal stability</strong>. If it holds, the
+tombstone can never again be needed — there is no surviving copy of the add for
+it to cancel.</p>
+<p><strong>The mechanism:</strong> each replica publishes a version vector of what it has seen;
+a replica takes the <em>pointwise minimum</em> across all members (&quot;the stable
+frontier&quot;) and may free any tombstone whose dot is below it. Membership and
+liveness come from gossip (<a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a>); the
+frontier is a lattice too, so it converges by the same rules.</p>
+<p><strong>Dropping one too early:</strong> the add it was cancelling gets re-delivered by a
+replica that never heard about the delete, and the deleted item <strong>comes back,
+permanently</strong>. This is the single worst CRDT failure in production because it
+looks like data corruption and cannot be undone by retrying.</p>
+<p><strong>A permanently unreachable replica:</strong> the minimum stops advancing and GC stalls
+forever. Every real system therefore has an eviction policy: after a timeout, a
+silent replica is removed from the membership and must re-bootstrap from scratch
+if it returns. That eviction is a <em>coordination</em> decision — note that even a
+coordination-free data type needs a coordinated membership service around it.</p>
+<p><strong>The check:</strong></p>
+<div class="code"><pre><code class="language-java">boolean safeToDrop(Dot d, List&lt;VersionVector&gt; whatEveryoneHasSeen) {
+    return whatEveryoneHasSeen.stream()
+        .allMatch(vv -&gt; vv.entries().getOrDefault(d.replica(), 0L) &gt;= d.counter());
+}
+</code></pre></div>
+<p>The subtlety worth naming: this is safe only if the list really is <em>everyone</em>.
+An incomplete membership list turns a correct-looking check into the
+too-early-drop failure above.</p>
+<h3 id="solutions-72-restore-from-an-old-backup">7.2 Restore from an old backup</h3>
+<p>A <em>wiped</em> replica is safe (experiment 10: recovers to 60 in one sync) because
+empty is the bottom of the lattice — merging can only climb out of it.</p>
+<p>An <em>older non-empty</em> state is only safe for a type whose merge cannot be
+confused by it. <code>GCounter</code> survives: <code>max(old, new) = new</code>. <code>OrSet</code> survives:
+unioning old receipts back in is harmless, because any that were tombstoned are
+subtracted again by tombstones the peers still hold.</p>
+<p>Where it breaks is any type whose state is not purely accumulative — including,
+critically, a <strong>garbage-collected</strong> OR-Set. Restore a replica from before a GC
+run, and it re-introduces adds whose tombstones have since been freed. The item
+returns from the dead, everywhere, permanently. Same mechanism as 7.1's
+too-early drop, arriving by a different door.</p>
+<p><strong>The operational rule:</strong> never restore a CRDT replica from a backup into a live
+cluster. Bootstrap it <strong>empty</strong> and let it re-merge. A backup is for
+total-cluster-loss recovery only.</p>
+<h3 id="solutions-73-sibling-explosion">7.3 Sibling explosion</h3>
+<p>The number of siblings grows with concurrent writes that did not read each
+other. The client-side fix is <strong>read-before-write</strong>: every write carries the
+causal context it read, which lets it dominate and collapse those candidates.
+That is not an optimisation, it is how a write earns its place in the order —
+the <a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> lab hit the exact
+opposite bug, where writing with an <em>empty</em> context made every write's vector
+identical and the store ignored them all.</p>
+<p>The read-side behaviour that makes it worse: a client that reads, sees siblings,
+picks one to display, and then writes back <strong>without</strong> merging the others. Each
+such write looks concurrent to something, so the sibling set never shrinks. Cap
+the sibling count, alert on the 99th percentile, and treat &quot;value with 500
+siblings&quot; as a code bug in the client, not a storage problem.</p>
+<hr />
+<h2 id="solutions-rung-8--worked-design-discussions">Rung 8 — Worked design discussions</h2>
+<h3 id="solutions-81-offline-first-cart-for-a-payments-product">8.1 Offline-first cart for a payments product</h3>
+<p><strong>CRDTs:</strong></p>
+<ul>
+<li><strong>The cart</strong> — an OR-Set of line items, keyed by product id, <strong>add-wins</strong>.
+Justification: an item that reappears is a support email; an item that cannot
+be deleted is a chargeback.</li>
+<li><strong>Quantity per line</strong> — a <strong>PN-Counter</strong> per item, not an LWW integer, so
+&quot;+1 on the phone&quot; and &quot;+2 on the tablet&quot; both survive.</li>
+<li><strong>Saved-for-later, wish list, recently viewed</strong> — OR-Sets. Nothing here has a
+cross-replica rule.</li>
+<li><strong>UI preferences, address, delivery note</strong> — LWW-Registers. Losing a
+concurrent edit to a delivery note is acceptable; say so out loud in the
+design doc rather than letting it be an accident.</li>
+</ul>
+<p><strong>Not CRDTs, and what they use instead:</strong></p>
+<ul>
+<li><strong>Stock / inventory</strong> — a single-writer or consensus-backed store. Experiment
+in <code>Sim.java</code> scene 5: two partitioned warehouses each sell 6 of 10 bags and
+the merged stock is <strong>−2</strong>. A PN-Counter cannot enforce <code>stock ≥ 0</code>, ever.</li>
+<li><strong>Payment capture</strong> — one authoritative ledger, idempotency keys, exactly-once
+semantics. An append-only ledger has no conflicts to resolve, which is why
+<a href="../50-event-sourcing/notes.html#readme"><code>event-sourcing</code></a>'s expected-version check is the right
+tool: it <em>refuses</em> the conflicting write rather than preserving it.</li>
+<li><strong>Price</strong> — server-authoritative, read-only on the client. A merged price is
+a fraud vector.</li>
+<li><strong>Coupon &quot;one use per customer&quot;</strong> — a uniqueness invariant. Consensus, or a
+conditional write on a single-partition store.</li>
+</ul>
+<p><strong>The boundary:</strong> the cart is a <em>proposal</em>; checkout is a <em>decision</em>. Everything
+before the tap of &quot;Pay&quot; is a CRDT and syncs freely; the tap crosses into the
+coordinated world, where the server re-prices, re-checks stock, and can say no.
+What crosses the boundary is a cart snapshot plus an idempotency key.</p>
+<p><strong>What the user sees on disagreement:</strong> items merge silently (both survive, and
+that is the desirable outcome). Quantities merge silently. If checkout fails
+because stock ran out while they were offline, they see an explicit
+&quot;1 of these is no longer available&quot; screen at checkout — never a silently
+altered cart, because a cart that changes itself destroys trust in the number
+next to the payment button.</p>
+<p><strong>Three launch metrics:</strong> (1) cart metadata size, p99 per user — the tombstone
+tax, which is what will page you first; (2) sync lag between regions, p99 — the
+disagreement window, and the number that explains every &quot;my phone and my laptop
+disagree&quot; ticket; (3) checkout stock-rejection rate — the rate at which the
+offline promise is meeting the coordinated world, and the leading indicator that
+your CRDT/consensus boundary is drawn in the wrong place.</p>
+<p><strong>What would get you fired:</strong> making stock, price, or payment a CRDT. Those need
+the ability to say <em>no</em>, and a CRDT structurally cannot.</p>
+<h3 id="solutions-82-crdt-or-ot-for-a-document-editor">8.2 CRDT or OT for a document editor</h3>
+<p>Offline for a week decides it. OT requires each edit to be transformed against
+the operations it was written without knowing about, and the cost is roughly
+(edits missed × edits made) — the
+<a href="../71-google-docs-system-design/notes.html#readme"><code>google-docs-system-design</code></a> lab measured
+<strong>8,200</strong> transforms for a client that missed 200 edits while making 20. A week
+offline makes that unbounded, which is why real OT products tell the client
+&quot;your revision is too old&quot; and force a reload — unacceptable when the whole
+promise was working on a plane. OT also needs one server per document deciding
+the official order, so the laptop cannot merge with a colleague's laptop
+directly. A CRDT needs neither, at the cost of metadata: this lab measured
+<strong>2.0 cells per visible character</strong> after light editing, and the google-docs lab
+measured <strong>1,000 cells for 100 visible characters</strong> under heavy churn. Accept
+the memory and the compaction work; take Automerge or Yjs rather than writing
+your own, because the parts you would get wrong (causal delivery, GC,
+encoding) are the parts they have already got right.</p>
+<h3 id="solutions-83-the-crdt-you-should-not-build">8.3 The CRDT you should not build</h3>
+<p><strong>Why it cannot work.</strong> A seat reservation is a uniqueness invariant: seat 14C
+may be held by at most one person. Enforcing that requires being able to <em>refuse</em>
+a booking, and refusal requires knowing what everyone else has done — which is
+exactly the coordination an offline-capable data type gives up. Any CRDT you
+build will faithfully record that two people booked 14C and converge on a state
+where both did, the same way <code>Sim.java</code> converges on −2 bags of flour. The
+merge is not wrong; there was never a rule for it to check.</p>
+<p><strong>What to build instead.</strong> Keep the offline experience for everything that is
+not the invariant: browsing, seat maps, party size, preferences, and a <em>held
+intent</em> (&quot;I want 14C&quot;) that syncs as an OR-Set entry and is explicitly labelled
+as not yet confirmed. Confirmation is a single coordinated write against the
+authoritative seat map — a conditional write or a short lock — with an
+idempotency key so a retry over a bad connection cannot double-book. The user
+sees &quot;requested&quot; and then &quot;confirmed&quot;, which is honest, and on the rare loss
+they see &quot;14C was taken; here are two seats next to each other&quot;. The general
+rule: <strong>let the CRDT carry the intent, and let consensus carry the commitment.</strong></p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../31-hybrid-logical-clocks/notes.html"><small>← Lab 31</small>hybrid-logical-clocks</a><a href="../33-flp-impossibility/notes.html" style="text-align:right"><small>Lab 33 →</small>flp-impossibility</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-cant-the-app-just-wait-for-a-signal">1. Why can&#x27;t the app just wait for a signal?</a><a href="#readme-2-what-happens-when-amira-and-ben-both-edit-the-list">2. What happens when Amira and Ben both edit the list?</a><a href="#readme-3-what-naive-solution-does-everyone-write-first">3. What naive solution does everyone write first?</a><a href="#readme-4-what-actually-arrives-and-who-gets-told">4. What actually arrives, and who gets told?</a><a href="#readme-5-what-does-asha-really-need-with-no-technology-in-it">5. What does Asha really need, with no technology in it?</a><a href="#readme-6-what-key-idea-makes-both-changes-survive">6. What key idea makes both changes survive?</a><a href="#readme-7-which-words-do-you-now-need-and-what-does-each-name">7. Which words do you now need, and what does each name?</a><a href="#readme-8-which-mental-models-should-you-carry-and-where-do-they-lie">8. Which mental models should you carry, and where do they lie?</a><a href="#readme-9-what-should-you-watch-on-the-page-before-reading-the-mechanism">9. What should you watch on the page before reading the mechanism?</a><a href="#readme-10-how-does-the-mechanism-grow-one-broken-design-at-a-time">10. How does the mechanism grow, one broken design at a time?</a><a href="#readme-11-which-ten-failure-scenarios-should-you-be-able-to-name">11. Which ten failure scenarios should you be able to name?</a><a href="#readme-12-what-does-correctness-mean-here-and-where-is-the-edge">12. What does correctness mean here, and where is the edge?</a><a href="#readme-13-in-what-order-should-you-read-the-code">13. In what order should you read the code?</a><a href="#readme-14-which-experiments-break-it-and-can-you-call-them-first">14. Which experiments break it, and can you call them first?</a><a href="#readme-15-what-does-a-real-production-system-add">15. What does a real production system add?</a><a href="#readme-16-which-exercises-should-you-attempt-now">16. Which exercises should you attempt now?</a><a href="#readme-17-where-does-this-sit-and-what-should-you-learn-next">17. Where does this sit, and what should you learn next?</a><a href="#readme-18-glossary--what-does-each-word-mean-precisely">18. Glossary — what does each word mean, precisely?</a><a href="#readme-19-about-this-lab--what-is-in-it-and-where-do-the-numbers-come-from">19. About this lab — what is in it, and where do the numbers come from?</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

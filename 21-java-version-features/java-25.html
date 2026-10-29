@@ -1,0 +1,490 @@
+<!doctype html>
+<html lang="en" data-hub-lab="21-java-version-features">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Java 25 — the current LTS, and where you should be going</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 21 · java-25.md</span><nav class="tabs" aria-label="This lab"><a href="notes.html">Lab notes</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 21 · java-version-features</p><h1 id="doc-java-25--the-current-lts-and-where-you-should-be-going">Java 25 — the current LTS, and where you should be going</h1>
+<p><strong>GA:</strong> September 2025 · <strong>LTS:</strong> <strong>yes</strong> · <strong>Class file major version:</strong> 69 ·
+<strong>Oracle Premier Support:</strong> September 2030 · <strong>Extended:</strong> September 2033
+<strong>[documented — Oracle roadmap]</strong></p>
+<p><strong>Previous:</strong> <a href="java-24.html">Java 24</a> · <strong>Next:</strong> JDK 26 (March 2026, non-LTS) ·
+<strong>Back to:</strong> <a href="notes.html#readme">the story</a></p>
+<p><strong>Everything marked [measured] in this file was executed on OpenJDK 25.0.4
+(Homebrew, macOS) during this lab's build.</strong></p>
+<hr />
+<h2 id="doc-the-one-thing-to-remember">The one thing to remember</h2>
+<p><strong>Java 25 is the current LTS and the correct target for essentially any Java
+work today.</strong> Supported to 2030 (premier) / 2033 (extended) under Oracle's
+roadmap, with equivalents from other vendors.</p>
+<p>It has no single headline feature the way <a href="java-21.html">21</a> had virtual threads.
+Its value is that it is the release where a large number of long ladders
+finish at once — scoped values, module imports, compact source files, flexible
+constructor bodies, compact object headers, generational Shenandoah — plus it
+inherits <a href="java-24.html">Java 24</a>'s <code>synchronized</code> unpinning fix, which is what
+makes virtual threads genuinely safe to adopt on an existing codebase.</p>
+<h2 id="doc-what-you-actually-get">What you actually get</h2>
+<h3 id="doc-scoped-values--final--jep-506">Scoped values — <strong>FINAL</strong> — JEP 506</h3>
+<p>Five years, six ticks: incubator in <a href="java-20.html">20</a>, then previews in 21, 22,
+23, 24, final here.</p>
+<div class="code"><pre><code class="language-java">private static final ScopedValue&lt;Principal&gt; USER = ScopedValue.newInstance();
+
+ScopedValue.where(USER, principal).run(() -&gt; handleRequest());
+// anywhere beneath, with no parameter threading:
+Principal p = USER.get();
+</code></pre></div>
+<p>Full treatment in the <a href="../20-scoped-values/notes.html#readme">scoped-values</a> lab. The reason it
+matters <em>now</em>: with virtual threads, <code>ThreadLocal</code> becomes a liability — a
+million virtual threads each carrying a <code>ThreadLocal</code> map is a million maps,
+and <code>InheritableThreadLocal</code> copies them on every fork. A <code>ScopedValue</code> is
+immutable, bound for a block, inherited by reference, and gone when the block
+exits on any path.</p>
+<p>Note that scoped values are final while <strong>structured concurrency, which they
+were designed alongside, is still a fifth preview</strong> (JEP 505) here and a sixth
+in JDK 26 (JEP 525). Two Loom features, same team, adjacent scope, seven years
+apart in maturity — the difference is entirely how much design risk each
+carried.</p>
+<h3 id="doc-compact-source-files-and-instance-main-methods--final--jep-512">Compact source files and instance main methods — <strong>FINAL</strong> — JEP 512</h3>
+<p>The end of a four-preview run that was renamed twice (JEP 445 &quot;Unnamed Classes
+and Instance Main Methods&quot; → 463/477 &quot;Implicitly Declared Classes&quot; → 495
+&quot;Simple Source Files&quot; → 512 &quot;Compact Source Files&quot;).</p>
+<p>A complete Java program is now:</p>
+<div class="code"><pre><code class="language-java">void main() {
+    IO.println(&quot;Hello&quot;);
+}
+</code></pre></div>
+<p><strong>[measured, JDK 25.0.4]</strong> — that file compiles with <code>javac P.java</code>, no flags,
+no warnings.</p>
+<p>Three things happen: the class declaration is implicit, <code>main</code> need not be
+<code>static</code> or <code>public</code> or take <code>String[]</code>, and <code>java.lang.IO</code> provides
+<code>IO.println</code> / <code>IO.readln</code> without an import.</p>
+<p><strong>Who this is for:</strong> learners, scripts, and small tools. It is not intended to
+change how you write a service, and a compact source file cannot be part of a
+package or referenced by name from other code. Combined with
+<code>java Hello.java</code> (<a href="java-11.html">11</a>) and multi-file source programs
+(<a href="java-22.html">22</a>), Java is now a viable scripting language for the first time.</p>
+<h3 id="doc-module-import-declarations--final--jep-511">Module import declarations — <strong>FINAL</strong> — JEP 511</h3>
+<div class="code"><pre><code class="language-java">import module java.base;
+</code></pre></div>
+<p><strong>[measured, JDK 25.0.4]</strong> — compiles with no flags on 25.</p>
+<p>Imports every package exported by the named module. Genuinely useful in
+scripts and compact source files; use with care in a large codebase, where
+explicit imports carry information and reduce ambiguity. If two imported
+modules export the same simple name, you must disambiguate with a single-type
+import.</p>
+<h3 id="doc-flexible-constructor-bodies--final--jep-513">Flexible constructor bodies — <strong>FINAL</strong> — JEP 513</h3>
+<p>Statements before <code>super(...)</code> or <code>this(...)</code>:</p>
+<div class="code"><pre><code class="language-java">public Order(List&lt;Line&gt; lines) {
+    if (lines.isEmpty()) throw new IllegalArgumentException(&quot;empty order&quot;);
+    super(computeTotal(lines));
+}
+</code></pre></div>
+<p>You still cannot <em>read</em> the object's own fields before the super call — the
+restriction that prevented observing an uninitialised object is intact. What
+was lifted is the blanket ban on any statement at all, which forced validation
+into static helper methods.</p>
+<h3 id="doc-compact-object-headers--product-feature--jep-519">Compact object headers — <strong>product feature</strong> — JEP 519</h3>
+<p>Promoted from experimental (<a href="java-24.html">24</a>) to a product feature. 64-bit
+object headers instead of 96/128, reducing heap footprint on object-heavy
+workloads.</p>
+<p><strong>[measured, JDK 25.0.4] — it is still not the default:</strong></p>
+<div class="code"><pre><code>bool UseCompactObjectHeaders = false {product lp64_product} {default}
+</code></pre></div>
+<p>You must pass <code>-XX:+UseCompactObjectHeaders</code>. &quot;Product feature&quot; means supported
+and no longer needing <code>-XX:+UnlockExperimentalVMOptions</code> — not enabled. Worth
+benchmarking on a service with a large live set.</p>
+<h3 id="doc-generational-shenandoah--final--jep-521">Generational Shenandoah — <strong>FINAL</strong> — JEP 521</h3>
+<p>Out of experimental. Shenandoah now has generations, as ZGC has since
+<a href="java-21.html">21</a>.</p>
+<h3 id="doc-aot-command-line-ergonomics-and-method-profiling--jep-514-515">AOT command-line ergonomics and method profiling — JEP 514, 515</h3>
+<p>Building on <a href="java-24.html">24</a>'s JEP 483. JEP 514 simplifies cache creation
+(<code>-XX:AOTCacheOutput</code> in one step rather than a two-command dance); JEP 515
+records method profiles in the cache so the JIT starts from a warm profile
+rather than cold.</p>
+<p><strong>[measured, JDK 25.0.4, macOS, 8 runs each]:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Configuration</th>
+  <th>Mean startup</th>
+  <th>Classes from archive</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Default (CDS only)</td>
+  <td>0.1050 s</td>
+  <td>956 of 1003</td>
+</tr>
+<tr>
+  <td>AOT cache (12.6 MB)</td>
+  <td>0.0862 s</td>
+  <td>1039 of 1048</td>
+</tr>
+</tbody>
+</table></div>
+<p>18% on a small program. Larger applications gain more — that is documented,
+not measured here. The command that produced the cache:</p>
+<div class="code"><pre><code>$ java -XX:AOTCacheOutput=app.aot -cp . Boot
+$ java -XX:AOTCache=app.aot -cp . Boot
+</code></pre></div>
+<h3 id="doc-jfr-cpu-time-profiling-cooperative-sampling-method-timing--jep-509-518-520">JFR: CPU-time profiling, cooperative sampling, method timing — JEP 509, 518, 520</h3>
+<p>Flight Recorder gets a real CPU-time profiler (Linux, experimental), safer
+stack sampling that doesn't require a safepoint, and method timing and tracing.</p>
+<p>The safepoint point is the important one: traditional Java profilers that
+sample at safepoints are biased, because safepoints only occur at certain
+bytecode positions — so hot loops without a safepoint poll are systematically
+under-sampled. JEP 518's cooperative sampling reduces that bias. If you have
+ever had a profiler confidently point at the wrong method, this is why.</p>
+<h3 id="doc-key-derivation-function-api--final--jep-510">Key Derivation Function API — <strong>FINAL</strong> — JEP 510</h3>
+<p>A standard API for KDFs (HKDF, and Argon2 later). Completes the crypto set with
+<a href="java-21.html">21</a>'s KEM API and <a href="java-24.html">24</a>'s post-quantum algorithms.</p>
+<h3 id="doc-stable-values--jep-502-preview">Stable values — JEP 502 (<strong>preview</strong>)</h3>
+<p>Deferred immutability: a field initialised at most once, on first use, with the
+JIT able to treat it as constant afterwards — the safe version of the
+double-checked-locking idiom.</p>
+<p>Note for the pipeline: this is <strong>renamed &quot;Lazy Constants&quot; in JDK 26</strong>
+(JEP 526, second preview). A rename between previews is normal and is exactly
+the kind of change the preview gate exists to permit.</p>
+<h3 id="doc-pem-encodings--jep-470-preview">PEM encodings — JEP 470 (<strong>preview</strong>)</h3>
+<p>Standard API for reading and writing PEM (<code>-----BEGIN CERTIFICATE-----</code>) text.
+Long overdue; everyone has hand-rolled this.</p>
+<h2 id="doc-pipeline-movement-this-release">Pipeline movement this release</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Feature</th>
+  <th>State here</th>
+  <th>Ends up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Scoped values (JEP 506)</strong></td>
+  <td><strong>FINAL</strong> (6 ticks)</td>
+  <td>done</td>
+</tr>
+<tr>
+  <td><strong>Compact source files (JEP 512)</strong></td>
+  <td><strong>FINAL</strong> (5 ticks, 2 renames)</td>
+  <td>done</td>
+</tr>
+<tr>
+  <td><strong>Module imports (JEP 511)</strong></td>
+  <td><strong>FINAL</strong></td>
+  <td>done</td>
+</tr>
+<tr>
+  <td><strong>Flexible constructor bodies (JEP 513)</strong></td>
+  <td><strong>FINAL</strong> (4 ticks)</td>
+  <td>done</td>
+</tr>
+<tr>
+  <td><strong>Compact object headers (JEP 519)</strong></td>
+  <td><strong>Product</strong> (opt-in)</td>
+  <td>done</td>
+</tr>
+<tr>
+  <td><strong>Generational Shenandoah (JEP 521)</strong></td>
+  <td><strong>FINAL</strong></td>
+  <td>done</td>
+</tr>
+<tr>
+  <td><strong>KDF API (JEP 510)</strong></td>
+  <td><strong>FINAL</strong></td>
+  <td>done</td>
+</tr>
+<tr>
+  <td>Stable values (JEP 502)</td>
+  <td>1st preview</td>
+  <td>Renamed &quot;Lazy Constants&quot;, 2nd preview in 26</td>
+</tr>
+<tr>
+  <td>PEM encodings (JEP 470)</td>
+  <td>1st preview</td>
+  <td>2nd preview in 26</td>
+</tr>
+<tr>
+  <td>Structured concurrency (JEP 505)</td>
+  <td><strong>5th preview</strong></td>
+  <td>6th preview in 26</td>
+</tr>
+<tr>
+  <td>Primitive patterns (JEP 507)</td>
+  <td>3rd preview</td>
+  <td>4th preview in 26</td>
+</tr>
+<tr>
+  <td><strong>Vector API (JEP 508)</strong></td>
+  <td><strong>10th incubator</strong></td>
+  <td>11th in 26</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="doc-what-broke">What broke</h2>
+<ul>
+<li><p><strong>32-bit x86 port removed — JEP 503.</strong> Deprecated in <a href="java-24.html">24</a>.</p>
+</li>
+<li><p><strong><code>--release 8</code> warns as obsolete.</strong> <strong>[measured, JDK 25.0.4]</strong>:</p>
+<div class="code"><pre><code>$ javac --release 8 T.java
+warning: [options] source value 8 is obsolete and will be removed in a future release
+warning: [options] target value 8 is obsolete and will be removed in a future release
+</code></pre></div>
+<p>Supported releases on 25.0.4 are <strong>8 through 25</strong>; <code>--release 7</code> is already
+an error. <a href="notes.html#readme-f10----release-8-warns-and-older-is-already-gone-jdk-25">F10</a>.
+Note the asymmetry: <strong>running</strong> Java 8 bytecode on JDK 25 is fine and always
+will be; <strong>compiling for</strong> Java 8 is what expires.</p>
+</li>
+<li><p>Everything inherited from <a href="java-24.html">24</a>: Security Manager disabled,
+<code>Unsafe</code> warnings, non-generational ZGC gone, JNI warnings.</p>
+</li>
+</ul>
+<h2 id="doc-what-is-still-coming-jdk-26-march-2026-documented">What is still coming (JDK 26, March 2026) <strong>[documented]</strong></h2>
+<div class="table"><table><thead>
+<tr>
+  <th>JEP</th>
+  <th>Feature</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>517</td>
+  <td><strong>HTTP/3 for the HTTP Client API</strong></td>
+</tr>
+<tr>
+  <td>504</td>
+  <td>Remove the Applet API (deprecated since <a href="java-17.html">17</a>)</td>
+</tr>
+<tr>
+  <td>500</td>
+  <td>Prepare to Make Final Mean Final — starts restricting reflective mutation of <code>final</code> fields</td>
+</tr>
+<tr>
+  <td>516</td>
+  <td>AOT object caching with any GC</td>
+</tr>
+<tr>
+  <td>522</td>
+  <td>G1: improve throughput by reducing synchronisation</td>
+</tr>
+<tr>
+  <td>525</td>
+  <td>Structured concurrency (<strong>sixth</strong> preview)</td>
+</tr>
+<tr>
+  <td>526</td>
+  <td>Lazy Constants (was Stable Values), 2nd preview</td>
+</tr>
+<tr>
+  <td>529</td>
+  <td>Vector API (<strong>eleventh</strong> incubator)</td>
+</tr>
+<tr>
+  <td>530</td>
+  <td>Primitive types in patterns (4th preview)</td>
+</tr>
+</tbody>
+</table></div>
+<p>JEP 500 is the one to watch: reflectively writing a <code>final</code> field —
+which some serialisation and DI frameworks still do — starts down the removal
+ladder. Same shape as JEP 451 and JEP 472 before it.</p>
+<h2 id="doc-verdict-for-your-day-job">Verdict for your day job</h2>
+<p><strong>This is the answer. Target Java 25.</strong></p>
+<ul>
+<li>Supported to 2030 premier / 2033 extended (Oracle; check your vendor).</li>
+<li>Everything from Amber is final: records, sealed types, pattern matching,
+text blocks, switch expressions.</li>
+<li>Virtual threads are final <em>and</em> the <code>synchronized</code> pinning caveat is gone
+(<a href="java-24.html">24</a>, JEP 491) — which is what makes them adoptable on a large
+existing codebase rather than only on new code.</li>
+<li>Scoped values are final, so the <code>ThreadLocal</code> replacement story is complete.</li>
+<li>Spring Boot 4 requires it.</li>
+</ul>
+<p><strong>Still not safe to build on:</strong> structured concurrency (fifth preview, sixth in
+26, API already redesigned once), primitive patterns (third preview), the
+Vector API (tenth incubator, waiting on Valhalla), stable values (renamed in
+26). Use them in throwaway experiments; keep them out of anything you publish.</p>
+<p><strong>Routes:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>From</th>
+  <th>Route</th>
+  <th>Where the risk is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>8</td>
+  <td>8 → 17 → 21 or 25</td>
+  <td>Almost all of it in 8→17: <a href="notes.html#readme-f1--split-packages-jdk-9-the-module-system">F1</a>, <a href="notes.html#readme-f2--the-java-ee-and-corba-modules-are-gone-jdk-11-jep-320">F2</a>, <a href="notes.html#readme-f3--inaccessibleobjectexception-strong-encapsulation-jdk-1617">F3</a></td>
+</tr>
+<tr>
+  <td>11</td>
+  <td>11 → 17 → 25</td>
+  <td><a href="notes.html#readme-f3--inaccessibleobjectexception-strong-encapsulation-jdk-1617">F3</a>, and dependency upgrades it forces</td>
+</tr>
+<tr>
+  <td>17</td>
+  <td>17 → 25 directly</td>
+  <td>Light. <a href="notes.html#readme-f6--utf-8-became-the-default-charset-jdk-18-jep-400">F6</a> charset default, GC flags, <code>Unsafe</code> warnings</td>
+</tr>
+<tr>
+  <td>21</td>
+  <td>21 → 25 directly</td>
+  <td>Very light</td>
+</tr>
+</tbody>
+</table></div>
+<p>And whichever route you take, the practice that matters most is the one from
+the README's <a href="notes.html#readme-the-playbook">playbook</a>: put the next JDK in a
+<strong>non-blocking CI job now</strong>, running your full behavioural test suite, and let
+it accumulate small known fixes instead of one big unknown project.</p>
+</main><aside aria-label="On this page"><h2>On this page</h2><a href="#doc-the-one-thing-to-remember">The one thing to remember</a><a href="#doc-what-you-actually-get">What you actually get</a><a href="#doc-pipeline-movement-this-release">Pipeline movement this release</a><a href="#doc-what-broke">What broke</a><a href="#doc-what-is-still-coming-jdk-26-march-2026-documented">What is still coming (JDK 26, March 2026) [documented]</a><a href="#doc-verdict-for-your-day-job">Verdict for your day job</a><h2>More in this lab</h2><a href="java-09.html">java-09</a><a href="java-10.html">java-10</a><a href="java-11.html">java-11</a><a href="java-12.html">java-12</a><a href="java-13.html">java-13</a><a href="java-14.html">java-14</a><a href="java-15.html">java-15</a><a href="java-16.html">java-16</a><a href="java-17.html">java-17</a><a href="java-18.html">java-18</a><a href="java-19.html">java-19</a><a href="java-20.html">java-20</a><a href="java-21.html">java-21</a><a href="java-22.html">java-22</a><a href="java-23.html">java-23</a><a href="java-24.html">java-24</a><a href="java-25.html">java-25</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

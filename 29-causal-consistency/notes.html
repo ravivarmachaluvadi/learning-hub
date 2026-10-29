@@ -1,0 +1,2950 @@
+<!doctype html>
+<html lang="en" data-hub-lab="29-causal-consistency">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>29. causal-consistency</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 29 of 71 · Stage 4</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 29 · Why Distribution Is Hard</p><article id="readme"><h1 id="readme-causal-consistency--never-show-the-reply-before-the-message">Causal consistency — never show the reply before the message</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Amira posts a photo of her dog in London. Ben, in
+Frankfurt, reads it and writes &quot;lovely dog!&quot; underneath. Cara opens the app in
+Singapore and sees Ben's comment sitting on its own, with no post above it.
+Nothing crashed and nobody misbehaved — Ben's comment simply took a faster
+road than Amira's photo, and the message carrying it never mentioned that he
+had read her post first. This lab is one rule that stops that: <strong>never show a
+change without everything that happened before it.</strong> You pay for it in waiting
+and nothing else, and it is the strongest promise you can keep while every
+region still answers on its own.</p>
+</blockquote>
+<p>The trainer is <a href="visualization.html"><code>visualization.html</code></a> — <em>The Comment Before
+the Post</em>. What the lab is made of, where every number came from, and where this
+sits among your other labs: section 19, at the end.</p>
+<hr />
+<h2 id="readme-1-why-can-nothing-be-broken-and-the-product-still-lie">1. Why can nothing be broken and the product still lie?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Your app is fast because each region answers from its own
+copy and passes changes to the others afterwards. That works perfectly until
+one change is a <em>reply</em> to another, because the reply can arrive first.</p>
+</blockquote>
+<p>Your product runs in several regions so that people everywhere get fast answers.
+A region answers immediately from its own copy. It passes the change along to
+the other regions in the background. This is the design almost everyone ships.
+For one person changing one thing, it is perfect.</p>
+<p>It stops being perfect the moment one change is a <em>response</em> to another.</p>
+<p>A comment is a response to a post. A reply is a response to a message.
+&quot;Publish this photo&quot; is a response to &quot;stop letting my manager see my photos&quot;.
+The two changes then travel by different routes, at different speeds. The second
+one can arrive first. Somewhere, a user is shown a reply to something that, as
+far as that region knows, has not happened.</p>
+<p>The damage runs from mildly confusing to genuinely serious.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What the user sees</th>
+  <th>How bad it is</th>
+  <th>Why it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a comment on a post that is not there</td>
+  <td>confusing; looks like a UI bug</td>
+  <td>the comment overtook the post</td>
+</tr>
+<tr>
+  <td>a reply quoting a message you cannot find</td>
+  <td>support ticket; nobody can explain it</td>
+  <td>the reply overtook the message</td>
+</tr>
+<tr>
+  <td>a photo published under the <em>old</em> privacy setting</td>
+  <td>a security incident</td>
+  <td>the photo overtook the setting change</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read the third row twice. That is the one that ends up in a postmortem. And the
+worst part is the same in all three rows: <strong>nothing is broken.</strong> Every machine
+did exactly what it was told.</p>
+<hr />
+<h2 id="readme-2-what-happens-to-amira-ben-and-cara-in-one-afternoon">2. What happens to Amira, Ben and Cara in one afternoon?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three people in three cities, one photo, one comment, and
+two roads of very different quality. The comment gets there and the photo does
+not.</p>
+</blockquote>
+<p>Meet the three people this lab follows all the way to the end.</p>
+<blockquote>
+<p><strong>Amira</strong> is in London. <strong>Ben</strong> is in Frankfurt. <strong>Cara</strong> is in Singapore. All
+three use the same app, and each one is served by the region nearest to them.</p>
+</blockquote>
+<p>Here is their afternoon, in three steps.</p>
+<ol>
+<li><strong>Amira posts a photo of her dog.</strong> London shows it to her instantly and
+starts sending a copy to Frankfurt and to Singapore.</li>
+<li><strong>Ben reads the post.</strong> The copy reached Frankfurt in a moment. <strong>He leaves
+a comment</strong>: &quot;lovely dog!&quot;. Frankfurt shows it to him instantly and starts
+sending copies out.</li>
+<li><strong>Cara opens the app in Singapore.</strong></li>
+</ol>
+<p>One more fact, and it is the only unusual thing in the whole setup. The road
+from London to Singapore is having a bad afternoon. The road from Frankfurt to
+Singapore is fine.</p>
+<p>Now hold on to this sentence, because everything else in the lab is a
+consequence of it:</p>
+<blockquote>
+<p><strong>Ben's comment only exists because he read Amira's post.</strong></p>
+</blockquote>
+<p>A human can see that at a glance. Nothing in the system can see it, because
+nothing wrote it down.</p>
+<p><strong>Where this lab takes you.</strong> Stop at any checkpoint and you still have
+something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner</strong></td>
+  <td>1–9</td>
+  <td>explain how an effect overtakes its cause, and what &quot;wait for what it was based on&quot; buys</td>
+</tr>
+<tr>
+  <td><strong>Intermediate</strong></td>
+  <td>10</td>
+  <td>derive every real implementation, from naming what a change was based on, to compressing that into counters, to the piece that has to live on the client</td>
+</tr>
+<tr>
+  <td><strong>Engineering</strong></td>
+  <td>11–14</td>
+  <td>state the guarantee and its exact edge, and cost it in latency rather than adjectives</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>15</td>
+  <td>read the COPS and Bayou papers and MongoDB's causal-consistency docs and know what you are looking at</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-3-what-is-the-obvious-design-and-why-does-everyone-ship-it">3. What is the obvious design, and why does everyone ship it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Show every change the moment it lands. There is nothing to
+wait for, so nothing is ever slow — and that is exactly the appeal.</p>
+</blockquote>
+<p>Asha builds the replication path. Her first version is the one you would write
+too, and it fits on a line:</p>
+<blockquote>
+<p>When a region receives a copy of a change, apply it and start showing it.</p>
+</blockquote>
+<p>There is nothing to wait for, so nothing is ever slow. Every region ends up with
+the same content eventually. This is what an ordinary asynchronous replicated
+store does, and it is what you get by default from almost every system in this
+family.</p>
+<p>Asha ships it. Then Cara opens the app.</p>
+<hr />
+<h2 id="readme-4-what-does-cara-actually-see">4. What does Cara actually see?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> She sees the comment and no post. Nobody is alerted,
+because from the system's point of view nothing went wrong — and the reason it
+cannot go right is hiding in the message, not in the network.</p>
+</blockquote>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Ben's comment took the fast road. Amira's post is still
+crawling. What is on Cara's screen, and who gets told about it?</em></p>
+<details><summary>Reveal</summary>
+
+<p>She sees the comment &quot;lovely dog!&quot;, and where the post should be there is
+nothing at all. Nobody is told anything. Singapore received one change and
+applied it, exactly as designed.</p>
+<p>If you guessed that Singapore would notice the gap and log a warning, you are
+imagining a system that knows the two changes are related. It does not. That
+is the whole problem, and the next paragraph is where it comes from.</p>
+<p>The lab's own narrated run says it like this:</p>
+<div class="code"><pre><code>Cara reads comment :  lovely dog!
+Cara reads post :     null
+t=6 cara [CAUSALITY] sees comment=lovely dog! (R1#1) but post still reads
+      &lt;absent&gt; — the cause post=photo-of-a-dog (R0#1) is invisible here
+</code></pre></div>
+<p>Three things in that output have short names. Here is what each one is, before
+you meet the notation again.</p>
+<p>| In the output | What it is, in words |
+|---|---|
+| <code>comment = &quot;lovely dog!&quot;</code> | the value Cara's screen is showing |
+| <code>R1#1</code> | the very first change Frankfurt ever accepted — Ben's comment |
+| <code>R0#1</code> | the very first change London ever accepted — Amira's post |
+| <code>[CAUSALITY]</code> | the checker's tag for &quot;an effect is on screen and its cause is not&quot; |</p>
+<p>Now the deeper problem, which is not about speed at all. <strong>The message Ben's
+region sent carries no trace of the fact that his comment was written after
+reading Amira's post.</strong> It says &quot;set comment to 'lovely dog!'&quot; and nothing
+else. Singapore could not have waited for the post even if it had wanted to.
+It had no way of knowing there was anything to wait for.</p>
+<p>The information was destroyed at the moment the message was built. You have
+seen this shape of failure twice before. The <a href="../32-crdts/notes.html#readme"><code>crdts</code></a> lab opens
+with a whole list being sent where one individual change was meant. The
+google-docs lab opens with a position being sent where an identity was meant.
+Every time, <em>the wire format threw away what the receiver needed</em>.</p>
+</details>
+
+</blockquote>
+<p>Two things stop this being a one-off curiosity.</p>
+<p><strong>It is not rare. It just needs an unequal network.</strong> Run the same design at six
+levels of road slowness and the anomaly rate climbs steeply. The design never
+changes between rows; only the road does.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Extra delay on the slow road</th>
+  <th>Runs that showed an effect before its cause</th>
+  <th>What the row tells you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>none</td>
+  <td>30 of 300</td>
+  <td>a calm network hides the bug nine times in ten</td>
+</tr>
+<tr>
+  <td>20 ticks</td>
+  <td><strong>214 of 300</strong></td>
+  <td>the same code, on an unequal network, fails most of the time</td>
+</tr>
+</tbody>
+</table></div>
+<p><em>A consistency test on a calm network proves nothing.</em> That is the same lesson
+the <a href="../26-linearizability/notes.html#readme"><code>linearizability</code></a> lab taught from the other side.</p>
+<p><strong>It is not fixed by the tools you already own.</strong> A version vector per key, from
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a>, keeps <em>one key's</em>
+copies in order. The post and the comment are different keys. A CRDT merge, from
+<a href="../32-crdts/notes.html#readme"><code>crdts</code></a>, makes each key settle on one value. Neither says a word
+about the order <em>between</em> two keys — and this problem lives entirely between
+keys.</p>
+<hr />
+<h2 id="readme-5-what-are-we-really-asking-for">5. What are we really asking for?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two demands. Never show an effect before its cause. And
+never stop answering. Everything difficult comes from wanting both.</p>
+</blockquote>
+<p>State the requirement in plain words, with no technology in it:</p>
+<blockquote>
+<p><strong>If one change was made after seeing another, then no region may ever show
+the second without also showing the first.</strong></p>
+</blockquote>
+<p>And, because Asha is not willing to give up the thing that made this
+architecture worth building in the first place:</p>
+<blockquote>
+<p>Every region must still answer immediately, from its own copy, even while cut
+off from the others.</p>
+</blockquote>
+<p>Now notice what we are <em>not</em> asking for. We are not asking that everybody see
+changes in the same order. Only that nobody sees an effect before its cause.
+Two changes that had nothing to do with each other may appear in either order,
+on different machines, and that is fine.</p>
+<p>That deliberate weakening is the whole idea. It is easiest to see against the
+models you already know. Read the middle column as &quot;the rule we are giving up&quot;.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Model</th>
+  <th>The rule you delete</th>
+  <th>What you keep</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Linearizability</strong></td>
+  <td>—</td>
+  <td>one order, and it matches real time</td>
+</tr>
+<tr>
+  <td><strong>Sequential consistency</strong></td>
+  <td>real-time order</td>
+  <td>one order everybody agrees on</td>
+</tr>
+<tr>
+  <td><strong>Causal consistency</strong></td>
+  <td>one agreed order</td>
+  <td>order only where one thing caused another</td>
+</tr>
+<tr>
+  <td><strong>Eventual consistency</strong></td>
+  <td>causal order too</td>
+  <td>nothing about order at all</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each step down buys availability and latency, and sells guarantees. This lab is
+about the third row. §12 explains why that row is a far more interesting place
+to stand than it first looks.</p>
+<hr />
+<h2 id="readme-6-what-is-the-one-rule-that-fixes-it">6. What is the one rule that fixes it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Make every change carry a note of what its author had
+already seen. Make a region refuse to show a change until it has applied
+everything on that note.</p>
+</blockquote>
+<p>Here is the rule, and the rest of the lab is either an implementation of it or a
+consequence of it:</p>
+<blockquote>
+<p><strong>Make each change carry a record of what its author had already seen, and
+make a region hold a change back until it has applied all of that.</strong></p>
+</blockquote>
+<p>Two halves, and both carry weight.</p>
+<p>The first half is <strong>record the reason</strong>. Ben's message must say more than &quot;set
+comment to 'lovely dog!'&quot;. It must also say &quot;…and the author had already seen
+the post&quot;. Every design in §10 is a different way of writing that second clause
+compactly.</p>
+<p>The second half is <strong>wait rather than show something wrong</strong>. Singapore already
+has Ben's comment sitting in memory. The rule does not make it arrive any
+sooner. It makes the region <em>decline to show it</em> until Amira's post lands.</p>
+<p>That is worth saying flatly, because it is the price tag on the entire lab:
+<strong>consistency here is bought with latency and nothing else.</strong> No extra messages.
+No agreement. No coordination. Just waiting.</p>
+<hr />
+<h2 id="readme-7-which-six-words-carry-this-lab-and-where-did-each-one-happen">7. Which six words carry this lab, and where did each one happen?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six terms do all the work. Each one names something you
+have already watched happen to Amira, Ben or Cara, so you meet the thing
+first and the word second.</p>
+</blockquote>
+<h3 id="readme-which-word-means-could-have-influenced">Which word means &quot;could have influenced&quot;?</h3>
+<p>Ben read Amira's post, and then he wrote a comment. We cannot know that the post
+shaped what he typed. We can know that it <em>could</em> have. That &quot;could have
+influenced&quot; relationship is the only kind of &quot;before&quot; that survives having no
+shared clock, and Leslie Lamport named it in 1978: <strong>happens-before</strong>.</p>
+<p>Three things make it true, and nothing else does:</p>
+<ol>
+<li>Two changes by the same person, in the order that person made them.</li>
+<li>A change written after reading another change.</li>
+<li>Chains: if the first happened before the second, and the second before the
+third, then the first happened before the third.</li>
+</ol>
+<p>Engineers write it with a small arrow. Amira's post happens-before Ben's
+comment, written <code>post → comment</code>. Read the arrow aloud as &quot;could have
+influenced&quot;, every time, until it stops needing translating.</p>
+<p>Papers write the same three rules with single letters. Here they are with the
+words kept beside them, so you never have to decode a bare arrow.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Written as</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>a → b</code></td>
+  <td>change <code>a</code> could have influenced change <code>b</code></td>
+</tr>
+<tr>
+  <td><code>b → c</code></td>
+  <td>change <code>b</code> could have influenced change <code>c</code></td>
+</tr>
+<tr>
+  <td><code>a → c</code></td>
+  <td>then <code>a</code> could have influenced <code>c</code> as well — that is the chaining rule</td>
+</tr>
+<tr>
+  <td><code>b → a</code></td>
+  <td>the reverse claim; for Amira's post and Ben's comment it is false</td>
+</tr>
+</tbody>
+</table></div>
+<p>The lab asserts both the reading rule and the chaining rule in
+<code>Tests.reading_a_write_puts_it_in_your_causal_past</code> and in
+<code>happens_before_is_transitive_across_three_clients</code>, the second across three
+clients at once.</p>
+<p>Why does this need its own word at all? To keep <em>could have influenced</em> apart
+from <em>happened earlier on a wall clock</em>. The second is unknowable across
+machines. It is also actively harmful when you rely on it: the
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> and
+<a href="../32-crdts/notes.html#readme"><code>crdts</code></a> labs both counted a replica whose clock ran 60 seconds
+fast destroying <strong>1,000 of 1,000</strong> genuinely newer writes.</p>
+<p>If the name feels familiar, it should. It is the distributed twin of
+<em>happens-before</em> in the <a href="../17-java-memory-model/notes.html#readme"><code>java-memory-model</code></a> lab. Same
+name, and the same job: say which writes a reader must see. One machine instead
+of many.</p>
+<h3 id="readme-what-do-you-call-two-changes-that-never-heard-of-each-other">What do you call two changes that never heard of each other?</h3>
+<p>Amira sets the album title to &quot;Dog Photos&quot;. At the same moment Ben sets it to
+&quot;My Dog&quot;. In the store those two changes read <code>title = &quot;Dog Photos&quot;</code> and
+<code>title = &quot;My Dog&quot;</code>. Neither author had seen the other's. Neither could possibly
+have influenced the other.</p>
+<p>Engineers call that pair <strong>concurrent</strong>. Read the notation below aloud as
+&quot;neither one could have influenced the other&quot;, and notice that it is defined
+entirely by two arrows that are <em>absent</em>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Written as</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>a ∥ b</code></td>
+  <td>neither <code>a → b</code> nor <code>b → a</code> holds</td>
+</tr>
+<tr>
+  <td><code>post ∥ comment</code></td>
+  <td>said of two particular changes: this pair has no arrow either way</td>
+</tr>
+</tbody>
+</table></div>
+<p>The important trap: concurrent is a statement about <em>knowledge</em>, not about time.
+Two changes made an hour apart are still concurrent if neither author had seen
+the other's. Wall-clock distance has nothing to do with it.</p>
+<p>This is why happens-before is a <strong>partial order</strong> rather than a line. Some pairs
+simply are not comparable. The model needs a word for that gap, and every design
+decision in §10 is really a decision about what to do inside it. There are
+plenty of such pairs: one sweep of 300 workloads throws up 17,163 pairs where
+neither author had seen the other's change.</p>
+<h3 id="readme-what-is-causal-consistency-said-precisely">What is causal consistency, said precisely?</h3>
+<p>The plain version you already have from §5: you never see an effect before its
+cause.</p>
+<p>The precise version: every region applies changes in an order that agrees with
+happens-before. Said fully — for every region there is some single ordering of
+the changes it has applied that respects &quot;could have influenced&quot; and explains
+every value it ever returned. Two regions may order a concurrent pair
+differently. That freedom is the definition, not a loophole.</p>
+<p>Why does the property deserve a name? Because it is the strongest guarantee that
+costs no coordination at all. §12 gives the formal result. The practical version
+is shorter: everything stronger has to stop answering during a partition.</p>
+<p>With the rule switched on, Cara sees <em>neither</em> the post nor the comment, rather
+than the comment alone. That is the test named
+<code>Tests.causal_delivery_holds_the_effect...</code>, and it is the one behaviour change
+the whole lab exists to produce.</p>
+<h3 id="readme-if-that-is-the-promise-what-is-the-machinery-called">If that is the promise, what is the machinery called?</h3>
+<p>The promise is causal consistency. The machinery that delivers it is <strong>causal
+delivery</strong>: a region applies a change only once everything that happened before
+it has been applied.</p>
+<p>Written with letters, and with the words kept alongside:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Written as</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>apply <code>w</code> only when every <code>d</code> with <code>d → w</code> is applied</td>
+  <td>show a change only once everything that could have influenced it is already showing</td>
+</tr>
+</tbody>
+</table></div>
+<p>Both words exist because you can have either without the other. A single-copy
+store is trivially causally consistent and has no delivery rule anywhere in it.
+And you can implement the delivery rule perfectly and still not have a system
+anyone would ship — which is the next term.</p>
+<p>You have already met this requirement once, as a cost rather than a subject. In
+the <a href="../32-crdts/notes.html#readme"><code>crdts</code></a> lab, causal delivery was the price of operation-based
+CRDTs: deliver an add and a remove out of causal order, and the two copies
+diverged permanently. This lab is that footnote, promoted to the subject.</p>
+<h3 id="readme-why-is-causal-consistency-alone-not-enough-to-ship">Why is causal consistency alone not enough to ship?</h3>
+<p>Turn the rule on, then have Amira and Ben set the same field at the same
+instant, neither having seen the other. Causality has no opinion about that
+pair. So each region keeps whichever copy happened to arrive last — and arrival
+order differs per region.</p>
+<p>The wire empties. Nothing is in flight. The regions still disagree, and nothing
+will ever fix it. Across 400 runs, that happened <strong>400 of 400</strong> times.</p>
+<p>So real systems ship causal consistency <em>plus</em> an agreed rule for the pairs
+causality has no opinion about. Regions that have received the same changes end
+up in the same state. The COPS paper coined a name for the combination:
+<strong>causal+</strong>, short for causal consistency with convergent conflict handling.</p>
+<p>The &quot;+&quot; is exactly where the <a href="../32-crdts/notes.html#readme"><code>crdts</code></a> lab plugs in. Its strong
+eventual consistency is a convergence guarantee with no ordering. This is an
+ordering guarantee with no convergence. Together they are the whole package, and
+that is what production systems actually ship.</p>
+<h3 id="readme-which-four-smaller-promises-do-users-actually-notice">Which four smaller promises do users actually notice?</h3>
+<p>Terry and his colleagues at Xerox PARC, building Bayou in 1994, noticed
+something practical. Users do not experience the whole store. They experience
+their own session. So they named four promises made to <em>one user</em> rather than to
+the system, and gave them names you will meet in every vendor's documentation.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Promise</th>
+  <th>What it says</th>
+  <th>What the user notices when it is missing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>read-your-writes</strong></td>
+  <td>a read reflects your own earlier changes</td>
+  <td>Amira edits her bio, reloads, and the old bio is back</td>
+</tr>
+<tr>
+  <td><strong>monotonic reads</strong></td>
+  <td>you never see the store go backwards</td>
+  <td>Cara refreshes and the comment she just read disappears</td>
+</tr>
+<tr>
+  <td><strong>monotonic writes</strong></td>
+  <td>your changes are applied everywhere in the order you made them</td>
+  <td>Ben's second edit lands before his first</td>
+</tr>
+<tr>
+  <td><strong>writes-follow-reads</strong></td>
+  <td>a change you based on something you read is never applied before that thing</td>
+  <td>the comment-before-post story itself</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two of those are nearly free. If a user always talks to the same region, the
+first two cannot be violated at all. The lab counts <strong>0</strong> violations of
+read-your-writes and monotonic reads with a sticky client. That holds even on
+the design with no ordering machinery whatsoever.</p>
+<p>And here is the theorem worth memorising: <strong>all four together are exactly causal
+consistency.</strong> That is why the list is worth learning. It is the property, taken
+apart into four pieces you can implement, test and alarm on one at a time.</p>
+<h3 id="readme-where-did-each-word-happen">Where did each word happen?</h3>
+<p>The map back to the story. Every row names the section where you watched the
+thing before it had a name.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>The moment it names</th>
+  <th>Where you saw it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>happens-before</strong></td>
+  <td>Ben read the post, then wrote the comment</td>
+  <td>§2, step 2</td>
+</tr>
+<tr>
+  <td><strong>concurrent</strong></td>
+  <td>Amira and Ben rename the album at once</td>
+  <td>§7, and the grey circles in §9</td>
+</tr>
+<tr>
+  <td><strong>causal consistency</strong></td>
+  <td>Cara sees neither, rather than the comment alone</td>
+  <td>§5's requirement</td>
+</tr>
+<tr>
+  <td><strong>causal delivery</strong></td>
+  <td>Singapore holds the comment in memory, unshown</td>
+  <td>§6's second half</td>
+</tr>
+<tr>
+  <td><strong>causal+</strong></td>
+  <td>the wire empties and the regions still disagree</td>
+  <td>§10 v7</td>
+</tr>
+<tr>
+  <td><strong>session guarantees</strong></td>
+  <td>Amira reloads and her own edit is missing</td>
+  <td>§10 v8</td>
+</tr>
+</tbody>
+</table></div>
+<p>Smaller terms are defined where they first appear, and the full terminology is
+collected in §18.</p>
+<hr />
+<h2 id="readme-8-what-picture-should-you-keep-in-your-head">8. What picture should you keep in your head?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every change is a letter, and on its envelope the author
+lists the letters they had already read. The post office may not put a letter
+on your desk until every letter named on its envelope is already there.</p>
+</blockquote>
+<h3 id="readme-what-if-every-change-were-a-letter-with-a-reading-list-on-the-envelope">What if every change were a letter with a reading list on the envelope?</h3>
+<p>Every change is a letter. On the envelope, the author writes the list of letters
+they had already read when they wrote it. A post office may deliver a letter to
+your desk only once every letter on that list is already on your desk.
+Otherwise it goes in a tray behind the counter.</p>
+<p>Follow the afternoon through, in letters:</p>
+<ul>
+<li>Amira's letter has an empty list. It can be delivered anywhere, immediately.</li>
+<li>Ben's letter says &quot;I had read Amira's letter first&quot;. Singapore holds it in the
+tray until Amira's letter arrives.</li>
+<li>Two letters with each other's names absent from both envelopes have no
+relationship at all. Either may be delivered first, and nobody can complain.</li>
+</ul>
+<p>That is the entire mechanism. Everything in §10 is an argument about how to
+write the list compactly enough to fit on the envelope.</p>
+<h3 id="readme-what-is-the-same-picture-in-engineering-words">What is the same picture in engineering words?</h3>
+<p>Changes form a <strong>directed acyclic graph</strong>: a set of dots with arrows, where the
+arrows never loop back. Each arrow is &quot;could have influenced&quot;. Every region's
+set of applied changes must be <strong>causally closed</strong> — if a change is in the set,
+everything below it in the graph is in the set too.</p>
+<p>Reading is then safe by construction. Whatever a region returns, everything
+underneath it is already there.</p>
+<p>The exhibit below draws Amira's afternoon as that graph. Read the solid arrows
+as &quot;must be applied before&quot;. The dotted lines are <strong>not</strong> arrows — they mark
+pairs with no arrow at all, and every region is free to order those however it
+likes.</p>
+<pre class="mermaid">flowchart TD
+  P[&quot;Amira&#x27;s post&lt;br/&gt;London&#x27;s 1st change&quot;] --&gt; C[&quot;Ben&#x27;s comment&lt;br/&gt;Frankfurt&#x27;s 1st change&quot;]
+  P --&gt; L[&quot;Cara&#x27;s like&lt;br/&gt;Singapore&#x27;s 1st change&quot;]
+  X[&quot;Amira renames album&lt;br/&gt;to Dog Photos&quot;]
+  Y[&quot;Ben renames album&lt;br/&gt;to My Dog&quot;]
+  C -.no arrow either way.- L
+  X -.no arrow either way.- Y
+  style P fill:#DEE5F7,stroke:#2B4A9E
+  style C fill:#FAE9D6,stroke:#B05908
+  style L fill:#FAE9D6,stroke:#B05908
+</pre>
+<p>Pick any one change in that picture. The graph then splits into three regions
+around it, and these three names are worth keeping:</p>
+<ul>
+<li>its <strong>causal past</strong> — everything that must already be visible;</li>
+<li>its <strong>causal future</strong> — everything that must not be visible before it;</li>
+<li>everything else — <strong>concurrent</strong>, and completely unconstrained.</li>
+</ul>
+<p>Clicking a circle in <a href="visualization.html">the visualization</a> paints exactly
+those three regions in three colours. That single gesture is the fastest way to
+feel that &quot;could have influenced&quot; is a partial order and not a timeline.</p>
+<h3 id="readme-how-do-the-two-pictures-line-up">How do the two pictures line up?</h3>
+<p>Read this table left to right: the letter, the engineering word, and the name in
+the Java.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In the letters story</th>
+  <th>In engineering words</th>
+  <th>In the Java</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a letter</td>
+  <td>a change (a write)</td>
+  <td><code>Write</code></td>
+</tr>
+<tr>
+  <td>the reading list on the envelope</td>
+  <td>the causal past</td>
+  <td><code>Write.deps</code></td>
+</tr>
+<tr>
+  <td>the tray behind the counter</td>
+  <td>changes received but held</td>
+  <td><code>Replica.pending</code></td>
+</tr>
+<tr>
+  <td>&quot;is every listed letter on the desk?&quot;</td>
+  <td>the causal closure check</td>
+  <td><code>Cluster.deliverable</code></td>
+</tr>
+<tr>
+  <td>delivered to the desk</td>
+  <td>applied and visible</td>
+  <td><code>Replica.store</code> / <code>applied</code></td>
+</tr>
+<tr>
+  <td>two letters that never mention each other</td>
+  <td>concurrent changes</td>
+  <td>neither in the other's <code>deps</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-the-story-lie-to-you">Where does the story lie to you?</h3>
+<p>Three places, and each one is a whole later section.</p>
+<p><strong>The reading list grows forever.</strong> A person's list of &quot;letters I have read&quot; only
+ever gets longer, so the envelope eventually costs more than the letter. After
+320 operations it holds <strong>102.5</strong> entries per letter. §10 v5 and §10 v6 are two
+different fixes.</p>
+<p><strong>The post office does not resend.</strong> Holding a letter in the tray is not the
+same as noticing one was lost. A letter destroyed in transit is simply gone, and
+every letter behind it waits forever. Causal delivery is a <em>when</em> rule and never
+a <em>whether</em> rule. Resending is anti-entropy's job, from the
+<a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a> lab. The lab asserts both halves:
+healing a partition delivers nothing, and one anti-entropy round delivers
+everything.</p>
+<p><strong>The reader may walk to a different post office.</strong> All of this orders <em>regions</em>
+against each other. It says nothing at all about a user whose next request is
+routed somewhere else. When clients roam, <strong>334 of 500</strong> of them fail to see
+their own change. §10 v8 is that story.</p>
+<hr />
+<h2 id="readme-9-can-you-watch-the-order-before-you-read-the-mechanism">9. Can you watch the order before you read the mechanism?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Before any code, spend ten minutes on the page. It draws
+three regions across time and lets you click one change to light up everything
+that caused it and everything it caused.</p>
+</blockquote>
+<p><strong><a href="visualization.html"><code>visualization.html</code></a> — <em>The Comment Before the Post</em></strong>
+(<a href="https://claude.ai/code/artifact/497ca160-d05d-4b21-8e7e-dca6e71a732e" target="_blank" rel="noopener">https://claude.ai/code/artifact/497ca160-d05d-4b21-8e7e-dca6e71a732e</a>)</p>
+<p>Time runs left to right, one lane per region. Filled circles are changes, hollow
+rings are reads, arrows are copies in flight, and a thick dashed tail means a
+copy arrived and is being deliberately held.</p>
+<p>Do these four things, in order.</p>
+<ol>
+<li>Start on <strong>Show it the moment it lands</strong>, which is the default. Run the
+first guess-first situation, <em>The comment with no post</em>. Watch the arrow from
+Frankfurt reach Singapore before the arrow from London.</li>
+<li><strong>Click Amira's circle.</strong> Everything caused by it turns amber. Everything
+that caused it turns indigo. Everything unrelated goes grey. That single
+gesture is the definition of happens-before, and the grey is the part
+causality has no opinion about.</li>
+<li>Switch to <strong>One counter per region</strong> and replay the same situation. Nothing
+arrives any sooner. A dashed tail appears instead, and the verdict changes
+from &quot;somebody saw an effect whose cause was invisible&quot; to &quot;one change is
+being deliberately held back&quot;. That trade is the entire subject of the lab.</li>
+<li>Then break the assumptions. Change <strong>which route is slow</strong> and by how much.
+Cut a region off. Turn <strong>users stay in their region</strong> off. Press <em>Repair</em>
+after a partition and watch that healing alone delivers nothing.</li>
+</ol>
+<p>Every outcome on the page matches an assertion in the Java, and §19 says how
+that was checked.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-beginner-model">✅ Checkpoint — end of the beginner model</h3>
+<p>You can now explain how an effect overtakes its cause, why the fix has to
+change the message rather than add a repair step, and what the rule costs:
+latency, not throughput. <strong>Next:</strong> the actual implementations — and every odd
+detail in them will arrive as the fix to something you just watched break.</p>
+<p><strong>Say it back.</strong> Without using the words <em>causal</em>, <em>dependency</em> or <em>order</em>,
+explain to a friend why Cara sees a comment with no post, and why sending the
+post again faster would not be a fix.</p>
+<details><summary>A good answer sounds like</summary>
+"Ben's note took a quicker road than Amira's photo, so it got to Singapore
+first. Singapore showed it because it had no reason not to — the note never
+said it was written about the photo. Sending the photo faster would just make
+this rarer, not impossible. The fix has to be in what the note says, not in
+how fast it travels."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-10-how-would-you-build-this-one-broken-attempt-at-a-time">10. How would you build this, one broken attempt at a time?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight designs. Nothing below is finished. Each version is
+what a careful engineer would build next, given exactly what just broke.</p>
+</blockquote>
+<p>Asha does not design this in one go, and neither would you. She builds the
+obvious thing, watches it fail, and fixes the thing that failed. Dev, Arjun and
+Priya each hand her one idea along the way. Follow the eight steps and you will
+have derived every real implementation in the field.</p>
+<h3 id="readme-v1--what-happens-if-you-show-every-change-the-moment-it-lands">v1 — what happens if you show every change the moment it lands?</h3>
+<p>Already done, already broken. Across 300 random workloads, <strong>160</strong> produce an
+anomaly. §4 gave the diagnosis: the message carries no record that one change
+was based on another.</p>
+<p>The obvious repair is to put <em>something</em> in the message that says &quot;this one
+comes later&quot;. The next three versions are three different somethings.</p>
+<h3 id="readme-v2--can-a-wall-clock-timestamp-put-them-back-in-order">v2 — can a wall-clock timestamp put them back in order?</h3>
+<p>Dev suggests the thing everybody suggests first. Stamp every change with the
+sending machine's clock reading — in Java, whatever
+<code>System.currentTimeMillis()</code> returns at that instant. Have each region apply
+changes in timestamp order. Ben's comment was written after Amira's post, so it carries the larger
+number, so it is applied second.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Does stamping the wall-clock time fix the comment-before-post
+problem?</em></p>
+<details><summary>Reveal</summary>
+
+<p>No, and it fails twice over, for two unrelated reasons.</p>
+<p>First, <strong>clocks disagree</strong>. You already have the number from two earlier labs:
+a replica whose clock ran 60 seconds fast destroyed <strong>1,000 of 1,000</strong>
+genuinely newer writes. If Ben's machine is slightly behind Amira's, his
+comment gets the <em>smaller</em> stamp. The ordering is inverted, with no error
+reported anywhere.</p>
+<p>Second, and more fundamental: <strong>a region cannot know when it is safe to
+apply.</strong> Singapore is holding a change stamped 14:32:09. Is something stamped
+14:32:07 still in flight? A timestamp tells you where a change belongs in the
+order. It does not tell you the order is complete. Every design from here on
+has to answer that second question too, and most of the difficulty in this lab
+lives there.</p>
+<p>If you guessed that better clock synchronisation would rescue this, you fixed
+only the first reason. The second has nothing to do with clock quality. A
+perfect clock still cannot tell a region that nothing older is on the way.</p>
+<p>This is why the lab ships no wall-clock design for you to run. It fails for a
+reason you have already seen counted twice, and running it again would only
+teach you that clocks are still bad.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v3--what-about-a-counter-that-cannot-lie">v3 — what about a counter that cannot lie?</h3>
+<p>Arjun's turn. Replace the clock with a counter that cannot run backwards
+relative to a message. Each region keeps one integer. Every change bumps it.
+Every message carries it. On receiving a message you set your integer to
+whichever is larger, yours or theirs — in code, <code>max(yours, theirs)</code>. Lamport
+described this in the same 1978 paper, so it is called a <strong>Lamport clock</strong>.</p>
+<p>It has the property the wall clock does not: <strong>if one change happened before
+another, its counter is strictly smaller.</strong> So order by the counter, and hold
+anything that would apply out of order.</p>
+<p>There are two problems. One is small. One is fatal.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Ordering by a counter that respects happens-before must give
+you causal consistency, surely?</em></p>
+<details><summary>Reveal</summary>
+
+<p>Only if every link delivers in the order things were sent. Here are the two
+rows side by side:</p>
+<div class="code"><pre><code>Lamport order, reordering links      3/300 runs      3 anomalies
+Lamport order, FIFO links            0/300 runs      0 anomalies
+</code></pre></div>
+<p>Here is the leak. A region decides it is safe to apply a change stamped 7 once
+it has heard from every other region at 7 or higher. But &quot;heard from&quot; means
+whatever actually arrived. Suppose a later change from London, stamped 9,
+overtakes an earlier one from London, stamped 4, on the same link. The
+receiver's evidence now says &quot;London has reached 9&quot;. So it releases the change
+it was holding, while London's change 4 is still in the air.</p>
+<p>If you guessed yes because the counter respects happens-before, you were
+assuming the counter arrives in counter order. <strong>Ordering by a single counter
+is causal only over links that preserve send order.</strong> Engineers call such a
+link <strong>FIFO</strong>, for first-in-first-out.</p>
+<p>That is a real dependency on your transport. It is quietly violated by UDP, by
+multi-path routing, and most commonly of all by sharding, where two keys
+travel on different connections. Scene 3 of the narrated run is exactly that
+case.</p>
+</details>
+
+</blockquote>
+<p>Now the fatal problem, which no amount of FIFO repairs. <strong>&quot;Safe to apply&quot; means
+hearing from everybody.</strong> A region that goes quiet stalls every other region's
+queue. It does not matter whether it is quiet because it is idle, slow, or cut
+off. From the outside, those three look identical.</p>
+<p>The exhibit below prices that. &quot;Held on arrival&quot; counts changes that arrived and
+were made to wait. &quot;Write-ticks hidden&quot; totals how long changes sat invisible.
+Read the last row against the third.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Design</th>
+  <th>Held on arrival</th>
+  <th>Write-ticks hidden</th>
+  <th>What the row says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>show it the moment it lands</td>
+  <td>0</td>
+  <td>0</td>
+  <td>no waiting, and no guarantee</td>
+</tr>
+<tr>
+  <td>name the dependencies</td>
+  <td>2,014</td>
+  <td>7,428</td>
+  <td>the cheapest correct design</td>
+</tr>
+<tr>
+  <td>one counter per region</td>
+  <td>2,995</td>
+  <td>16,279</td>
+  <td>correct, and twice the waiting</td>
+</tr>
+<tr>
+  <td><strong>a single Lamport counter</strong></td>
+  <td><strong>9,583</strong></td>
+  <td><strong>89,509</strong></td>
+  <td><strong>twelve times the invisibility</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Twelve times the invisibility of the best causal design, for exactly the same
+promise. The reason is that a single counter forces a <em>total</em> order. It makes
+everyone wait for everyone, including for changes they never depended on.</p>
+<p>Put a number on that waste. Of the 17,163 pairs where neither author had seen
+the other's change, a single Lamport counter puts <strong>87.2%</strong> of them into a
+definite order. Every one of those orderings is invented, and every one costs
+latency.</p>
+<h3 id="readme-v4--what-if-each-change-names-what-it-was-based-on">v4 — what if each change names what it was based on?</h3>
+<p>Stop inferring. Asha's next version has each change carry <strong>the actual set of
+changes its author had already seen</strong>, and a region holds it until every one of
+them has been applied.</p>
+<p>Each change needs a name for this to work. Give it two parts: which region
+accepted it, and how many changes that region had accepted before. Amira's post
+is London's first, so its name is <code>R0#1</code>. Ben's comment is Frankfurt's first, so
+its name is <code>R1#1</code>. Engineers call that pair a <strong>dot</strong>. The point of it is that
+any region can mint one alone, with no coordination at all. You used this exact
+record in the <a href="../32-crdts/notes.html#readme"><code>crdts</code></a> lab.</p>
+<p>The whole idea is three lines of Java:</p>
+<div class="code"><pre><code class="language-java">// Cluster.deliverable, case DEPS — the whole idea, three lines
+Set&lt;Dot&gt; need = rule.nearestOnly() ? w.nearest() : w.deps();
+for (Dot d : need) if (!r.applied.contains(d)) return false;
+return true;
+</code></pre></div>
+<p>This is correct with <strong>no assumptions about the network at all</strong>: 0 anomalies in
+300 runs, no FIFO requirement, and no waiting on silent regions. It is also what
+COPS does.</p>
+<p>The cost is in the envelope. The exhibit below counts how many entries each
+design puts on each change as a workload gets longer. Read down the &quot;name them
+all&quot; column.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Operations so far</th>
+  <th>Single counter</th>
+  <th><strong>Name them all</strong></th>
+  <th>Nearest only</th>
+  <th>One per region</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>20</td>
+  <td>1.0</td>
+  <td>4.1</td>
+  <td>1.1</td>
+  <td>3.0</td>
+</tr>
+<tr>
+  <td>40</td>
+  <td>1.0</td>
+  <td>10.0</td>
+  <td>1.3</td>
+  <td>3.0</td>
+</tr>
+<tr>
+  <td>80</td>
+  <td>1.0</td>
+  <td>22.5</td>
+  <td>1.4</td>
+  <td>3.0</td>
+</tr>
+<tr>
+  <td>160</td>
+  <td>1.0</td>
+  <td>49.0</td>
+  <td>1.4</td>
+  <td>3.0</td>
+</tr>
+<tr>
+  <td>320</td>
+  <td>1.0</td>
+  <td><strong>102.5</strong></td>
+  <td>1.4</td>
+  <td>3.0</td>
+</tr>
+</tbody>
+</table></div>
+<p>A person's causal past only ever grows, so the list grows without bound. At 320
+operations, each change ships 102 dependency names in order to set one value.
+The envelope now costs more than the letter.</p>
+<h3 id="readme-v5--how-much-of-that-list-can-you-throw-away">v5 — how much of that list can you throw away?</h3>
+<p>Most of that list is redundant, and the story shows you why. Ben's comment
+depends on Amira's post. Cara's like depends on Ben's comment. So Cara's like
+does not need to name the post at all. The comment already implies it, and the
+comment cannot be applied without it.</p>
+<p>Keep only the <strong>nearest dependencies</strong>, the ones no other dependency already
+covers.</p>
+<div class="code"><pre><code class="language-java">// Cluster.nearest — a dep is redundant if another dep has it in ITS past
+for (Dot other : deps)
+    if (allWrites.get(other).deps().contains(d)) { covered = true; break; }
+</code></pre></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Throwing away most of the list must weaken something. What
+does Cara stop being protected from?</em></p>
+<details><summary>Reveal</summary>
+
+<p>Nothing at all. This is a pure saving, and that is the surprise.</p>
+<p>The table above is the result: <strong>1.4</strong> entries per change, flat, against 102.5
+and climbing. And <code>Tests.full_deps_and_nearest_deps_give_the_same_visibility</code>
+asserts across over 100 workloads that the two produce identical region
+states. Not similar. Identical.</p>
+<p>If you guessed that some rare ordering would slip through, you were treating
+the dropped names as extra evidence. They are not evidence, they are echoes. A
+dropped name is one that some kept name already forces to be present. This is
+COPS's central optimisation, and it is what makes naming dependencies
+practical at all.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v6--can-you-compress-it-to-one-counter-per-region">v6 — can you compress it to one counter per region?</h3>
+<p>There is a still more compact encoding, and it is the one most people have heard
+of. Instead of naming individual changes, say <strong>how much of each region's
+history the author had already seen</strong>.</p>
+<p>Picture a row of three tally marks on the envelope, one per region. Amira's row
+says &quot;I had seen none of anybody's changes&quot;. Ben's says &quot;one of London's, and my
+own&quot;. A zero means &quot;none of that region's changes at all&quot;.</p>
+<p>Engineers call that row a <strong>vector clock</strong>: one counter per region, kept
+together as a vector. Here is the row of marks, first in words and then as
+notation.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The row of marks</th>
+  <th>In words</th>
+  <th>Written as</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>London 0, Frankfurt 0, Singapore 0</td>
+  <td>Amira's post, written before she had seen anything</td>
+  <td><code>[0,0,0]</code></td>
+</tr>
+<tr>
+  <td>London 1, Frankfurt 0, Singapore 0</td>
+  <td>Ben, having read the post and nothing else</td>
+  <td><code>[1,0,0]</code></td>
+</tr>
+<tr>
+  <td>London 1, Frankfurt 1, Singapore 0</td>
+  <td>the comment itself, once Frankfurt has accepted it</td>
+  <td><code>[1,1,0]</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The delivery rule then becomes two checks, and both are needed:</p>
+<div class="code"><pre><code class="language-java">// Cluster.deliverable, case VV
+int src = w.id().replica();
+if (w.vv()[src] != r.vv[src] + 1) return false;      // exactly the next write from its author
+for (int j = 0; j &lt; r.vv.length; j++)
+    if (j != src &amp;&amp; w.vv()[j] &gt; r.vv[j]) return false;  // nothing else it saw is missing
+return true;
+</code></pre></div>
+<p>The first line is the &quot;no gaps&quot; check: this must be exactly the next change from
+its author, not one further along. The second is the &quot;nothing missing&quot; check:
+everything else the author had seen must already be here. The lab plants a
+broken build with the first line removed, to prove that check earns its place.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>A vector clock is 3 numbers where the pruned dependency list
+was 1.4 names. Does the vector clock hold changes back for less time, or more?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>More.</strong> Look again at the table above: 16,279 write-ticks hidden for the
+vector clock against 7,428 for the explicit list. More than double the
+waiting, for exactly the same promise.</p>
+<p>If you guessed less, you were pricing bytes on the wire rather than time on
+the clock. Smaller metadata is not the same as less waiting, and here the two
+pull in opposite directions.</p>
+<p>The reason is a distinction worth carrying out of this lab. The two designs
+answer different questions. The dependency list records <strong>what the person
+saw</strong>, exactly. A vector clock records <strong>what that person's region had already
+applied</strong> when the change was accepted, which includes plenty the person never
+looked at.</p>
+<p>The second is a safe over-approximation. It never under-orders, so it is
+always correct. But it invents dependencies that were never there. Of the
+17,163 pairs where neither author had seen the other's change, the per-region
+counters still put <strong>68.9%</strong> into an order.</p>
+<div class="code"><pre><code>what the CLIENT saw   — exact.        0% false ordering.   list, ~1.4 entries
+what the REGION had   — safe superset. 68.9% false ordering. 3 counters
+a single counter      — total order.   87.2% false ordering. 1 counter
+</code></pre></div>
+<p>That is the real trade, in one sentence: <strong>precision costs bytes, imprecision
+costs latency.</strong> All three rows are correct. None of them ever shows an effect
+before its cause.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v7--with-the-rule-working-perfectly-do-the-regions-agree">v7 — with the rule working perfectly, do the regions agree?</h3>
+<p>Turn causal delivery on and leave it on. Now have Amira and Ben set the same
+field at the same instant, neither having seen the other.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Causal delivery is working perfectly. Do the three regions end
+up showing the same value?</em></p>
+<details><summary>Reveal</summary>
+
+<p>Not necessarily, and in this lab's runs, never:</p>
+<div class="code"><pre><code>causal only (no convergence rule)     replicas left disagreeing: 400 / 400
+causal+, one counter per replica      replicas left disagreeing:   0 / 400
+</code></pre></div>
+<p>Causality has <strong>no opinion</strong> about a concurrent pair. So each region keeps
+whichever change arrived last, and arrival order differs per region. Every
+message has been delivered. Nothing is in flight. The regions permanently
+disagree, and no further messages will fix it.</p>
+<p>If you guessed yes, you were expecting an ordering rule to be a tie-break rule
+as well. It is not. Ordering says nothing about the pairs it refuses to order.</p>
+<p>The fix is one line, and it is not an ordering rule at all. Resolve concurrent
+changes the <em>same way everywhere</em>. This lab uses a tie-break on the pair
+<code>(lamport, replicaId)</code>, which in words means &quot;the larger counter wins, and if
+those are equal, the lower-numbered region wins&quot;. A real system might use a
+CRDT merge instead, which is what the <a href="../32-crdts/notes.html#readme"><code>crdts</code></a> lab built.</p>
+<div class="code"><pre><code class="language-java">// Cluster.wins — the &quot;+&quot; in causal+
+if (current.deps().contains(incoming.id())) return false;  // ordered: incoming is the past
+if (incoming.deps().contains(current.id())) return true;   // ordered: incoming is later
+if (!rule.convergent()) return true;                       // concurrent: arrival order — diverges
+return incoming.lamport() &gt; current.lamport() ...;          // concurrent: agreed tie-break
+</code></pre></div>
+<p>Causal consistency plus that rule is <strong>causal+</strong>, and it is what every
+production system actually means when it says &quot;causal&quot;.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v8--what-about-the-user-who-moves">v8 — what about the user who moves?</h3>
+<p>Everything so far orders <em>regions</em> against each other. Now move a person.</p>
+<p>Amira updates her profile in London. Priya has just rolled out a load-balancer
+change for better balancing, and Amira's next request is routed to Frankfurt,
+before the copy of her update arrives.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Causal delivery is on and working. Does Amira see her own
+edit?</em></p>
+<details><summary>Reveal</summary>
+
+<p>Usually not:</p>
+<div class="code"><pre><code>stays on one replica     reads that did NOT see the client&#x27;s own write:   0 / 500
+roams between replicas   reads that did NOT see the client&#x27;s own write: 334 / 500
+</code></pre></div>
+<p>If you guessed that causal delivery covers this, look closely at what is
+happening. Nothing is out of order. Frankfurt has not shown any effect before
+its cause. Amira's update is simply still in flight, and Frankfurt is
+answering honestly from what it holds.</p>
+<p>What is missing is that <strong>the person has a position in history too</strong>, and it
+did not travel with her.</p>
+</details>
+
+</blockquote>
+<p>The fix is to give the client a token describing what it has seen, and to have
+it present that token with every request. The region then waits until it has
+caught up to that point before answering. MongoDB calls that token
+<code>afterClusterTime</code>. Bayou called the general idea session guarantees. Exercise
+7.1 builds it.</p>
+<p>Now the four promises from §7 have a mechanical shape. Read the right-hand
+column as &quot;where the ordering has to live&quot;.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Guarantee</th>
+  <th>What it needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>read-your-writes</td>
+  <td>the client's own position, carried with it</td>
+</tr>
+<tr>
+  <td>monotonic reads</td>
+  <td>the client's own position, carried with it</td>
+</tr>
+<tr>
+  <td>monotonic writes</td>
+  <td>per-author ordering between regions</td>
+</tr>
+<tr>
+  <td>writes-follow-reads</td>
+  <td>cross-author ordering between regions — the hard one</td>
+</tr>
+</tbody>
+</table></div>
+<p>And here is the split, counted. Every cell counts violations of that promise, so
+lower is better and zero is the goal.</p>
+<div class="code"><pre><code>design                              R-Y-W   mono-R   mono-W      WFR
+async, client stays put                 0        0      834     2075
+async, client roams                  3359     1243      884     2340
+causal, client stays put                0        0        0        0
+causal, client roams                 3759     1611        0      356
+</code></pre></div>
+<p>Read the first and third rows together, and one fact jumps out. <strong>Session
+stickiness gives you the two guarantees users actually notice, for free, with no
+ordering machinery at all.</strong> Row one has no causal delivery anywhere in it and
+still scores zero on both.</p>
+<p>That is why a sticky load balancer papers over so much. It is also why Priya's
+change, removing stickiness for better balancing, is a consistency change
+wearing an infrastructure costume.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-intermediate-model">✅ Checkpoint — end of the intermediate model</h3>
+<p>You can now derive every real implementation from the failure of the one
+before it, and explain why a vector clock, the cheapest encoding on the wire,
+is also the slowest to release a change. <strong>Next:</strong> the failure modes, and the
+precise sentence describing what causal consistency does not promise.</p>
+<p><strong>Say it back.</strong> Without using the words <em>vector</em>, <em>dot</em> or <em>metadata</em>,
+explain to a friend why naming the exact changes an author saw makes people
+wait less than counting how much of each region's history they saw.</p>
+<details><summary>A good answer sounds like</summary>
+"The list of names says what Ben actually read. The row of tallies says what
+Frankfurt happened to have on hand when Ben pressed send, which is more than
+he read. So the tallies make Singapore wait for things Ben never looked at.
+Both are safe. One of them just makes people wait for nothing."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-11-what-goes-wrong-and-what-does-it-look-like-on-call">11. What goes wrong, and what does it look like on call?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten things break. Some break the guarantee, some break only
+your patience, and telling those two apart at three in the morning is the
+skill this section is for.</p>
+</blockquote>
+<p>Each of the ten is a short story about Amira, Ben, Cara or the people who keep
+their app running. After the ten there is one table that lines them all up.</p>
+<p><strong>1 · An effect overtakes its cause.</strong>
+This is Cara's afternoon from §4. She sees a comment on a post that is not
+there, and on the design with no ordering at all it happens in <strong>160 of 300</strong>
+random workloads. The message carried no record of the dependency, so Singapore
+had nothing to wait on. Every region is internally fine and will settle down
+eventually. What is gone is causal consistency, visibly, to a real person. On
+call it arrives as a bug report nobody can make happen again: &quot;the reply showed
+up before the message&quot;. On a calm network it hits 30 times in 300 rather than
+214, which is why nobody can. The narrated run leaves this line behind:</p>
+<div class="code"><pre><code>t=6 cara [CAUSALITY] sees comment=lovely dog! (R1#1) but post still reads
+      &lt;absent&gt; — the cause post=photo-of-a-dog (R0#1) is invisible here
+</code></pre></div>
+<p><strong>2 · The same design, on a calm network.</strong>
+Asha's staging environment has three regions in one datacentre and equal
+latencies between them. She runs the consistency suite and it passes. At zero
+extra route delay the anomaly shows up 30 times in 300; at 20 ticks of extra
+delay, 214 times in 300. Nothing about the design changed between those two
+rows. Only the network did. This is the single most useful sentence in the lab:
+<strong>a consistency test without injected asymmetry is close to worthless.</strong> Jepsen's
+entire method is built on that observation.</p>
+<p><strong>3 · Ordering by a single counter over reordering links.</strong>
+Arjun's Lamport design leaks in 3 of 300 runs when links may reorder, and in 0
+of 300 when every link preserves send order. The mechanism is v3's: a later
+change from a region raises the receiver's evidence about that region past an
+earlier change of its own that is still in flight. The design is still perfectly
+correct if every link is FIFO. It stops being correct the moment two keys travel
+on different connections. This is why &quot;we use TCP, so we're causal&quot; is wrong.
+TCP preserves order per connection, and a sharded store has thousands.</p>
+<p><strong>4 · A quiet region stalls everyone.</strong>
+Singapore goes idle for a while. Nobody there is doing anything. London and
+Frankfurt still cannot release anything, because the single-counter rule needs
+news from everybody before anything is safe. The price was in v3's table: 89,509
+write-ticks hidden against 16,279 for the vector clock, same guarantee.
+Correctness is untouched. What is lost is liveness of visibility — and an idle
+region is indistinguishable from a slow one. Systems that need this design send
+heartbeats purely so that silence cannot be mistaken for lag, exactly as Raft's
+empty AppendEntries does.</p>
+<p><strong>5 · The dependency list outgrows the data.</strong>
+Nothing is wrong here at all, and that is the point. Amira's causal past never
+shrinks, so after 320 operations each change is carrying <strong>102.5</strong> dependency
+entries to set one value, and still growing. Correctness is perfect throughout.
+This is a bill, not a bug. COPS's nearest-only pruning takes it to 1.4, and past
+that you switch to a vector clock and pay in latency instead.</p>
+<p><strong>6 · One slow shard makes unrelated changes invisible.</strong>
+This is the failure that decided the history of the field, so read the numbers
+slowly. One route slows down. Everything causally after a delayed change must
+wait, and dependency chains carry that delay into changes about entirely
+different keys.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Extra delay on the one slow route</th>
+  <th>Write-ticks hidden</th>
+  <th>Multiple of the calm case</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0</td>
+  <td>351</td>
+  <td>1×</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>1,443</td>
+  <td>about 4×</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>5,613</td>
+  <td>about 16×</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td>16,697</td>
+  <td>about 48×</td>
+</tr>
+<tr>
+  <td>32</td>
+  <td><strong>31,659</strong></td>
+  <td>about 90×</td>
+</tr>
+</tbody>
+</table></div>
+<p>Correctness holds all the way down that column. What is lost is visibility
+latency, and it is lost <em>non-locally</em>: Cara waits for something she has no
+relationship with. Engineers call this the <strong>slowdown cascade</strong>, and it is the
+reason causal stores did not become the default. Facebook's <em>Existential
+Consistency</em> paper looked at their eventually-consistent store and found it was
+already causal 99.9%+ of the time. So they declined to pay this bill for the
+remaining 0.1%.</p>
+<p><strong>7 · A client is moved to another replica.</strong>
+Priya's load-balancer change from v8. <strong>334 of 500</strong> roaming clients fail to see
+their own change. Nothing is out of order; the change is simply still in flight.
+Causal ordering between regions is genuinely intact, and genuinely not helping.
+What is lost is read-your-writes and monotonic reads — the two promises users
+actually notice. The fix is the session token the client presents, which MongoDB
+spells <code>afterClusterTime</code>. Until that exists, session stickiness is
+load-bearing, and turning it off is a data-correctness change.</p>
+<p><strong>8 · Concurrent changes leave the regions disagreeing forever.</strong>
+Amira and Ben rename the album at the same instant. In <strong>400 of 400</strong> runs, the
+three regions end up showing different values with the wire completely empty.
+Causality has no opinion about that pair, and arrival order differs per region.
+This is fully legal causal consistency, which is exactly why it is dangerous.
+What is lost is convergence. You never ship this. You ship causal+, with either
+a timestamp tie-break, which loses updates, or a CRDT merge, which costs
+metadata.</p>
+<p><strong>9 · A partition, and then a heal that heals nothing.</strong>
+Singapore is cut off. Every operation Cara performs still succeeds on stale
+data: <strong>600 of 600</strong> of them. Availability holds throughout, and so does causal
+consistency. Then the partition heals, and the changes made during the outage
+are <em>still missing</em>, because causal delivery is a rule about <em>when</em> a received
+change may be shown, never about <em>whether</em> it arrives. What is lost is recency,
+and until repair runs, cross-region visibility itself. The background repair
+loop from <a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a> is not optional. Without
+it, a causal store is a store that quietly forgets. The suite pins both halves
+down in <code>Tests.anti_entropy_is_what_repairs_a_partition_not_causal_delivery</code>:
+healing alone delivers nothing, and one repair round delivers everything.</p>
+<p><strong>10 · Per-key causality mistaken for causal consistency.</strong>
+This is the most common misunderstanding in the whole area, so it gets the last
+slot. Build the rule so it waits only for dependencies on the <em>same key</em>. That
+is precisely what a per-object version vector gives you, and precisely what the
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> lab taught you to
+build. The lab plants it as the bug named <code>same-key-only</code>. Anomalies appear in
+<strong>99 of 200</strong> runs, and Cara's comment-before-post afternoon replays exactly. Every individual key's history is intact. The whole
+property is gone. <strong>Causality is a statement across keys.</strong> A per-key version
+vector is a convergence tool, not an ordering one.</p>
+<p>Now line them up. Read the third column first: it is what is still true while
+you are being paged.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>The failure in short</th>
+  <th>What still holds</th>
+  <th>What is lost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>an effect overtakes its cause</td>
+  <td>every region converges eventually</td>
+  <td>causal consistency, visibly, to a user</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>the calm network hides it</td>
+  <td>nothing about the design changed</td>
+  <td>your confidence in the test suite</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>one counter over reordering links</td>
+  <td>correct if every link is FIFO</td>
+  <td>the guarantee, silently, once you shard</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>a quiet region stalls everyone</td>
+  <td>correctness</td>
+  <td>liveness of visibility</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>the dependency list outgrows the data</td>
+  <td>correctness</td>
+  <td>nothing logical; this is a cost</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>one slow route hides unrelated changes</td>
+  <td>correctness, throughout</td>
+  <td>visibility latency, non-locally</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>the client is moved to another replica</td>
+  <td>ordering between regions</td>
+  <td>read-your-writes, monotonic reads</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>concurrent changes never converge</td>
+  <td>causal consistency; this is legal</td>
+  <td>convergence</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>a heal that heals nothing</td>
+  <td>availability, and causal consistency</td>
+  <td>recency, until repair runs</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>per-key causality mistaken for the real thing</td>
+  <td>every individual key's history</td>
+  <td>the whole property</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-12-what-exactly-is-promised-and-where-does-the-promise-stop">12. What exactly is promised, and where does the promise stop?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The promise is one sentence long. The list of things it
+deliberately does not promise is much longer, and every item on it has bitten
+somebody.</p>
+</blockquote>
+<h3 id="readme-what-is-guaranteed">What is guaranteed?</h3>
+<p>Five things hold, and each one has a count behind it.</p>
+<p>The core promise: <strong>no region ever shows a change without also showing
+everything that happened before it.</strong> All three dependency-based designs score 0
+anomalies in 300 runs.</p>
+<p>All four session guarantees hold, provided the client keeps its position:
+read-your-writes, monotonic reads, monotonic writes and writes-follow-reads,
+all four at 0 violations for causal plus sticky routing.</p>
+<p>Availability is total. Every region answers every read and every change
+immediately, alone, partitioned, forever — 600 of 600 operations on the isolated
+side of a partition.</p>
+<p>Amira's own changes are never delayed. A region applies its own clients' changes
+with no waiting at all, which the lab pins down in
+<code>Tests.a_replica_never_delays_its_own_clients_write</code>.</p>
+<p>And with the &quot;+&quot;, convergence: regions that have received the same changes end
+up in the same state, 0 of 400 divergent with a tie-break in place.</p>
+<h3 id="readme-what-is-explicitly-not-guaranteed">What is explicitly not guaranteed?</h3>
+<p>There is <strong>no agreed order for concurrent changes</strong>. Two regions may serialise
+Amira's rename and Ben's rename differently. Without a convergence rule they can
+disagree permanently, which is failure 8.</p>
+<p>There is <strong>no recency</strong>. A causal read may be arbitrarily stale and still be
+perfectly legal. The lab's own check,
+<code>Tests.a_causal_read_can_be_arbitrarily_stale</code>, returns a value 100 ticks out of
+date with zero violations recorded. There is no bound at all. Compare
+<a href="../26-linearizability/notes.html#readme"><code>linearizability</code></a>, where &quot;already answered&quot; pins a read
+to real time. Here nothing does.</p>
+<p>There is <strong>no compare-and-set, no uniqueness, and no global invariant</strong>. Omar
+from the compliance team asks whether the app can reserve a seat, or promise
+that a username is unique. It cannot. Deciding requires agreeing, agreeing
+requires coordination, and coordination is the thing we gave up. This is the
+same wall the <a href="../32-crdts/notes.html#readme"><code>crdts</code></a> lab hit at minus two bags of flour.</p>
+<p>There are <strong>no transactions</strong>. Two changes are ordered if one caused the other.
+They are never <em>atomic</em>. Cara can legally see the first without the second.
+COPS's follow-up, Eiger, adds read-only and write-only transactions on top, and
+that is extra machinery rather than a consequence of causality.</p>
+<p>There is <strong>no delivery</strong>. Causal delivery orders what arrives. Loss needs
+anti-entropy, which is failure 9.</p>
+<p>And there is <strong>nothing about the client</strong>. Ordering between regions says nothing
+about a person who moves between them, which is failure 7.</p>
+<h3 id="readme-what-did-you-trade-away-and-what-did-you-get-for-it">What did you trade away, and what did you get for it?</h3>
+<p>You gave up agreement on the concurrent pairs, and any relationship to real
+time. In exchange you keep answering during a partition. That is the whole
+point, and it brings us to the result that makes this model interesting rather
+than merely weak:</p>
+<blockquote>
+<p><strong>Causal consistency is the strongest consistency model that can be
+implemented in a system that remains available under network partition.</strong></p>
+</blockquote>
+<p>Two papers make that precise. Attiya and Welch show that stronger models require
+communication proportional to network delay, so they cannot be available.
+Mahajan, Alvisi and Dahlin show causal consistency is the ceiling for
+always-available, one-way-convergent systems.</p>
+<p>So this is not &quot;eventual consistency with extra steps&quot;. It is the top of the
+available half of the <a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a> picture.</p>
+<h3 id="readme-where-does-this-sit-on-the-ladder">Where does this sit on the ladder?</h3>
+<p>The exhibit below is the same ladder as §5's table, drawn as a fall. Each step
+down gives up a rule and gains the ability to keep answering.</p>
+<pre class="mermaid">flowchart TD
+  L[&quot;linearizable&lt;br/&gt;&lt;i&gt;one order, matching real time&lt;/i&gt;&lt;br/&gt;needs a majority&lt;br/&gt;refuses during a partition&quot;]
+  S[&quot;sequential&lt;br/&gt;&lt;i&gt;one order everyone agrees on&lt;/i&gt;&lt;br/&gt;still needs agreement&quot;]
+  C[&quot;causal+&lt;br/&gt;&lt;i&gt;order only where one thing&lt;br/&gt;caused another, plus an&lt;br/&gt;agreed tie-break&lt;/i&gt;&lt;br/&gt;ALWAYS AVAILABLE — the ceiling&quot;]
+  E[&quot;eventual&lt;br/&gt;&lt;i&gt;no order at all&lt;/i&gt;&lt;br/&gt;always available,&lt;br/&gt;and shows nonsense&quot;]
+  L --&gt; S --&gt; C --&gt; E
+  style C fill:#DEE5F7,stroke:#2B4A9E,stroke-width:2px
+  style L fill:#F9E0E5,stroke:#AE1F38
+</pre>
+<h3 id="readme-which-model-do-you-actually-need">Which model do you actually need?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Asha's team stores follower counts. Nobody ever reads a count
+before writing one; the writes are independent. Do they need any of this?</em></p>
+<details><summary>Reveal</summary>
+
+<p>No. They need a convergence rule and nothing else. If no change is ever made
+after reading another, there is no causality in the workload, and a rule that
+orders causes before effects has nothing to order.</p>
+<p>If you guessed yes because the data is replicated, you are buying ordering for
+a workload with no order in it. That is failure 6's bill with none of failure
+1's benefit. Follow the tree below and it lands you on the eventual branch.</p>
+</details>
+
+</blockquote>
+<p>Follow this from the top. Each question is one you can answer about your own
+product today.</p>
+<pre class="mermaid">flowchart TD
+  Q1{&quot;Must you be able to REFUSE&lt;br/&gt;a write? (uniqueness, stock,&lt;br/&gt;compare-and-set)&quot;}
+  Q1 --&gt;|yes| CON[&quot;consensus / quorum&lt;br/&gt;raft, paxos, linearizable store&lt;br/&gt;— it will stop answering&lt;br/&gt;during a partition&quot;]
+  Q1 --&gt;|no| Q2{&quot;Does one write ever depend&lt;br/&gt;on having read another?&quot;}
+  Q2 --&gt;|no, writes are independent| EV[&quot;eventual + a convergence rule&lt;br/&gt;CRDTs, or last-writer-wins&quot;]
+  Q2 --&gt;|yes| Q3{&quot;Do those writes touch&lt;br/&gt;more than one key?&quot;}
+  Q3 --&gt;|no, one key| VVK[&quot;per-key version vectors&lt;br/&gt;— this is NOT causal consistency,&lt;br/&gt;and that is fine if there is&lt;br/&gt;nothing to order it against&quot;]
+  Q3 --&gt;|yes| CC[&quot;causal+&lt;br/&gt;dependency tracking or vector clocks,&lt;br/&gt;plus session tokens for the client&quot;]
+  style CC fill:#DEE5F7,stroke:#2B4A9E
+  style CON fill:#F9E0E5,stroke:#AE1F38
+</pre>
+<h3 id="readme-what-does-each-design-cost">What does each design cost?</h3>
+<p>One table, and the middle column is the one people forget. &quot;Over-orders&quot; is the
+share of genuinely unrelated pairs the design puts in an order anyway. That is
+latency you pay for nothing: changes waiting on things their author never looked
+at.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Design</th>
+  <th>Metadata per change</th>
+  <th>Over-orders</th>
+  <th>Correctness needs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>show it the moment it lands</td>
+  <td>0</td>
+  <td>—</td>
+  <td>nothing, and gives nothing</td>
+</tr>
+<tr>
+  <td>single counter</td>
+  <td>1</td>
+  <td>87.2%</td>
+  <td><strong>FIFO links</strong> plus hearing from everyone</td>
+</tr>
+<tr>
+  <td>name them all</td>
+  <td>grows: 102.5 at 320 ops</td>
+  <td>0%</td>
+  <td>nothing</td>
+</tr>
+<tr>
+  <td>nearest only</td>
+  <td>1.4, flat</td>
+  <td>0%</td>
+  <td>nothing</td>
+</tr>
+<tr>
+  <td>one counter per region</td>
+  <td>1 per region</td>
+  <td>68.9%</td>
+  <td>nothing</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-13-which-lines-actually-carry-the-guarantee">13. Which lines actually carry the guarantee?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight files, no dependencies, and the whole property lives
+in one method. Everything else is scaffolding that lets you watch that method
+work.</p>
+</blockquote>
+<p>Read them in this order. The right-hand column is the line to look at first in
+each file.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+  <th>The line that matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>Dot.java</code></td>
+  <td>a unique name for one change</td>
+  <td><code>record Dot(int replica, long seq)</code></td>
+</tr>
+<tr>
+  <td><code>Write.java</code></td>
+  <td>a change, and everything known about its place in history</td>
+  <td>the <code>deps</code> field — the whole subject</td>
+</tr>
+<tr>
+  <td><code>Rule.java</code></td>
+  <td>the design under test</td>
+  <td><code>Ordering { NONE, LAMPORT, DEPS, VV }</code></td>
+</tr>
+<tr>
+  <td><code>Cluster.java</code></td>
+  <td>regions, clients, and a network you can abuse</td>
+  <td><strong><code>deliverable()</code></strong> — everything else is scaffolding</td>
+</tr>
+<tr>
+  <td><code>Sim.java</code></td>
+  <td>Amira, Ben and Cara's narrated afternoon</td>
+  <td>five scenes</td>
+</tr>
+<tr>
+  <td><code>Tests.java</code></td>
+  <td>32 asserted guarantees</td>
+  <td><code>an_effect_can_arrive_before_its_cause</code></td>
+</tr>
+<tr>
+  <td><code>Experiments.java</code></td>
+  <td>ten measurements</td>
+  <td><code>workload()</code> — note it <em>reads before writing</em></td>
+</tr>
+<tr>
+  <td><code>YourCheck.java</code></td>
+  <td>exercise 5, with the rule blanked out</td>
+  <td>self-checking, 2/6 → 6/6</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three lines carry the concept, and all three are in <code>Cluster.java</code>.</p>
+<div class="code"><pre><code class="language-java">// 1. a write records what its author had already seen
+Set&lt;Dot&gt; deps = new TreeSet&lt;&gt;(c.context);
+
+// 2. a replica may not show it until all of that is applied
+for (Dot d : need) if (!r.applied.contains(d)) return false;
+
+// 3. reading a write puts it, and everything it depended on, in your past
+c.context.add(w.id());
+c.context.addAll(w.deps());
+</code></pre></div>
+<p>Line 1 is Ben's envelope. Line 2 is the tray behind the counter. Line 3 is what
+happens the moment Ben reads Amira's post: her post, and everything her post
+depended on, joins his own past.</p>
+<p>There is no conflict-resolution step and no repair pass anywhere in the ordering
+path. The property is entirely a consequence of line 2.</p>
+<p>One deliberate choice is worth flagging, because it will save you from writing a
+useless test one day. <code>Experiments.workload()</code> makes each client <strong>read before it
+writes</strong>. A workload of independent changes has no causality in it and cannot
+demonstrate any of this. Build a consistency test that never reads before
+writing and it will pass on every design, including the broken ones.</p>
+<p>Here is what the suite prints, abbreviated to the lines that matter most:</p>
+<div class="code"><pre><code>== The anomaly, and the rule that stops it
+  PASS  apply-on-arrival: Cara sees the comment
+  PASS  ...while the post is still absent
+  PASS  causal delivery: Cara sees neither, not the wrong one
+  PASS  ...the comment is received but deliberately held
+== What causal consistency does NOT give you
+  PASS  causal ordering alone leaves replicas disagreeing (100/100)
+  PASS  causal+ (one agreed tie-break) converges 100/100
+  PASS  a legal causal read returns a value 100 ticks out of date
+32 passed, 0 failed
+</code></pre></div>
+<hr />
+<h2 id="readme-14-can-you-predict-the-numbers-before-you-run-them">14. Can you predict the numbers before you run them?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten runnable measurements. Answer the question in the
+second column out loud before you type the command, then check yourself
+against the fourth.</p>
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Answer before you run it</th>
+  <th>Command</th>
+  <th>What you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Which designs let an effect overtake its cause?</td>
+  <td><code>java src/Experiments.java 1</code></td>
+  <td>apply-on-arrival <strong>160/300</strong>; all dependency designs <strong>0/300</strong>; Lamport <strong>3/300</strong> without FIFO links, <strong>0</strong> with</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Does a calm network hide a broken design?</td>
+  <td><code>java src/Experiments.java 2</code></td>
+  <td><strong>30/300</strong> at no delay against <strong>214/300</strong> at 20 ticks, same design</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>What does each encoding cost per change?</td>
+  <td><code>java src/Experiments.java 3</code></td>
+  <td>name-them-all <strong>102.5</strong> and rising; nearest <strong>1.4</strong> flat; vector clock <strong>3.0</strong> flat</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>What does the guarantee cost in latency?</td>
+  <td><code>java src/Experiments.java 4</code></td>
+  <td>write-ticks hidden: 0 / <strong>7,428</strong> / <strong>16,279</strong> / <strong>89,509</strong></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Which promises does stickiness give you free?</td>
+  <td><code>java src/Experiments.java 5</code></td>
+  <td>read-your-writes and monotonic reads at <strong>0</strong>, even with no ordering at all</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>What breaks when a client changes replica?</td>
+  <td><code>java src/Experiments.java 6</code></td>
+  <td><strong>334/500</strong> miss their own change</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>Does causal ordering make regions agree?</td>
+  <td><code>java src/Experiments.java 7</code></td>
+  <td><strong>400/400</strong> disagree without a tie-break, <strong>0/400</strong> with</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>Can the isolated side keep working?</td>
+  <td><code>java src/Experiments.java 8</code></td>
+  <td><strong>600/600</strong> operations answered; a linearizable store answers 0</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>How much does each design over-order?</td>
+  <td><code>java src/Experiments.java 9</code></td>
+  <td>vector clock <strong>68.9%</strong>, Lamport <strong>87.2%</strong> of genuinely concurrent pairs</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>How far does one slow route reach?</td>
+  <td><code>java src/Experiments.java 10</code></td>
+  <td>write-ticks hidden 351 → <strong>31,659</strong> as the route slows 0 → 32</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two are worth doing by hand, because both punish a guess.</p>
+<p>The first is the planted-bug run. Before reading any output, predict which of
+the three plausible-but-wrong rules recreates Cara's exact comment-before-post
+afternoon. Two of them do.</p>
+<p>The second is a one-line edit. In <code>Experiments.workload()</code>, delete the
+<code>c.get(...)</code> line that precedes each <code>c.put(...)</code>, then re-run experiment 1.
+Apply-on-arrival drops from <strong>160/300</strong> to <strong>28/300</strong>. Predict <em>before</em> you run
+it whether it will drop to zero, then explain the number you actually get. It
+does not reach zero, and the reason is the whole point: causality is created by
+reading, and the workload still has one other read path left in it.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-engineering-model">✅ Checkpoint — end of the engineering model</h3>
+<p>You can now name the failure modes, state the guarantee and its exact edge,
+and cost the whole thing in latency rather than adjectives. <strong>Next:</strong> what real
+systems ship, and everything this lab left out.</p>
+<p><strong>Say it back.</strong> Without using the words <em>concurrent</em> or <em>converge</em>, explain
+to a friend why turning the rule on can leave the three regions permanently
+showing three different album titles, and why that is not a bug.</p>
+<details><summary>A good answer sounds like</summary>
+"The rule only says: if one change was made after seeing another, show them in
+that order. Amira and Ben each renamed the album without seeing the other, so
+the rule has nothing to say about which of the two comes first. Each region
+keeps whichever landed last, and the landings happen in different orders. You
+need a second rule, one that picks the same winner everywhere."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-15-what-does-a-real-system-add-and-what-does-meera-watch">15. What does a real system add, and what does Meera watch?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The lab is one JVM and three maps. A real system adds five
+things, and the on-call engineer watches six numbers — one of which matters
+more than the other five put together.</p>
+</blockquote>
+<h3 id="readme-what-is-the-chain-from-this-lab-to-a-real-system">What is the chain from this lab to a real system?</h3>
+<p><strong>This lab</strong> is one JVM, three regions, one key-value map each, a tick-driven
+network, and one design at a time. It exists to make <code>deliverable()</code> visible.</p>
+<p><strong>A real implementation</strong> adds five things, roughly in this order.</p>
+<ol>
+<li><strong>Sharding, and the fact that it breaks FIFO.</strong> A real store has thousands of
+partitions, and two keys travel on different connections. This is why the
+single-counter design is not usable in practice, and why dependency tracking
+has to be explicit. See failure 3.</li>
+<li><strong>Dependency pruning.</strong> COPS's nearest-only rule, plus a &quot;these are old
+enough that everyone certainly has them&quot; cut-off, plus batching. Without it,
+experiment 3's 102.5 becomes unbounded.</li>
+<li><strong>Session tokens.</strong> The client-side half from v8: a compact record of the
+person's position, presented with each request, so that Amira stays ordered
+even when Priya's load balancer moves her. MongoDB's <code>afterClusterTime</code> over a
+hybrid logical clock.</li>
+<li><strong>Anti-entropy.</strong> Causal delivery orders; it does not deliver. The background
+repair loop from <a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a> does.</li>
+<li><strong>A convergence rule.</strong> The &quot;+&quot; — a timestamp tie-break, or CRDTs from the
+<a href="../32-crdts/notes.html#readme"><code>crdts</code></a> lab, chosen per data type rather than globally.</li>
+</ol>
+<p><strong>A production architecture</strong> is then this. Regions, each internally a sharded
+and locally-consistent store. Asynchronous replication between regions, carrying
+dependency metadata. A dependency-check queue on the receiving side. A repair
+loop underneath. Sticky routing plus session tokens at the edge. And, for the
+small set of operations that must be able to say <em>no</em>, a completely separate
+coordinated path.</p>
+<h3 id="readme-what-does-the-on-call-engineer-actually-watch">What does the on-call engineer actually watch?</h3>
+<p>Meera carries the pager for this service. Six numbers are on her dashboard.
+Read the third column as &quot;what makes her open the laptop&quot;.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Signal</th>
+  <th>Why it is there</th>
+  <th>What bad looks like</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>dependency-queue depth per region</td>
+  <td>changes received but not yet showable</td>
+  <td>a queue that grows instead of oscillating: something upstream is stuck</td>
+</tr>
+<tr>
+  <td>write visibility lag, p99</td>
+  <td>the real user-facing number</td>
+  <td>a step change right after a routing or sharding deploy</td>
+</tr>
+<tr>
+  <td>metadata bytes per change</td>
+  <td>the pruning is working, or it is not</td>
+  <td>steady growth with no plateau</td>
+</tr>
+<tr>
+  <td>the oldest blocked dependency</td>
+  <td>one lagging shard delaying everything</td>
+  <td>a single change id sitting at the head of many queues</td>
+</tr>
+<tr>
+  <td>session-token rejections</td>
+  <td>clients arriving ahead of the region</td>
+  <td>spikes right after a load-balancer change</td>
+</tr>
+<tr>
+  <td>stickiness rate</td>
+  <td>the two cheap guarantees</td>
+  <td>a drop here is a consistency regression, not an infra tweak</td>
+</tr>
+</tbody>
+</table></div>
+<p>If Meera may have only one alarm, it is <strong>the age of the oldest blocked
+dependency</strong>. It catches the slowdown cascade before Cara does, and it is the
+failure mode unique to this design.</p>
+<h3 id="readme-who-actually-ships-this">Who actually ships this?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>System</th>
+  <th>What it does</th>
+  <th>Worth knowing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>MongoDB</strong> (3.6+)</td>
+  <td>causally-consistent sessions: <code>afterClusterTime</code> over a hybrid logical clock</td>
+  <td>the mainstream implementation you are most likely to meet; <strong>per-session, opt-in</strong>, not automatic</td>
+</tr>
+<tr>
+  <td><strong>Azure Cosmos DB</strong></td>
+  <td>offers <em>Consistent Prefix</em> and <em>Session</em> as named levels</td>
+  <td>Session ≈ the four session guarantees; Consistent Prefix ≈ never see changes out of order</td>
+</tr>
+<tr>
+  <td><strong>COPS / Eiger</strong> (research)</td>
+  <td>the origin of &quot;causal+&quot; and nearest-dependency pruning</td>
+  <td>Eiger adds read-only and write-only transactions on top</td>
+</tr>
+<tr>
+  <td><strong>AntidoteDB</strong></td>
+  <td>causal+ with CRDTs and transactions, geo-replicated</td>
+  <td>the clearest working example of this lab's design end to end</td>
+</tr>
+<tr>
+  <td><strong>Bayou</strong> (Xerox PARC, 1994)</td>
+  <td>where the four session guarantees were named</td>
+  <td>still the best paper on the client-side half</td>
+</tr>
+<tr>
+  <td><strong>Riak / Dynamo</strong></td>
+  <td>per-key version vectors and siblings</td>
+  <td><strong>not</strong> causal consistency: no ordering across keys. See failure 10</td>
+</tr>
+<tr>
+  <td><strong>Cassandra</strong></td>
+  <td>none of this</td>
+  <td><code>QUORUM</code> gives overlap, not order — the quorums lab's distinction</td>
+</tr>
+<tr>
+  <td><strong>Facebook TAO</strong></td>
+  <td>eventually consistent, and causal 99.9%+ of the time anyway</td>
+  <td><em>Existential Consistency</em> (2015): the honest reason most people never buy this</td>
+</tr>
+</tbody>
+</table></div>
+<p>Notice the pattern in that table. Causal consistency is <em>offered as an option</em>
+far more often than it is <em>the default</em>. The reason is failure 6: nobody wants
+their unrelated changes delayed by somebody else's slow shard.</p>
+<h3 id="readme-what-does-this-lab-deliberately-leave-out">What does this lab deliberately leave out?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted</th>
+  <th>Why it matters</th>
+  <th>How real systems do it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>sharding</strong></td>
+  <td>one map per region here; real stores have thousands of partitions, which is what breaks FIFO</td>
+  <td>explicit dependency metadata, per-partition queues</td>
+</tr>
+<tr>
+  <td><strong>dependency garbage collection</strong></td>
+  <td>the lists here are kept forever</td>
+  <td>prune to nearest, then drop anything provably everywhere</td>
+</tr>
+<tr>
+  <td><strong>session tokens</strong></td>
+  <td>the client-side half of the property</td>
+  <td><code>afterClusterTime</code>, Bayou session state</td>
+</tr>
+<tr>
+  <td><strong>hybrid logical clocks</strong></td>
+  <td>this lab uses a pure Lamport counter</td>
+  <td>HLC keeps a physical-time component, so timestamps stay readable and bounded</td>
+</tr>
+<tr>
+  <td><strong>transactions</strong></td>
+  <td>changes are ordered, never atomic</td>
+  <td>Eiger's read-only and write-only transactions; Antidote's interactive ones</td>
+</tr>
+<tr>
+  <td><strong>persistence and recovery</strong></td>
+  <td>everything is in memory</td>
+  <td>log plus snapshot; a recovered region must not go backwards</td>
+</tr>
+<tr>
+  <td><strong>membership changes</strong></td>
+  <td>three fixed regions</td>
+  <td>the vector-clock encoding is sized by membership, so adding a region is a schema change</td>
+</tr>
+<tr>
+  <td><strong>Byzantine faults</strong></td>
+  <td>every region is trusted to report its dependencies honestly</td>
+  <td>out of scope for this family entirely</td>
+</tr>
+</tbody>
+</table></div>
+<p>The membership row deserves its own sentence. <strong>A vector clock's width is your
+region count</strong>, so &quot;add a region&quot; means rewriting every stored clock. That is a
+real operational cost the compact encoding hides, and it is one more reason
+dependency lists survive in systems that reshard often.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-production-model">✅ Checkpoint — end of the production model</h3>
+<p>You can now say what a real store adds on top of <code>deliverable()</code>, which alarm
+to build first, and why the industry offers this as an option rather than a
+default.</p>
+<p><strong>Say it back.</strong> Meera is asked to move the service off sticky routing to
+balance load more evenly. In two sentences, and without using the word
+<em>causal</em>, explain what she should say back.</p>
+<details><summary>A good answer sounds like</summary>
+"Right now, each person always talks to the same region, and that alone is
+what stops them seeing their own edits vanish. If we spread them across
+regions, we need every request to carry a marker saying how far that person
+has got, and every region to wait until it has caught up before answering."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-16-what-should-you-try-yourself">16. What should you try yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, easiest first, from explaining the anomaly in
+your own words up to designing a multi-region product and saying which parts
+must <em>not</em> be causal.</p>
+</blockquote>
+<p><a href="notes.html#exercises"><code>EXERCISES.md</code></a> takes you from explaining the anomaly in your own
+words, through implementing the delivery rule and finding a planted bug, up to
+designing a multi-region product and saying precisely which parts must <em>not</em> be
+causal. Answers are in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Attempt each rung first.</p>
+<hr />
+<h2 id="readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five labs fed into this one. Three lead out of it. And six
+neighbouring ideas get confused with it, so each gets one sentence of
+separation.</p>
+</blockquote>
+<pre class="mermaid">graph TD
+  LIN[&quot;linearizability&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&lt;br/&gt;histories, sequential consistency&quot;] --&gt; CC
+  QR[&quot;quorums-and-replication&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&lt;br/&gt;version vectors — per KEY&quot;] --&gt; CC
+  CRDT[&quot;crdts&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&lt;br/&gt;convergence, causal delivery as a cost&quot;] --&gt; CC
+  CAP[&quot;cap-theorem&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&quot;] --&gt; CC
+  GOSS[&quot;gossip-protocols&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&lt;br/&gt;anti-entropy&quot;] --&gt; CC
+  CC[&quot;&lt;b&gt;causal consistency&lt;/b&gt;&lt;br/&gt;order across keys, without agreement&quot;]
+  CC --&gt; HLC[&quot;hybrid-logical-clocks?&quot;]
+  CC --&gt; ISO[&quot;isolation-levels?&quot;]
+  CC --&gt; LOCAL[&quot;local-first-software?&quot;]
+  CC -.contrast.-&gt; RAFT[&quot;raft&lt;br/&gt;&lt;i&gt;learned&lt;/i&gt;&lt;br/&gt;one agreed order, at the price of a majority&quot;]
+  style CC fill:#DEE5F7,stroke:#2B4A9E,stroke-width:2px
+</pre>
+<h3 id="readme-what-is-this-commonly-confused-with">What is this commonly confused with?</h3>
+<p>Six near-neighbours, one sentence of separation each.</p>
+<p><strong>Against eventual consistency.</strong> Eventual consistency promises the regions end
+up the same and says nothing about what you see on the way. Causal consistency
+constrains the journey and, on its own, promises nothing about the destination.
+You want both, which is causal+.</p>
+<p><strong>Against a per-key version vector.</strong> A version vector orders changes <em>to one
+key</em> and detects conflicts on it. Causal consistency orders changes <em>across all
+keys</em>. Confusing the two is the most common mistake in this area, and the
+planted-bug run recreates it at <strong>99 of 200</strong> runs anomalous.</p>
+<p><strong>Against sequential consistency.</strong> Sequential consistency requires one order
+that everybody agrees on. Causal consistency lets different regions order
+concurrent changes differently. Sequential needs coordination; causal does not.</p>
+<p><strong>Against &quot;consistent prefix&quot;.</strong> Consistent prefix says you see some prefix of a
+single agreed order. It is stronger than causal, because it implies one order,
+and it is what a single-master system with async replicas naturally gives you.</p>
+<p><strong>Against causal <em>delivery</em>.</strong> Delivery is the mechanism: hold a message until
+its dependencies are applied. Consistency is the property. You can have the
+property without the mechanism, and the mechanism without a usable system.</p>
+<p><strong>Against read-your-writes.</strong> Read-your-writes is one of the four session
+guarantees. It is a quarter of the property, and the quarter stickiness gives
+you free.</p>
+<h3 id="readme-what-should-you-learn-next">What should you learn next?</h3>
+<div class="code"><pre><code>/learn hybrid-logical-clocks   the clock MongoDB and CockroachDB actually ship
+/learn isolation-levels        the same ladder for transactions, where the words all differ
+/learn local-first-software    what you build once you accept this model
+/learn jepsen                  how any of these claims gets tested for real
+</code></pre></div>
+<p>Two of those are the other half of this lab's subject. <code>hybrid-logical-clocks</code>
+fuses the counter Arjun built here with a physical clock, and
+<code>clock-synchronization</code> is where the physical half comes from and why it can
+only ever be bounded, never fixed.</p>
+<hr />
+<h2 id="readme-18-glossary--which-word-was-which">18. Glossary — which word was which?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every term this lab earned, grouped by the part of the
+machine it belongs to, with the section where you first watched it happen.</p>
+</blockquote>
+<p><strong>The picture: what is being ordered, and by what.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>region / replica</strong></td>
+  <td>one machine's independently updatable copy, answering its own clients</td>
+  <td>§2</td>
+</tr>
+<tr>
+  <td><strong>happens-before (<code>→</code>)</strong></td>
+  <td>&quot;could have influenced&quot;: same-client order, plus read-from, plus chaining</td>
+  <td>§7</td>
+</tr>
+<tr>
+  <td><strong>concurrent (<code>∥</code>)</strong></td>
+  <td>neither change is in the other's past — a statement about knowledge, not time</td>
+  <td>§7</td>
+</tr>
+<tr>
+  <td><strong>partial order</strong></td>
+  <td>an order in which some pairs are simply not comparable; happens-before is one</td>
+  <td>§7</td>
+</tr>
+<tr>
+  <td><strong>causal past / future</strong></td>
+  <td>everything that must be visible before a change / everything that must not be visible before it</td>
+  <td>§8</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The promise, and the machine that keeps it.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>causal consistency</strong></td>
+  <td>no region ever shows a change without everything that happened before it</td>
+  <td>§5, §7</td>
+</tr>
+<tr>
+  <td><strong>causal delivery</strong></td>
+  <td>the mechanism: hold a received change until its dependencies are applied</td>
+  <td>§7</td>
+</tr>
+<tr>
+  <td><strong>causally closed</strong></td>
+  <td>a region's applied set contains the whole past of everything in it</td>
+  <td>§8</td>
+</tr>
+<tr>
+  <td><strong>causal+</strong></td>
+  <td>causal consistency plus an agreed rule for concurrent changes, so regions converge</td>
+  <td>§10 v7</td>
+</tr>
+<tr>
+  <td><strong>convergent conflict handling</strong></td>
+  <td>that agreed rule: a timestamp tie-break, or a CRDT merge</td>
+  <td>§10 v7</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What a change carries on its envelope.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>dot</strong></td>
+  <td>a unique name for one change: <code>(replica, sequence number)</code>, e.g. <code>R0#1</code></td>
+  <td>§10 v4</td>
+</tr>
+<tr>
+  <td><strong>dependencies (<code>deps</code>)</strong></td>
+  <td>the set of changes the author had already seen</td>
+  <td>§10 v4</td>
+</tr>
+<tr>
+  <td><strong>nearest dependencies</strong></td>
+  <td>the dependencies not already implied by another dependency — COPS's pruning</td>
+  <td>§10 v5</td>
+</tr>
+<tr>
+  <td><strong>Lamport clock</strong></td>
+  <td>one counter per region, maxed on receive; if <code>a → b</code> its counter is smaller, but not the reverse</td>
+  <td>§10 v3</td>
+</tr>
+<tr>
+  <td><strong>vector clock</strong></td>
+  <td>one counter per region, kept as a vector; detects concurrency, which a Lamport clock cannot</td>
+  <td>§10 v6</td>
+</tr>
+<tr>
+  <td><strong>version vector</strong></td>
+  <td>the same structure applied to one object's copies — a <em>convergence</em> tool, not an ordering one</td>
+  <td>failure 10</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What it costs, and what it silently needs.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>FIFO channel</strong></td>
+  <td>a link that delivers in send order; what single-counter ordering silently requires</td>
+  <td>§10 v3</td>
+</tr>
+<tr>
+  <td><strong>over-ordering</strong></td>
+  <td>treating concurrent changes as ordered — always safe, always extra latency</td>
+  <td>§10 v6, §12</td>
+</tr>
+<tr>
+  <td><strong>slowdown cascade</strong></td>
+  <td>one lagging shard delaying changes that never depended on it</td>
+  <td>failure 6</td>
+</tr>
+<tr>
+  <td><strong>anti-entropy</strong></td>
+  <td>the background loop that resends what was lost; causal delivery does not do this</td>
+  <td>failure 9</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The four promises made to one person.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>session guarantees</strong></td>
+  <td>read-your-writes, monotonic reads, monotonic writes, writes-follow-reads</td>
+  <td>§7</td>
+</tr>
+<tr>
+  <td><strong>read-your-writes</strong></td>
+  <td>a read reflects your own earlier changes</td>
+  <td>§7, §10 v8</td>
+</tr>
+<tr>
+  <td><strong>monotonic reads</strong></td>
+  <td>you never see the store go backwards</td>
+  <td>§7, §10 v8</td>
+</tr>
+<tr>
+  <td><strong>monotonic writes</strong></td>
+  <td>your changes are applied everywhere in the order you made them</td>
+  <td>§7, §10 v8</td>
+</tr>
+<tr>
+  <td><strong>writes-follow-reads</strong></td>
+  <td>a change based on something you read is never applied before that thing</td>
+  <td>§7, §10 v8</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Carrying a person's position, and two names borrowed from neighbouring labs.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>sticky session</strong></td>
+  <td>a client always talks to the same region; gives the first two guarantees free</td>
+  <td>§10 v8</td>
+</tr>
+<tr>
+  <td><strong>session token</strong></td>
+  <td>a compact record of a client's position, presented with each request (<code>afterClusterTime</code>)</td>
+  <td>§10 v8, §15</td>
+</tr>
+<tr>
+  <td><strong>hybrid logical clock (HLC)</strong></td>
+  <td>a Lamport counter with a physical-time component, so timestamps stay meaningful</td>
+  <td>§15</td>
+</tr>
+<tr>
+  <td><strong>existential consistency</strong></td>
+  <td>Facebook's measurement of how often an eventually-consistent store is causal anyway</td>
+  <td>failure 6, §15</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-19-about-this-lab--how-was-it-built-and-where-do-the-numbers-come-from">19. About this lab — how was it built, and where do the numbers come from?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> What you can run, how every figure was produced, where this
+sits among your other labs, and why the story stops here. None of it is needed
+to follow Amira, Ben and Cara, which is exactly why it lives at the back.</p>
+</blockquote>
+<h3 id="readme-what-can-you-run">What can you run?</h3>
+<div class="code"><pre><code class="language-bash">java src/Sim.java             # one narrated afternoon across three regions
+java src/Tests.java           # 32 guarantees, asserted
+java src/Tests.java broken    # three plausible, wrong versions of the rule
+java src/Experiments.java     # ten measurements
+java src/Experiments.java 4   # ...or just experiment 4
+java src/YourCheck.java       # exercise 5: write the rule yourself (2/6 -&gt; 6/6)
+</code></pre></div>
+<p>No build tool and no dependencies. JDK 22+ compiles the whole <code>src/</code> directory
+straight from source.</p>
+<p>The page is <a href="visualization.html"><code>visualization.html</code></a> — <em>The Comment Before the
+Post</em> (<a href="https://claude.ai/code/artifact/497ca160-d05d-4b21-8e7e-dca6e71a732e" target="_blank" rel="noopener">https://claude.ai/code/artifact/497ca160-d05d-4b21-8e7e-dca6e71a732e</a>).
+Three regions on a space-time diagram; click any change to light up everything
+that caused it and everything it caused. Six guess-first situations.</p>
+<h3 id="readme-where-do-the-numbers-come-from">Where do the numbers come from?</h3>
+<p>Every figure in this lab is produced by the Java in <code>src/</code>, on one machine, with
+a fixed seed per experiment. Nothing is an estimate and nothing is quoted from
+elsewhere unless the source is named at the point of use.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Kind of claim</th>
+  <th>How it was produced</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>anomaly counts (160/300, 214/300, 99/200)</td>
+  <td><code>Experiments.java</code> and <code>Tests.java broken</code>, one representative run each</td>
+</tr>
+<tr>
+  <td>latency figures (write-ticks hidden)</td>
+  <td><code>Experiments.java</code> 4 and 10, tick-driven, same workload across designs</td>
+</tr>
+<tr>
+  <td>metadata sizes (102.5, 1.4, 3.0)</td>
+  <td><code>Experiments.java</code> 3, averaged per write across the run</td>
+</tr>
+<tr>
+  <td>over-ordering shares (68.9%, 87.2%)</td>
+  <td><code>Experiments.java</code> 9, over 17,163 concurrent pairs</td>
+</tr>
+<tr>
+  <td>the six situations on the page</td>
+  <td>verified headlessly against the Java before publishing</td>
+</tr>
+<tr>
+  <td>the 60-seconds-fast clock destroying 1,000 of 1,000 writes</td>
+  <td>measured in the <code>quorums-and-replication</code> and <code>crdts</code> labs, not this one</td>
+</tr>
+<tr>
+  <td>Facebook's 99.9%+ figure</td>
+  <td>the <em>Existential Consistency</em> paper (2015), not reproduced here</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-this-sit-in-what-you-already-know">Where does this sit in what you already know?</h3>
+<p>The <a href="../26-linearizability/notes.html#readme"><code>linearizability</code></a> lab defined the strongest useful
+consistency model, and showed you how to weaken it once: delete the real-time
+rule and you get sequential consistency. <strong>This lab deletes the second rule</strong>,
+the requirement that everybody agree on <em>one</em> order. It lands on the weakest
+model that still makes sense to a human.</p>
+<p>The <a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> and
+<a href="../32-crdts/notes.html#readme"><code>crdts</code></a> labs both gave you machinery for keeping one key's copies
+in agreement. The thing neither of them addressed is ordering <em>across</em> keys,
+which is exactly what this property is.</p>
+<p>Two neighbours pick up where this lab stops. <code>clock-synchronization</code> is the
+physical-time half: what a clock actually is, why two of them drift apart, and
+why the honest output of a clock is a bracket rather than an instant.
+<code>hybrid-logical-clocks</code> fuses the two halves into the stamp MongoDB and
+CockroachDB actually ship.</p>
+<h3 id="readme-how-is-the-lab-meant-to-be-read">How is the lab meant to be read?</h3>
+<p>§1 to §9 are one sitting, and that is the whole idea. §10 is the machine, built
+in eight versions, each forced by a limitation in the one before. §11 to §14 are
+what you need before your code depends on any of this. §15 is what you need
+before it reaches a customer.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--causal-consistency">Exercises — causal consistency</h1>
+<p>Eight rungs, easiest first. Attempt each before opening
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Rungs 7 and 8 have no single right answer; the
+solution is a worked discussion to compare yours against.</p>
+<div class="code"><pre><code class="language-bash">java src/Sim.java · java src/Tests.java · java src/Tests.java broken
+java src/Experiments.java [1-10] · java src/YourCheck.java
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> In three sentences, with no jargon, explain to a colleague why a
+comment can show up without the post it is a comment on, when nothing has
+crashed and no replica is misbehaving.</p>
+<p><strong>1.2</strong> Your team already stores a version vector per key and resolves
+conflicts with it. Explain in two sentences why that does not fix 1.1.</p>
+<p><strong>1.3</strong> Someone says &quot;causal consistency resolves conflicts between concurrent
+writes&quot;. Correct them in one sentence: what does causality actually say about
+two concurrent writes?</p>
+<p><strong>1.4</strong> A causal read returns a value that is two minutes out of date. Is that
+a violation? Answer, and say which model <em>would</em> be violated by it.</p>
+<p><strong>1.5</strong> Name the four session guarantees and, for each, say in a few words what
+a user would notice if it were missing.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a>, leave the rule on <strong>Show it
+the moment it lands</strong>, and play the first situation, <em>The comment with no post</em>.</p>
+<p><strong>2.1</strong> Click Amira's filled circle. Which circles turn amber, which stay grey,
+and what does grey mean?</p>
+<p><strong>2.2</strong> Now switch to <strong>One counter per region</strong> and replay. A thick dashed
+line appears in the Singapore lane. What is it, what is at each end of it, and
+what does the &quot;holding back&quot; line on the Singapore card say it is waiting for?</p>
+<p><strong>2.3</strong> In <code>src/Cluster.java</code>, find the single method whose body <em>is</em> the
+property this lab is about. Which one is it, and which of its branches is the
+one COPS implements?</p>
+<p><strong>2.4</strong> In <code>src/Write.java</code>, which field is the subject of this lab? Which two
+fields are compressed encodings of the same information, and which one is not
+an encoding of it at all?</p>
+<p><strong>2.5</strong> Run <code>java src/Sim.java</code> and find the line in scene 1 beginning
+<code>t=6 cara [CAUSALITY]</code>. Which write is the effect, which is the cause, and how
+does the checker know they are related?</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Commit to an answer, then run the command.</p>
+<p><strong>3.1</strong> Ordering writes by a Lamport counter guarantees that if <code>a</code> happened
+before <code>b</code>, then <code>a</code>'s counter is smaller. Does ordering by that counter give
+you causal consistency? (<code>java src/Experiments.java 1</code>, rows 3 and 4.)</p>
+<p><strong>3.2</strong> A vector clock is 3 numbers; a pruned dependency list averages 1.4
+entries. Which of the two holds writes back for <strong>longer</strong>, and why?
+(<code>java src/Experiments.java 4</code>, then <code>9</code>.)</p>
+<p><strong>3.3</strong> Causal delivery is switched on and working perfectly. Amira and Ben set
+the same key at the same instant, neither having seen the other. Do the three
+regions end up showing the same value? (<code>java src/Experiments.java 7</code>.)</p>
+<p><strong>3.4</strong> Amira writes in London; her next request is routed to Frankfurt before
+the copy arrives. The regions are running full causal delivery. Does she see her
+own write? (<code>java src/Experiments.java 6</code>.)</p>
+<p><strong>3.5</strong> In <code>Experiments.workload()</code>, delete the <code>c.get(...)</code> that precedes each
+<code>c.put(...)</code>, then re-run experiment 1. Apply-on-arrival scores 160/300 today.
+Predict the new number <strong>before running</strong>, then explain the number you get.</p>
+<p><strong>3.6</strong> A partition heals. Predict whether the writes made during the outage
+become visible on the other side. (<code>java src/Tests.java</code>, the two checks under
+<em>What it buys</em>.)</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Set <code>fifo = true</code> in the two Lamport rows of <code>e1_anomaliesByDesign</code> — it
+is already a parameter. Which row changes and which do not? What does that tell
+you about which designs depend on your transport?</p>
+<p><strong>4.2</strong> In <code>Cluster.deliverable</code>, case <code>VV</code>, delete the line
+<code>if (w.vv()[src] != r.vv[src] + 1) return false;</code>. Run
+<code>java src/Tests.java</code>. Then run <code>java src/Tests.java broken</code> and find which
+planted bug you just recreated. Why does the deterministic comment-before-post
+story <em>not</em> reproduce it, while the random workload does?</p>
+<p><strong>4.3</strong> In <code>e2_theCalmNetworkLie</code>, the design never changes between rows — only
+<code>slowLink</code>. Write down, in one sentence, the rule this gives you for every
+consistency test you will ever write.</p>
+<p><strong>4.4</strong> Change <code>Rule.causalVv()</code> to return <code>sticky = false</code> and run
+<code>java src/Tests.java</code>. Which named tests fail, and are they failures of the
+<em>store</em> or of the <em>client</em>?</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> <code>src/YourCheck.java</code> contains the delivery rule, blanked out. Implement
+<code>safeToShow</code>.</p>
+<div class="code"><pre><code class="language-bash">java src/YourCheck.java     # starts at 2/6; you are done at 6/6
+</code></pre></div>
+<p>Two hints, escalating — try without them first:</p>
+<ul>
+<li>Everything you need is on the write itself.</li>
+<li>If only check 4 fails, you filtered the dependencies by key. Re-read failure
+10 in the README.</li>
+</ul>
+<p><strong>5.2</strong> Add a method to <code>Cluster</code> that reports, for a given replica, the
+<strong>oldest blocked dependency</strong>: the write id that the largest number of held
+writes are waiting on. Use it to find the culprit in <code>java src/Experiments.java 10</code> at a slow route of 32. (§15 names this the single
+most useful alarm for a causal store — build it.)</p>
+<p><strong>5.3</strong> Implement <code>Rule.Ordering.LAMPORT</code> correctly for a system with FIFO
+links: change <code>allHeardAtLeast</code> so it stops requiring news from a replica that
+has sent nothing at all. What new problem does that create, and which of §11's
+failures is it?</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><code>java src/Tests.java broken</code> runs three plausible, wrong versions of the
+delivery rule. Answer each <strong>before</strong> looking at the output.</p>
+<p><strong>6.1</strong> <code>same-replica-only</code> waits only for dependencies written by the same
+replica as the write itself. What real-world belief does this encode, and why is
+that belief nearly true? Construct the smallest three-event story it breaks.</p>
+<p><strong>6.2</strong> <code>same-key-only</code> waits only for dependencies on the same key. Which
+earlier lab teaches you to build exactly this, and what is it correct <em>for</em>?
+Why is this the most dangerous of the three?</p>
+<p><strong>6.3</strong> <code>vv-no-gap-check</code> drops the &quot;exactly the next write from its author&quot;
+clause. It produces anomalies in only 10 of 200 runs, versus ~99 for the other
+two. Explain the low number — and say why &quot;rarer&quot; makes it worse to have, not
+better.</p>
+<p><strong>6.4</strong> A colleague proposes a fourth design: attach each write's <em>wall-clock
+time</em> and have replicas apply in timestamp order. Give the two independent
+reasons this fails, and name the lab where you already measured the first one.</p>
+<hr />
+<h2 id="exercises-rung-7--handle-a-failure-the-lab-does-not">Rung 7 — Handle a failure the lab does not</h2>
+<p><strong>7.1 — The session token.</strong> Experiment 6 shows 334 of 500 roaming clients
+failing to see their own write, and the regions are ordered correctly the whole
+time. Implement the fix: give the client a position in history, present it with
+every request, and have the replica wait until it has caught up before
+answering.</p>
+<p>State precisely: what the token has to contain, what the replica does when it is
+behind, what happens when the replica can <em>never</em> catch up (the write went to a
+region that is now partitioned away), and what the client should be told then.
+Then measure: roaming read-your-writes failures should go from 334/500 to 0.</p>
+<p><strong>7.2 — Dependency garbage collection.</strong> Experiment 3 shows full dependency
+lists reaching 102.5 entries per write and still growing. Nearest-only takes it
+to 1.4. Design what removes the rest: what fact must be true before a dependency
+can be dropped from a list entirely, what mechanism establishes it, and what
+breaks if you drop one too early. (You solved a structurally identical problem
+in the <a href="../32-crdts/notes.html#readme"><code>crdts</code></a> lab.)</p>
+<p><strong>7.3 — The slowdown cascade.</strong> Experiment 10 shows hidden write-ticks going
+from 351 to 31,659 as one route slows. Propose two mitigations that keep the
+guarantee, and one that abandons it in a controlled way. For each, say what you
+would have to measure to know it was working, and what the user experiences.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — A multi-region social product.</strong> Three regions, 150 ms apart. Posts,
+comments, likes, follows, blocks, direct messages, and a &quot;who can see this&quot;
+privacy setting per post.</p>
+<p>Produce: which data needs causal ordering and which does not; where the
+session token lives and what happens on a load-balancer failover; what must
+<em>not</em> be causal and what it uses instead; what the user sees when a region is
+behind; and the three dashboard metrics you would require before launch.</p>
+<p>Be explicit about the one item on that list where getting it wrong is a
+security incident rather than a bug.</p>
+<p><strong>8.2 — Turning it on in a real stack.</strong> Your service is Spring Boot on
+MongoDB, currently reading from secondaries for speed and getting complaints
+about users not seeing their own edits. Write the six-sentence proposal: what
+you would change, what it costs, what you would measure before and after, and
+why &quot;just read from the primary&quot; is and is not the answer.</p>
+<p><strong>8.3 — Where causal consistency is the wrong choice.</strong> Pick one of: a seat
+reservation system, a bank ledger, a rate limiter. Argue in two paragraphs why
+causal consistency cannot be the answer for the core operation, and what part of
+the product it <em>is</em> right for. (Two of the three have an obvious answer and one
+is genuinely interesting — the rate limiter appears in your
+<a href="../60-distributed-rate-limiting/notes.html#readme"><code>distributed-rate-limiting</code></a> lab.)</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--causal-consistency">Solutions — causal consistency</h1>
+<p>Every number below came from running the lab. Where an answer is a design
+discussion rather than an output, it is marked as such.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> The comment only exists because its author read the post first, but the
+message announcing the comment says nothing about that — it just says &quot;set
+comment to this text&quot;. So when the two updates travel to a third region by
+routes of different speeds, the comment can arrive first and be shown on its
+own. Every machine did exactly what it was told; the information that one
+depended on the other was destroyed when the message was built.</p>
+<p><strong>1.2</strong> A version vector orders the copies of <strong>one key</strong> and tells you when two
+updates to that key conflict. The post and the comment are different keys, and
+nothing in a per-key structure has an opinion about the order between two keys.
+<code>java src/Tests.java broken</code> reproduces exactly this mistake: the
+<code>same-key-only</code> rule produces anomalies in <strong>99 of 200</strong> runs.</p>
+<p><strong>1.3</strong> It says nothing at all about them — that is the definition. Two writes
+neither of whose authors had seen the other are <em>concurrent</em>, and causality
+leaves them unordered; something else (a timestamp tie-break, or a CRDT merge)
+has to decide, and adding that is what makes it causal+.</p>
+<p><strong>1.4</strong> Not a violation. Causal consistency says nothing about recency — there is
+no bound at all, and <code>Tests.a_causal_read_can_be_arbitrarily_stale</code> returns a
+value 100 ticks old with zero violations recorded. <strong>Linearizability</strong> is the
+model that forbids it: there, an operation already answered must precede
+anything sent afterwards, which pins reads to real time.</p>
+<p><strong>1.5</strong></p>
+<ul>
+<li><strong>read-your-writes</strong> — you edit your profile, reload, and the old name is back.</li>
+<li><strong>monotonic reads</strong> — you see a comment, refresh, and it disappears.</li>
+<li><strong>monotonic writes</strong> — you rename a file then move it, and remotely the move
+lands first and fails.</li>
+<li><strong>writes-follow-reads</strong> — you reply to a message, and someone elsewhere sees
+your reply before the message you replied to. (This is the one the whole lab
+is about; it is the only one stickiness cannot give you.)</li>
+</ul>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Ben's comment turns amber (it is in Amira's causal <em>future</em>). Amira's
+own circle is highlighted. Every other circle stays grey, meaning <strong>concurrent</strong>
+— neither in her past nor her future, and therefore something the causal rule
+will never hold back or reorder. Grey is where causality has no opinion, and it
+is usually most of the graph.</p>
+<p><strong>2.2</strong> The dashed line is a change that has <strong>arrived and is being deliberately
+held</strong>. Its left end is the moment the copy landed; its right end is either the
+moment it was released or the current time if it is still waiting. Singapore's
+card says it is waiting for <code>R0 up to #1</code> — the post. Nothing arrived faster;
+the region simply declines to show what it already has.</p>
+<p><strong>2.3</strong> <code>Cluster.deliverable(Replica r, Write w)</code>. The branch COPS implements is
+<code>case DEPS</code> with <code>nearestOnly</code> — name the dependencies explicitly, and prune the
+ones another dependency already implies.</p>
+<p><strong>2.4</strong> <code>deps</code> is the subject. <code>nearest</code> and <code>vv</code> are two compressed encodings
+of the same information (exact and over-approximate respectively). <code>lamport</code> is
+<strong>not</strong> an encoding of it: it is a total order that happens to be consistent
+with causality, which is a strictly weaker thing — it can tell you an order but
+never tell you whether two writes were related.</p>
+<p><strong>2.5</strong> Effect: <code>R1#1</code>, <code>comment = &quot;lovely dog!&quot;</code>. Cause: <code>R0#1</code>,
+<code>post = &quot;photo-of-a-dog&quot;</code>. The checker knows because <code>R0#1 ∈ R1#1.deps</code> — Ben's
+client context contained the post when he wrote, because he had read it, and
+<code>Cluster.get</code> adds every write it returns (and that write's own past) to the
+reader's context.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> <strong>No, not on its own.</strong> Measured:</p>
+<div class="code"><pre><code>Lamport order, reordering links      3/300 runs      3 anomalies
+Lamport order, FIFO links            0/300 runs      0 anomalies
+</code></pre></div>
+<p>It is causal only if every link delivers in send order. The leak: a region
+decides a write stamped 7 is safe once it has heard from everyone at 7 or
+higher — but if a later write from London (stamped 9) overtakes an earlier one
+(stamped 4) on the same link, the evidence says London is at 9 while London's
+write 4 is still in the air. This is why &quot;we use TCP, so we're causal&quot; is wrong:
+TCP is FIFO <strong>per connection</strong>, and a sharded store uses many.</p>
+<p><strong>3.2</strong> The <strong>vector clock</strong> holds writes longer — 16,279 hidden write-ticks
+versus 7,428, more than double, for the same guarantee. The two structures
+answer different questions: the dependency list records <em>what the client saw</em>
+(exact), the vector clock records <em>what the client's region had applied</em> (a safe
+superset). Experiment 9 measures the over-approximation: of 17,163 pairs where
+neither author had seen the other, the vector clock still puts <strong>68.9%</strong> in an
+order, and each of those is a write waiting for something it never depended on.
+<strong>Precision costs bytes; imprecision costs latency.</strong></p>
+<p><strong>3.3</strong> <strong>No — 400 of 400 runs end with the regions disagreeing</strong>, wire empty,
+nothing left to fix it. Causality has no opinion about concurrent writes, so each
+region keeps whichever arrived last, and arrival order differs. With a
+<code>(lamport, replicaId)</code> tie-break: <strong>0 of 400</strong>. That is the &quot;+&quot; in causal+.</p>
+<p><strong>3.4</strong> <strong>No — 334 of 500 fail.</strong> And nothing is out of order: the write is
+simply still in flight. Causal delivery orders regions against each other; it
+has nothing to say about a client that moves between them. The missing piece is
+the client's own position in history, travelling with the client.</p>
+<p><strong>3.5</strong> It drops to <strong>28 of 300</strong>, not to zero. The workload still has one other
+read path (the 1-in-3 branch that only reads), and every read a client performs
+adds that write and its whole past to the client's context — so later writes by
+that client still carry dependencies. <strong>Causality is created by reading.</strong> A
+workload that never reads before writing has no causality in it and cannot
+demonstrate, or test, any of this.</p>
+<p><strong>3.6</strong> <strong>They do not.</strong> Two asserted checks:</p>
+<div class="code"><pre><code>PASS  healing alone does NOT deliver what was lost
+PASS  an anti-entropy round does
+</code></pre></div>
+<p>Causal delivery decides <em>when</em> a received write may be shown; it never decides
+<em>whether</em> it arrives. The background repair loop from
+<a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a> is not optional here.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Only the Lamport row changes: <strong>3/300 → 0/300</strong>. The dependency-based
+rows are already 0 and stay 0; apply-on-arrival is already broken and stays
+broken.</p>
+<p>The lesson: <strong>a design that infers order from a counter has a hidden dependency
+on your transport; a design that names what it is waiting for does not.</strong> When
+you evaluate a store's consistency claim, &quot;under what network assumptions?&quot; is
+the question that separates the two.</p>
+<p><strong>4.2</strong> You recreate <code>vv-no-gap-check</code>, which produces anomalies in <strong>10 of
+200</strong> random runs.</p>
+<p>The deterministic comment-before-post story does not reproduce it because the
+bug removes only the <em>own-author sequence</em> check. In that story the missing
+dependency is a write from a <strong>different</strong> region (London's post), which the
+surviving <code>w.vv[j] &gt; r.vv[j]</code> clause still catches. To trigger this bug you need
+a gap in one author's <strong>own</strong> sequence — the author's write #3 arriving while #2
+is still in flight — which a two-write story never creates.</p>
+<p>That is the general shape of the bug: the vector-clock check is two conditions
+doing two different jobs, and removing either leaves the other looking like it
+still works.</p>
+<p><strong>4.3</strong> <em>Never accept a consistency result from a test that did not inject
+network asymmetry.</em> Measured on one unchanged design: <strong>30/300</strong> at no extra
+delay, <strong>214/300</strong> at 20 ticks. A design with no ordering guarantee at all is
+indistinguishable from a correct one on a calm network.</p>
+<p><strong>4.4</strong> Eleven tests fail, and they split cleanly into two groups:</p>
+<div class="code"><pre><code>FAIL  200/200 sticky reads see the client&#x27;s own write (62/200)
+FAIL  causal + sticky: read-your-writes holds
+FAIL  causal + sticky: monotonic reads holds
+FAIL  causal + sticky: writes-follow-reads holds
+</code></pre></div>
+<p>— these are the <strong>client's</strong> failures. Nothing is out of order in the store; a
+client keeps being handed to a replica that has not caught up to where the
+client already is.</p>
+<div class="code"><pre><code>FAIL  your own write is visible to you immediately
+FAIL  the isolated minority answers all 100 operations
+FAIL  causal delivery: Cara sees neither, not the wrong one
+</code></pre></div>
+<p>— these look like store failures but are the same cause wearing a disguise: the
+tests assume a named client keeps talking to a known region, and with roaming
+the client is somewhere else by the time it reads.</p>
+<p>The takeaway is the one from §10 v8: <strong>session stickiness is doing real
+consistency work</strong>, and removing it &quot;for better load balancing&quot; is a correctness
+change, not an infrastructure tweak.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> The blank starts at <strong>2 / 6</strong> (checks 1 and 2 pass trivially for
+<code>return true</code>). The whole rule:</p>
+<div class="code"><pre><code class="language-java">static boolean safeToShow(Set&lt;Dot&gt; applied, Write w) {
+    for (Dot d : w.deps()) if (!applied.contains(d)) return false;
+    return true;
+}
+</code></pre></div>
+<p><strong>6 / 6.</strong> Check 4 is the exercise: it fails for the version that filters
+<code>w.deps()</code> down to dependencies on the same key, which is failure 10 and the
+most common real-world mistake in this area.</p>
+<p><strong>5.2</strong> A workable shape — count how many held writes are blocked on each id and
+report the worst:</p>
+<div class="code"><pre><code class="language-java">public Dot oldestBlockedDependency(int replica) {
+    Map&lt;Dot, Integer&gt; blocking = new TreeMap&lt;&gt;();
+    Replica r = reps[replica];
+    for (Write w : r.pending)
+        for (Dot d : w.deps())
+            if (!r.applied.contains(d)) blocking.merge(d, 1, Integer::sum);
+    return blocking.entrySet().stream()
+        .max(Map.Entry.comparingByValue()).map(Map.Entry::getKey).orElse(null);
+}
+</code></pre></div>
+<p>At a slow route of 32, one id sits at the head of many queues — which is exactly
+the signature of the slowdown cascade, and why §15 nominates <em>oldest blocked
+dependency age</em> as the one alarm to have if you may have only one. A queue that
+is deep but has many different heads is normal load; a queue that is deep behind
+<strong>one</strong> id is a stuck upstream.</p>
+<p><strong>5.3</strong> Change <code>allHeardAtLeast</code> to skip a replica you have never received
+anything from. The new problem is immediate: you can no longer distinguish
+<em>&quot;that region has nothing to say&quot;</em> from <em>&quot;that region's message has not arrived
+yet&quot;</em>, so you release writes that a slower message would have preceded — you are
+back to failure 1. This is failure 4 from the other direction, and it is why
+systems that need a total order send <strong>heartbeats</strong>: not to carry data, but so
+that silence can never be mistaken for lag. Raft's empty <code>AppendEntries</code> exists
+for the same reason (see the <a href="../40-raft/notes.html#readme"><code>raft</code></a> lab).</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> It encodes <em>&quot;we use TCP, so messages from a given sender arrive in
+order, so we are causal.&quot;</em> It is nearly true — it does give you <strong>monotonic
+writes</strong>, one of the four guarantees — which is exactly why it survives review.
+Smallest breaking story: Amira writes the post (R0), Ben <strong>reads</strong> it and writes
+the comment (R1), Cara's region receives the comment. The comment's only
+dependency is from a <em>different</em> replica, so the rule waits for nothing.
+Anomalies in <strong>98 of 200</strong> runs; the deterministic story reproduces it exactly.</p>
+<p><strong>6.2</strong> <a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> teaches you to
+build precisely this, and it is correct for what it was built for: <strong>detecting
+conflicting updates to one object</strong>. It is the most dangerous of the three
+because it is not an implementation slip — it is a correct tool applied to the
+wrong question, by someone who can defend it. Anomalies in <strong>99 of 200</strong> runs.
+The one-sentence corrective: <em>causality is a statement across keys.</em></p>
+<p><strong>6.3</strong> It is rare because it only fires when one author's <strong>own</strong> writes arrive
+with a gap — #3 landing while #2 is in flight — which needs that author to have
+written twice in quick succession over a link that reorders. Two writes by
+different people never trigger it.</p>
+<p>Rarer is worse, for three reasons: it survives every test suite and every
+staging environment; when it does fire it is unreproducible, so it gets closed
+as &quot;could not repeat&quot;; and it fires most under load, which is when the
+consequences are largest. The general rule — the same one experiment 2 teaches —
+is that <strong>in consistency work, a low failure rate is evidence about your test
+environment, not about your design.</strong></p>
+<p><strong>6.4</strong> (a) <strong>Clocks disagree.</strong> You measured this twice already: a replica 60
+seconds fast destroyed <strong>1,000 of 1,000</strong> genuinely newer writes in both the
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> and
+<a href="../32-crdts/notes.html#readme"><code>crdts</code></a> labs. If the commenter's machine is slightly behind the
+poster's, the ordering inverts with no error. (b) <strong>A timestamp does not tell
+you the order is complete.</strong> Holding a write stamped 14:32:09, a replica has no
+way to know whether something stamped 14:32:07 is still in flight — so it either
+shows things out of order or waits forever. Fixing (a) with NTP does nothing
+about (b), which is the deeper of the two.</p>
+<hr />
+<h2 id="solutions-rung-7--worked-design-discussions">Rung 7 — Worked design discussions</h2>
+<h3 id="solutions-71-the-session-token">7.1 The session token</h3>
+<p><strong>What the token contains:</strong> the client's causal position — the set (or, in
+practice, the vector-clock summary) of everything it has seen or written. In
+MongoDB this is <code>afterClusterTime</code>, a hybrid-logical-clock timestamp; in Bayou
+terms it is the session's read-set and write-set summary.</p>
+<p><strong>What the replica does when behind:</strong> it waits until its own applied state
+covers the token, then answers. It does not answer from a stale state and it
+does not error immediately — it converts a correctness problem into a latency
+problem, which is the same trade the whole lab makes.</p>
+<p><strong>Measured, on the roaming workload that scores 334/500 failures today:</strong></p>
+<div class="code"><pre><code>token=false   read-your-writes=3759   monotonic-reads=1611   writes-follow-reads=356   anomalies=726
+token=true    read-your-writes=0      monotonic-reads=0      writes-follow-reads=0     anomalies=0
+</code></pre></div>
+<p>and on the isolated read-your-writes test, <strong>334/500 → 0/500</strong>. Note the guard
+is needed on <strong>both</strong> paths: on reads so the client does not go backwards, and
+on writes so a write made from a fresh region still carries the dependencies the
+client acquired elsewhere. Guarding only reads leaves writes-follow-reads broken.</p>
+<p><strong>When the replica can never catch up</strong> (the write went to a region that is now
+partitioned away): the wait must be bounded. After the timeout you have three
+honest options and one dishonest one. Honest: fail the request with a
+retryable error; route the client back toward a region that can satisfy the
+token; or degrade explicitly and tell the UI it is showing a stale view. The
+dishonest one — answer anyway — silently converts a latency problem back into
+the correctness problem you built the token to fix, and it is what happens by
+default if nobody chooses.</p>
+<p><strong>What the client is told:</strong> something actionable and specific — &quot;this view may
+be a few seconds behind&quot; for the degraded path, not a generic error. Note the
+irony worth stating in a design review: <strong>the client-side half is where causal
+consistency stops being always-available.</strong> The store still answers; the session
+guarantee is what makes you wait.</p>
+<h3 id="solutions-72-dependency-garbage-collection">7.2 Dependency garbage collection</h3>
+<p><strong>The fact that must be true:</strong> every replica that could ever receive a write
+naming this dependency has already applied it. Then no receiver can ever need it
+to decide whether to wait, and it can be dropped from the list.</p>
+<p><strong>The mechanism:</strong> each replica publishes what it has applied (a vector clock);
+take the pointwise minimum across the membership — the <strong>stable frontier</strong> — and
+prune any dependency below it. This is <em>causal stability</em>, structurally
+identical to the tombstone-GC problem you solved in the <a href="../32-crdts/notes.html#readme"><code>crdts</code></a>
+lab, and it needs the same two things: membership and liveness, from
+<a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a>.</p>
+<p><strong>What breaks if you drop one too early:</strong> a replica that never received the
+dependency receives the dependent write with nothing telling it to wait, applies
+it, and shows an effect without its cause — failure 1, reintroduced by the
+optimisation meant to make it cheaper. This is the same shape as the
+too-early-tombstone-drop failure in the crdts lab, and it is equally
+unrecoverable: nothing later will notice.</p>
+<p><strong>What stalls it:</strong> one unreachable replica freezes the minimum, so the frontier
+stops advancing and lists grow again. The answer is the same as for tombstone
+GC — after a timeout, evict the silent member and require it to re-bootstrap.
+Which means, once again, a coordination-free property leaning on a coordinated
+membership service.</p>
+<h3 id="solutions-73-the-slowdown-cascade">7.3 The slowdown cascade</h3>
+<p><strong>Two mitigations that keep the guarantee:</strong></p>
+<ol>
+<li><strong>Reduce over-ordering.</strong> Half of the waiting in the vector-clock design is
+for writes the author never saw — 68.9% of concurrent pairs treated as
+ordered. Switching to pruned explicit dependencies more than halves the
+hidden write-ticks (16,279 → 7,428, measured). You pay in bytes and get
+latency back.</li>
+<li><strong>Make the slow route not be on the critical path.</strong> Deliver each write over
+more than one route, or have a fast replica forward on behalf of a slow one
+(COPS-style dependency propagation). The dependency then arrives by whichever
+path is quickest, and one slow shard stops gating unrelated writes.
+<em>Measure:</em> oldest-blocked-dependency age (exercise 5.2), per replica.</li>
+</ol>
+<p><strong>One that abandons it in a controlled way:</strong> cap the hold. If a write has
+waited longer than N, apply it anyway and record the event. You have chosen to
+serve an anomaly rather than a stall — which is defensible for a like counter
+and indefensible for a privacy setting. <em>Measure:</em> the rate of forced releases,
+alarmed as a correctness metric, and <strong>broken out by key class</strong> so the privacy
+keys can be excluded from the policy entirely.</p>
+<p><strong>What the user experiences</strong> in each case: (1) and (2) are invisible — things
+appear sooner. (3) is invisible until the day it fires, and then it is failure 1
+in production with a metric that tells you it happened, which is strictly better
+than the silent version but is not &quot;no anomaly&quot;.</p>
+<hr />
+<h2 id="solutions-rung-8--worked-design-discussions">Rung 8 — Worked design discussions</h2>
+<h3 id="solutions-81-a-multi-region-social-product">8.1 A multi-region social product</h3>
+<p><strong>Needs causal ordering, across keys:</strong></p>
+<ul>
+<li><strong>post → comment → reply.</strong> The whole point; a reply visible before its parent
+is the bug this lab exists for.</li>
+<li><strong>privacy setting → post.</strong> &quot;Remove my manager from who-can-see-this&quot; then
+&quot;publish&quot; is two writes to two keys with one obvious order, and this is the
+COPS example. This is the security item.</li>
+<li><strong>block → post.</strong> Same shape: block someone, then post. If the post overtakes
+the block, the blocked user sees it.</li>
+<li><strong>follow → timeline entry</strong>, <strong>upload → attach</strong>, <strong>delete account → any
+subsequent write.</strong></li>
+</ul>
+<p><strong>Does not need it:</strong></p>
+<ul>
+<li><strong>like counts</strong> — a CRDT counter; nothing causally precedes a like that
+matters, and delaying likes for ordering is pure cost.</li>
+<li><strong>presence / &quot;last seen&quot;</strong> — an LWW register; losing a concurrent update is
+fine and staleness is expected.</li>
+<li><strong>view counts, analytics</strong> — no ordering, no per-user guarantee.</li>
+</ul>
+<p><strong>The session token</strong> lives at the edge: issued and carried by the client (a
+cookie or header), presented on every request, and enforced by the region. On a
+load-balancer failover, the new region reads the token and waits — which is the
+whole reason to have it, and the reason stickiness alone is not a design. Budget
+for it: a bounded wait plus an explicit stale-view path, per 7.1.</p>
+<p><strong>Must NOT be causal:</strong></p>
+<ul>
+<li><strong>username / handle uniqueness</strong> — needs the ability to refuse. Coordinated
+store, conditional write.</li>
+<li><strong>payments, credits, anything counted down</strong> — the crdts lab's −2 bags of
+flour, in a different costume.</li>
+<li><strong>auth token revocation</strong> — this one is subtle and worth arguing in the
+review: revocation must be <em>fast and fail-closed</em>, and a causal store gives
+you neither bound. Short token lifetimes plus a coordinated deny-list.</li>
+</ul>
+<p><strong>What the user sees when a region is behind:</strong> their own writes, always
+(session token). Other people's, late. Never an effect without its cause. The
+one thing to design deliberately is the <em>stale-view</em> indicator, because the
+alternative is a user who does not know whether the feed is empty or just behind.</p>
+<p><strong>Three metrics before launch:</strong> (1) oldest blocked dependency age, p99 per
+region — the cascade alarm; (2) session-token wait time and timeout rate — the
+client-side cost, which is where users feel it; (3) privacy-setting propagation
+lag specifically, separated from everything else, because it is the item where
+being late is an incident.</p>
+<p><strong>The security item:</strong> the privacy/block ordering. Getting the like counter
+wrong is a bug report. Getting &quot;remove access, then publish&quot; wrong publishes
+private content to the person it was hidden from, and no amount of eventual
+convergence undoes the moment they saw it.</p>
+<h3 id="solutions-82-turning-it-on-in-a-real-stack">8.2 Turning it on in a real stack</h3>
+<p>MongoDB has supported causally-consistent sessions since 3.6, so the change is
+to open a session per user request and pass it through every read and write —
+the driver then attaches <code>afterClusterTime</code> and secondaries wait until they have
+caught up before answering, which is precisely the fix in 7.1. The cost is
+latency on reads that land on a lagging secondary, and a new failure mode
+(waiting, then timing out) that your code must handle rather than ignore. Before
+and after, measure secondary read latency at p99 and the rate of session waits
+that exceed your budget — the second number tells you whether replication lag,
+not the feature, is your actual problem. &quot;Just read from the primary&quot; <em>is</em> the
+answer if your read volume fits on one node: it gives you a strictly stronger
+guarantee for less complexity, and the honest version of this proposal says so
+out loud. It stops being the answer when read volume or geography forces
+secondaries, and the point of causal sessions is that they let you keep the
+secondaries without the complaints. One caveat to state explicitly: this fixes
+the <em>client's</em> view, and says nothing about ordering between two different
+users' writes across regions — if your product has the privacy-setting problem
+from 8.1, sessions alone do not solve it.</p>
+<h3 id="solutions-83-where-causal-consistency-is-the-wrong-choice">8.3 Where causal consistency is the wrong choice</h3>
+<p><strong>Seat reservation</strong> (the easy one). Booking seat 14C must be able to <em>refuse</em>,
+and refusing requires knowing what everyone else has done. Causal consistency
+never blocks and never refuses, so two regions will both accept 14C and then
+faithfully converge on a state where both did. It is right for everything around
+the booking — the seat map, the browsing, the party size, a &quot;requested&quot; state —
+with a single coordinated write at the moment of commitment. Same boundary as
+the crdts lab: <strong>let the weak model carry the intent, and consensus carry the
+commitment.</strong></p>
+<p><strong>Rate limiting</strong> (the interesting one). At first it looks like the seat
+problem — &quot;at most 100 requests per minute&quot; is a global invariant, so it needs
+coordination. But your
+<a href="../60-distributed-rate-limiting/notes.html#readme"><code>distributed-rate-limiting</code></a> lab already
+established that nobody actually pays for that: the limit is a business policy
+with slack in it, so approximate counting with local buckets and background
+reconciliation is the <em>correct</em> engineering answer, not a compromise. So the
+verdict is neither &quot;causal works&quot; nor &quot;causal fails&quot; — it is that <strong>the invariant
+was never really an invariant</strong>, and the right question is not which consistency
+model to buy but how much overshoot the policy tolerates. That distinction —
+between a rule that must hold and a rule that must mostly hold — is worth more
+in design reviews than any consistency model on the ladder.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../28-eventual-consistency/notes.html"><small>← Lab 28</small>eventual-consistency</a><a href="../30-clock-synchronization/notes.html" style="text-align:right"><small>Lab 30 →</small>clock-synchronization</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-can-nothing-be-broken-and-the-product-still-lie">1. Why can nothing be broken and the product still lie?</a><a href="#readme-2-what-happens-to-amira-ben-and-cara-in-one-afternoon">2. What happens to Amira, Ben and Cara in one afternoon?</a><a href="#readme-3-what-is-the-obvious-design-and-why-does-everyone-ship-it">3. What is the obvious design, and why does everyone ship it?</a><a href="#readme-4-what-does-cara-actually-see">4. What does Cara actually see?</a><a href="#readme-5-what-are-we-really-asking-for">5. What are we really asking for?</a><a href="#readme-6-what-is-the-one-rule-that-fixes-it">6. What is the one rule that fixes it?</a><a href="#readme-7-which-six-words-carry-this-lab-and-where-did-each-one-happen">7. Which six words carry this lab, and where did each one happen?</a><a href="#readme-8-what-picture-should-you-keep-in-your-head">8. What picture should you keep in your head?</a><a href="#readme-9-can-you-watch-the-order-before-you-read-the-mechanism">9. Can you watch the order before you read the mechanism?</a><a href="#readme-10-how-would-you-build-this-one-broken-attempt-at-a-time">10. How would you build this, one broken attempt at a time?</a><a href="#readme-11-what-goes-wrong-and-what-does-it-look-like-on-call">11. What goes wrong, and what does it look like on call?</a><a href="#readme-12-what-exactly-is-promised-and-where-does-the-promise-stop">12. What exactly is promised, and where does the promise stop?</a><a href="#readme-13-which-lines-actually-carry-the-guarantee">13. Which lines actually carry the guarantee?</a><a href="#readme-14-can-you-predict-the-numbers-before-you-run-them">14. Can you predict the numbers before you run them?</a><a href="#readme-15-what-does-a-real-system-add-and-what-does-meera-watch">15. What does a real system add, and what does Meera watch?</a><a href="#readme-16-what-should-you-try-yourself">16. What should you try yourself?</a><a href="#readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</a><a href="#readme-18-glossary--which-word-was-which">18. Glossary — which word was which?</a><a href="#readme-19-about-this-lab--how-was-it-built-and-where-do-the-numbers-come-from">19. About this lab — how was it built, and where do the numbers come from?</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

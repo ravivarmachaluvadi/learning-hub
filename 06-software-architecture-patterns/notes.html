@@ -1,0 +1,1513 @@
+<!doctype html>
+<html lang="en" data-hub-lab="06-software-architecture-patterns">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>6. software-architecture-patterns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 6 of 71 · Stage 1</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 6 · The Ground Floor</p><article id="readme"><h1 id="readme-software-architecture--patterns-principles-and-how-to-choose">Software Architecture — Patterns, Principles, and How to Choose</h1>
+<blockquote>
+<p><strong>Depth layers in this doc:</strong>
+<strong>BEGINNER MODEL</strong> (stages 1–9) → <strong>INTERMEDIATE MODEL</strong> (stage 10) →
+<strong>ENGINEERING MODEL</strong> (stages 11–12) → <strong>PRODUCTION MODEL</strong> (stage 15)</p>
+<p>Companion files: <a href="CATALOG.html"><code>CATALOG.md</code></a> — the exhaustive per-pattern
+reference (every pattern, when to use it, when NOT to, real systems using
+it). <a href="notes.html#exercises"><code>EXERCISES.md</code></a> — the practice ladder.
+Interactive <strong>Pattern Atlas</strong> — <code>visualization.html</code> in this folder (also
+published as an artifact; link in the session notes).</p>
+</blockquote>
+<p>This lab builds on things you already learned:
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>, <a href="../47-saga/notes.html#readme">saga</a>,
+<a href="../51-cqrs/notes.html#readme">cqrs</a>, <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>,
+<a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a>, <a href="../39-paxos/notes.html#readme">paxos</a>,
+<a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>. Those labs each taught <strong>one</strong> pattern in
+depth. This lab answers the question that sits above all of them: <strong>what is
+the full landscape of patterns, and how do you pick?</strong></p>
+<hr />
+<h2 id="readme-1-why--why-does-architecture-exist-at-all">1. WHY — why does &quot;architecture&quot; exist at all?</h2>
+<p>Every software system that survives gets bigger, gets more users, and gets
+more people working on it. When that happens, the thing that kills projects
+is almost never a hard algorithm — it is that <strong>changing one part breaks
+another part</strong>, and nobody can predict which. Teams slow to a crawl, releases
+become terrifying, and eventually someone says &quot;we have to rewrite it.&quot;
+Architecture is the discipline of arranging code and machines so that change
+stays cheap and failures stay small — <em>before</em> the system gets big enough to
+punish you. If nobody does this job, the system does not stay simple; it
+becomes complicated in an <em>uncontrolled</em> way instead of a controlled one.</p>
+<hr />
+<h2 id="readme-2-the-problem--meeras-tiffin-service">2. THE PROBLEM — Meera's tiffin service</h2>
+<p>Meera starts <strong>TiffinBox</strong>, a lunch-delivery service. Week one, the whole
+&quot;system&quot; is one Python file: a customer messages her, she writes the order
+into a spreadsheet, she texts the kitchen. It works perfectly.</p>
+<p>Six months later: 2,000 orders a day, a real web app, online payments, a
+kitchen dashboard, delivery-rider assignment, discount coupons. Meera hired
+two developers, Dev and Priya. All the code lives in one project, and every
+feature was added wherever it was quickest to add — payment code calls into
+menu code, the coupon logic reads the riders' GPS table directly, and the
+function that saves an order also sends the SMS, updates loyalty points, and
+resizes the dish photo.</p>
+<p>Nothing is <em>wrong</em> yet. Every individual feature works. But notice the shape
+of the thing: <strong>everything touches everything</strong>, and no one decided that —
+it just happened, one shortcut at a time.</p>
+<hr />
+<h2 id="readme-3-the-naive-solution--just-keep-adding-code-carefully">3. THE NAIVE SOLUTION — &quot;just keep adding code carefully&quot;</h2>
+<p>The team's plan is the plan every team starts with: be careful, test before
+deploying, and add each new feature wherever it fits most easily. No
+structure is <em>decided</em>; structure is whatever the last six months of
+shortcuts produced.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Priya changes how dish photos are stored — a change that
+has nothing to do with money. What is the <em>worst</em> thing that can plausibly
+happen when she deploys?</p>
+<details><summary>Reveal</summary>
+Payments go down. The order-saving function also resizes photos, so her
+change made saving an order throw an error — and saving an order is the
+step that happens *after* charging the card. Customers get charged, orders
+don't get recorded. The failure appeared in the code furthest from where
+she was working, which is exactly why she didn't test it. When everything
+touches everything, "unrelated" is an illusion.
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-4-the-failure--why-being-careful-cannot-work">4. THE FAILURE — why &quot;being careful&quot; cannot work</h2>
+<p>The photo incident happens, for real, at 1 p.m. on the busiest day of the
+month. The postmortem finding is uncomfortable: <strong>no individual was
+careless.</strong> The system itself made the blast radius of every change equal to
+the whole system. Three specific things went wrong, and each one is a
+<em>structural</em> fact, not a people fact:</p>
+<ol>
+<li><strong>A change in one place broke a distant place</strong> — because a hidden
+connection existed (order-saving → photo-resizing) that nobody
+remembered.</li>
+<li><strong>Nobody could say in advance what a change might affect</strong> — because the
+connections are not written down anywhere; they exist only as function
+calls scattered through 80,000 lines.</li>
+<li><strong>The team cannot work in parallel</strong> — Dev and Priya keep editing the
+same files, and every merge is a fight.</li>
+</ol>
+<p>Being careful does not scale, because <em>care is a per-person resource and the
+number of hidden connections grows roughly with the square of the code.</em>
+The deeper problem is now visible: it is not any single bug. It is the
+<strong>shape of the dependencies</strong>.</p>
+<hr />
+<h2 id="readme-5-the-real-requirement">5. THE REAL REQUIREMENT</h2>
+<p>What TiffinBox actually needs — what every growing system needs — is:</p>
+<blockquote>
+<p><strong>The effect of a change must be predictable and local.</strong> A change to
+photos should be able to break photos, and nothing else. And it must be
+possible to <em>know that</em> without reading the whole codebase.</p>
+</blockquote>
+<p>Everything in this lab — every pattern, every principle — is some team's
+battle-tested answer to a version of this requirement, at some scale (one
+file, one codebase, one company, one planet). Keep this sentence; it is the
+measuring stick for every pattern you're about to meet.</p>
+<hr />
+<h2 id="readme-6-the-key-idea">6. THE KEY IDEA</h2>
+<blockquote>
+<p><strong>Draw boundaries on purpose, and control what crosses them.</strong></p>
+</blockquote>
+<p>That's the whole field. You divide the system into parts, you decide which
+part is allowed to know about which other part, and you make the connections
+between parts explicit and few. A <strong>pattern</strong> is nothing more mysterious
+than a <em>named, pre-packaged way of drawing those boundaries</em> that many teams
+have already paid to debug — plus a known bill: every boundary you draw
+costs something (indirection, latency, duplication, operational work). The
+second half of the skill is knowing when a pattern's bill is higher than the
+problem it solves.</p>
+<hr />
+<h2 id="readme-7-terminology--the-words-professionals-use-for-all-this">7. TERMINOLOGY — the words professionals use for all this</h2>
+<p>Now that you've <em>felt</em> the problem, here are the names. These seven are
+load-bearing for the whole lab.</p>
+<p><strong>Software architecture</strong> — plain: the on-purpose shape of a system.
+Precise: the set of structures (parts, and the relations between parts) plus
+the <em>decisions that are expensive to reverse</em>. The term exists to separate
+&quot;decisions we can casually refactor Tuesday&quot; from &quot;decisions that will still
+be constraining us in three years&quot; (language, datastore, sync-vs-async,
+service boundaries). Example: &quot;one codebase or many services?&quot; is
+architecture; &quot;for-loop or stream?&quot; is not. Connects to: everything below.</p>
+<p><strong>Module / component</strong> — plain: a part with a name and a job. Precise: a
+unit of code with an explicit <strong>interface</strong> (what outsiders may call) and
+hidden internals. The term exists because &quot;part&quot; is only useful if the part
+has a <em>boundary</em> — TiffinBox has parts (payments, menus) but no boundaries,
+so its parts aren't modules. Example: a <code>payments</code> module whose only public
+surface is <code>charge(order)</code> and <code>refund(paymentId)</code>.</p>
+<p><strong>Coupling</strong> — plain: how much parts know about each other. Precise: the
+degree to which a change in one module forces a change (or a failure) in
+another. The term exists because &quot;everything touches everything&quot; needed a
+measurable name — you <em>lower</em> coupling. Example: the coupon code reading the
+riders' GPS <em>table directly</em> is high coupling; the photo-resize hiding
+inside order-saving is coupling nobody even knew about. Comes in flavors
+you'll meet later: compile-time, runtime (&quot;if B is down, A fails&quot; —
+<strong>temporal coupling</strong>), and data-shape coupling.</p>
+<p><strong>Cohesion</strong> — plain: how much the things inside one part belong together.
+Precise: the degree to which a module's contents change for the same
+reasons. The term exists as coupling's twin: you <em>raise</em> cohesion. A module
+holding &quot;everything about invoicing&quot; is cohesive; a <code>utils</code> folder holding
+date-parsing, retry logic, and a coupon rule is not — three unrelated
+reasons to change, filed in one place. The eternal slogan: <strong>low coupling,
+high cohesion</strong> — few connections <em>between</em> parts, strong belonging
+<em>within</em> parts.</p>
+<p><strong>Quality attributes (the &quot;-ilities&quot;)</strong> — plain: the adjectives you want the
+system to have. Precise: measurable non-functional properties —
+<em>scalability</em> (add load without redesign), <em>availability</em> (fraction of time
+it answers), <em>maintainability/evolvability</em> (cost of the next change),
+<em>performance</em> (latency/throughput), <em>reliability</em>, <em>deployability</em>,
+<em>testability</em>, <em>security</em>, <em>simplicity</em> (yes, it counts — it's the one you
+trade away most often). The term exists because features tell you what a
+system <em>does</em>; -ilities describe how it <em>holds up</em> — and <strong>patterns are
+chosen by -ilities, not by features</strong>. Example: &quot;orders must survive a
+datacenter outage&quot; is an availability requirement; no feature list will
+surface it.</p>
+<p><strong>Pattern</strong> — plain: a named solution-shape other teams already debugged.
+Precise: a reusable arrangement of parts + responsibilities + tradeoffs,
+addressing a recurring problem in a context. The term (borrowed from
+building architect Christopher Alexander, via the 1994 &quot;Gang of Four&quot; book)
+exists so engineers can transfer <em>judgment</em>, not just code — saying
+&quot;circuit breaker&quot; transmits a whole failure-analysis in two words. Patterns
+come in sizes: <strong>architecture styles</strong> shape the whole system (layered,
+microservices, event-driven); <strong>architecture patterns</strong> solve one recurring
+sub-problem inside a style (saga, outbox, API gateway, circuit breaker);
+<strong>design patterns</strong> (GoF: factory, observer, strategy...) live inside a
+single module, below this lab's altitude.</p>
+<p><strong>Tradeoff</strong> — plain: what the pattern costs you. Precise: the -ilities a
+pattern <em>worsens</em> as the price of the ones it improves. The term is
+load-bearing because of what practitioners call the <strong>First Law of
+Software Architecture</strong> (Richards &amp; Ford): <em>everything in architecture is a
+tradeoff</em> — and its corollary: if you think you've found a pattern with no
+downside, you haven't found the downside yet. Example: microservices buy
+independent deployment and pay with network failures, eventual consistency,
+and an ops bill.</p>
+<p>Smaller terms will be introduced as they're earned; every one lands in the
+<a href="#readme-18-glossary">GLOSSARY</a>.</p>
+<hr />
+<h2 id="readme-8-mental-models--carry-two-pictures">8. MENTAL MODELS — carry two pictures</h2>
+<p><strong>The simple model: a city.</strong> A garage workshop (one file) grows into a
+building (structured codebase), then a city (many services). Zoning laws
+decide what may be built where (boundaries); roads and phone lines connect
+districts (interfaces, networks); the fire code limits how far a fire can
+spread (blast radius); and the city planner's real job is not designing any
+one building — it is deciding <em>what goes where and what connects to what</em>,
+knowing the city will keep growing in ways nobody can predict.</p>
+<p><strong>The engineering model: three overlaid graphs plus a ledger.</strong> A system is
+(1) a <strong>dependency graph</strong> — who is allowed to know about whom, at build
+time; (2) a <strong>runtime topology</strong> — what actually calls what, over which
+transport, sync or async; (3) a <strong>failure graph</strong> — if this node dies or
+slows, which nodes feel it; and (4) a <strong>tradeoff ledger</strong> — for every
+boundary you drew, what it bought and what it costs. Architecture work =
+editing these graphs on purpose. Every pattern in this lab is a named shape
+in one or more of these graphs.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>City model</th>
+  <th>Engineering model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Zoning map</td>
+  <td>Dependency graph (allowed knowledge)</td>
+</tr>
+<tr>
+  <td>Roads, phone lines</td>
+  <td>Runtime topology (calls, queues, transports)</td>
+</tr>
+<tr>
+  <td>Fire spreading between buildings</td>
+  <td>Failure graph (blast radius)</td>
+</tr>
+<tr>
+  <td>Cost-benefit file at city hall</td>
+  <td>Tradeoff ledger</td>
+</tr>
+<tr>
+  <td>A district (residential, industrial)</td>
+  <td>A module / service with one job</td>
+</tr>
+<tr>
+  <td>Building codes</td>
+  <td>Principles (SOLID, etc.)</td>
+</tr>
+<tr>
+  <td>&quot;We've seen this city-shape work&quot;</td>
+  <td>A pattern / style</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the analogy breaks.</strong> Three places, and they matter. (1) Concrete is
+hard; software is soft — you <em>can</em> re-zone a live software city
+(refactoring, strangler migrations), and much of modern practice exploits
+exactly this, so &quot;get it right up front&quot; is the wrong lesson to take.
+(2) City roads degrade gracefully; <strong>networks fail weirdly</strong> — a software
+&quot;road&quot; can silently drop one message in a thousand, deliver it twice, or
+deliver it after a 30-second stall, and (as your <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>
+lab showed) can cut a district in half while both halves keep working.
+(3) A city has physics keeping buildings apart; software has <em>nothing</em>
+keeping modules apart except discipline or tooling — left alone, every
+boundary erodes. The engineering model, not the city, is the truth: the
+graphs are real and checkable; the city is just how you'll remember them.</p>
+<hr />
+<h2 id="readme-9-visualization--the-map-of-the-territory">9. VISUALIZATION — the map of the territory</h2>
+<p>Open <strong><code>visualization.html</code></strong> (the Pattern Atlas) alongside the rest of this
+doc. It holds the full pattern landscape as a filterable map — filter by the
+problem you have, click any pattern for its when/when-not card — and a
+<strong>decision-guide quiz</strong>: real scenarios where you commit to a pattern choice
+before seeing the verdict. Use it after stage 10, once the families below
+mean something.</p>
+<p>Here is the same territory as a static map — this is the diagram to
+memorize. Everything in stage 10 walks it left to right:</p>
+<pre class="mermaid">flowchart LR
+    P[PRINCIPLES&lt;br/&gt;coupling · cohesion · SOLID&lt;br/&gt;the physics] --&gt; S[ONE CODEBASE&lt;br/&gt;layered · hexagonal · clean&lt;br/&gt;vertical slice · modular monolith&lt;br/&gt;microkernel · pipes and filters]
+    S --&gt; D[MANY MACHINES&lt;br/&gt;monolith vs microservices&lt;br/&gt;SOA · event-driven&lt;br/&gt;serverless · space-based]
+    D --&gt; C[CONNECTING THEM&lt;br/&gt;gateway · BFF · mesh&lt;br/&gt;strangler fig · anti-corruption]
+    D --&gt; DA[DATA&lt;br/&gt;db-per-service · CQRS · saga&lt;br/&gt;outbox · caching · sharding]
+    D --&gt; R[SURVIVING FAILURE&lt;br/&gt;timeout · retry · circuit breaker&lt;br/&gt;bulkhead · load shedding]
+    D --&gt; DE[SHIPPING&lt;br/&gt;blue-green · canary&lt;br/&gt;feature flags]
+</pre>
+<hr />
+<blockquote>
+<p><strong>✅ CHECKPOINT — you now hold the BEGINNER MODEL.</strong> You can explain <em>why</em>
+architecture exists (change must stay local), what a pattern is (a named
+boundary-shape with a known bill), and what actually gets traded
+(-ilities). Next layer: the actual patterns, family by family — each one
+arriving only when Meera's system breaks in the way that pattern fixes.</p>
+</blockquote>
+<hr />
+<h2 id="readme-10-the-actual-mechanism--the-pattern-families-earned-one-failure-at-a-time">10. THE ACTUAL MECHANISM — the pattern families, earned one failure at a time</h2>
+<p>This is the longest stage. Each subsection: the failure that forces the
+family, the v1 answer, where v1 cracks, the refinements. Full per-pattern
+detail (including the ones only name-dropped here) lives in
+<a href="CATALOG.html"><code>CATALOG.md</code></a>.</p>
+<h3 id="readme-101-first-the-physics-principles">10.1 First, the physics: principles</h3>
+<p>Patterns are shapes; principles are the forces that make some shapes strong.
+Six you must have before any pattern makes sense.</p>
+<p><strong>Low coupling, high cohesion</strong> (stage 7) is the master principle; nearly
+everything below is a special case of it.</p>
+<p><strong>Information hiding</strong> (David Parnas, 1972 — older than almost everything
+else here). Decompose a system around <em>what is likely to change</em>, and hide
+each such decision inside one module, behind an interface that would survive
+the change. TiffinBox translation: &quot;which SMS vendor we use&quot; is likely to
+change → one module owns it, and its interface says <code>notify(customer, msg)</code>,
+not <code>sendViaTwilio(apiKey, ...)</code>. When the vendor changes, one module
+changes. This 1972 idea is the direct ancestor of hexagonal architecture and
+of microservice boundary-drawing — you'll see it twice more.</p>
+<p><strong>SOLID</strong> — five module-level rules, here compressed to what earns its keep
+at architecture altitude:</p>
+<ul>
+<li><strong>S</strong>ingle Responsibility: a module should have <strong>one reason to change</strong>
+(one business stakeholder whose mind changing rewrites it). The
+order-saver that also sends SMS and resizes photos has three.</li>
+<li><strong>O</strong>pen/Closed: add behavior by <em>adding</em> code (a new plugin, handler,
+strategy), not editing working code. This is the seed of microkernel and
+event-driven styles.</li>
+<li><strong>L</strong>iskov Substitution: anything claiming to be a <code>PaymentProvider</code> must
+be usable wherever one is expected, no surprises. At architecture scale:
+every implementation behind an interface must honor the interface's
+<em>contract</em>, including its failure behavior.</li>
+<li><strong>I</strong>nterface Segregation: many small client-shaped interfaces beat one
+fat one — don't force the kitchen dashboard to depend on refund methods
+it never calls.</li>
+<li><strong>D</strong>ependency Inversion: the load-bearing one for this lab, so slowly:
+high-level policy (&quot;an order is confirmed when paid&quot;) must not depend on
+low-level detail (Postgres, Stripe, Twilio). Instead <strong>both</strong> depend on an
+interface that the <em>policy</em> side owns. The arrow of knowledge points from
+detail to policy — the detail is the plugin. Hold onto this; hexagonal
+architecture (10.2) is this principle drawn as a picture.</li>
+</ul>
+<p><strong>DRY, KISS, YAGNI</strong> — the judgment trio. <em>Don't Repeat Yourself</em> — but the
+real rule is: don't duplicate a piece of <strong>knowledge</strong> (a tax rule, a
+validation) so it can drift; duplicating incidental <em>code</em> is often fine,
+and DRY-zealotry that fuses two coincidentally-similar things into one
+shared abstraction creates coupling worse than the duplication (&quot;wrong
+abstraction &gt; duplication&quot; is a classic failure). <em>Keep It Simple</em> — the
+simplest design that meets today's actual -ilities. <em>You Aren't Gonna Need
+It</em> — don't build for imagined future requirements; you pay for flexibility
+now, and probably guessed the wrong flexibility. Together they say:
+<strong>complexity must be paid for by a real, current requirement</strong> — the single
+most-violated rule in architecture.</p>
+<p><strong>Separation of concerns</strong> — one part per <em>kind</em> of work (what to do vs how
+to store vs how to display). The layered style (next) is this principle as a
+floor plan.</p>
+<p><strong>Conway's law</strong> (1967): a system's shape copies the communication structure
+of the organization that builds it — four teams building a compiler will
+build a four-pass compiler. It sounds like a joke; it is the most reliable
+law in this lab. Consequence used daily in industry (the &quot;inverse Conway
+maneuver&quot;): if you want a given architecture, <em>shape the teams first</em>,
+because the org chart wins any fight with the diagram. This is why &quot;how many
+teams?&quot; appears in every pattern-selection question later.</p>
+<h3 id="readme-102-structuring-one-codebase">10.2 Structuring one codebase</h3>
+<p>Meera's team is 3 people, one deployable app. Everything in this subsection
+keeps it that way — these styles cost almost nothing to adopt and are where
+every system should start.</p>
+<p><strong>v1 — Layered architecture.</strong> The first structural instinct, and a good
+one: horizontal floors, each allowed to call only downward.</p>
+<pre class="mermaid">flowchart TD
+    A[Presentation layer&lt;br/&gt;HTTP handlers, dashboard UI] --&gt; B[Business / domain layer&lt;br/&gt;orders, pricing, coupons — the rules]
+    B --&gt; C[Persistence layer&lt;br/&gt;repositories, SQL]
+    C --&gt; D[(Database)]
+</pre>
+<p>Separation of concerns, applied: HTTP details on one floor, business rules
+on another, SQL on a third. A photo-storage change now lives on one floor.
+For a huge share of real applications — internal tools, CRUD-heavy apps,
+early-stage products — <strong>this is enough, and choosing more is a mistake.</strong></p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Two years of layered TiffinBox. Where does the business
+logic actually end up living?</p>
+<details><summary>Reveal</summary>
+Everywhere except the business layer. Validation drifts into HTTP
+handlers ("it was quicker"), pricing rules drift into SQL queries ("the
+report needed it"), and the business layer degrades into pass-through
+methods. Two structural causes: (1) layering by *technical kind* means
+one feature is smeared across all floors, so cohesion is low by
+construction — "the coupon logic" has no single home; (2) everything
+transitively depends on the database at the bottom, so the *shape of the
+tables* starts driving the design of the domain, when it should be the
+reverse. Layered doesn't fail loudly; it erodes.
+</details>
+
+</blockquote>
+<p><strong>Refinement 1 — Hexagonal architecture (a.k.a. ports and adapters).</strong>
+Alistair Cockburn's fix, and it is exactly Dependency Inversion drawn as a
+picture: put the <strong>domain</strong> (business rules) at the center; the domain
+defines <strong>ports</strong> — interfaces it owns, in its own vocabulary
+(<code>OrderRepository</code>, <code>PaymentGateway</code>, <code>Notifier</code>); everything technological
+— HTTP, Postgres, Stripe, Twilio, the test suite — is an <strong>adapter</strong>
+plugged into a port from outside. All arrows point <em>inward</em>. The database is
+no longer the foundation; it's a plugin, exactly as swappable as the SMS
+vendor. Two consequences you can cash immediately: the domain is testable
+with no database and no HTTP (plug in in-memory adapters), and vendor swaps
+touch one adapter. The bill: more interfaces and mapping code than layered
+— which is why it's wrong for a 10-endpoint CRUD app.</p>
+<p><strong>Same family, other names:</strong> <strong>Onion architecture</strong> and <strong>Clean
+architecture</strong> (Robert Martin) are the same core move — domain center,
+dependencies point inward — with more prescribed rings. Treat the trio as
+one idea: <strong>the domain owes nothing to any technology.</strong> Learn hexagonal;
+recognize the other two names in blog posts.</p>
+<p><strong>Refinement 2 — Vertical slice architecture.</strong> Attacks layering's other
+weakness (features smeared across floors) from the opposite direction:
+organize by <strong>feature</strong>, not by technical kind — a <code>place-order/</code> slice
+owns its handler, its logic, its data access, top to bottom. Cohesion by
+construction: one feature, one folder, one place to change. Bill: shared
+domain rules now need a deliberate home or they get duplicated across
+slices. Hexagonal-vs-slices is a real fork in modern backend teams; slices
+win for request/response apps with many independent features, hexagonal
+wins for deep domains with heavy shared rules. Hybrid (slices whose inside
+is hexagonal) is common and fine.</p>
+<p><strong>Refinement 3 — the modular monolith.</strong> The team is now 12 and stepping on
+each other. The 2010s reflex was &quot;split into microservices.&quot; The current
+industry consensus — learned expensively — is: first make it a <strong>modular
+monolith</strong>: one deployable, internally divided into modules with <em>enforced</em>
+boundaries — each module (<code>orders</code>, <code>payments</code>, <code>kitchen</code>, <code>riders</code>) has a
+public interface, private internals a build-time rule stops others from
+importing, and ideally its own tables that only it touches. You get most of
+microservices' <em>organizational</em> benefits (team ownership, local reasoning)
+with none of the network. It is also the only honest preparation for
+microservices: <strong>module boundaries are where you rehearse service
+boundaries while mistakes are still one refactor away</strong> — get a boundary
+wrong in a monolith, fix it in an afternoon; get it wrong across two
+services and two databases, fix it in a quarter. Shopify runs one of the
+world's largest commerce platforms this way, on purpose, at a scale far
+beyond most companies that run microservices.</p>
+<p><strong>Two specialist shapes</strong> worth recognizing (details in CATALOG):
+<strong>microkernel / plugin</strong> — a small core plus plugins, for products whose
+<em>point</em> is extension (IDEs, browsers, payment gateways with per-country
+rules; Open/Closed as a whole architecture); <strong>pipes and filters</strong> —
+independent stages connected by data flow, for transformation-shaped
+problems (compilers, data/ETL pipelines, Unix pipes).</p>
+<h3 id="readme-103-distributing-when-one-deployable-stops-being-enough">10.3 Distributing: when one deployable stops being enough</h3>
+<p>TiffinBox is now 40 engineers, 500k orders/day. Three pressures no
+single-codebase style can relieve: (1) <strong>deployment coupling</strong> — 8 teams
+share one release train, one team's bug rolls back everyone; (2)
+<strong>scale shape</strong> — order-placement needs 30 instances at lunch, menu-editing
+needs 2, but a monolith scales as one lump; (3) <strong>fault isolation</strong> — a
+memory leak in photo-processing takes down payments, because one process
+shares one fate. Note carefully what is <em>not</em> on the list: &quot;monoliths can't
+scale&quot; (Stack Overflow and Shopify falsify that daily) and &quot;microservices
+are more modern.&quot; The pressures are deployment independence, differential
+scaling, and blast-radius control — if you don't actually have them,
+this whole subsection is YAGNI.</p>
+<p><strong>Microservices</strong> — split the system into independently deployable
+services, each owned by one team, each owning its own data, talking over a
+network. The style is best understood as <strong>the modular monolith's module
+boundaries, promoted to process boundaries</strong> — which buys the three
+-ilities above and pays a famous bill: every in-process call became a
+network call that can fail, slow down, or half-happen; every cross-module
+transaction became a distributed-data problem. You have already met the
+payment plan for that bill — it is your previous labs: no more shared ACID
+transaction across modules → <a href="../47-saga/notes.html#readme">saga</a>; &quot;save locally AND announce
+it&quot; is now a dual write → <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>;
+cross-service queries → <a href="../51-cqrs/notes.html#readme">cqrs</a> read models; and the temptation to
+get atomicity back via <a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a> — which you
+already know blocks on coordinator death, which is why the industry chose
+sagas. <strong>Microservices are not an upgrade; they are a tradeoff you buy when
+team-scale forces it</strong> — the industry's own numbers (Amazon's Prime Video
+team publicly re-merged a microservice pipeline into a monolith in 2023 and
+cut costs 90%; Segment wrote the same story in 2018) say the failure mode
+of adopting them early is common and expensive.</p>
+<p>A note on the ancestor: <strong>SOA</strong> (service-oriented architecture, 2000s) had
+the same core idea — services — but with heavyweight shared middleware (the
+Enterprise Service Bus) into which integration logic sank until the bus
+itself became the new monolith. Microservices' slogan &quot;smart endpoints,
+dumb pipes&quot; is a direct scar from that: keep logic in services, keep the
+transport stupid. (Amazon's famous 2002 API mandate — all teams expose
+functionality only through service interfaces — is SOA's success story and
+microservices' origin myth.)</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> TiffinBox splits into 12 services. Placing one order now
+synchronously calls: orders → payments → kitchen → riders → notifications.
+Each service is up 99.9% of the time. Is order-placement more or less
+available than the old monolith — and roughly what is its availability?</p>
+<details><summary>Reveal</summary>
+Less. A synchronous chain is an AND of availabilities: 0.999⁵ ≈ 99.5% —
+about 43 hours of failed orders a year, versus ~9 for one 99.9% monolith.
+Distribution *subtracted* availability, because the chain is temporally
+coupled: every link must be up at the same moment. This one calculation
+motivates the next family (async messaging) and stage 10.6 (resilience).
+</details>
+
+</blockquote>
+<p><strong>Event-driven architecture (EDA)</strong> — the standard answer to that
+calculation. Instead of orders <em>calling</em> four services and waiting, orders
+appends <code>OrderPlaced</code> to a <strong>broker</strong> (a durable message middleman — Kafka,
+RabbitMQ, SNS/SQS) and answers the customer. Kitchen, riders, notifications
+each consume the event at their own pace. What changed structurally:
+producers no longer know consumers exist (<strong>coupling drops to the event
+schema alone</strong>); a dead consumer no longer fails the producer — the event
+waits (<strong>temporal decoupling</strong> — the availability math above stops
+multiplying); and adding a 13th subscriber (fraud scoring) touches zero
+existing services (Open/Closed, at system scale). The bill, which you can
+already itemize from your labs: eventual consistency windows (<a href="../51-cqrs/notes.html#readme">cqrs</a>),
+at-least-once delivery forcing idempotent consumers
+(<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>), and a new system-level
+disease — <strong>nobody can see the workflow</strong>. When &quot;place an order&quot; is 9
+services reacting to each other's events, no code file says what happens in
+what order; the flow exists only emergently. That disease has a name and a
+fork you already know from <a href="../47-saga/notes.html#readme">saga</a>: <strong>choreography</strong> (pure
+reactions — maximal decoupling, invisible flow) vs <strong>orchestration</strong> (an
+explicit coordinator — visible flow, one more component to own). Same fork,
+same tradeoff, system-wide. Within events themselves there's a spectrum
+(Fowler's distinction, detailed in CATALOG): <strong>event notification</strong> (&quot;order
+1042 placed — call me if you care&quot;) → <strong>event-carried state transfer</strong> (the
+event carries the full order, consumers keep local copies — more autonomy,
+more staleness) → <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a> (the events <em>are</em>
+the truth — a per-service storage decision, not a system-wide one).</p>
+<p><strong>Two more distribution styles</strong>, for recognition (details in CATALOG):
+<strong>serverless / FaaS</strong> — functions on demand, infrastructure fully rented;
+superb for spiky/glue/event-handling workloads, wrong where cold starts,
+execution limits, or per-invocation cost at sustained volume bite;
+<strong>space-based</strong> — in-memory data grids absorbing extreme write bursts
+(ticketing on-sales, trading), the database moved out of the hot path.</p>
+<h3 id="readme-104-connecting-the-pieces">10.4 Connecting the pieces</h3>
+<p>Distribution created a new problem class: the seams themselves.
+Four patterns cover most of it (rest in CATALOG):</p>
+<ul>
+<li><strong>API gateway</strong> — one front door for all clients: routing, auth, rate
+limiting, TLS in one place instead of 12. Risk: business logic sinking
+into it (the ESB disease returning — keep the pipe dumb).
+<strong>BFF</strong> (backend-for-frontend) — one thin gateway <em>per client type</em>
+(mobile, web), each shaping responses for its screen, owned by that
+client's team.</li>
+<li><strong>Service mesh / sidecar</strong> — networking concerns (retries, mTLS, metrics)
+extracted into a proxy deployed <em>beside</em> every service, so 12 services
+don't reimplement them 12 times inconsistently. Worth its ops cost only
+well past 10–15 services.</li>
+<li><strong>Anti-corruption layer (ACL)</strong> — a translator at the border between your
+clean model and a messy/legacy/third-party one, so their concepts
+(<code>CUST_MST_TBL</code>, 40-field SOAP orders) never leak into your domain.
+Information hiding, applied at the border.</li>
+<li><strong>Strangler fig</strong> — <em>the</em> migration pattern: put a routing facade in
+front of the legacy system, move capabilities out one at a time, shrink
+the old system until it can be turned off. This is how real monolith →
+services migrations are done — incrementally and reversibly. Big-bang
+rewrites are the alternative, and their industry track record is dismal
+enough that &quot;strangler over rewrite&quot; qualifies as a best practice.</li>
+</ul>
+<p>Undercutting all four, one fundamental dial: <strong>sync vs async</strong>. Synchronous
+request/response is simple to reason about and temporally couples the
+caller to the callee's health and latency; asynchronous messaging decouples
+time and pays in complexity, duplicates, and consistency windows. Most real
+architectures deliberately mix: sync for queries the user is waiting on,
+async for everything that can happen &quot;soon.&quot;</p>
+<h3 id="readme-105-data-patterns">10.5 Data patterns</h3>
+<p>Shortest section, because your labs already are the depth here — this is
+just the map. <strong>Database-per-service</strong> is the rule that makes services
+real: each service's data is private; others go through its API or events.
+The moment two services write one schema (<strong>shared database</strong> — the #1
+distributed anti-pattern), every schema change needs cross-team
+coordination and you have a distributed monolith with extra steps. Flowing
+from that one rule: cross-service writes → <a href="../47-saga/notes.html#readme">saga</a>; write + announce
+→ <a href="../48-transactional-outbox/notes.html#readme">outbox</a>; cross-service reads →
+<a href="../51-cqrs/notes.html#readme">cqrs</a>-style read models fed by events, or <strong>CDC</strong> (change data
+capture — tailing a database's own change log, e.g. Debezium, to get events
+out of systems that were never designed to emit them). Below that sit the
+storage-scaling patterns every backend engineer needs on recall —
+<strong>caching</strong> (cache-aside, write-through, write-behind — and the two classic
+diseases: staleness and stampede), <strong>replication</strong> (read replicas —
+<a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> tradeoffs apply the moment a replica lags),
+<strong>sharding</strong> (split data across nodes by key — the escape hatch when one
+writer node is not enough, at the price of losing cross-shard joins and
+transactions), <strong>materialized views</strong>. Each has a full CATALOG entry.</p>
+<h3 id="readme-106-surviving-failure-resilience-patterns">10.6 Surviving failure: resilience patterns</h3>
+<p>The distributed TiffinBox is one week old when it has its first <em>cascading</em>
+failure, and this family is best taught by walking it: the riders service
+develops a slow database query (2s instead of 20ms). Orders calls riders
+synchronously with no timeout. Orders' request threads start waiting 2s
+each; its thread pool (200 threads) fills in seconds; now <em>orders</em> is
+unresponsive — to everything, including requests that never touch riders.
+The web tier calling orders fills up next. <strong>Total outage, from one slow
+query in one service.</strong> Note the physics: in distributed systems, <strong>slow is
+more dangerous than down</strong> — a dead service fails fast and callers move on;
+a slow one holds every caller's resources hostage. The patterns, in the
+order the postmortem adds them:</p>
+<ol>
+<li><strong>Timeout</strong> — never wait unboundedly; budget how long the caller can
+tolerate (say 500ms) and fail at the deadline. Converts &quot;slow&quot; into
+&quot;down,&quot; which is survivable.</li>
+<li><strong>Retry, with exponential backoff and jitter</strong> — try again, but each
+retry waits longer (1s, 2s, 4s...) and adds randomness. The naive
+version — immediate retries — is a weapon: 200 failing callers retrying
+instantly triple the load on the already-struggling service, and
+synchronized retries arrive as coordinated waves (<strong>retry storm</strong> /
+thundering herd). Backoff gives the victim air; jitter breaks the
+synchronization. Also: only retry <em>transient</em> errors (a 400 will fail
+all 5 times), and only retry <em>idempotent</em> operations — retrying
+&quot;charge card&quot; without an idempotency key double-bills a customer (your
+outbox lab's at-least-once lesson, appearing on the client side).</li>
+<li><strong>Circuit breaker</strong> — retries still send every request into a service
+known to be drowning. The breaker wraps calls with a state machine:</li>
+</ol>
+<pre class="mermaid">stateDiagram-v2
+    CLOSED --&gt; OPEN : failures exceed threshold&lt;br/&gt;(e.g. 50% of last 20 calls)
+    OPEN --&gt; HALF_OPEN : after cool-off (e.g. 30s)
+    HALF_OPEN --&gt; CLOSED : probe calls succeed
+    HALF_OPEN --&gt; OPEN : probe fails
+</pre>
+<p>CLOSED = normal; OPEN = fail <em>instantly</em> without calling (callers get an
+error in microseconds instead of a timeout in 500ms — resources freed,
+victim gets zero load and room to recover); HALF_OPEN = let a few probes
+through to test recovery. Named after the electrical part, and the
+analogy is exact: sacrifice the circuit to save the house.
+4. <strong>Bulkhead</strong> — partition resources so one dependency can't drain them
+all: a separate small thread/connection pool per downstream dependency.
+The riders pool (30 threads) can now fill completely while the other 170
+threads serve everything else. Named after ship hull compartments; this
+is blast-radius control <em>inside</em> one service.
+5. <strong>Load shedding &amp; backpressure</strong> — when genuinely overloaded, reject
+cheap and early (shed) rather than degrade for everyone; let pressure
+propagate to slow the <em>source</em> (backpressure — queues with bounded
+length, consumers pulling at their own pace) instead of buffering
+unboundedly until you fall over.
+6. <strong>Graceful degradation / fallback</strong> — decide <em>in advance</em> what the
+user experience is when a dependency is gone: recommendations service
+down → show bestsellers, not an error page; riders-ETA down → &quot;being
+assigned&quot; instead of a spinner. Availability of the <em>product</em>, not of
+every service.</p>
+<p>Netflix made this family famous (Hystrix, now resilience4j in the JVM
+world), plus its cultural weapon: <strong>chaos engineering</strong> — deliberately
+killing instances in production (Chaos Monkey) so these patterns are
+continuously proven, not hoped.</p>
+<h3 id="readme-107-shipping-deployment-patterns">10.7 Shipping: deployment patterns</h3>
+<p>The last family closes the loop, because architecture that can't be
+deployed safely doesn't stay any shape for long. <strong>Blue-green</strong> — two
+identical environments; deploy to the idle one, flip traffic atomically,
+flip back to roll back; instant rollback, at 2× infrastructure cost, and
+watch the shared database schema (it serves both colors during the flip —
+schema changes must be backward-compatible, usually via expand/contract:
+add-new, migrate, remove-old across releases). <strong>Canary</strong> — route 1% → 5%
+→ 25% of real traffic to the new version, watching error/latency metrics,
+promoting or rolling back on evidence; blast-radius control for deploys
+themselves. <strong>Feature flags</strong> — decouple <em>deploy</em> from <em>release</em>: code
+ships dark, a runtime switch turns it on per-user/percentage, and the
+fastest rollback in the industry is flipping a flag off; the bill is flag
+debt (dead flags multiply into <code>if</code> spaghetti — flags need expiry dates).
+<strong>Rolling deploys</strong> — replace instances gradually; the default in
+Kubernetes; both versions serve simultaneously, so N and N+1 must
+interoperate.</p>
+<hr />
+<blockquote>
+<p><strong>✅ CHECKPOINT — you now hold the INTERMEDIATE MODEL.</strong> You can name the
+seven families, and for each pattern say which failure forced it into
+existence and what bill it charges. What you can't yet do is <em>judge</em>:
+spot these patterns failing in the wild, and choose among them under real
+constraints. That is the next layer.</p>
+</blockquote>
+<hr />
+<h2 id="readme-11-failure-scenarios--how-architectures-actually-go-wrong">11. FAILURE SCENARIOS — how architectures actually go wrong</h2>
+<p>Protocols fail by crashing; architectures fail by <em>decisions</em> — slowly,
+expensively, and usually while every individual service is green. The six
+below cause most real-world architectural pain. Format per scenario: how
+it's created → how you detect it → why it happens → the repair → what it
+teaches.</p>
+<p><strong>F1 — The distributed monolith.</strong> Created by: splitting a monolith into
+services along the wrong lines (usually entity nouns, or too early), so
+every business change still touches 4 services. Detect: deploys must be
+coordinated (&quot;release train&quot; for &quot;independent&quot; services); PRs routinely
+span repos; lockstep version requirements. Why: the coupling was never
+removed — it was <em>promoted</em> from function calls (cheap, refactorable,
+compiler-checked) to network calls + API contracts (slow, unrefactorable,
+runtime-checked). You now pay microservices' full bill (network failures,
+sagas, ops burden) while receiving none of its product (independent
+deployment). Strictly worse than the monolith you started with. Repair:
+re-merge (Prime Video, Segment — no shame in it) or re-draw boundaries
+along business capabilities and team ownership. Teaches: <strong>the unit of
+decomposition is the business capability, not the entity</strong> — &quot;orders,
+payments, kitchen,&quot; never &quot;users-service, database-service.&quot; Guarantee
+lost: evolvability. Kept: none — that's what makes it the #1 anti-pattern.</p>
+<p><strong>F2 — Premature microservices.</strong> Created by: a 6-person team adopting
+12 services because that's what the conference talks did (the <em>golden
+hammer</em> / resume-driven-design anti-patterns). Detect: infra work dwarfs
+feature work; every feature is a distributed transaction; the whole
+codebase would fit in one IDE window. Why: the style's benefits scale with
+<em>team count</em> and its costs are near-fixed — below ~2–3 teams the bill
+exceeds the benefit by construction. Boundaries also get drawn before the
+domain is understood, guaranteeing F1. Repair: modular monolith; keep the
+module seams honest so a <em>future</em> extraction is an option held, not a
+price paid. Teaches: <strong>Conway's law sets the service count, not ambition</strong>.</p>
+<p><strong>F3 — The shared database.</strong> Created by: two services &quot;temporarily&quot;
+writing the same tables during a migration; temporary becomes permanent.
+Detect: a schema change requires a cross-team meeting; you can't tell who
+writes a column. Why: the schema becomes a hidden global contract —
+maximal coupling with zero interface, invisible in every architecture
+diagram. Repair: pick one owner per table set; everyone else migrates to
+the owner's API/events; CDC as a bridge during transition. Teaches: a
+boundary you can bypass <strong>is</strong> bypassed; boundaries need enforcement, not
+agreement.</p>
+<p><strong>F4 — Event spaghetti.</strong> Created by: years of choreography — hundreds of
+event types, every service reacting to reactions. Detect: nobody can
+answer &quot;what all happens when an order is placed?&quot; without archaeology; a
+consumer change breaks a producer nobody knew existed; debugging = reading
+five services' logs side by side. Why: choreography's decoupling hides the
+<em>workflow</em> — the flow exists only emergently, and system-level reasoning
+was traded away service by service, each trade locally reasonable. Repair:
+orchestrators for the core multi-step workflows (the saga fork, chosen
+consciously); an event <strong>schema registry</strong> with versioning; distributed
+tracing (stage 15) as the flashlight. Teaches: decoupling is not free
+observability — the more decoupled the pieces, the more deliberate the
+<em>visibility</em> work must be.</p>
+<p><strong>F5 — The retry storm / metastable failure.</strong> Created by: layered
+retries without budgets — client retries ×3, gateway ×3, service ×3 = one
+user click becoming 27 downstream calls exactly when the system is
+sickest. Detect: load spikes <em>during</em> partial outages; recovery doesn't
+happen even after the root cause is fixed (the system is kept down by its
+own retry load — a <em>metastable</em> state). Why: each layer's retry is locally
+reasonable; the multiplication is emergent. Repair: retry budgets, one
+designated retry layer, circuit breakers as the pressure-relief valve,
+jitter everywhere. Teaches: resilience patterns compose <em>against</em> you
+unless designed as a system.</p>
+<p><strong>F6 — Cache inconsistency as a product bug.</strong> Created by: cache-aside
+with ad-hoc invalidation (&quot;we'll delete the key when we update&quot;). Detect:
+support tickets — &quot;I changed my address and the old one still shows&quot;;
+stale reads that heal on refresh. Why: cache + database is a two-writes
+problem — the dual-write from your <a href="../48-transactional-outbox/notes.html#readme">outbox</a> lab
+wearing a different coat; deletes get missed, race (read-repopulates-stale
+just after invalidation), or fan out to keys nobody tracked. Repair: TTLs
+as the safety net (bounded staleness), event-driven invalidation off the
+outbox/CDC stream, or accept-and-display staleness honestly. Teaches: a
+cache is a <em>replica</em>, and every replica buys <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>
+consistency problems at small scale.</p>
+<hr />
+<h2 id="readme-12-correctness--what-getting-it-right-even-means-here">12. CORRECTNESS — what &quot;getting it right&quot; even means here</h2>
+<p>Individual patterns have proofs (your paxos lab proved safety properties).
+Architecture has no proofs — it has <strong>laws, tradeoff discipline, and fit</strong>.
+This stage is the actual skill; everything before it was vocabulary.</p>
+<p><strong>The two laws</strong> (Richards &amp; Ford, <em>Fundamentals of Software Architecture</em>):
+<strong>First Law: everything in architecture is a tradeoff</strong> — if a choice looks
+tradeoff-free, the downside hasn't been found yet. <strong>Second Law: <em>why</em> is
+more important than <em>how</em></strong> — an architecture whose reasons are recorded
+can be safely evolved when the reasons change; one whose reasons are lost
+becomes cargo cult (&quot;we've always had a gateway there&quot;).</p>
+<p><strong>There is no &quot;best architecture.&quot;</strong> Only fit between: the -ilities that
+actually matter for <em>this</em> system (ranked, because they conflict — you
+cannot maximize consistency and availability, per your CAP lab; nor
+simplicity and fault-isolation), the team (size, count, skill — Conway),
+and the constraints (money, deadline, regulation, existing systems). The
+selection method, compressed:</p>
+<ol>
+<li>Extract the top 3–5 -ilities from the actual business situation (not
+from preference). &quot;We're a 5-person startup finding product-market fit&quot;
+→ evolvability, simplicity, speed-to-ship. &quot;We process payments&quot; →
+consistency, auditability. Most systems genuinely need only 2–3.</li>
+<li>Take the <strong>simplest</strong> style that serves them (there is a default:
+modular monolith, layered or hexagonal inside, boring relational
+database, sync calls — deviate only on evidence).</li>
+<li>Add patterns one at a time, each <strong>paid for by a named, current
+requirement</strong> (YAGNI at architecture scale). &quot;We might need to scale
+someday&quot; buys you clean module seams — an option — not 12 services.</li>
+<li>Record each decision and its <em>why</em> (ADRs, stage 15) so future teams
+can re-decide when the why changes.</li>
+</ol>
+<p>What this discipline guarantees — and doesn't: you get <em>fitness for the
+requirements you named</em> and <em>revisability</em>. You explicitly do NOT get
+future-proofing (requirements will change; the goal is cheap-to-change,
+not never-changes), and you traded away resume glamour and the comfort of
+following the loudest conference talk. <strong>Safety-vs-liveness has an
+architecture-level echo you already know:</strong> in every distributed choice
+you made above, you were choosing between refusing to proceed (consistent,
+maybe unavailable) and proceeding on possibly-stale grounds (available,
+maybe wrong) — CAP again, wearing a suit.</p>
+<hr />
+<h2 id="readme-13-code--where-the-runnable-versions-live">13. CODE — where the runnable versions live</h2>
+<p>A survey has no single toy implementation — its runnable arm is the labs
+you already built: <a href="../47-saga/notes.html#readme">saga</a>, <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>,
+<a href="../51-cqrs/notes.html#readme">cqrs</a>, <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>,
+<a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a>, <a href="../39-paxos/notes.html#readme">paxos</a> each contain a
+working implementation of one pattern from stage 10.5's family, with tests
+and failure experiments. The load-bearing code <em>shapes</em> from this lab —
+a hexagonal port/adapter in miniature and a circuit breaker state machine
+— are in <a href="CATALOG.html"><code>CATALOG.md</code></a> entries for those patterns, at
+walking-through length.</p>
+<h2 id="readme-14-experiments--breaking-things-on-purpose">14. EXPERIMENTS — breaking things on purpose</h2>
+<p>The interactive Pattern Atlas (<code>visualization.html</code>) is this lab's
+experiment bench: the <strong>decision-guide quiz</strong> puts you in six realistic
+scenarios (startup CRUD app, payment flow, cascading failure, monolith
+migration...) where you commit to a pattern choice and then see the
+verdict and the bill. The thought-experiment versions — with worked
+answers — are rungs 3, 4, 7 and 8 of <a href="notes.html#exercises"><code>EXERCISES.md</code></a>.</p>
+<hr />
+<blockquote>
+<p><strong>✅ CHECKPOINT — you now hold the ENGINEERING MODEL.</strong> You can recognize
+the six classic architecture failures in a system you've just met, and
+you have a defensible method for choosing patterns under constraints.
+The last layer: how this discipline is actually operated inside real
+companies, day to day.</p>
+</blockquote>
+<hr />
+<h2 id="readme-15-production--how-real-organizations-do-architecture">15. PRODUCTION — how real organizations do architecture</h2>
+<p><strong>Deciding and recording: ADRs.</strong> An Architecture Decision Record is a
+one-page file, in the repo, per significant decision: context → options
+considered → decision → consequences (including the accepted downsides).
+The ADR log is the Second Law made operational — the <em>why</em> survives the
+people. Industry-standard practice; start one this week, it costs nothing.</p>
+<p><strong>Communicating: the C4 model.</strong> Four zoom levels of diagram — Context
+(system among its neighbors), Container (deployable units: services, DBs,
+brokers), Component (modules inside one container), Code (rarely drawn).
+Its value is agreeing on the <em>altitude</em> of a conversation; most
+architecture arguments are two people talking at different zoom levels.</p>
+<p><strong>Keeping the shape: fitness functions &amp; evolutionary architecture.</strong>
+Boundaries erode (mental-model break #3), so encode them as tests that
+fail the build: &quot;no module imports another's internals&quot; (ArchUnit on the
+JVM), &quot;no service calls this deprecated API,&quot; &quot;p99 latency of this
+endpoint &lt; 300ms.&quot; An architecture with fitness functions can evolve
+safely — the tests hold the shape while everything inside changes. This +
+strangler fig + ADRs is the modern posture: architecture as a continuously
+re-decided thing, not a blueprint drawn once.</p>
+<p><strong>Operating it: observability.</strong> A distributed architecture is only as
+good as your ability to see it: the <strong>three pillars</strong> — metrics
+(aggregate health: rates, errors, latency percentiles), logs (per-event
+detail), <strong>distributed tracing</strong> (one request's journey across services —
+trace IDs propagated through every call and event; the only cure for F4's
+&quot;what happens when an order is placed?&quot;). On-call reality check for every
+pattern you adopt: a breaker that opens needs an alert and a dashboard; a
+saga that half-completes needs a place where a human can see and resume
+it; a consumer lagging its topic needs a lag monitor (<a href="../51-cqrs/notes.html#readme">cqrs</a>
+taught you why). <strong>A pattern you can't observe is a pattern you don't
+have.</strong></p>
+<p><strong>What this doc's tidy story omitted</strong> (the honest list): security
+architecture (zero-trust, secrets, authn/z topologies) — a lab of its own;
+multi-region and data-residency; cost as an -ility (cloud bills kill
+architectures too — Prime Video again); org politics (the real
+counterweight to every clean method here); and the fact that real systems
+are <em>never</em> one style — every production architecture at scale is a hybrid
+(a modular monolith core + a few extracted services + an event backbone +
+serverless glue is a very common honest answer).</p>
+<p><strong>Real-world anchors to remember, one line each:</strong> Amazon 2002 — API
+mandate, services only, birth of the modern era. Netflix 2010s — microservices</p>
+<ul>
+<li>resilience patterns + chaos engineering, the reference implementation.
+Shopify — world-scale <em>modular monolith</em>, the proof you don't have to
+distribute. Stack Overflow — top-100 website on a handful of servers, the
+proof scale-up is real. Segment 2018 / Amazon Prime Video 2023 — public,
+successful <em>retreats</em> from microservices; the proof that re-merging is a
+move, not a failure.</li>
+</ul>
+<hr />
+<h2 id="readme-16-exercises">16. EXERCISES</h2>
+<p>The eight-rung ladder is in <a href="notes.html#exercises"><code>EXERCISES.md</code></a> — explain,
+identify, predict, modify, plus (this being architecture) heavyweight
+rungs 7–8: failure-handling and full design prompts with worked solutions
+in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Rung 8 is the one that matters: do it
+on paper before reading the solution.</p>
+<h2 id="readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">flowchart TD
+    subgraph done[&quot;already learned (your labs)&quot;]
+        CAP[cap-theorem] --- TPC[two-phase-commit] --- PAX[paxos]
+        OB[transactional-outbox] --- SAGA[saga] --- CQRS[cqrs] --- ES[event-sourcing]
+    end
+    THIS[THIS LAB&lt;br/&gt;the map of the whole territory] --&gt; done
+    THIS --&gt; N1[ddd-strategic-design?&lt;br/&gt;how service boundaries are actually found]
+    THIS --&gt; N2[caching?&lt;br/&gt;deep-dive the hardest data pattern]
+    THIS --&gt; N3[load-balancing?]
+    THIS --&gt; N4[distributed-tracing?]
+    THIS --&gt; N5[kafka?&lt;br/&gt;the event backbone made concrete]
+</pre>
+<p><strong>Commonly confused, one sentence each:</strong> <em>microservices vs SOA</em> — same
+&quot;services&quot; idea; SOA centralized logic in a smart bus, microservices keep
+the pipe dumb. <em>Hexagonal vs clean vs onion</em> — one idea (domain center,
+arrows inward), three brandings. <em>Event-driven vs event sourcing</em> — EDA is
+how services <em>talk</em>; event sourcing is how one service <em>stores</em>; you can
+have either without the other. <em>Saga orchestration vs an ESB</em> — the
+orchestrator owns one workflow's logic; the ESB owned everybody's.
+<em>Modular monolith vs layered monolith</em> — modules cut by business
+capability with enforced seams vs floors cut by technical kind.</p>
+<p><strong>Next steps, ready to type:</strong> <code>/learn ddd-strategic-design</code> (the missing
+skill this lab kept pointing at: <em>finding</em> boundaries), <code>/learn kafka</code>
+(the event backbone concrete), <code>/learn caching</code>, <code>/learn distributed-tracing</code>,
+<code>/learn load-balancing</code>.</p>
+<h2 id="readme-18-glossary">18. GLOSSARY</h2>
+<p>In order of appearance. One line each.</p>
+<ul>
+<li><strong>Software architecture</strong> — the on-purpose shape of a system: its parts, their relations, and the hard-to-reverse decisions.</li>
+<li><strong>Module / component</strong> — a named part with a public interface and hidden internals.</li>
+<li><strong>Interface</strong> — the declared surface through which outsiders may use a module.</li>
+<li><strong>Coupling</strong> — how much a change (or failure) in one part forces change (or failure) in another; lower it.</li>
+<li><strong>Temporal coupling</strong> — a runtime flavor of coupling: A works only while B is up and fast, at the same moment.</li>
+<li><strong>Cohesion</strong> — how much a module's contents change for the same reason; raise it.</li>
+<li><strong>Quality attributes / -ilities</strong> — measurable non-functional properties (scalability, availability, maintainability…) that patterns are chosen by.</li>
+<li><strong>Pattern</strong> — a named, reusable boundary-shape with known tradeoffs; sizes: style → architecture pattern → design pattern.</li>
+<li><strong>Architecture style</strong> — a pattern that shapes the whole system (layered, microservices, event-driven).</li>
+<li><strong>Tradeoff</strong> — the -ilities a choice worsens as the price of those it improves.</li>
+<li><strong>Blast radius</strong> — how much of the system one change or failure can reach.</li>
+<li><strong>Information hiding</strong> — decompose around likely changes; hide each inside one module (Parnas).</li>
+<li><strong>SOLID</strong> — five module-design rules: single responsibility, open/closed, Liskov substitution, interface segregation, dependency inversion.</li>
+<li><strong>Dependency inversion</strong> — policy owns the interface; technological detail implements it; arrows point from detail to policy.</li>
+<li><strong>DRY / KISS / YAGNI</strong> — don't duplicate knowledge / keep it simple / don't build for imagined futures.</li>
+<li><strong>Separation of concerns</strong> — one part per kind of work.</li>
+<li><strong>Conway's law</strong> — system shape copies org communication shape; the inverse maneuver: shape teams to get the architecture.</li>
+<li><strong>Layered architecture</strong> — horizontal technical floors, calls point downward.</li>
+<li><strong>Hexagonal architecture / ports and adapters</strong> — domain at center defining ports (interfaces it owns); all technology plugs in as adapters; arrows inward.</li>
+<li><strong>Port / adapter</strong> — a domain-owned interface / a technology-specific implementation of one.</li>
+<li><strong>Onion / clean architecture</strong> — same-family variants of hexagonal with prescribed rings.</li>
+<li><strong>Vertical slice architecture</strong> — organize by feature (full stack per slice) instead of by technical layer.</li>
+<li><strong>Modular monolith</strong> — one deployable, internally split into enforced business-capability modules with private data.</li>
+<li><strong>Microkernel / plugin architecture</strong> — minimal core plus plugins; extension is the product.</li>
+<li><strong>Pipes and filters</strong> — independent transformation stages connected by data flow.</li>
+<li><strong>Microservices</strong> — independently deployable, team-owned services with private data, communicating over a network.</li>
+<li><strong>SOA / ESB</strong> — 2000s service style with a smart central bus; the bus became the new monolith — hence &quot;smart endpoints, dumb pipes.&quot;</li>
+<li><strong>Event-driven architecture (EDA)</strong> — services communicate by publishing events to a broker; consumers react asynchronously.</li>
+<li><strong>Broker</strong> — durable message middleman (Kafka, RabbitMQ) between producers and consumers.</li>
+<li><strong>Choreography vs orchestration</strong> — flow emerges from reactions vs an explicit coordinator owns the flow.</li>
+<li><strong>Event notification / event-carried state transfer</strong> — event as pointer (&quot;go ask&quot;) vs event carrying the full data (consumers keep copies).</li>
+<li><strong>Serverless / FaaS</strong> — functions run on demand on rented infrastructure; scale-to-zero, cold starts.</li>
+<li><strong>Space-based architecture</strong> — in-memory data grids absorb extreme bursts; database out of the hot path.</li>
+<li><strong>API gateway / BFF</strong> — one front door for cross-cutting concerns / one thin per-client-type front door.</li>
+<li><strong>Service mesh / sidecar</strong> — per-service proxy handling networking concerns uniformly.</li>
+<li><strong>Anti-corruption layer</strong> — a translator preventing a foreign model from leaking into yours.</li>
+<li><strong>Strangler fig</strong> — migrate by routing through a facade and moving capabilities out incrementally.</li>
+<li><strong>Database-per-service</strong> — each service's data is private; access via API or events only.</li>
+<li><strong>Shared database (anti-pattern)</strong> — multiple services writing one schema; hidden maximal coupling.</li>
+<li><strong>CDC (change data capture)</strong> — tailing a database's change log to emit events (e.g. Debezium).</li>
+<li><strong>Cache-aside / write-through / write-behind</strong> — read-miss-fill / write both synchronously / write cache now, store later.</li>
+<li><strong>Cache stampede</strong> — many callers rebuilding an expired hot key at once.</li>
+<li><strong>Sharding</strong> — partitioning data across nodes by key; loses cross-shard joins/transactions.</li>
+<li><strong>Timeout</strong> — a deadline on every remote call; converts slow into down.</li>
+<li><strong>Retry with backoff and jitter</strong> — spaced, randomized re-attempts of transient, idempotent failures.</li>
+<li><strong>Retry storm / thundering herd</strong> — multiplied, synchronized retries attacking a struggling service.</li>
+<li><strong>Metastable failure</strong> — a system kept down by its own recovery load after the root cause is gone.</li>
+<li><strong>Circuit breaker</strong> — CLOSED/OPEN/HALF_OPEN wrapper that fails fast when a dependency is drowning.</li>
+<li><strong>Bulkhead</strong> — partitioned resource pools so one dependency can't drain everything.</li>
+<li><strong>Load shedding / backpressure</strong> — reject early when overloaded / propagate slowdown to the source via bounded queues.</li>
+<li><strong>Graceful degradation / fallback</strong> — a pre-decided reduced experience when a dependency is gone.</li>
+<li><strong>Chaos engineering</strong> — deliberately injecting failure in production to prove resilience continuously.</li>
+<li><strong>Blue-green / canary / rolling deployment</strong> — flip between two environments / shift traffic gradually on metrics / replace instances one by one.</li>
+<li><strong>Feature flag</strong> — runtime switch decoupling deploy from release; needs expiry or becomes flag debt.</li>
+<li><strong>Expand/contract</strong> — backward-compatible schema migration: add new, migrate, remove old, across releases.</li>
+<li><strong>Distributed monolith</strong> — services with monolith coupling; all of the bill, none of the benefit.</li>
+<li><strong>Golden hammer / resume-driven design</strong> — choosing patterns from familiarity or fashion instead of fit.</li>
+<li><strong>Schema registry</strong> — versioned, validated home for event schemas.</li>
+<li><strong>ADR (architecture decision record)</strong> — one page per decision: context, options, decision, consequences.</li>
+<li><strong>C4 model</strong> — four diagram zoom levels: context, container, component, code.</li>
+<li><strong>Fitness function</strong> — an automated test that fails the build when an architectural rule is broken.</li>
+<li><strong>Evolutionary architecture</strong> — architecture as continuously re-decided, held in shape by fitness functions.</li>
+<li><strong>Three pillars of observability</strong> — metrics, logs, distributed traces.</li>
+<li><strong>Distributed tracing</strong> — following one request's ID across every service and event it touches.</li>
+</ul>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--the-eight-rung-ladder">Exercises — the eight-rung ladder</h1>
+<p>Attempt each rung before opening <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. This lab
+has no code project, so rungs 5–6 are paper-engineering exercises (write
+the ADR, find the planted flaw) — for architecture, paper <em>is</em> the medium:
+the real-world artifact of this skill is a decision, written down. Rungs
+7–8 are the ones that build the actual muscle; do them longhand.</p>
+<hr />
+<h2 id="exercises-rung-1--explain-no-notation-no-pattern-names-if-you-can-help-it">Rung 1 — Explain (no notation, no pattern names if you can help it)</h2>
+<p><strong>1.1</strong> Explain to a smart non-engineer why &quot;being careful&quot; stops working
+as a codebase grows, and what architecture does about it. Two paragraphs
+max.</p>
+<p><strong>1.2</strong> Your teammate says: &quot;Microservices are the modern way; monoliths
+are legacy.&quot; Correct this in three sentences, naming what microservices
+actually buy and what they cost.</p>
+<p><strong>1.3</strong> What is the difference between a <em>principle</em>, a <em>pattern</em>, and a
+<em>style</em>? One sentence each, with one example each.</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Open the Pattern Atlas (<code>visualization.html</code>). Filter by &quot;my
+system falls over when one dependency slows down.&quot; Which family lights
+up? Within it, which pattern is the <em>prerequisite</em> for all the others,
+and why?</p>
+<p><strong>2.2</strong> A codebase has folders <code>controllers/</code>, <code>services/</code>,
+<code>repositories/</code>. A single feature change (&quot;add a tip to an order&quot;)
+touches all three. Which style is this, which principle is being honored,
+and which is being sacrificed?</p>
+<p><strong>2.3</strong> In the hexagonal code sketch in CATALOG Family 1: which lines are
+domain, which are adapter, and in which direction do the compile-time
+dependencies point? Why does <code>PlaceOrderService</code> have no Stripe import?</p>
+<p><strong>2.4</strong> Your company's diagram shows 30 services and one box labeled
+&quot;Integration Hub&quot; that transforms messages and applies routing rules
+based on order type. Which historical pattern is being reinvented, and
+what is its known failure mode?</p>
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> Five services in a synchronous chain, each 99.9% available.
+Predict end-to-end availability of the chain (compute it). Then predict
+what it becomes if hops 3–5 are moved behind a durable queue.</p>
+<p><strong>3.2</strong> A team adds retries (3 attempts, no backoff) at the client, the
+gateway, and the service layer. The database gets slow for 60 seconds.
+Predict the request multiplication factor and the shape of the load graph
+after the database recovers.</p>
+<p><strong>3.3</strong> Cache-aside with 10-minute TTLs, no event invalidation. A user
+updates their delivery address, then immediately reloads the page, which
+is served by a different app instance. Predict what they see and for how
+long, and name the two distinct mechanisms that can make it stale.</p>
+<p><strong>3.4</strong> TiffinBox splits into services named <code>user-service</code>,
+<code>database-service</code> (wraps the shared DB), and <code>logic-service</code>. Predict,
+concretely, what a typical feature PR looks like six months later.</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Take the layered TiffinBox and make exactly one structural change
+that lets the domain be tested without a database. What did you invert,
+and who owns the new interface?</p>
+<p><strong>4.2</strong> The circuit breaker in CATALOG trips at 50% failure over 20
+calls, cools off 30s. Modify it for a dependency that is a <em>payment
+provider</em> (calls are money-moving, low volume, high value). Which
+parameters change, which direction, and what non-parameter change does
+&quot;money-moving&quot; force?</p>
+<p><strong>4.3</strong> An event-driven checkout uses pure choreography across 9
+services. Modify the design to make the <em>order flow</em> debuggable without
+losing fan-out benefits for analytics/notifications. What did you
+centralize, what stayed decoupled, and what new component do you now own?</p>
+<h2 id="exercises-rung-5--implement-on-paper-the-adr">Rung 5 — Implement (on paper: the ADR)</h2>
+<p><strong>5.1</strong> Write a one-page ADR for TiffinBox at 12 engineers choosing
+<strong>modular monolith over microservices</strong>. Include: context, at least two
+options with honest pros/cons, the decision, and 3+ consequences —
+at least one of which must be a <em>downside of the chosen option</em>.</p>
+<h2 id="exercises-rung-6--debug-find-the-planted-flaws">Rung 6 — Debug (find the planted flaws)</h2>
+<p><strong>6.1</strong> An architect proposes this design for a flash-sale feature
+(200k requests in the first minute):</p>
+<blockquote>
+<p>&quot;The mobile app calls the API gateway, which synchronously calls
+<code>sale-service</code>. <code>sale-service</code> checks remaining stock by querying
+<code>inventory-service</code> (sync REST), reserves a unit by writing to the
+shared <code>inventory</code> table that <code>inventory-service</code> also writes, then
+synchronously calls <code>payment-service</code> (timeout 60s, 5 immediate
+retries on failure to make sure the charge goes through), then
+publishes <code>SalePlaced</code> to Kafka and commits its own DB row. Caching
+is added on stock counts with a 30s TTL so the stock check is fast.&quot;</p>
+</blockquote>
+<p>There are at least <strong>five</strong> distinct architectural flaws, each violating
+a named pattern or principle from this lab. Find them and name the
+violation.</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> TiffinBox's recommendation service (&quot;customers also ordered...&quot;)
+has become the #2 cause of checkout-page incidents, despite being the
+least important feature on the page. Redesign the checkout page's
+relationship to it so recommendation failures <em>cannot</em> affect checkout,
+using at least three named patterns. Specify: the failure modes covered,
+what the user sees in each, and what alerts fire.</p>
+<p><strong>7.2</strong> During a monolith → services migration (strangler fig), orders
+exist in <em>both</em> the legacy DB and the new orders service for the 6-month
+transition. The support team needs one consistent view, and the finance
+batch job still reads the legacy schema. Design the transition-period
+data architecture: who owns writes, how the two stores stay in sync, in
+which direction, and what happens when they disagree.</p>
+<h2 id="exercises-rung-8--design-the-real-exam">Rung 8 — Design (the real exam)</h2>
+<p><strong>8.1</strong> Design <strong>TiffinBox 2.0</strong> end to end: 3M orders/day across 40
+cities, 60 engineers in 8 teams (orders, payments, kitchen ops, riders,
+pricing/promotions, customer app, restaurant app, data/ML), lunchtime
+traffic is 20× baseline, riders' GPS pings are 2,000 writes/sec,
+payments must never double-charge, and the CFO wants the infra bill
+justified. Produce: (a) the service/module decomposition with the
+<em>reasoning</em> per boundary, (b) sync vs async per interaction on the
+place-order path, (c) the data architecture (per-store choices,
+consistency stance per flow), (d) the resilience stack on the critical
+path, (e) the deployment strategy, and (f) the three biggest risks of
+your own design — argued as seriously as its strengths.</p>
+<p><strong>8.2</strong> (Reverse design) You inherit: 85 microservices, 9 engineers,
+release train every 2 weeks because &quot;everything depends on everything,&quot;
+p50 checkout latency 2.8s across 14 sync hops, AWS bill growing 3× YoY
+with flat traffic. Management wants &quot;microservices done right.&quot;
+Argue for what you'd actually do instead, with a 12-month migration
+plan, the metrics that gate each phase, and the political case for why
+merging services is not an admission of failure.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<p>Worked answers. For rungs 7–8 these are <em>discussions</em> — architecture has
+no single correct output; judge your attempt by whether it named the same
+tradeoffs, not whether it drew the same boxes.</p>
+<hr />
+<h2 id="solutions-rung-1">Rung 1</h2>
+<p><strong>1.1</strong> As code grows, hidden connections between parts grow roughly with
+the square of the code, while a person's carefulness stays constant — so
+eventually a &quot;safe&quot; change breaks something far away that nobody
+remembered was connected. Architecture fixes this structurally rather
+than behaviorally: divide the system into parts with explicit boundaries,
+control which part may know about which, and make the connections few and
+visible — so the effect of a change becomes predictable and local, and
+&quot;careful&quot; becomes achievable again because there's a bounded amount to be
+careful about.</p>
+<p><strong>1.2</strong> Microservices buy independent deployment, per-team ownership, and
+per-component scaling and fault isolation — benefits that only pay off
+when you have multiple autonomous teams and genuinely different scaling
+or isolation needs. They cost network failure modes on every call, loss
+of cross-module transactions (hello sagas and eventual consistency), and
+a large permanent operations bill. A well-modularized monolith is the
+better engineering choice for most teams most of the time — Shopify and
+Stack Overflow run at world scale on exactly that — so the monolith/
+microservices question is about your <em>organization</em>, not modernity.</p>
+<p><strong>1.3</strong> A <em>principle</em> is a force or rule of thumb that makes designs good
+or bad (low coupling). A <em>pattern</em> is a named, reusable solution-shape
+with known tradeoffs for a recurring problem (circuit breaker). A <em>style</em>
+is a pattern big enough to shape the entire system (event-driven
+architecture).</p>
+<h2 id="solutions-rung-2">Rung 2</h2>
+<p><strong>2.1</strong> The resilience family. The prerequisite is the <strong>timeout</strong>:
+every other pattern in the family reacts to failure, and without
+timeouts &quot;slow&quot; never becomes &quot;failure&quot; — retries never trigger,
+breakers never see errors to count, bulkhead pools just fill up more
+slowly. Unbounded waiting is the enabling condition of every cascade.</p>
+<p><strong>2.2</strong> Layered architecture. Honored: separation of concerns (each
+folder is one technical kind of work). Sacrificed: cohesion per feature
+— &quot;the tip feature&quot; has no single home, so every feature change fans
+across all layers.</p>
+<p><strong>2.3</strong> Domain: the two interfaces (<code>OrderRepository</code>,
+<code>PaymentGateway</code>) and <code>PlaceOrderService</code>. Adapters:
+<code>PostgresOrderRepository</code>, <code>StripeGateway</code>, <code>OrderController</code>, and the
+test fakes. All compile-time arrows point <em>inward</em>: adapters import the
+domain; the domain imports nothing technological. <code>PlaceOrderService</code>
+has no Stripe import because dependency inversion puts the interface on
+the policy side — the domain defines <em>what it needs</em> (<code>charge(...)</code>) in
+its own vocabulary, and Stripe is a plugin conforming to it, not a
+foundation the domain stands on.</p>
+<p><strong>2.4</strong> The Enterprise Service Bus (SOA-era). Failure mode: business
+logic sinks into the shared middleware until the &quot;hub&quot; is a new
+monolith that every team queues behind, owned by an integration team,
+undeployable independently — the exact disease &quot;smart endpoints, dumb
+pipes&quot; was coined against.</p>
+<h2 id="solutions-rung-3">Rung 3</h2>
+<p><strong>3.1</strong> Chain: 0.999⁵ ≈ <strong>99.50%</strong> (~43.5 h/year of failure — vs ~8.7 h
+for a single 99.9% system). With hops 3–5 behind a durable queue, the
+<em>user-facing</em> operation only needs hops 1–2 up: 0.999² ≈ <strong>99.80%</strong>
+(~17.5 h/yr). The queued work completes later regardless — availability
+was bought by <em>removing simultaneity</em>, not by improving any service.
+(Caveat worth naming: the broker's own availability now enters the
+math, but brokers are engineered and operated for exactly that role.)</p>
+<p><strong>3.2</strong> Multiplication: 3 × 3 × 3 = <strong>27 attempts per user request</strong>,
+arriving with no spacing, exactly while the database is sickest. After
+recovery, expect the <em>metastable</em> signature: a mountain of queued and
+synchronized retries slams the recovering database, which slows again,
+which triggers more retries — load stays pinned above capacity even
+though the root cause is fixed, until traffic is shed or retries drain.
+The graph looks like: outage → recovery attempt → self-inflicted second
+outage → sawtooth.</p>
+<p><strong>3.3</strong> The page likely shows the <strong>old address</strong>. Two distinct
+mechanisms: (1) TTL staleness — the other instance's cache still holds
+the old value for up to 10 minutes because nothing invalidated it;
+(2) even with delete-on-write invalidation, the read-repopulate race —
+a concurrent read that fetched the old row just before the write can
+fill the cache with stale data <em>after</em> the invalidation ran. (If a read
+replica feeds the cache fill, replica lag is a third contributor.)
+Bounded fix: event-driven invalidation + TTL as backstop + read-your-
+own-writes routing for the updating user.</p>
+<p><strong>3.4</strong> The distributed monolith signature: a typical feature PR spans
+three repos (<code>logic-service</code> for the rule, <code>database-service</code> for the
+new access method, <code>user-service</code> for the field), the three changes
+must deploy in a coordinated order, and a version mismatch between them
+is a production incident. Services named after <em>technical roles</em>
+(database, logic) rather than business capabilities guarantee this —
+every business change cuts across all of them by construction.</p>
+<h2 id="solutions-rung-4">Rung 4</h2>
+<p><strong>4.1</strong> Invert the persistence dependency: define an <code>OrderRepository</code>
+interface <strong>owned by the domain</strong>, move all SQL into an adapter
+implementing it, and hand the domain its repository from outside
+(constructor injection). The domain now depends on an interface it
+owns; Postgres depends on the domain's contract. Tests plug in an
+in-memory implementation. (This is the layered → hexagonal move in
+one step; nothing else needs to change yet.)</p>
+<p><strong>4.2</strong> Direction of changes: <strong>more sensitive and more patient.</strong> Trip
+faster: low volume means a 20-call window reacts too slowly — shrink
+the window (e.g. 10) and/or trip on consecutive failures (e.g. 5) since
+each failure is high-value; lengthen the cool-off (payment providers'
+incidents last minutes, not seconds) and let HALF_OPEN admit exactly
+one probe. The non-parameter change &quot;money-moving&quot; forces: the fallback
+cannot be &quot;fail silently&quot; and retries/probes MUST carry <strong>idempotency
+keys</strong> — a timeout is not evidence the charge didn't happen, so the
+breaker must treat timeouts as &quot;unknown outcome,&quot; never re-charge
+without a key, and the fallback becomes an explicit product decision
+(queue order + charge later, or tell the user payment is unavailable).</p>
+<p><strong>4.3</strong> Introduce an <strong>orchestrator</strong> (a saga orchestrator / workflow
+engine) that owns the order flow's core steps — reserve stock, charge,
+confirm kitchen — as explicit, inspectable state; it still communicates
+with participants via commands/events over the broker. Keep pure
+pub-sub <strong>choreography for the passive fan-out</strong> — analytics,
+notifications, fraud scoring, loyalty — which subscribe to the events
+the flow emits and can multiply freely without touching it. You
+centralized <em>the workflow's decision logic and state</em>; you kept
+<em>reaction fan-out</em> decoupled. You now own a new stateful component:
+the orchestrator needs HA, monitoring, and a UI/console where a human
+can see and resume stuck flows — that operational surface is the price
+of debuggability, and it's a good trade for the <em>core</em> flow only.</p>
+<h2 id="solutions-rung-5">Rung 5</h2>
+<p><strong>5.1</strong> A good ADR hits these beats (yours can differ in content):</p>
+<blockquote>
+<p><strong>ADR-007: Modular monolith for TiffinBox core (not microservices)</strong>
+<strong>Context.</strong> 12 engineers in 3 loose teams; Rails-era monolith, no
+enforced internal boundaries; release conflicts rising; domain
+boundaries (orders vs kitchen vs riders) still shifting monthly as the
+business changes; no platform team; on-call is 2 people.
+<strong>Option A — microservices now.</strong> Pros: independent deploys,
+per-team ownership, differential scaling later. Cons: boundaries
+would be drawn before the domain is stable (high distributed-monolith
+risk); we'd inherit sagas/outbox/observability as day-one mandatory
+equipment with no platform team to own them; ops load exceeds 2-person
+on-call.
+<strong>Option B — modular monolith with enforced seams.</strong> Pros: team
+ownership via modules; boundaries refactorable in-process while the
+domain settles; one transaction scope keeps checkout simple; ops
+unchanged. Cons: shared release cadence remains; one runtime = shared
+blast radius; requires new build tooling (ArchUnit rules) and
+discipline to stop seam erosion.
+<strong>Decision.</strong> Option B. Modules: orders, payments, kitchen, riders,
+catalog — by business capability; each with a public facade, private
+tables, in-process events between them.
+<strong>Consequences.</strong> (1) We accept the shared release train for now;
+revisit when team count passes ~5 (trigger written here on purpose).
+(2) Boundary fitness functions run in CI from week one — an
+unenforced module boundary is a drawing, not a boundary. (3) Payments
+module gets an outbox even in-process, so a future extraction doesn't
+change its contract. (4) <em>Accepted downside:</em> a memory leak anywhere
+still restarts everything; we mitigate with per-module resource
+monitoring, not isolation we haven't paid for.</p>
+</blockquote>
+<p><strong>5.2 (grading your own)</strong> Must-haves: a real second option argued
+honestly; a written <em>trigger for revisiting</em>; at least one consequence
+that is a cost of the chosen option. An ADR with no downsides recorded
+is advocacy, not a decision record (Second Law: the why must survive).</p>
+<h2 id="solutions-rung-6">Rung 6</h2>
+<p><strong>6.1</strong> The five-plus flaws:</p>
+<ol>
+<li><strong>Shared database</strong> — <code>sale-service</code> writes the <code>inventory</code> table
+that <code>inventory-service</code> also writes. Violates database-per-service;
+creates a hidden interface-less contract; also a check-then-write
+race on stock under 200k concurrent requests.</li>
+<li><strong>Retry storm on a non-idempotent operation</strong> — 5 <em>immediate</em>
+retries on payment &quot;to make sure the charge goes through&quot; is 5
+chances to double-charge (no idempotency key mentioned, no backoff,
+no jitter) aimed at a struggling provider. Violates
+retry-with-backoff discipline and idempotency prerequisites.</li>
+<li><strong>60s timeout on the user path</strong> — holds a request thread for up to
+a minute (× 5 retries!) during the biggest traffic burst of the
+year; thread-pool exhaustion → cascade. Timeout must be sized to
+the user's latency budget; and where are the circuit breaker and
+bulkhead on this critical path? Absent entirely.</li>
+<li><strong>Dual write</strong> — publish <code>SalePlaced</code> to Kafka, <em>then</em> commit the
+local row: a crash between them announces sales that don't exist
+(and reversed order silently drops events). This is the exact
+problem the transactional outbox exists for.</li>
+<li><strong>Stale cache used for a correctness decision</strong> — a 30s-TTL cached
+stock count during a flash sale means selling from a count up to
+30s old at 200k req/min: guaranteed oversell. Caching is for
+<em>performance</em> reads, never for the authoritative check in a
+reserve decision; the reserve must be an atomic conditional
+operation at the source of truth (or a pre-allocated token/queue
+scheme).</li>
+<li>(Bonus) <strong>Fully synchronous chain for a burst-shaped workload</strong> —
+gateway → sale → inventory → payment in-line under 20× burst is the
+availability-multiplication trap; a flash sale is the canonical
+case for admission control + queue (load leveling), with async
+confirmation.</li>
+</ol>
+<h2 id="solutions-rung-7">Rung 7</h2>
+<p><strong>7.1</strong> Pattern stack (minimum viable set):</p>
+<ul>
+<li><strong>Timeout</strong> 150ms on the recommendations call (checkout page budget,
+not recommendation service's comfort).</li>
+<li><strong>Circuit breaker</strong> around it — on OPEN, checkout renders instantly
+with the fallback; alert fires on the transition (page the <em>recs</em>
+owner, not the checkout on-call).</li>
+<li><strong>Fallback / graceful degradation</strong> — pre-decided with product: show
+editorially-curated &quot;popular near you&quot; (served from a static cache),
+or nothing — the section collapses; checkout functionality identical
+in all cases.</li>
+<li><strong>Bulkhead</strong> — recommendations calls get their own small connection/
+thread pool (or move fully async: fetched after page render via a
+separate endpoint), so even breaker-missed slowness can't touch
+checkout's resources.
+Failure modes covered: recs down (breaker OPEN → fallback, ~0 added
+latency), recs slow (timeout → fallback at +150ms worst case; bulkhead
+caps concurrent exposure), recs erroring (breaker counts, opens).
+Alerts: breaker state transitions, fallback-serve rate &gt; threshold,
+recs pool saturation. The success metric: recommendations can be <em>hard
+down for a day</em> and checkout conversion doesn't move.</li>
+</ul>
+<p><strong>7.2</strong> Transition data architecture (one defensible shape):</p>
+<ul>
+<li><strong>Single write owner per capability at any moment</strong> — the strangler
+facade routes each order-related <em>write</em> to exactly one world;
+migrate write ownership capability-by-capability (e.g. new orders →
+new service; refunds still legacy) rather than splitting one
+capability's writes.</li>
+<li><strong>Sync direction follows ownership:</strong> new-service writes flow to the
+legacy schema via <strong>CDC/outbox → a legacy-updater adapter</strong> (so the
+finance batch job keeps working untouched — an anti-corruption layer
+writing <em>into</em> the old shape); anything still legacy-written flows
+the other way via CDC into the new service's store. One direction
+per table set — bidirectional sync of the same rows is where these
+migrations go to die.</li>
+<li><strong>Support's one consistent view:</strong> a read model (CQRS-style)
+projecting <em>both</em> streams into one queryable store, labeled with
+source and sync lag — honest eventual consistency rather than
+pretended uniformity.</li>
+<li><strong>On disagreement:</strong> the write owner is truth by definition; a
+reconciliation job diffs the stores continuously, auto-repairs the
+follower, and <em>pages a human with the diff</em> when repair fails —
+during migrations, silent disagreement is the real enemy, so the
+metric &quot;rows in disagreement, by age&quot; is a first-class SLO on the
+migration dashboard.</li>
+<li><strong>End state discipline:</strong> every capability flip has a date; finance's
+batch job gets a migration deadline to read the new API/warehouse —
+otherwise this becomes a lava flow (the half-strangled forever-state).</li>
+</ul>
+<h2 id="solutions-rung-8">Rung 8</h2>
+<p><strong>8.1</strong> A strong answer's skeleton (compare beats, not boxes):</p>
+<ul>
+<li><strong>(a) Decomposition mirrors the 8 teams</strong> (Conway, on purpose):
+orders, payments, kitchen, rider-logistics, pricing/promotions as
+services or hard modules; the two apps as clients behind <strong>two BFFs</strong>
+(customer, restaurant); data/ML consuming the event stream, never
+production DBs. Boundary reasoning must be capability + ownership +
+divergent -ilities: payments isolated for consistency/compliance;
+rider-GPS isolated for its write shape (2k writes/s telemetry —
+different store, different availability stance); pricing separate
+because it changes at marketing speed, not platform speed. A merged
+orders+kitchen is defensible at 8 teams; entity-services
+(user-service) or technical services (database-service) are the
+automatic-fail answers.</li>
+<li><strong>(b) Place-order path:</strong> sync for the user-facing decision segment —
+app → BFF → orders → payments (charge with idempotency key) — then
+<strong>async for all fan-out</strong>: <code>OrderPlaced</code> via outbox → kitchen,
+riders, notifications, loyalty, analytics. Justification: the user
+must know &quot;paid &amp; confirmed&quot; now (sync, short chain, ~2 hops); the
+kitchen finding out is &quot;soon&quot; (async). GPS pings: fire-and-forget
+into a stream (Kafka), never request/response.</li>
+<li><strong>(c) Data:</strong> DB-per-service; orders/payments on relational stores
+(payments: serializable + idempotency-key table — &quot;never
+double-charge&quot; is an idempotency argument, not a 2PC argument);
+GPS into a time-series/wide-column store with TTL; promotions
+cached aggressively (staleness harmless); analytics via the event
+stream into a warehouse. Consistency stance stated per flow:
+checkout strongly consistent inside payments, eventually consistent
+everywhere downstream, with read-your-own-writes on the customer's
+own order status.</li>
+<li><strong>(d) Resilience on the critical path:</strong> timeouts sized from a
+stated user budget (e.g. 2s end-to-end), breakers + bulkheads on
+the BFF→orders and orders→payments hops, retry budget with jitter
+and keys, fallbacks decided per widget (ETA degraded, checkout
+never), load shedding at the gateway by priority at lunch peak
+(20× burst: autoscale the stateless tier ahead of the lunch curve —
+it's predictable! — and shed analytics-grade traffic first).</li>
+<li><strong>(e) Deployment:</strong> canary + flags on customer-visible services,
+expand/contract schema discipline everywhere, blue-green acceptable
+for low-state services; deploy independence is the whole point of
+the split, so no release trains.</li>
+<li><strong>(f) Self-critique (the differentiating section):</strong> e.g. (1) the
+event backbone is now tier-0 — broker outage stops kitchen fan-out:
+what's the buffered/degraded mode? (2) 8-team boundaries will be
+wrong somewhere within a year — which seams are cheapest to move,
+and did we keep them cheap? (3) the CFO question: BFFs, a mesh, and
+per-service infra multiply baseline cost — the honest answer prices
+the platform team and defers the mesh until service count demands
+it. An answer with no self-critique hasn't internalized the First
+Law.</li>
+</ul>
+<p><strong>8.2</strong> The defensible position: <strong>this is a distributed monolith at
+1/10th the team size that could sustain it — consolidate.</strong> ~85
+services / 9 engineers ≈ 9+ services per engineer; the release train
+proves deploy-independence (microservices' core product) was never
+achieved, so you're paying the full bill for no benefit. Plan shape:</p>
+<ul>
+<li><strong>Phase 0 (month 1–2), measure:</strong> dependency-map the 85 (tracing
+data), find the 14-hop checkout chain, classify services into
+natural business capabilities; baseline the gating metrics —
+deploy lead time, cross-repo PR rate, p50/p99 checkout, infra cost
+per order.</li>
+<li><strong>Phase 1 (2–6), consolidate the core:</strong> merge each cluster of
+chatty, co-deployed services into one modular service per capability
+(checkout's 14 hops → likely 2–3), strangler-style: new consolidated
+service stands up, facade/gateway shifts routes, old services
+drain. In-process calls replace network hops → latency and cost
+fall mechanically.</li>
+<li><strong>Phase 2 (6–10):</strong> collapse the long tail (nanoservices → modules),
+delete idle infrastructure, keep genuinely separate only what has a
+named reason (payments compliance, one high-scale hot path).
+Target: ~6–10 deployables for 9 engineers.</li>
+<li><strong>Phase 3 (10–12):</strong> boundary fitness functions + ADRs so the
+consolidated modules stay honest and future re-extraction stays
+cheap.</li>
+<li><strong>Gates per phase:</strong> checkout p50 (2.8s → &lt;800ms is realistic when
+hops collapse), deploys/week per engineer, % PRs spanning &gt;1 repo
+(→ near zero), infra cost per order (the 3× YoY bill is the CFO's
+proof).</li>
+<li><strong>The political case:</strong> frame with industry precedent — Amazon Prime
+Video's own team merged a microservice pipeline back and cut 90% of
+its cost; Segment did the same and wrote it up. &quot;Microservices done
+right&quot; <em>means</em> matching service count to team count (Conway's law);
+merging is not retreating from modern architecture, it is what the
+people who invented modern architecture do when the math says so.
+The modules keep their seams, so the day the org has 30 teams, the
+extraction path is rehearsed and cheap — you are keeping the
+option, and stopping the payments on an option you don't hold.</li>
+</ul>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../05-btree-and-lsm/notes.html"><small>← Lab 5</small>btree-and-lsm</a><a href="../07-acid/notes.html" style="text-align:right"><small>Lab 7 →</small>acid</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why--why-does-architecture-exist-at-all">1. WHY — why does &quot;architecture&quot; exist at all?</a><a href="#readme-2-the-problem--meeras-tiffin-service">2. THE PROBLEM — Meera&#x27;s tiffin service</a><a href="#readme-3-the-naive-solution--just-keep-adding-code-carefully">3. THE NAIVE SOLUTION — &quot;just keep adding code carefully&quot;</a><a href="#readme-4-the-failure--why-being-careful-cannot-work">4. THE FAILURE — why &quot;being careful&quot; cannot work</a><a href="#readme-5-the-real-requirement">5. THE REAL REQUIREMENT</a><a href="#readme-6-the-key-idea">6. THE KEY IDEA</a><a href="#readme-7-terminology--the-words-professionals-use-for-all-this">7. TERMINOLOGY — the words professionals use for all this</a><a href="#readme-8-mental-models--carry-two-pictures">8. MENTAL MODELS — carry two pictures</a><a href="#readme-9-visualization--the-map-of-the-territory">9. VISUALIZATION — the map of the territory</a><a href="#readme-10-the-actual-mechanism--the-pattern-families-earned-one-failure-at-a-time">10. THE ACTUAL MECHANISM — the pattern families, earned one failure at a time</a><a href="#readme-11-failure-scenarios--how-architectures-actually-go-wrong">11. FAILURE SCENARIOS — how architectures actually go wrong</a><a href="#readme-12-correctness--what-getting-it-right-even-means-here">12. CORRECTNESS — what &quot;getting it right&quot; even means here</a><a href="#readme-13-code--where-the-runnable-versions-live">13. CODE — where the runnable versions live</a><a href="#readme-14-experiments--breaking-things-on-purpose">14. EXPERIMENTS — breaking things on purpose</a><a href="#readme-15-production--how-real-organizations-do-architecture">15. PRODUCTION — how real organizations do architecture</a><a href="#readme-16-exercises">16. EXERCISES</a><a href="#readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-18-glossary">18. GLOSSARY</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a><h2>More in this lab</h2><a href="CATALOG.html">CATALOG</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

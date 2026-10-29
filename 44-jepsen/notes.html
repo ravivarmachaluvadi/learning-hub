@@ -1,0 +1,2447 @@
+<!doctype html>
+<html lang="en" data-hub-lab="44-jepsen">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>44. jepsen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 44 of 71 · Stage 5</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 44 · Copies and Agreement</p><article id="readme"><h1 id="readme-jepsen">Jepsen</h1>
+<blockquote>
+<p><strong>What this lab is.</strong> You have spent a dozen labs learning what the words on a
+database's marketing page are <em>supposed</em> to mean — linearizable, serializable,
+majority, no data loss. This lab is about the opposite direction: given a
+running system and a claim, <strong>how do you catch it lying?</strong> Jepsen is the answer
+the industry converged on, and it is stranger and more interesting than
+&quot;a test suite for databases&quot;.</p>
+<p><strong>Open the simulator:</strong></p>
+<div class="code"><pre><code>open visualization.html
+</code></pre></div>
+<p>This is a <strong>no-code lab</strong>: a teaching document, an interactive checker, and
+exercises. There is nothing to compile.</p>
+</blockquote>
+<blockquote>
+<p><strong>⚠️ This lab exists because of the last line of your last one.</strong>
+The <a href="../27-linearizability-vs-serializability/notes.html#readme">linearizability-vs-serializability</a>
+lab ended with <code>Next: [jepsen?] (Elle finds F1–F5 in the wild)</code>. You now own
+precise definitions of linearizability, serializability, strict
+serializability, and a ten-anomaly ladder. Every one of those is a claim
+<em>about a system you do not control</em>. This lab is the machine that turns those
+definitions into verdicts about real software — and, more importantly, teaches
+you why the obvious way to build such a machine produces a test that is
+confidently, quietly wrong.</p>
+</blockquote>
+<hr />
+<h2 id="readme-how-deep-this-goes">How deep this goes</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>You will be able to…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner model</strong></td>
+  <td>1–7</td>
+  <td>say what Jepsen actually does, and why &quot;assert the final answer is right&quot; is not a safety test</td>
+</tr>
+<tr>
+  <td><strong>Intermediate model</strong></td>
+  <td>8–13</td>
+  <td>read a history in Jepsen's notation, run a linearizability check by hand, and explain the indeterminate operation</td>
+</tr>
+<tr>
+  <td><strong>Engineering model</strong></td>
+  <td>14–18</td>
+  <td>describe every component of a Jepsen test, choose faults on purpose, and explain Elle's cycle detection</td>
+</tr>
+<tr>
+  <td><strong>Production model</strong></td>
+  <td>19–22</td>
+  <td>read a real Jepsen report and know exactly what it does and does not claim; decide whether to run this against your own system</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h1 id="readme-1--why--the-sentence-you-cannot-check">1 · WHY — the sentence you cannot check</h1>
+<p>Open any distributed database's documentation and you will find a sentence like
+one of these:</p>
+<blockquote>
+<p>&quot;Transactions are fully ACID and serializable.&quot;</p>
+<p>&quot;Reads with <code>readConcern: majority</code> never return data that could be rolled
+back.&quot;</p>
+<p>&quot;Acknowledged writes are never lost.&quot;</p>
+</blockquote>
+<p>Each of those is a <strong>claim about behaviour under failure</strong>. Not under normal
+operation — under normal operation almost everything works. The claim is about
+what happens when a switch reboots, a leader's process is stopped for nine
+seconds by a garbage collection pause, a disk lies about <code>fsync</code>, or a clock
+jumps backwards.</p>
+<p>Here is the uncomfortable fact that motivates this entire field:</p>
+<blockquote>
+<p><strong>Those sentences are frequently false, and they are false in systems written
+by careful people, reviewed by good engineers, and used in production by
+companies you have heard of.</strong></p>
+</blockquote>
+<p>Not because the authors are dishonest. Because the property is very hard to
+implement, and — this is the part that matters — <strong>very hard to test.</strong> A bug
+that only appears when a network partition heals during a leader election, on
+the third of five nodes, while a client is retrying, is not going to be found by
+a unit test.</p>
+<p>So the question this lab answers is not &quot;what is serializability&quot;. You know
+that. The question is:</p>
+<blockquote>
+<p><strong>Given a running cluster and a claimed guarantee, what procedure produces
+evidence that the guarantee is broken?</strong></p>
+</blockquote>
+<p>The answer, developed by Kyle Kingsbury from 2013 onward and now the de facto
+standard, is called <strong>Jepsen</strong>.</p>
+<hr />
+<h1 id="readme-2--the-concrete-problem--you-are-about-to-bet-a-ledger-on-ferrousdb">2 · THE CONCRETE PROBLEM — you are about to bet a ledger on FerrousDB</h1>
+<p>Let us make this specific.</p>
+<blockquote>
+<p><em>FerrousDB is fictional. It is a stand-in for a real product so that we can be
+rude about it. Every failure it exhibits in this lab is modelled on a
+documented, published finding in a real system; those are named in section 18.</em></p>
+</blockquote>
+<p>You work on payments. You need a store for the ledger. <strong>FerrousDB</strong> is fast,
+has a good client library, and its documentation says:</p>
+<blockquote>
+<p><em>FerrousDB provides linearizable reads and writes for single keys when
+<code>consistency=strong</code> is set. Acknowledged writes survive the failure of any
+minority of nodes.</em></p>
+</blockquote>
+<p>You have three nodes: <code>n1</code>, <code>n2</code>, <code>n3</code>. You have four client processes hammering
+it. Before you commit the company to this, you want to check the claim.</p>
+<p><strong>What do you do?</strong></p>
+<p>Hold that question for a moment, because the first answer everybody gives is
+wrong, and understanding <em>why</em> it is wrong is most of this lab.</p>
+<hr />
+<h1 id="readme-3--the-obvious-solution--assert-the-final-answer">3 · THE OBVIOUS SOLUTION — assert the final answer</h1>
+<p>Here is what a good engineer writes first. It is not a straw man; it is what I
+would write, and probably what you would write.</p>
+<div class="code"><pre><code># Pseudocode. Illustrative only — this lab has no runnable code.
+set x = 0
+run 8 threads for 60 seconds:
+    each thread does 100 increments:  read x, then write x+1
+assert x == 800
+</code></pre></div>
+<p>This is a <strong>stateful assertion test</strong>. It is a completely reasonable instinct:
+do a lot of work, then check the arithmetic at the end.</p>
+<p>Run it against FerrousDB. It passes. <code>x == 800</code>.</p>
+<p>Run it a hundred times. It passes a hundred times.</p>
+<p>You ship.</p>
+<p>Six weeks later a customer's balance is wrong.</p>
+<p><strong>🔮 Predict:</strong> Before reading on — name at least two distinct reasons this test
+could pass a hundred times against a database that violates its linearizability
+claim. Not &quot;it got lucky&quot;. Structural reasons.</p>
+<hr />
+<h1 id="readme-4--failure--three-separate-reasons-the-final-state-check-is-blind">4 · FAILURE — three separate reasons the final-state check is blind</h1>
+<details>
+<summary><b>Reveal</b></summary>
+
+<p><strong>Reason 1: nothing bad ever happened, because nothing bad was ever attempted.</strong></p>
+<p>The test ran against a healthy cluster. No node died. No cable was cut. No
+process was paused. The claim you wanted to check — <em>&quot;acknowledged writes
+survive the failure of any minority&quot;</em> — was never put under any stress at all.
+You tested the happy path and concluded something about the unhappy one.</p>
+<p><strong>Reason 2: the final state is a terrible detector, because errors cancel.</strong></p>
+<p>Suppose two increments were lost, and separately, one increment was applied
+twice due to an internal retry. Final value: 799 + ... it depends. Errors in
+opposite directions cancel. Worse, some anomalies <em>leave no trace in the final
+state at all</em>: a <strong>stale read</strong> — a client seeing yesterday's value — corrupts a
+decision that client made, then vanishes. The final number is perfect. The
+customer's balance is not.</p>
+<p>This is the single most important structural point:</p>
+<blockquote>
+<p><strong>Many correctness violations are events in the middle of the run that leave
+the final state completely normal.</strong> If you only look at the end, you are
+looking at the one place the evidence isn't.</p>
+</blockquote>
+<p><strong>Reason 3: <code>x == 800</code> is the wrong question.</strong></p>
+<p>Think about what <code>assert x == 800</code> actually encodes. It encodes: <em>&quot;I expected
+this exact outcome.&quot;</em> But a correct concurrent system has <strong>many</strong> legal
+outcomes. And an incorrect one can produce a legal-looking outcome. Equality
+against a predicted value only works when the answer is deterministic — which is
+precisely what a distributed system under load is not.</p>
+<p>So you cannot assert on the <em>answer</em>. You have to judge the <em>behaviour</em>.</p>
+</details>
+
+<hr />
+<h1 id="readme-5--attempt-two--inject-faults-and-immediately-drown">5 · ATTEMPT TWO — inject faults, and immediately drown</h1>
+<p>Reason 1 has an obvious fix. <strong>Break things while the test runs.</strong></p>
+<p>Add a background process that, every 15 seconds, cuts the network in half for a
+while, then heals it. Now you are actually exercising the claim.</p>
+<p>Run the test.</p>
+<p>It fails instantly, and not in the way you hoped:</p>
+<div class="code"><pre><code>thread 3: java.net.SocketTimeoutException: Read timed out
+thread 5: FerrousException: not the leader, try again
+thread 1: java.io.IOException: Connection reset by peer
+thread 7: FerrousException: no quorum available
+</code></pre></div>
+<p>And now you are stuck, because you have to answer a question that sounds
+trivial and is not:</p>
+<blockquote>
+<p><strong>Which of these is a bug?</strong></p>
+</blockquote>
+<p>Think it through. A <code>SocketTimeoutException</code> during a network partition is
+<em>correct behaviour</em>. The database is supposed to become unavailable to a
+minority — the <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> lab settled that. Refusing to
+serve is the <em>good</em> outcome. If you treat errors as failures, your test reports
+a catastrophe every single run, you stop believing it, and you delete it.</p>
+<p>But you also cannot ignore errors, because some of them are hiding real damage.</p>
+<p>The instinct now is to write a big list of &quot;acceptable exceptions&quot;. That way
+lies madness — it makes your test's verdict depend on your guesses about which
+error strings are benign, and a database's error taxonomy is not a safety
+specification.</p>
+<p>The real lesson is that you have been asking the wrong kind of question all
+along.</p>
+<hr />
+<h1 id="readme-6--the-thing-nobody-expects--the-operation-that-neither-succeeded-nor-failed">6 · THE THING NOBODY EXPECTS — the operation that neither succeeded nor failed</h1>
+<p>Stare at this line for a moment:</p>
+<div class="code"><pre><code>thread 3: java.net.SocketTimeoutException: Read timed out
+</code></pre></div>
+<p>Thread 3 sent a write. It waited. It got nothing back.</p>
+<p><strong>Did the write happen?</strong></p>
+<p>You do not know. And here is the crucial part — <strong>you cannot ever find out</strong>.
+The request may have been dropped on the way out (no effect). It may have been
+applied and the response lost on the way back (full effect). It may be sitting
+in a queue on <code>n2</code> right now and will be applied in eight seconds (effect, but
+later). Every one of those is consistent with everything you observed.</p>
+<p>This is not a gap in your tooling. It is the fundamental condition of talking to
+another machine over a network, and it is the same fact that forced
+<a href="../49-idempotency/notes.html#readme">idempotency</a> keys to exist and made the
+<a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a> coordinator's silence so expensive.</p>
+<p>Jepsen's founding insight is to take this seriously and give it a name and a
+place in the data model:</p>
+<blockquote>
+<p>Every operation has <strong>three</strong> possible outcomes, not two:</p>
+<ul>
+<li><strong><code>:ok</code></strong> — it definitely happened. It has a logical effect on the system.</li>
+<li><strong><code>:fail</code></strong> — it definitely did not happen. It has <strong>no</strong> logical effect.</li>
+<li><strong><code>:info</code></strong> — <strong>indeterminate.</strong> It may or may not have happened, now or at
+any point in the future.</li>
+</ul>
+</blockquote>
+<p>Those are the actual keywords in Jepsen. From the Jepsen documentation:</p>
+<blockquote>
+<p><em><code>:invoke</code> denotes the start of a logical operation; <code>:ok</code> denotes its
+successful completion. <code>:fail</code> denotes its definite failure… An operation
+which completes with <code>:fail</code> must have no logical effect on the system.
+<code>:info</code> denotes an indeterminate result: the operation either may or may not
+have completed.</em></p>
+</blockquote>
+<p>Almost every home-grown consistency test in the world gets this wrong, in one
+of two directions, and the two directions fail differently:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Mistake</th>
+  <th>What it does to the judgement</th>
+  <th>Consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Over-claiming</strong> — recording an indeterminate op as <code>:ok</code> or <code>:fail</code></td>
+  <td>The checker is given a <em>fact</em> that isn't one</td>
+  <td><strong>False alarms.</strong> You report bugs that aren't there, lose credibility, and stop trusting the test</td>
+</tr>
+<tr>
+  <td><strong>Under-claiming</strong> — recording a <em>definite</em> failure as <code>:info</code> because it was easier</td>
+  <td>The checker loses a constraint it was entitled to</td>
+  <td><strong>Missed bugs.</strong> The test goes green over a real violation</td>
+</tr>
+</tbody>
+</table></div>
+<p>The second one is the dangerous one, because it looks responsible. &quot;I wasn't
+sure, so I marked it unknown&quot; feels like humility. It is actually <strong>throwing
+away evidence</strong>, and a checker with less evidence finds fewer violations.</p>
+<blockquote>
+<p><strong>Section 12 makes this concrete, and the simulator lets you watch the same
+history get three different verdicts depending on how <code>:info</code> is read.</strong> If
+you take one thing from this lab, take this one.</p>
+</blockquote>
+<p>There is a second consequence of indeterminacy, and it is a rule people find
+surprising the first time:</p>
+<blockquote>
+<p><strong>A process that gets an <code>:info</code> is retired forever.</strong> Jepsen never issues
+another operation on that process ID.</p>
+</blockquote>
+<p>Why? Because that operation <em>might still be in flight</em>. If the same process
+issued a new write, and the old one landed afterwards, the history would contain
+two overlapping operations from a &quot;single-threaded&quot; process — which breaks the
+one modelling assumption the checker depends on. So Jepsen burns the process
+number and starts a fresh one on the same thread. From the docs: <em>&quot;Processes are
+logically singlethreaded… If a process crashes it can never invoke an operation
+again.&quot;</em></p>
+<p>That single rule tells you a lot about how seriously this framework takes
+uncertainty.</p>
+<hr />
+<h1 id="readme-7--the-real-requirement">7 · THE REAL REQUIREMENT</h1>
+<p>Let us now state plainly what we actually need, having watched two attempts
+fail.</p>
+<p>We cannot assert on final state (section 4). We cannot classify errors as
+pass/fail (section 5). We cannot even say for sure whether individual operations
+occurred (section 6).</p>
+<p>What we <em>can</em> do is <strong>write down exactly what we observed</strong>, including our
+uncertainty, and then ask a question with a yes/no answer:</p>
+<blockquote>
+<p><strong>Is there any way this system could have behaved like the thing it claims to
+be, and produced everything we saw?</strong></p>
+<p>If <strong>yes</strong> → we found no evidence of a bug. That is all it means.
+If <strong>no</strong> → the claim is false, and we hold the proof.</p>
+</blockquote>
+<p>This is the whole idea. Three things follow from it, and they are the three
+pillars of Jepsen:</p>
+<ol>
+<li><strong>Record, do not assert.</strong> The output of a run is a <em>history</em>, not a
+pass/fail.</li>
+<li><strong>Judge afterwards, against a model.</strong> Correctness is decided by searching
+for an explanation, not by comparing to an expected value.</li>
+<li><strong>The evidence is a counterexample.</strong> A failure is not &quot;assertion failed on
+line 42&quot;; it is a concrete list of operations that no correct system could
+have produced.</li>
+</ol>
+<p>That third point is why Jepsen reports are so persuasive and why vendors
+generally fix the bugs. You cannot argue with a history.</p>
+<blockquote>
+<p><strong>✅ Checkpoint.</strong> You can now explain what Jepsen is <em>for</em> and why the two
+obvious designs fail. Next we make &quot;history&quot; and &quot;explanation&quot; precise enough
+to compute with — after which you will run a check by hand.</p>
+</blockquote>
+<hr />
+<h1 id="readme-8--terminology--the-five-words-the-rest-of-this-lab-uses">8 · TERMINOLOGY — the five words the rest of this lab uses</h1>
+<p>These are earned now; each solves a problem you just watched appear.</p>
+<h3 id="readme-operation">Operation</h3>
+<p>A single request from a single client, recorded as <strong>two entries</strong> in the log:
+an <strong>invocation</strong> and a <strong>completion</strong>. Not one entry — two. Because the thing
+that matters is that an operation occupies an <em>interval of time</em>, and both ends
+of that interval are constraints.</p>
+<p>In Jepsen's notation:</p>
+<div class="code"><pre><code class="language-clojure">{:process 3, :type :invoke, :f :write, :value 1,   :time 1042}
+{:process 3, :type :ok,     :f :write, :value 1,   :time 1187}
+</code></pre></div>
+<p><code>:f</code> is which function (<code>:read</code>, <code>:write</code>, <code>:cas</code>, <code>:txn</code>), <code>:value</code> is the
+argument or result, <code>:process</code> is the logical client, <code>:time</code> is nanoseconds
+since the run started.</p>
+<h3 id="readme-history">History</h3>
+<p>The complete, time-ordered log of every invocation and completion from every
+process in one run. <strong>This is the artefact of a Jepsen run.</strong> It is written to
+disk. It is the thing that gets attached to the bug report.</p>
+<h3 id="readme-process">Process</h3>
+<p>A logical single-threaded client. Only one operation in flight at a time.
+Retired permanently on <code>:info</code> (section 6).</p>
+<h3 id="readme-consistency-model">Consistency model</h3>
+<p>The thing the history is judged <em>against</em>: linearizability, serializable
+snapshot isolation, &quot;a set that never loses elements&quot;, and so on. You already
+own these definitions. Jepsen adds no new ones — it consumes yours.</p>
+<h3 id="readme-checker">Checker</h3>
+<p>A program that takes a history and a consistency model, and returns either
+<code>valid? true</code> or a <strong>counterexample</strong>.</p>
+<p>Note what the checker does <strong>not</strong> get: it does not get to see inside the
+database. No internal logs, no replica state, no timestamps from the servers.
+Only what a client could observe. This is deliberate, and it is where the phrase
+in Jepsen's own repository comes from — Knossos verifies <em>&quot;experimentally
+accessible histories&quot;</em>. If a violation is invisible from outside, it is by
+definition not a violation of a client-facing guarantee.</p>
+<hr />
+<h1 id="readme-9--mental-models">9 · MENTAL MODELS</h1>
+<h3 id="readme-the-simple-model-a-courtroom">The simple model: a courtroom</h3>
+<ul>
+<li>The <strong>history</strong> is the transcript of testimony. Each witness (process) says
+&quot;at 10:04 I asked for the balance, and at 10:05 I was told £70.&quot;</li>
+<li>The <strong>consistency model</strong> is the law: <em>&quot;the account behaves as if there were
+one ledger, updated one entry at a time.&quot;</em></li>
+<li>The <strong>checker</strong> is the judge, and the judge's job is narrow: <strong>is there any
+single sequence of ledger entries consistent with all of this testimony?</strong></li>
+<li>A <strong>witness with a timeout</strong> is a witness who says &quot;I filed a form; I never
+heard whether it was accepted.&quot; The judge must consider both worlds.</li>
+<li>A <strong>verdict of guilty</strong> requires a proof that <em>no</em> sequence works. A verdict
+of not-guilty means only that the prosecution failed to find a contradiction
+today.</li>
+</ul>
+<h3 id="readme-the-engineering-model">The engineering model</h3>
+<pre class="mermaid">flowchart LR
+  G[Generator&lt;br/&gt;what to do next] --&gt; C[Clients&lt;br/&gt;1 process each]
+  C --&gt;|SSH / network| DB[(Cluster&lt;br/&gt;n1 n2 n3 n4 n5)]
+  N[Nemesis&lt;br/&gt;injects faults] --&gt;|iptables, SIGSTOP,&lt;br/&gt;clock, disk| DB
+  C --&gt; H[History&lt;br/&gt;invoke/ok/fail/info&lt;br/&gt;+ timestamps]
+  N --&gt; H
+  H --&gt; K[Checker&lt;br/&gt;Knossos / Elle]
+  K --&gt; V{valid?}
+  V --&gt;|true| Green[No violation found]
+  V --&gt;|false| Red[Counterexample]
+</pre>
+<p>Read that diagram as: <strong>everything flows into the history, and only the history
+is judged.</strong> The cluster is opaque. The nemesis writes to the history too — its
+faults are recorded as operations, so a report can say &quot;the anomaly began 0.4s
+after the partition started.&quot;</p>
+<h3 id="readme-mapping-the-two">Mapping the two</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Courtroom</th>
+  <th>Engineering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Transcript</td>
+  <td>History (a vector of operation maps)</td>
+</tr>
+<tr>
+  <td>Witness</td>
+  <td>Process</td>
+</tr>
+<tr>
+  <td>&quot;I never heard back&quot;</td>
+  <td><code>:info</code></td>
+</tr>
+<tr>
+  <td>The law</td>
+  <td>Consistency model</td>
+</tr>
+<tr>
+  <td>Judge</td>
+  <td>Checker (Knossos, Elle)</td>
+</tr>
+<tr>
+  <td>Guilty verdict</td>
+  <td><code>valid? false</code> + a minimal set of operations</td>
+</tr>
+<tr>
+  <td>Not guilty</td>
+  <td><code>valid? true</code> — <em>this run found nothing</em></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-the-courtroom-analogy-breaks--and-it-breaks-in-three-places">Where the courtroom analogy breaks — and it breaks in three places</h3>
+<ol>
+<li><p><strong>There is no presumption of innocence over time.</strong> In a real court, repeated
+acquittals mean something. Here, a thousand green Jepsen runs is not
+evidence of correctness in any strong sense — it is evidence that this
+particular workload, with these particular faults, on this hardware, for this
+duration, did not trigger the bug. Section 17 makes this precise.</p>
+</li>
+<li><p><strong>The judge can run out of patience, and that is not an acquittal.</strong> Deciding
+linearizability is NP-complete. Real checkers time out. &quot;Checker did not
+finish&quot; is a third outcome that the courtroom has no analogue for, and it is
+<em>not</em> a pass.</p>
+</li>
+<li><p><strong>The witnesses are the ones who decide what is admissible.</strong> The client
+library chooses whether to record <code>:ok</code>, <code>:fail</code>, or <code>:info</code> — so a sloppy
+client can hand the judge a transcript in which the crime is unprovable
+(section 12, scenario 6). The judge is only as good as the testimony.</p>
+</li>
+</ol>
+<hr />
+<h1 id="readme-10--what-to-look-at--the-simulator">10 · WHAT TO LOOK AT — the simulator</h1>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a> now, before reading the
+mechanism. It has two halves and you only need the first one for the next few
+sections.</p>
+<p><strong>The register half (<code>Knossos</code>)</strong> shows a recorded history as horizontal bars —
+one row per process, each bar spanning the operation's invocation to its
+completion. Above them sit <strong>three verdict chips</strong>. All three judge the <em>same</em>
+history; they differ only in how they read <code>:info</code>. Watch for the scenarios
+where they disagree — that disagreement is section 12.</p>
+<p><strong>What to look at first:</strong> pick scenario <strong>S2 — the stale read</strong>, and before
+pressing <em>Check</em>, try to find the contradiction yourself by eye. Then press
+<em>Check</em> and watch the search backtrack.</p>
+<hr />
+<h1 id="readme-11--the-mechanism-part-one--running-a-checker-by-hand">11 · THE MECHANISM, PART ONE — running a checker by hand</h1>
+<p>Time to do the judge's job manually. This is the exercise that makes everything
+else click, and it takes about four minutes.</p>
+<p><strong>The system:</strong> one register <code>x</code>, starting at <code>0</code>. The claim: linearizable.</p>
+<p><strong>The history</strong> (this is scenario <strong>S2</strong> in the simulator):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>process</th>
+  <th>operation</th>
+  <th>invoked</th>
+  <th>completed</th>
+  <th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>p1</td>
+  <td><code>write(1)</code></td>
+  <td>t=0</td>
+  <td>t=9</td>
+  <td><code>:ok</code></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>p2</td>
+  <td><code>read()</code></td>
+  <td>t=1</td>
+  <td>t=3</td>
+  <td><code>:ok</code> → <strong>1</strong></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>p3</td>
+  <td><code>read()</code></td>
+  <td>t=5</td>
+  <td>t=7</td>
+  <td><code>:ok</code> → <strong>0</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Draw it:</p>
+<div class="code"><pre><code>p1  |=========== write(1) ===========|          t=0 .. t=9
+p2      |== read → 1 ==|                        t=1 .. t=3
+p3                  |== read → 0 ==|            t=5 .. t=7
+        ^                        ^
+        └── these two do NOT overlap ───────────┘
+</code></pre></div>
+<p><strong>The rule of the game.</strong> Every operation must be assigned a single instant —
+its <strong>linearization point</strong> — somewhere inside its own bar. Then, reading those
+instants left to right must produce a sequence that a single-threaded register
+would actually produce.</p>
+<p>Work it:</p>
+<ul>
+<li><strong>p2 read → 1.</strong> For a read to return 1, the most recent write before its
+point must be <code>write(1)</code>. So <code>write(1)</code>'s point is <strong>before t=3</strong>.</li>
+<li><strong>p3 read → 0.</strong> For a read to return 0, the most recent write before its
+point must be… nothing, i.e. the initial value. So <code>write(1)</code>'s point is
+<strong>after t=5</strong>.</li>
+<li><strong>Contradiction.</strong> We need <code>write(1)</code> to be linearized before t=3 <em>and</em> after
+t=5. There is no such instant.</li>
+</ul>
+<p><strong>Verdict: not linearizable.</strong> And notice the shape of the proof — it needed
+exactly three operations. Jepsen reports quote exactly this: a minimal set of
+operations and the constraint that has no solution.</p>
+<blockquote>
+<p><strong>What just happened, in one sentence:</strong> two reads that did not overlap each
+other saw the value go <em>backwards</em>, and time is not allowed to run backwards.</p>
+</blockquote>
+<p>That is the same violation the <a href="../26-linearizability/notes.html#readme">linearizability</a> lab taught
+you to define. The difference is that here you derived it <em>from an observation
+log of a black box</em>, which is the only access you have to somebody else's
+database.</p>
+<p><strong>🔮 Predict:</strong> Now change one thing. Suppose p3's read had been invoked at t=2
+instead of t=5, so that it overlaps p2's read. Is the history still a violation?</p>
+<details>
+<summary><b>Reveal</b></summary>
+
+<p><strong>No — it becomes perfectly legal.</strong> If p2's and p3's reads overlap in time,
+then a valid order exists: linearize p3's read (returning 0) first, then
+<code>write(1)</code>, then p2's read (returning 1). All three points sit inside their own
+bars, and the sequence <code>read→0, write(1), read→1</code> is exactly what a single
+register does.</p>
+<p>This is the most important thing to internalise about linearizability checking,
+and it is why the checker cannot be replaced by &quot;did the values look weird&quot;:</p>
+<blockquote>
+<p><strong>Concurrent operations are unordered, and therefore almost anything is
+allowed between them. Constraints come only from operations that do <em>not</em>
+overlap.</strong></p>
+</blockquote>
+<p>A history in which everything overlaps everything is nearly unfalsifiable. A
+history of neatly separated operations is highly constrained. This has a direct
+practical consequence in section 13: how you <em>generate</em> the workload determines
+how much power your test has.</p>
+</details>
+
+<hr />
+<h1 id="readme-12--the-mechanism-part-two--where-info-changes-the-verdict">12 · THE MECHANISM, PART TWO — where <code>:info</code> changes the verdict</h1>
+<p>Now we do the same exercise on a history containing an indeterminate operation,
+because this is where home-grown tests die.</p>
+<h3 id="readme-scenario-s3--the-timeout-that-was-not-a-bug">Scenario S3 — &quot;the timeout that was not a bug&quot;</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>process</th>
+  <th>operation</th>
+  <th>invoked</th>
+  <th>completed</th>
+  <th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>p1</td>
+  <td><code>write(1)</code></td>
+  <td>t=0</td>
+  <td>t=8</td>
+  <td><strong><code>:info</code></strong> (timed out)</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>p2</td>
+  <td><code>read()</code></td>
+  <td>t=2</td>
+  <td>t=4</td>
+  <td><code>:ok</code> → <strong>1</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Three ways to read that <code>:info</code>, three verdicts:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Reading</th>
+  <th>Reasoning</th>
+  <th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>:info</code> = it failed</strong></td>
+  <td>Nothing ever wrote 1. p2 read a value that was never written.</td>
+  <td>❌ <strong>VIOLATION</strong></td>
+</tr>
+<tr>
+  <td><strong><code>:info</code> = it succeeded</strong></td>
+  <td><code>write(1)</code> happened somewhere in [0,8]; put it at t=3, read at t=3.5.</td>
+  <td>✅ fine</td>
+</tr>
+<tr>
+  <td><strong><code>:info</code> = may or may not</strong> <em>(Jepsen)</em></td>
+  <td>Try both branches; the &quot;did happen&quot; branch works.</td>
+  <td>✅ fine</td>
+</tr>
+</tbody>
+</table></div>
+<p>The naive-but-tempting first reading <strong>reports a bug in a database that did
+nothing wrong.</strong> Do this once a run and your test is noise.</p>
+<h3 id="readme-scenario-s4--the-timeout-that-was-a-bug">Scenario S4 — &quot;the timeout that <em>was</em> a bug&quot;</h3>
+<p>The reverse case, so you do not learn the wrong lesson (<code>:info</code> is not a
+get-out-of-jail card):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>process</th>
+  <th>operation</th>
+  <th>invoked</th>
+  <th>completed</th>
+  <th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>p1</td>
+  <td><code>write(1)</code></td>
+  <td>t=0</td>
+  <td>t=20</td>
+  <td><strong><code>:info</code></strong></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>p2</td>
+  <td><code>read()</code></td>
+  <td>t=2</td>
+  <td>t=4</td>
+  <td><code>:ok</code> → <strong>1</strong></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>p3</td>
+  <td><code>read()</code></td>
+  <td>t=6</td>
+  <td>t=8</td>
+  <td><code>:ok</code> → <strong>0</strong></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>p4</td>
+  <td><code>read()</code></td>
+  <td>t=10</td>
+  <td>t=12</td>
+  <td><code>:ok</code> → <strong>1</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The only two values that can ever exist are the initial <code>0</code> and the single
+<code>write(1)</code>. Three non-overlapping reads observed <code>1</code>, then <code>0</code>, then <code>1</code>. That
+needs the value to change twice, and only one write exists. <strong>No reading of the
+<code>:info</code> saves this.</strong> Violation, and a real one.</p>
+<blockquote>
+<p><strong>The generalisable rule:</strong> <code>:info</code> grants the <em>write</em> freedom about <strong>when</strong>
+and <strong>whether</strong> it took effect. It never grants the <em>reads</em> freedom about what
+they saw. Reads that returned <code>:ok</code> are hard facts, and enough hard facts
+convict on their own.</p>
+</blockquote>
+<h3 id="readme-a-detail-that-surprises-people-an-info-never-ends">A detail that surprises people: an <code>:info</code> never ends</h3>
+<p>When Knossos considers whether an indeterminate operation took effect, it does
+not confine it to the interval you recorded. The operation may still be sitting
+in a queue somewhere and land in ten seconds' time — so <strong>its interval is
+extended to the end of the history.</strong></p>
+<p>That is why, in the simulator, an <code>:info</code> bar is drawn as a dashed box with an
+arrow running off the right-hand edge. It is not a stylistic choice; it is the
+model. In scenario S6 this matters directly: the checker is free to say <em>&quot;the
+write may have landed after the read&quot;</em>, which is one of the two ways that
+history escapes conviction.</p>
+<h3 id="readme-scenario-s6--the-one-that-should-worry-you">Scenario S6 — the one that should worry you</h3>
+<p>Same shape as a genuine lost-write bug, but the client library was lazy:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>process</th>
+  <th>operation</th>
+  <th>invoked</th>
+  <th>completed</th>
+  <th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>p1</td>
+  <td><code>write(1)</code></td>
+  <td>t=0</td>
+  <td>t=4</td>
+  <td><strong><code>:info</code></strong> ← the server actually replied &quot;committed&quot;</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>p2</td>
+  <td><code>read()</code></td>
+  <td>t=8</td>
+  <td>t=10</td>
+  <td><code>:ok</code> → <strong>0</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>FerrousDB <strong>acknowledged</strong> that write and then lost it during a failover. That
+is precisely the &quot;acknowledged writes are never lost&quot; claim, broken.</p>
+<p>But the client recorded <code>:info</code> — perhaps it wrapped everything in a
+<code>try/catch</code> that could not distinguish &quot;server said no&quot; from &quot;no reply&quot; — and
+so the checker reasons: <em>the write may never have happened; a read of 0 is
+therefore fine</em>. <strong>Verdict: valid. Bug missed.</strong></p>
+<p>This is under-claiming (section 6), and it is the reason serious Jepsen clients
+put real effort into error classification: mapping each of the database's error
+codes onto <code>:ok</code> / <code>:fail</code> / <code>:info</code> <em>correctly</em> is a substantial part of writing
+a test, and getting it wrong in the &quot;safe-looking&quot; direction silently disables
+your safety check.</p>
+<blockquote>
+<p><strong>Run S3, S4, S5 and S6 in the simulator and watch the three chips.</strong> S3 is
+the false alarm, S4 is the true conviction, S6 is the missed bug. The
+simulator shows you all three readings at once precisely so you can see that
+the <em>history alone</em> does not determine the verdict — the history <em>plus your
+honesty about uncertainty</em> does.</p>
+</blockquote>
+<hr />
+<h1 id="readme-13--why-the-checker-is-expensive--and-what-that-costs-you-in-practice">13 · WHY THE CHECKER IS EXPENSIVE — and what that costs you in practice</h1>
+<p>You just checked a 3-operation history by inspection. Real histories have tens
+of thousands of operations. How does the search scale?</p>
+<p>Badly.</p>
+<blockquote>
+<p><strong>Deciding whether a history is linearizable is NP-complete in general.</strong></p>
+</blockquote>
+<p>The intuition is immediate once you have done section 11 by hand: at each step
+the checker must pick <em>which</em> of the currently-pending operations to linearize
+next, and if that choice leads to a dead end it must back up and try another.
+With <code>k</code> operations overlapping at once, there are up to <code>k!</code> orders to explore.</p>
+<p>Jepsen's linearizability checker is called <strong>Knossos</strong> — named for the ruins
+where the Linear B script was found, a pun on whether a history &quot;be linear&quot;. It
+implements the <strong>WGL algorithm</strong>: Wing &amp; Gong's backtracking search with Gavin
+Lowe's extension, whose key move is to <strong>prune states equivalent to one already
+seen</strong>, so the search explores a graph of distinct register-states rather than a
+tree of orderings. Knossos additionally pre-compiles the model's state space into
+pointer arrays so the inner loop is pointer-chasing rather than interpreting model
+code, and runs a graph search and a tree search in parallel, taking whichever
+finishes first.</p>
+<p><strong>The simulator measures this for you.</strong> Scenario <strong>S8</strong> lets you slide the
+number of <em>concurrent</em> operations and shows states explored, with pruning on and
+off. Measured in this lab's own checker, on a history of <code>k</code> mutually-overlapping
+writes plus one unsatisfiable read:</p>
+<div class="table"><table><thead>
+<tr>
+  <th style="text-align:right">k concurrent ops</th>
+  <th style="text-align:right">states explored, no pruning</th>
+  <th style="text-align:right">with pruning</th>
+  <th style="text-align:right">ratio</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">4</td>
+  <td style="text-align:right">65</td>
+  <td style="text-align:right">53</td>
+  <td style="text-align:right">1.2×</td>
+</tr>
+<tr>
+  <td style="text-align:right">5</td>
+  <td style="text-align:right">326</td>
+  <td style="text-align:right">166</td>
+  <td style="text-align:right">2.0×</td>
+</tr>
+<tr>
+  <td style="text-align:right">6</td>
+  <td style="text-align:right">1,957</td>
+  <td style="text-align:right">487</td>
+  <td style="text-align:right">4.0×</td>
+</tr>
+<tr>
+  <td style="text-align:right">7</td>
+  <td style="text-align:right">13,700</td>
+  <td style="text-align:right">1,352</td>
+  <td style="text-align:right">10.1×</td>
+</tr>
+<tr>
+  <td style="text-align:right">8</td>
+  <td style="text-align:right">109,601</td>
+  <td style="text-align:right">3,593</td>
+  <td style="text-align:right">30.5×</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two things to read off that table. The unpruned column is tracking <code>k!</code> (it is
+almost exactly <code>e·k!</code>), so it is not going to survive <code>k=15</code>. And the <strong>ratio
+roughly doubles with every additional concurrent operation</strong> — pruning is not a
+constant-factor win, it changes the growth rate, which is why WGL made
+linearizability checking practical at all. Below <code>k=4</code> pruning saves nothing,
+because the search has not yet found two routes to the same state.</p>
+<blockquote>
+<p>⚠️ <strong>Honest framing:</strong> the simulator implements the <em>idea</em> of WGL — search with
+a visited-set — in about sixty lines of JavaScript, on histories of a dozen
+operations. It is not Knossos and its numbers are the lab's model, not
+measurements of Knossos. The shape of the curve is the real lesson; the
+absolute numbers are not.</p>
+</blockquote>
+<p>Three consequences that matter in practice, and they are why real Jepsen tests
+look the way they do:</p>
+<ol>
+<li><strong>Short tests, many of them.</strong> You cannot check a one-hour history. Jepsen
+tests typically run for tens of seconds to a few minutes and are repeated.</li>
+<li><strong>Few keys, low concurrency, small value spaces.</strong> Five processes on one key
+produces a far more checkable — and far more constrained (section 11's
+reveal) — history than five hundred processes on ten thousand keys.</li>
+<li><strong>Independent keys are checked independently.</strong> Linearizability is <em>local</em> —
+your <a href="../27-linearizability-vs-serializability/notes.html#readme">linearizability-vs-serializability</a>
+lab measured this as the composition property: if every key is linearizable
+the whole store is. So the checker splits the history by key and checks each
+separately, which turns one enormous problem into many small ones. <strong>This is
+not an optimisation trick; it is a theorem being cashed in.</strong></li>
+</ol>
+<p>And note what point 3 implies: the same trick is <em>unavailable</em> for
+serializability, which does not compose. That is the crack that Elle exists to
+get through, and we reach it in section 16.</p>
+<hr />
+<h1 id="readme-14--anatomy-of-a-jepsen-test">14 · ANATOMY OF A JEPSEN TEST</h1>
+<p>Now that you know what the machine has to produce, its parts are predictable.
+Jepsen is a Clojure library; a test is a map of six things. You will not write
+Clojure here — the point is to know what each part is <em>for</em>, because these are
+the six decisions you make when you test anything.</p>
+<pre class="mermaid">flowchart TB
+  subgraph Control[&quot;Control node — runs the test, holds the one clock&quot;]
+    GEN[Generator]
+    CL1[process 0]
+    CL2[process 1]
+    CL3[process 2]
+    NEM[Nemesis]
+    HIST[(History on disk)]
+    CHK[Checker]
+  end
+  subgraph Cluster[&quot;Nodes under test — opaque&quot;]
+    N1[n1]
+    N2[n2]
+    N3[n3]
+    N4[n4]
+    N5[n5]
+  end
+  GEN --&gt; CL1 &amp; CL2 &amp; CL3 &amp; NEM
+  CL1 &amp; CL2 &amp; CL3 --&gt;|client protocol| Cluster
+  NEM --&gt;|SSH: iptables, kill,&lt;br/&gt;SIGSTOP, date, dd| Cluster
+  CL1 &amp; CL2 &amp; CL3 &amp; NEM --&gt; HIST
+  HIST --&gt; CHK
+</pre>
+<div class="table"><table><thead>
+<tr>
+  <th>Part</th>
+  <th>Job</th>
+  <th>The decision you are really making</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>db</code></strong></td>
+  <td>Install, configure, start, stop, tear down the database on each node. Also collects logs.</td>
+  <td>Are you testing the <em>product</em> or your <em>deployment</em>? Jepsen insists on installing from scratch every run so results are reproducible.</td>
+</tr>
+<tr>
+  <td><strong><code>client</code></strong></td>
+  <td>Turn an abstract operation (<code>{:f :write :value 3}</code>) into a real request, and turn the response into <code>:ok</code> / <code>:fail</code> / <code>:info</code>.</td>
+  <td><strong>The error-classification decision from section 12.</strong> This is where tests are won and lost.</td>
+</tr>
+<tr>
+  <td><strong><code>nemesis</code></strong></td>
+  <td>Inject faults. It is <em>also</em> a client — it receives operations from the generator and writes to the history — so faults are timestamped alongside data operations.</td>
+  <td>Which failures do you believe your system survives?</td>
+</tr>
+<tr>
+  <td><strong><code>generator</code></strong></td>
+  <td>Decide what operation happens next, on which process, and when the nemesis fires. Composable: <code>(gen/nemesis ...)</code>, <code>(gen/time-limit 60 ...)</code>, staggered rates.</td>
+  <td>The concurrency/checkability trade-off from section 11.</td>
+</tr>
+<tr>
+  <td><strong><code>checker</code></strong></td>
+  <td>Judge the history. Composable — one run can be checked for linearizability <em>and</em> for &quot;no acknowledged write was lost&quot; <em>and</em> for latency graphs.</td>
+  <td>Which claim are you actually testing?</td>
+</tr>
+<tr>
+  <td><strong><code>os</code> / <code>remote</code></strong></td>
+  <td>Set up the operating system; run commands on nodes over SSH.</td>
+  <td>Infrastructure realism.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two structural details worth pausing on, because they are easy to miss and they
+are load-bearing:</p>
+<p><strong>All timestamps come from one machine.</strong> Every client thread and the nemesis
+run on the <strong>control node</strong>, not on the database nodes. So the real-time
+ordering in the history is measured by a single clock. This is what makes the
+&quot;these two operations did not overlap&quot; claim in section 11 trustworthy even when
+the nemesis is <em>deliberately skewing the clocks on the database nodes</em>. Clock
+chaos on the cluster cannot corrupt the transcript.</p>
+<p><strong>The nemesis is in the history.</strong> Because faults are recorded as operations,
+every Jepsen report can say things like &quot;the stale reads began 200ms after the
+partition started and ended 1.8s after it healed&quot; — and that timeline is
+usually what tells the vendor where the bug is.</p>
+<hr />
+<h1 id="readme-15--the-nemesis--choosing-faults-on-purpose">15 · THE NEMESIS — choosing faults on purpose</h1>
+<p>A &quot;chaos monkey&quot; that randomly breaks things is a weak test. Each fault type
+exists to attack a specific mechanism you have already studied. Here is the
+standard catalogue, with what each one is <em>for</em>:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Fault</th>
+  <th>What it does</th>
+  <th>The mechanism it attacks</th>
+  <th>Your lab</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>partition-halves</code></strong></td>
+  <td>Cuts the network into two fixed halves</td>
+  <td>Quorum arithmetic; minority must not serve</td>
+  <td><a href="../34-quorums-and-replication/notes.html#readme">quorums-and-replication</a></td>
+</tr>
+<tr>
+  <td><strong><code>partition-random-halves</code></strong></td>
+  <td>Same, but the split is re-randomised each time</td>
+  <td>Recovery paths, repeated failovers</td>
+  <td><a href="../42-split-brain/notes.html#readme">split-brain</a></td>
+</tr>
+<tr>
+  <td><strong><code>partition-majorities-ring</code></strong></td>
+  <td>Every node sees a majority, <strong>but no two nodes see the same majority</strong></td>
+  <td>Systems that assume &quot;I can see a majority&quot; means &quot;I am the only leader&quot;</td>
+  <td><a href="../42-split-brain/notes.html#readme">split-brain</a></td>
+</tr>
+<tr>
+  <td><strong><code>partition-random-node</code></strong></td>
+  <td>Isolates one node completely</td>
+  <td>Failure detection, rejoin</td>
+  <td><a href="../37-gossip-protocols/notes.html#readme">gossip-protocols</a></td>
+</tr>
+<tr>
+  <td><strong><code>bridge</code></strong></td>
+  <td>Two components, plus one node that can talk to both</td>
+  <td><strong>Non-transitive</strong> connectivity: A↮B but both↔C. The shape nobody draws</td>
+  <td><a href="../42-split-brain/notes.html#readme">split-brain</a></td>
+</tr>
+<tr>
+  <td><strong><code>:kill</code></strong></td>
+  <td><code>SIGKILL</code> — process dies with no warning, no clean shutdown</td>
+  <td>Durability: was it actually <code>fsync</code>ed? Crash recovery</td>
+  <td><a href="../07-acid/notes.html#readme">acid</a></td>
+</tr>
+<tr>
+  <td><strong><code>:pause</code></strong> / <strong><code>hammer-time</code></strong></td>
+  <td><code>SIGSTOP</code> then <code>SIGCONT</code> — the process freezes, then resumes believing no time passed</td>
+  <td><strong>Lease and lock expiry.</strong> A frozen leader is the split-brain case that fencing exists for</td>
+  <td><a href="../43-distributed-locking/notes.html#readme">distributed-locking</a></td>
+</tr>
+<tr>
+  <td><strong><code>:clock</code></strong> / <code>clock-scrambler</code></td>
+  <td>Jumps node clocks forwards and backwards</td>
+  <td>Anything using wall-clock time for correctness: leases, TTLs, LWW conflict resolution, TrueTime imitations</td>
+  <td><a href="../31-hybrid-logical-clocks/notes.html#readme">hybrid-logical-clocks</a></td>
+</tr>
+<tr>
+  <td><strong><code>:packet</code></strong></td>
+  <td>Delay, loss, corruption, duplication of packets</td>
+  <td>Timeout tuning, retry logic, duplicate delivery</td>
+  <td><a href="../49-idempotency/notes.html#readme">idempotency</a></td>
+</tr>
+<tr>
+  <td><strong><code>:file-corruption</code></strong> (<code>bitflip</code>, <code>truncate-file</code>)</td>
+  <td>Flips bits in data files; truncates them</td>
+  <td>Checksums; &quot;durable&quot; meaning what you think; recovery from a torn write</td>
+  <td><a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a></td>
+</tr>
+<tr>
+  <td><strong><code>:membership</code></strong></td>
+  <td>Adds and removes nodes during the run</td>
+  <td>Reconfiguration, the hardest part of every consensus protocol</td>
+  <td><a href="../40-raft/notes.html#readme">raft</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>Two things to notice about this table.</p>
+<p><strong>First, <code>:pause</code> deserves special attention.</strong> It is the cheapest fault to run
+and it finds an enormous number of bugs, because a <code>SIGSTOP</code>ped process is
+<em>exactly</em> a long garbage-collection pause — which happens in production
+constantly, without anyone injecting it. A node that freezes for 12 seconds and
+then resumes still believing it holds the lock is the canonical distributed
+systems bug, and your <a href="../43-distributed-locking/notes.html#readme">distributed-locking</a> and
+<a href="../42-split-brain/notes.html#readme">split-brain</a> labs both measured it. If you only ever inject one
+fault, inject this one.</p>
+<p><strong>Second, faults compose.</strong> Jepsen's <code>nemesis.combined</code> lets you throw
+partitions <em>and</em> pauses <em>and</em> clock skew simultaneously — the documentation's
+own phrasing is that it lets you throw &quot;a broad array of simple failures&quot; and
+see &quot;what sticks&quot;. Real bugs frequently need two faults at once: a partition
+during a membership change, a pause during a leader election.</p>
+<p><strong>🔮 Predict:</strong> You are testing a system that uses <strong>leases</strong> — a leader holds
+authority for 10 seconds and must renew it. Which single fault from that table
+is most likely to break it, and what would you expect to see in the history?</p>
+<details>
+<summary><b>Reveal</b></summary>
+
+<p><strong><code>:pause</code> (<code>SIGSTOP</code>) is the killer, and <code>:clock</code> is the accomplice.</strong></p>
+<p>A lease is a bet that <em>my clock and yours advance at roughly the same rate</em>. A
+<code>SIGSTOP</code>ped leader does not notice that 12 seconds passed; it wakes up, sees a
+lease it believes is still valid, and writes. Meanwhile the rest of the cluster
+timed the lease out and elected someone else. That is two leaders, both
+sincerely believing they are entitled to write.</p>
+<p>In the history you would expect: a window where the old leader's writes are
+<code>:ok</code> <em>after</em> the new leader's writes are <code>:ok</code>, followed by a read that shows
+one set of them vanished — an acknowledged-write loss, or a value going
+backwards as in section 11.</p>
+<p>Clock skew attacks the same assumption from the other side: move a node's clock
+forward and its lease expires early; move it back and the lease outlives its
+grant.</p>
+<p>The defence is the one your <a href="../42-split-brain/notes.html#readme">split-brain</a> lab landed on:
+<strong>fencing tokens</strong> — the resource refuses work carrying an epoch older than one
+it has already served. Note that fencing does not stop the old leader from
+<em>believing</em>; it stops its writes from <em>counting</em>. Jepsen cannot detect belief.
+It detects effects — which is the only thing that was ever the problem.</p>
+</details>
+
+<hr />
+<h1 id="readme-16--transactions-break-knossos--and-elle-is-the-answer">16 · TRANSACTIONS BREAK KNOSSOS — and Elle is the answer</h1>
+<p>Everything so far judged <strong>single operations on single objects</strong>. That is the
+left half of your <code>linearizability-vs-serializability</code> 2×2 grid. Now take the
+other axis: <strong>transactions</strong>.</p>
+<p>Two things go wrong at once.</p>
+<p><strong>Problem 1: the search explodes past all hope.</strong> Section 13's NP-completeness
+was survivable because linearizability is <em>local</em> — check each key separately.
+Serializability does <strong>not</strong> compose (you measured this: two locally-serializable
+banks plus a cross-bank transfer have no global serial order). So you cannot
+split the history by key. You must search orderings of whole transactions across
+all keys at once. That is hopeless at any useful scale.</p>
+<p><strong>Problem 2: you cannot see what happened.</strong> Consider a transaction that writes
+<code>x = 5</code>. Later another transaction reads <code>x = 5</code>. Fine. But if a <em>third</em>
+transaction also wrote <code>x = 5</code>, you now have no idea which one the reader saw.
+Register writes <strong>destroy</strong> the information you need. The history is
+under-determined not because of timing, but because of the datatype.</p>
+<h3 id="readme-elles-move-and-it-is-genuinely-clever">Elle's move, and it is genuinely clever</h3>
+<p><strong>Elle</strong> (Kingsbury &amp; Alvaro, VLDB 2020) attacks both problems with two ideas.</p>
+<p><strong>Idea one: change the datatype so writes stop destroying evidence.</strong></p>
+<p>Instead of registers, use <strong>lists, and the only write is &quot;append a unique
+value&quot;</strong>. Now a read of <code>x</code> does not return one value — it returns the entire
+write history of <code>x</code>, in order:</p>
+<div class="code"><pre><code>read x → [1, 4, 9, 2]
+</code></pre></div>
+<p>That single observation tells you: the transaction that appended <code>1</code> came before
+the one that appended <code>4</code>, which came before <code>9</code>, which came before <code>2</code>. <strong>One
+read recovers the complete write-write order for that key.</strong> Elle's own
+documentation calls list-append the workload with &quot;the most powerful inference
+rules&quot;; the rw-register workload is offered too, with &quot;weaker inference&quot; but
+&quot;broader applicability&quot;.</p>
+<blockquote>
+<p><strong>This is the most reusable idea in the lab.</strong> If you ever need to make a
+system's behaviour observable, do not ask &quot;how do I get better logging&quot;.
+Ask <strong>&quot;can I choose a datatype whose reads reveal their own history?&quot;</strong></p>
+</blockquote>
+<p><strong>Idea two: stop searching for an order. Look for a cycle instead.</strong></p>
+<p>You are not required to <em>find</em> a serial order to prove one does not exist. Build
+a graph where the nodes are transactions and the edges are the orderings that
+<em>must</em> hold, then look for a cycle. A cycle means the required orderings
+contradict each other, so no serial order exists. <strong>Cycle detection is cheap.</strong>
+Searching permutations is not.</p>
+<p>Elle infers three kinds of edge (these are Adya's dependencies, and Elle
+implements every non-predicate anomaly in that framework):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Edge</th>
+  <th>Read as</th>
+  <th>Inferred when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>ww</strong></td>
+  <td>T1 wrote this key before T2 did</td>
+  <td>With list-append: directly, from a read showing <code>[…a…b…]</code></td>
+</tr>
+<tr>
+  <td><strong>wr</strong></td>
+  <td>T2 read what T1 wrote</td>
+  <td>T2's read contains T1's appended value</td>
+</tr>
+<tr>
+  <td><strong>rw</strong></td>
+  <td>T1 read a version <em>older</em> than the one T2 wrote — so T1 must come <strong>first</strong></td>
+  <td>T1 read <code>[1]</code>, T2 appended <code>2</code>. T1 did not see <code>2</code>, so T1 precedes T2</td>
+</tr>
+</tbody>
+</table></div>
+<p>That third one — the <strong>anti-dependency</strong> — is the subtle one and the one that
+catches the hard anomalies. It is a &quot;must have happened before&quot; that comes from
+what a transaction <strong>did not see</strong>.</p>
+<h3 id="readme-the-anomalies-elle-names">The anomalies Elle names</h3>
+<p>These are exactly the ladder from your <a href="../08-isolation-levels/notes.html#readme">isolation-levels</a>
+lab, now stated as graph shapes:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Name</th>
+  <th>Graph shape</th>
+  <th>Plain meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>G0</strong></td>
+  <td>Cycle of <code>ww</code> edges only</td>
+  <td>Write cycle: two transactions wrote two keys in opposite orders</td>
+</tr>
+<tr>
+  <td><strong>G1a</strong></td>
+  <td>—</td>
+  <td><strong>Aborted read</strong>: read a value from a transaction that failed</td>
+</tr>
+<tr>
+  <td><strong>G1b</strong></td>
+  <td>—</td>
+  <td><strong>Intermediate read</strong>: read a value the writer later overwrote <em>within the same transaction</em></td>
+</tr>
+<tr>
+  <td><strong>G1c</strong></td>
+  <td>Cycle of <code>ww</code>/<code>wr</code> edges</td>
+  <td><strong>Circular information flow</strong>: T1 saw T2's write and T2 saw T1's</td>
+</tr>
+<tr>
+  <td><strong>G-single</strong></td>
+  <td>Cycle with <strong>exactly one</strong> <code>rw</code> edge</td>
+  <td><strong>Read skew</strong>: saw some but not all of another transaction's effects</td>
+</tr>
+<tr>
+  <td><strong>G2-item / G2</strong></td>
+  <td>Cycle with <strong>two or more</strong> <code>rw</code> edges</td>
+  <td>Anti-dependency cycle — the write-skew family</td>
+</tr>
+</tbody>
+</table></div>
+<p>Elle also reports things that are not in Adya at all but indicate a broken
+system: <strong>duplicate writes</strong> (a value appended twice when the client appended it
+once — a retry bug), <strong>garbage reads</strong> (a value nobody wrote), <strong>dirty updates</strong>,
+and <strong>internal inconsistency</strong> (a transaction contradicting itself).</p>
+<p><strong>Open the simulator's <code>Elle</code> tab.</strong> It shows small transactional histories, the
+graph Elle would infer, the cycle highlighted, and the anomaly named. Then use
+the <strong>datatype toggle</strong> to switch from list-append to registers, and watch edges
+disappear — the anomaly is still in the system, but the evidence is gone. That
+toggle is the whole argument for Elle in one control.</p>
+<blockquote>
+<p><strong>✅ Checkpoint.</strong> You can now explain both checkers and why there are two of
+them: Knossos searches for an <em>order</em> over single-key operations; Elle searches
+for a <em>cycle</em> over transactions. The rest is production reality.</p>
+</blockquote>
+<hr />
+<h1 id="readme-17--what-a-jepsen-result-actually-means">17 · WHAT A JEPSEN RESULT ACTUALLY MEANS</h1>
+<p>This section is short and it is the one people get wrong.</p>
+<h3 id="readme-a-red-result-is-very-strong">A red result is very strong</h3>
+<p><code>valid? false</code> means: <strong>there exists a set of client-observable operations that
+no correct implementation could have produced.</strong> It does not depend on load, on
+hardware, on the phase of the moon. The counterexample is self-contained, and it
+is checkable by hand — as you did in section 11.</p>
+<p>This is why Jepsen reports produce fixes rather than arguments. The vendor
+cannot say &quot;works on my machine&quot; to a history.</p>
+<p>Two caveats that keep a red result honest:</p>
+<ul>
+<li><strong>The claim must be the vendor's claim.</strong> Finding that a system with
+<code>readConcern: local</code> returns stale data is not a bug; that is what <code>local</code>
+means. Every good report states the configured settings, and the interesting
+findings are the ones at the <em>strongest</em> settings.</li>
+<li><strong>The bug might be in the test.</strong> A client that misclassifies an error
+(section 12) can manufacture a false violation. This is why reports publish
+the test code and why vendors reproduce before fixing.</li>
+</ul>
+<h3 id="readme-a-green-result-is-very-weak">A green result is very weak</h3>
+<p><code>valid? true</code> means: <strong>this workload, with these faults, at this concurrency, on
+this version, for this duration, did not produce a violation.</strong></p>
+<p>It does <strong>not</strong> mean the system is correct. It does not mean it is likely
+correct. Testing shows the presence of bugs, not their absence — and Jepsen is a
+falsification instrument, nothing more. Concretely, a green run is compatible
+with all of these:</p>
+<ul>
+<li>the bug needs a fault you did not inject;</li>
+<li>the bug needs two faults <em>simultaneously</em>;</li>
+<li>the bug needs a longer run, or a larger cluster, or slower disks;</li>
+<li>the bug is real but <strong>your client under-claimed</strong> and destroyed the evidence
+(section 12, S6);</li>
+<li>the checker <strong>timed out</strong> and someone recorded that as a pass;</li>
+<li>the workload never issued the operation that triggers it (no <code>cas</code>, no
+transactions spanning keys, no deletes).</li>
+</ul>
+<blockquote>
+<p><strong>The asymmetry is the whole point.</strong> Jepsen is built to <em>falsify</em>. If you
+want a positive claim about correctness you need a different instrument
+entirely — a proof, a model check (TLA+), or a deterministic simulation that
+can exhaustively explore a defined fault space. Jepsen deliberately does not
+pretend to be those.</p>
+</blockquote>
+<h3 id="readme-therefore-jepsen-tested-is-not-a-certification">Therefore: &quot;Jepsen-tested&quot; is not a certification</h3>
+<p>There is no pass mark. There is no badge. A Jepsen analysis is a <strong>dated report
+about a specific version</strong> — &quot;MongoDB 4.2.6&quot;, &quot;PostgreSQL 12.3&quot;, &quot;NATS 2.12.1&quot;
+— usually commissioned and paid for by the vendor, published in full including
+the bugs, and immediately out of date the moment a new version ships.</p>
+<p>When a vendor's homepage says &quot;Jepsen tested&quot;, the correct response is:
+<strong>which version, and what did the report say?</strong> Read it. The findings section is
+the interesting part, and it is always published.</p>
+<hr />
+<h1 id="readme-18--what-this-has-actually-found">18 · WHAT THIS HAS ACTUALLY FOUND</h1>
+<p>Some real, published results, chosen because each one teaches a different
+lesson. All are from jepsen.io analyses.</p>
+<h3 id="readme-postgresql-123--even-the-boring-trusted-single-node-database">PostgreSQL 12.3 — even the boring, trusted, single-node database</h3>
+<p>Jepsen found that <strong>PostgreSQL's <code>SERIALIZABLE</code> isolation level allowed
+G2-item</strong> — an anti-dependency cycle — <em>during normal operation, without any
+faults at all</em>. The report's sentence: <em>&quot;PostgreSQL's 'serializable' isolation
+level isn't serializable: it allows G2-item during normal operation.&quot;</em></p>
+<p>Every instance involved a read-write conflict on a <strong>freshly inserted row</strong>. The
+cause was a conflict-detection flaw that had been present for over a decade: the
+mechanism could attribute an updating transaction's own transaction ID to both
+the original and the updated version of a tuple, rather than the ID that
+originally created it. PostgreSQL developers wrote a patch and a regression test
+for the next minor release.</p>
+<p><strong>Lesson:</strong> this is not an exotic new distributed database. It is the most
+scrutinised open-source RDBMS in the world, its most conservative isolation
+level, no network faults, a decade-old bug. <strong>Nobody had checked</strong> — because
+until Elle there was no practical way to check.</p>
+<h3 id="readme-mongodb-426--the-settings-you-thought-protected-you">MongoDB 4.2.6 — the settings you thought protected you</h3>
+<p>At the strongest settings the report tested (read concern <code>snapshot</code>, write
+concern <code>majority</code>), Jepsen observed <strong>read skew (G-single), cyclic information
+flow (G1c), duplicate writes, and transactions reading their own future writes</strong>
+— roughly 10% of transactions showed anomalies <em>without faults</em>. Two causes: the
+transaction API silently ignored database- and collection-level read/write
+concerns, defaulting to <code>local</code> and <code>w:1</code>; and a bug in the transaction retry
+mechanism. MongoDB patched the retry bug for 4.2.8.</p>
+<p><strong>Lesson:</strong> a system can implement a strong guarantee correctly and then <strong>fail
+to apply it</strong>, because the setting you configured was not the setting that took
+effect. Always test the configuration you actually deploy.</p>
+<h3 id="readme-nats-2121-december-2025--crashes-alone">NATS 2.12.1 (December 2025) — crashes alone</h3>
+<p>Jepsen's NATS analysis reported that in JetStream <strong>version 2.10.22, process
+crashes alone could cause the total loss of a stream and all its data</strong>, with
+further data-loss and replica-divergence findings in 2.12.1 relating to file
+corruption and power failure.</p>
+<p><strong>Lesson:</strong> the humblest fault in the catalogue — <code>:kill</code> — remains one of the
+most productive. Durability claims are claims about <code>fsync</code>, and they are
+routinely wrong.</p>
+<h3 id="readme-others-worth-reading">Others worth reading</h3>
+<p>Historically: Elasticsearch losing acknowledged writes under partition, Redis
+Sentinel's failover behaviour (which your <a href="../13-redis/notes.html#readme">redis</a> lab measured),
+Kafka's unclean leader election, Cassandra's lightweight transactions,
+etcd/Consul, RethinkDB, and more recently Bufstream, Amazon RDS for PostgreSQL
+17.4, and TigerBeetle 0.16.1. The archive is at <strong><a href="https://jepsen.io/analyses" target="_blank" rel="noopener">https://jepsen.io/analyses</a></strong>
+and reading two or three end-to-end is worth more than another lab.</p>
+<hr />
+<h1 id="readme-19--production--should-you-run-this-and-how">19 · PRODUCTION — should <em>you</em> run this, and how</h1>
+<p>Being honest about cost first: <strong>writing a good Jepsen test is a serious
+project.</strong> It is Clojure, it wants five machines (LXC, Docker, or VMs) plus a
+control node, and the hard part is not the framework — it is the
+error-classification work from section 12 and knowing which model to check
+against. A rough, credible test is a week; a good one is longer.</p>
+<p>So here is the ladder, cheapest first.</p>
+<h3 id="readme-rung-1--read-reports-an-afternoon-enormous-return">Rung 1 — read reports (an afternoon, enormous return)</h3>
+<p>Pick the two databases you actually run. Read their Jepsen analyses. You will
+learn more about your production risk in three hours than from any amount of
+documentation, because the reports describe <strong>what the system does when it
+breaks</strong>, which the documentation never does.</p>
+<h3 id="readme-rung-2--maelstrom-a-weekend-and-genuinely-fun">Rung 2 — Maelstrom (a weekend, and genuinely fun)</h3>
+<p><strong>Maelstrom</strong> is a workbench built on Jepsen for writing <em>toy</em> distributed
+systems. You write a node as a program in <strong>any language</strong> that reads JSON
+messages on stdin and writes them on stdout; Maelstrom simulates the network,
+routes messages, injects faults, and runs the real Jepsen checkers against the
+result.</p>
+<p>This means you can experience the entire Jepsen machine — history, nemesis,
+Elle, a counterexample — without a cluster, without Clojure, and in Java. The
+<strong>Gossip Glomers</strong> challenge set (Fly.io, built with Kingsbury) is a guided
+sequence through exactly this: broadcast, a grow-only counter, a replicated
+key-value store, a transactional store.</p>
+<blockquote>
+<p>Given the <a href="../40-raft/notes.html#readme">raft</a>, <a href="../32-crdts/notes.html#readme">crdts</a>, and
+<a href="../29-causal-consistency/notes.html#readme">causal-consistency</a> labs you already have, this is
+the natural next thing to actually <em>do</em>. Note that it does involve writing
+code — which is why it is a recommendation here rather than part of this lab.</p>
+</blockquote>
+<h3 id="readme-rung-3--elle-standalone-against-your-own-system">Rung 3 — Elle standalone against your own system</h3>
+<p>You do not need all of Jepsen to use Elle. If you can make your application
+issue list-append transactions against your database and record a history in the
+right shape, Elle will check it. Several teams use exactly this to verify their
+ORM/connection-pool/proxy stack does not weaken the isolation the database
+provides — a real risk, since a pooler that reuses sessions or a read-replica
+router can quietly downgrade your guarantees below what the database offers.</p>
+<p><strong>This is often the highest-value thing to check, because the bug is usually
+yours, not the vendor's.</strong></p>
+<h3 id="readme-rung-4--a-full-jepsen-test">Rung 4 — a full Jepsen test</h3>
+<p>Worth it if you build or operate infrastructure that other teams depend on for
+correctness.</p>
+<h3 id="readme-the-neighbouring-technique-you-should-know-exists">The neighbouring technique you should know exists</h3>
+<p>Jepsen tests a <strong>real system</strong> with <strong>real faults</strong> and <strong>non-deterministic</strong>
+results — so a bug found may be hard to reproduce. The complementary approach is
+<strong>deterministic simulation testing (DST)</strong>: run the whole system on a simulated,
+seeded scheduler and network so that any run can be replayed exactly. FoundationDB
+pioneered it; TigerBeetle, Antithesis and others use it now.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>Jepsen</th>
+  <th>Deterministic simulation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>System under test</td>
+  <td>The real binary, real OS, real network</td>
+  <td>Usually needs the code written for it</td>
+</tr>
+<tr>
+  <td>Reproducibility</td>
+  <td>Hard — a rare bug may not recur</td>
+  <td>Perfect — replay by seed</td>
+</tr>
+<tr>
+  <td>Retrofitting to existing software</td>
+  <td><strong>Yes, from outside</strong></td>
+  <td>Usually no</td>
+</tr>
+<tr>
+  <td>Fault space</td>
+  <td>Whatever you inject</td>
+  <td>Can be explored systematically</td>
+</tr>
+</tbody>
+</table></div>
+<p>They answer different questions. Jepsen's superpower is that it needs <strong>no
+cooperation from the system under test</strong> — which is exactly why it can be
+pointed at someone else's database and produce a report they cannot dismiss.</p>
+<hr />
+<h1 id="readme-20--common-wrong-models">20 · COMMON WRONG MODELS</h1>
+<h3 id="readme--jepsen-is-a-test-suite-you-run-to-certify-a-database">❌ &quot;Jepsen is a test suite you run to certify a database.&quot;</h3>
+<p>There is no suite and no certificate. Jepsen is a <strong>library</strong> for building a
+test for one system against one claim, plus a body of published analyses. Each
+analysis is a dated report on one version. Correct model: <em>Jepsen is a
+falsification instrument and a report archive, not a benchmark or a badge.</em></p>
+<h3 id="readme--passing-jepsen-means-the-system-is-correct">❌ &quot;Passing Jepsen means the system is correct.&quot;</h3>
+<p>A green run means &quot;we did not catch it this time&quot; (section 17). Correct model:
+<em>red is strong evidence; green is weak evidence.</em></p>
+<h3 id="readme--jepsen-tests-network-partitions">❌ &quot;Jepsen tests network partitions.&quot;</h3>
+<p>Partitions are the famous fault and were the original one, but the catalogue in
+section 15 is much broader, and <strong>process pauses and crashes find more bugs than
+partitions do</strong> — because they are more common in production and attack timing
+assumptions directly. Correct model: <em>the nemesis injects whatever you ask for,
+and partitions are one entry in a long list.</em></p>
+<h3 id="readme--a-timeout-in-the-history-is-a-bug">❌ &quot;A timeout in the history is a bug.&quot;</h3>
+<p>No. A timeout under a partition is often <em>correct</em>. It is an <code>:info</code>, which is a
+statement about your knowledge, not about the system's behaviour. Correct model:
+<em>errors and timeouts are data, not verdicts. Only the checker issues verdicts.</em></p>
+<h3 id="readme--the-checker-compares-results-against-expected-values">❌ &quot;The checker compares results against expected values.&quot;</h3>
+<p>This is the deepest one, and the reason people build the wrong tool. There is no
+expected value. The checker searches for <strong>any</strong> explanation consistent with the
+model, and only reports a violation when <strong>none exists</strong>. Correct model:
+<em>checking is a search for an explanation, not a comparison to an answer.</em></p>
+<h3 id="readme--if-im-unsure-whether-an-operation-happened-marking-it-info-is-the-safe-choice">❌ &quot;If I'm unsure whether an operation happened, marking it <code>:info</code> is the safe choice.&quot;</h3>
+<p>It is the <em>sound</em> choice only when you genuinely do not know. If the server told
+you it aborted, recording <code>:info</code> throws away a fact and makes the checker
+weaker — it can then explain away real bugs (section 12, S6). Correct model:
+<em>record exactly what you know, no more and no less. Both over-claiming and
+under-claiming break the test, in opposite directions.</em></p>
+<h3 id="readme--elle-is-a-linearizability-checker-for-transactions">❌ &quot;Elle is a linearizability checker for transactions.&quot;</h3>
+<p>Elle checks <strong>transactional isolation</strong> — serializability and the anomaly ladder
+below it — by cycle detection. Linearizability is a <em>recency</em> property about
+single operations and is Knossos's job. They live on different axes of the grid
+from your <code>linearizability-vs-serializability</code> lab, and Elle can also check the
+real-time variants (strict serializability) when asked. Correct model: <em>two
+axes, two checkers.</em></p>
+<h3 id="readme--a-history-where-operations-interleave-weirdly-is-suspicious">❌ &quot;A history where operations interleave weirdly is suspicious.&quot;</h3>
+<p>Concurrent operations are <em>unordered</em>; almost any result between overlapping
+operations is legal (section 11's reveal). Constraints come from operations that
+do <strong>not</strong> overlap. Correct model: <em>the violation is never &quot;this looks odd&quot;; it
+is &quot;no order exists&quot;.</em></p>
+<hr />
+<h1 id="readme-21--knowledge-map-and-next-steps">21 · KNOWLEDGE MAP AND NEXT STEPS</h1>
+<h3 id="readme-where-this-sits">Where this sits</h3>
+<pre class="mermaid">flowchart TB
+  LIN[linearizability] --&gt; J[jepsen]
+  LVS[linearizability-vs-serializability] --&gt; J
+  ISO[isolation-levels] --&gt; J
+  SB[split-brain] --&gt; J
+  CAP[cap-theorem] --&gt; J
+  DL[distributed-locking] --&gt; J
+  J --&gt; M[maelstrom / gossip glomers?]
+  J --&gt; DST[deterministic-simulation-testing?]
+  J --&gt; TLA[tla-plus?]
+  J --&gt; OBS[observability?]
+</pre>
+<p><strong>Builds on.</strong> <a href="../26-linearizability/notes.html#readme">linearizability</a> (the model Knossos
+checks — and its own hand-built checker is the thing Knossos does properly),
+<a href="../27-linearizability-vs-serializability/notes.html#readme">linearizability-vs-serializability</a>
+(the two axes; why there are two checkers),
+<a href="../08-isolation-levels/notes.html#readme">isolation-levels</a> (Elle's anomaly names are that ladder),
+<a href="../42-split-brain/notes.html#readme">split-brain</a> and <a href="../43-distributed-locking/notes.html#readme">distributed-locking</a>
+(what <code>:pause</code> and the partition topologies are hunting),
+<a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> (why a timeout under partition is correct
+behaviour), <a href="../49-idempotency/notes.html#readme">idempotency</a> (the same indeterminacy, from the
+client's side), <a href="../07-acid/notes.html#readme">acid</a> (what <code>:kill</code> tests).</p>
+<h3 id="readme-commonly-confused-with">Commonly confused with</h3>
+<ul>
+<li><strong>Jepsen vs chaos engineering.</strong> Chaos engineering asks <em>&quot;does the service
+stay up?&quot;</em> — an availability question, usually in production, judged by
+metrics. Jepsen asks <em>&quot;is the data still correct?&quot;</em> — a safety question, in a
+lab, judged by a checker. Netflix's Chaos Monkey and Jepsen look superficially
+similar and answer opposite questions.</li>
+<li><strong>Jepsen vs fuzzing.</strong> Fuzzing hunts for crashes and memory errors from
+malformed <em>input</em>. Jepsen hunts for correctness violations from adverse
+<em>timing and failure</em>. Both generate randomly; only one has a formal model as
+its oracle.</li>
+<li><strong>Jepsen vs property-based testing.</strong> Closely related — Jepsen <em>is</em> a
+property-based test whose property is a consistency model and whose generator
+includes failures of the environment. The difference is the fault injection
+and the real cluster.</li>
+<li><strong>Knossos vs Elle.</strong> Order-search over single-object operations vs
+cycle-detection over transactions. Different axis, different algorithm,
+different cost.</li>
+<li><strong>Jepsen vs TLA+.</strong> TLA+ checks your <em>design</em> exhaustively; Jepsen checks your
+<em>implementation</em> by sampling. A system can be verified in TLA+ and still fail
+Jepsen, because the bug was in the code, not the design. Several have.</li>
+</ul>
+<h3 id="readme-suggested-next-commands">Suggested next commands</h3>
+<div class="code"><pre><code>/learn deterministic-simulation-testing   # the complementary technique: FoundationDB, TigerBeetle, Antithesis
+/learn tla-plus                           # verify the design instead of sampling the implementation
+/learn kafka                              # unclean leader election and ISR — a Jepsen finding you can now read
+/learn zookeeper                          # the coordination service whose guarantees straddle two grid cells
+/learn failure-detectors                  # phi-accrual and SWIM: the component the nemesis is attacking
+/learn mvcc-and-vacuum                    # the machinery underneath the G2-item bug in PostgreSQL
+</code></pre></div>
+<hr />
+<h1 id="readme-22--glossary">22 · GLOSSARY</h1>
+<p>In order of first appearance.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Jepsen</strong></td>
+  <td>An open-source Clojure library for testing distributed systems by generating a concurrent workload under injected faults, recording a history, and checking it against a consistency model. Also the name of the consultancy that publishes analyses using it.</td>
+</tr>
+<tr>
+  <td><strong>Safety property</strong></td>
+  <td>&quot;Nothing bad ever happens&quot; — e.g. no acknowledged write is lost. Violations are witnessed by a finite counterexample, which is why they are testable this way.</td>
+</tr>
+<tr>
+  <td><strong>Fault injection</strong></td>
+  <td>Deliberately breaking the environment — network, process, clock, disk — during a test.</td>
+</tr>
+<tr>
+  <td><strong>History</strong></td>
+  <td>The time-ordered log of every operation invocation and completion in one run. The artefact of a Jepsen test and the input to the checker.</td>
+</tr>
+<tr>
+  <td><strong>Operation</strong></td>
+  <td>One client request, recorded as two entries: an invocation and a completion, spanning an interval of time.</td>
+</tr>
+<tr>
+  <td><strong><code>:invoke</code> / <code>:ok</code> / <code>:fail</code> / <code>:info</code></strong></td>
+  <td>The four entry types. <code>:ok</code> = definitely happened; <code>:fail</code> = definitely did not; <code>:info</code> = indeterminate, may or may not have, now or later.</td>
+</tr>
+<tr>
+  <td><strong>Indeterminate operation</strong></td>
+  <td>An operation whose outcome is unknowable — the archetype is a timeout. Recorded as <code>:info</code>.</td>
+</tr>
+<tr>
+  <td><strong>Process</strong></td>
+  <td>A logical single-threaded client. Retired permanently once it receives an <code>:info</code>, because the operation may still be in flight.</td>
+</tr>
+<tr>
+  <td><strong>Process retirement</strong></td>
+  <td>The rule above. Prevents an in-flight operation from overlapping a later one on the same logical process.</td>
+</tr>
+<tr>
+  <td><strong>Over-claiming / under-claiming</strong></td>
+  <td>Recording an indeterminate operation as definite (→ false alarms) or a definite one as indeterminate (→ missed bugs).</td>
+</tr>
+<tr>
+  <td><strong>Consistency model</strong></td>
+  <td>The specification the history is judged against: linearizability, serializability, snapshot isolation, etc.</td>
+</tr>
+<tr>
+  <td><strong>Checker</strong></td>
+  <td>A program that takes a history plus a model and returns <code>valid?</code> plus, on failure, a counterexample.</td>
+</tr>
+<tr>
+  <td><strong>Linearization point</strong></td>
+  <td>The single instant, inside an operation's own interval, at which it is deemed to take effect.</td>
+</tr>
+<tr>
+  <td><strong>Counterexample</strong></td>
+  <td>A minimal set of operations for which no valid explanation exists. The output that convicts.</td>
+</tr>
+<tr>
+  <td><strong>Knossos</strong></td>
+  <td>Jepsen's linearizability checker. Implements the WGL algorithm.</td>
+</tr>
+<tr>
+  <td><strong>WGL algorithm</strong></td>
+  <td>Wing &amp; Gong's backtracking linearizability search with Lowe's pruning extension: skip states equivalent to one already visited.</td>
+</tr>
+<tr>
+  <td><strong>Nemesis</strong></td>
+  <td>The component that injects faults. Also a client, so its actions are timestamped into the history.</td>
+</tr>
+<tr>
+  <td><strong>Generator</strong></td>
+  <td>The component that decides what operation happens next, on which process, and when faults fire.</td>
+</tr>
+<tr>
+  <td><strong>Control node</strong></td>
+  <td>The machine running the test. Holds the single clock all timestamps come from, which is why clock-skew faults cannot corrupt the history's real-time ordering.</td>
+</tr>
+<tr>
+  <td><strong><code>hammer-time</code></strong></td>
+  <td>The <code>SIGSTOP</code>/<code>SIGCONT</code> nemesis. Simulates a long GC pause. Disproportionately effective.</td>
+</tr>
+<tr>
+  <td><strong><code>partition-majorities-ring</code></strong></td>
+  <td>A partition topology where every node sees <em>a</em> majority but no two see the <em>same</em> majority.</td>
+</tr>
+<tr>
+  <td><strong><code>bridge</code></strong></td>
+  <td>A partition topology with one node able to talk to both sides — non-transitive connectivity.</td>
+</tr>
+<tr>
+  <td><strong>Elle</strong></td>
+  <td>Jepsen's transactional consistency checker. Infers Adya-style dependency graphs from observed reads and reports cycles.</td>
+</tr>
+<tr>
+  <td><strong>List-append workload</strong></td>
+  <td>Elle's most powerful workload: objects are lists, writes append unique elements, so a single read reveals the whole write order for that key.</td>
+</tr>
+<tr>
+  <td><strong><code>ww</code> / <code>wr</code> / <code>rw</code> edge</strong></td>
+  <td>Write-write, write-read, and read-write (anti-dependency) orderings between transactions. The <code>rw</code> edge is inferred from what a transaction did <em>not</em> see.</td>
+</tr>
+<tr>
+  <td><strong>Anti-dependency</strong></td>
+  <td>T1 read an older version than T2 wrote, so T1 must precede T2.</td>
+</tr>
+<tr>
+  <td><strong>G0 / G1a / G1b / G1c / G-single / G2</strong></td>
+  <td>Adya's anomaly names: write cycle, aborted read, intermediate read, cyclic information flow, read skew, anti-dependency cycle.</td>
+</tr>
+<tr>
+  <td><strong>Duplicate write / garbage read</strong></td>
+  <td>Elle findings outside Adya: a value appended twice when written once (retry bug); a value read that nobody wrote.</td>
+</tr>
+<tr>
+  <td><strong>Maelstrom</strong></td>
+  <td>A Jepsen-based workbench for toy distributed systems. Your node speaks JSON over stdin/stdout in any language; Maelstrom simulates the network and runs the real checkers.</td>
+</tr>
+<tr>
+  <td><strong>Gossip Glomers</strong></td>
+  <td>A guided challenge set (Fly.io + Kingsbury) built on Maelstrom.</td>
+</tr>
+<tr>
+  <td><strong>Deterministic simulation testing (DST)</strong></td>
+  <td>The complementary technique: run the system on a seeded, simulated scheduler so every run is exactly replayable. FoundationDB, TigerBeetle, Antithesis.</td>
+</tr>
+<tr>
+  <td><strong>Falsification</strong></td>
+  <td>Establishing a claim is false by exhibiting a counterexample. The only thing Jepsen does, and the reason a green run proves so little.</td>
+</tr>
+</tbody>
+</table></div>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-jepsen--exercises">Jepsen — Exercises</h1>
+<p>Eight rungs, from saying it back in your own words to designing a test for a real
+system. <strong>None of them ask you to write code.</strong> Rungs 2 to 6 are checkable against
+<a href="visualization.html"><code>visualization.html</code></a> — open it and keep it open.</p>
+<p>Worked answers are in <a href="notes.html#solutions">SOLUTIONS.md</a>. Attempt each rung first. Rungs 7
+and 8 are discussions rather than single answers, so compare reasoning rather than
+checking a box.</p>
+<p><strong>Simulator reminders.</strong> Tab 1 (<em>One register</em>) has eight recorded runs, S1–S8, judged
+by three chips that differ only in how they read an <code>:info</code>. Tab 2 (<em>Transactions</em>) has
+six histories E1–E6 and one toggle: <strong>list-append</strong> vs <strong>register</strong>. The register
+always starts at <strong>0</strong>; in the Elle tab, keys always start as empty lists.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p>No simulator. Write the answers out; the point is to find the places where you can
+only gesture.</p>
+<p><strong>1.1</strong> A colleague says: &quot;we already have integration tests that check the data is
+right at the end. Why would we need Jepsen?&quot; Give them <strong>three structurally
+different</strong> reasons, not one reason three ways.</p>
+<p><strong>1.2</strong> Explain <code>:ok</code>, <code>:fail</code>, and <code>:info</code> to someone who has never seen them, in a
+way that makes clear why two outcomes are not enough. Then say what a checker is
+allowed to assume about each.</p>
+<p><strong>1.3</strong> In one sentence each, say what a <strong>red</strong> Jepsen result means and what a
+<strong>green</strong> one means. Make the asymmetry between them explicit.</p>
+<p><strong>1.4</strong> The lab claims a checker &quot;searches for an explanation&quot; rather than &quot;compares
+against an expected value&quot;. Explain the difference to someone who writes ordinary
+unit tests, and say why the ordinary approach cannot work here.</p>
+<p><strong>1.5</strong> Why does Jepsen permanently retire a process after it receives an <code>:info</code>?
+What would break if it did not?</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Read-off-the-screen questions. Open tab 1.</p>
+<p><strong>2.1</strong> Run <strong>S2</strong>. Which two operations do <em>not</em> overlap, and what does that
+non-overlap force? Which single operation would you delete to make the history legal?</p>
+<p><strong>2.2</strong> Run <strong>S3</strong>. Look at p1's bar. Why is it drawn dashed with an arrow running off
+the right edge rather than ending at t=8? State the modelling rule that arrow encodes.</p>
+<p><strong>2.3</strong> Run <strong>S3</strong> and read all three verdict chips. Which one is red, and which one
+does the page mark as Jepsen's? What is the practical consequence of shipping a test
+that behaves like the red one?</p>
+<p><strong>2.4</strong> Run <strong>S7</strong>. Both writes are in flight when p3 reads. Which pairs of operations
+in this history are actually <em>constrained</em> relative to each other, and which are free?
+Give the rule you used.</p>
+<p><strong>2.5</strong> Switch to tab 2 and select <strong>E4</strong>. Two edges are shown. One is derived from
+something a transaction <em>read</em>; the other from something it <em>did not</em> read. Which is
+which, and what is the second kind called?</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Commit to an answer before pressing anything.</p>
+<p><strong>3.1</strong> In <strong>S4</strong>, p1's write timed out — the checker has total freedom about whether
+and when it took effect. Predict the verdict under Jepsen's reading, then run it. If
+your prediction was &quot;valid&quot;, say exactly which fact defeats it.</p>
+<p><strong>3.2</strong> In <strong>S6</strong>, the write is recorded <code>:info</code> and the later read returns 0. Before
+running: which of the three chips will be red? Then explain why the pattern here is
+the <em>mirror image</em> of S3.</p>
+<p><strong>3.3</strong> Tab 2, <strong>E2</strong> in list-append mode: predict whether Elle finds a cycle. Now
+predict what happens when you flip to <strong>register</strong>. Run both.</p>
+<p><strong>3.4</strong> Tab 2, <strong>E5</strong> (write skew): predict whether flipping to register mode hides
+this anomaly the way it hid E2's. Run it, then explain the difference in one sentence
+about what each anomaly's evidence depends on.</p>
+<p><strong>3.5</strong> S8 with k=8: before dragging, predict roughly what factor separates the pruned
+and unpruned columns — 2×, 30×, 3000×? Then predict what happens to that factor at
+k=9, and say why you cannot check that on this page.</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>Change one thing and say what breaks.</p>
+<p><strong>4.1</strong> Take <strong>S2</strong> and move p3's read so it starts at t=2 instead of t=5. Is it still
+a violation? Answer from the rule, then verify by reasoning through the checker's
+search by hand. What general principle about test design does this demonstrate?</p>
+<p><strong>4.2</strong> Take <strong>S5</strong> (a confirmed write, then a read of 0) and change the write's
+result from <code>:ok</code> to <code>:info</code>. You have now built <strong>S6</strong>. Which chip changes, and what
+does that tell you about where a Jepsen test's power actually comes from?</p>
+<p><strong>4.3</strong> In <strong>S3</strong>, change p2's read result from 1 to 0. Work out all three verdicts by
+hand before checking your reasoning against the rules in the README.</p>
+<p><strong>4.4</strong> Suppose Jepsen recorded only completion times and not invocation times — one
+timestamp per operation instead of two. Which scenarios in tab 1 could still be
+judged, and which become unjudgeable? What property of linearizability does the
+invocation timestamp carry?</p>
+<p><strong>4.5</strong> In <strong>E4</strong>, suppose T2 had read <code>y = [1]</code> instead of <code>y = []</code>. Redraw the edges.
+Is there still a cycle? Name what T2 would then have observed.</p>
+<hr />
+<h2 id="exercises-rung-5--trace">Rung 5 — Trace</h2>
+<p>Do the checker's job by hand. Write the state after each step.</p>
+<p><strong>5.1</strong> Run the linearizability search on <strong>S2</strong> manually. At each step list the
+<em>candidate</em> operations (those not blocked by the real-time rule), the one you pick,
+and the register value afterwards. Show both branches dying.</p>
+<p><strong>5.2</strong> Do the same for <strong>S7</strong>, and produce the winning order. Show at least one
+branch you had to abandon before finding it.</p>
+<p><strong>5.3</strong> Trace Jepsen's handling of <strong>S6</strong> explicitly as two branches: &quot;the <code>:info</code>
+write took effect&quot; and &quot;it did not&quot;. Show why <em>both</em> branches are needed to reach the
+verdict, and which one succeeds.</p>
+<p><strong>5.4</strong> For <strong>E3</strong> (G1c), write out the two edges as sentences of the form <em>&quot;X must
+have committed before Y, because …&quot;</em>. Then state the contradiction in one sentence
+without using the word &quot;cycle&quot;.</p>
+<p><strong>5.5</strong> Here is a history not in the simulator. Register starts at 0.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>process</th>
+  <th>operation</th>
+  <th>invoked</th>
+  <th>completed</th>
+  <th>result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>p1</td>
+  <td><code>write(1)</code></td>
+  <td>0</td>
+  <td>6</td>
+  <td><code>:ok</code></td>
+</tr>
+<tr>
+  <td>p2</td>
+  <td><code>write(2)</code></td>
+  <td>1</td>
+  <td>7</td>
+  <td><code>:info</code></td>
+</tr>
+<tr>
+  <td>p3</td>
+  <td><code>read()</code></td>
+  <td>8</td>
+  <td>9</td>
+  <td><code>:ok</code> → 2</td>
+</tr>
+<tr>
+  <td>p4</td>
+  <td><code>read()</code></td>
+  <td>10</td>
+  <td>11</td>
+  <td><code>:ok</code> → 1</td>
+</tr>
+</tbody>
+</table></div>
+<p>Decide the verdict under all three readings of <code>:info</code>, showing your work. This one
+rewards care.</p>
+<hr />
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p>Each of these is a plausible design with a subtle defect. Find the smallest concrete
+scenario where it fails, and name the guarantee or property it violates.</p>
+<p><strong>6.1</strong> A team writes their own checker. To keep it fast, they <strong>drop every <code>:info</code>
+operation from the history entirely — both the invocation and the completion</strong> —
+before checking. They argue this is conservative: &quot;we're just ignoring the ones we're
+unsure about.&quot; Construct the smallest history where this produces the wrong verdict,
+and say in which direction it is wrong.</p>
+<p><strong>6.2</strong> A team's client code is:</p>
+<div class="code"><pre><code class="language-java">try   { db.write(key, value); return Result.ok(); }
+catch (Exception e) { return Result.info(); }   // &quot;safe default&quot;
+</code></pre></div>
+<p>Name the specific class of database response that this mishandles, and construct the
+smallest history where the mishandling causes a real bug to go unreported.</p>
+<p><strong>6.3</strong> To make the test find bugs faster, a team raises concurrency from 5 client
+processes to 500, all hammering the same key. They reason that more concurrency means
+more races means more bugs. Explain, using the rule from <strong>2.4</strong>, why this can make
+the test <em>strictly weaker</em>, and describe the extreme case.</p>
+<p><strong>6.4</strong> A team checks a transactional database using an <strong>rw-register</strong> workload,
+finds nothing over two weeks of runs, and writes in their design doc: &quot;the store
+provides serializability under partition.&quot; Give the two independent reasons this
+sentence is unsupported by the evidence, one about the datatype and one about
+falsification.</p>
+<p><strong>6.5</strong> A vendor's status page says: &quot;Our clocks are synchronised to within 200ms via
+NTP, so we skip the clock-skew nemesis.&quot; Give the smallest concrete failure this
+reasoning misses. (Your <code>distributed-locking</code> and <code>split-brain</code> labs both contain the
+answer.)</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>Design discussions. There is no single right answer; there are answers that survive
+scrutiny and answers that do not.</p>
+<p><strong>7.1</strong> Your Jepsen run goes red. Before you file a bug against the vendor, list — in
+priority order — the things you must rule out about <strong>your own test</strong>. For each, say
+how you would rule it out.</p>
+<p><strong>7.2</strong> Your checker does not finish: it runs for four hours on a 20,000-operation
+history and is killed. Someone proposes recording this as a pass, since &quot;no violation
+was found.&quot; Explain why that is wrong, and then give <strong>three concrete changes</strong> to the
+test that would make future histories checkable — for each, say what testing power you
+give up in exchange.</p>
+<p><strong>7.3</strong> You are testing a system whose vendor claims <em>&quot;acknowledged writes are never
+lost, and reads never return uncommitted data.&quot;</em> Those are two separate claims. For
+each: which checker would you use, which workload, which faults, and what would the
+counterexample look like if the claim were false?</p>
+<p><strong>7.4</strong> A real Jepsen run produces a violation that appears only when a partition
+heals <strong>during</strong> a leader election, roughly once in forty runs. The vendor cannot
+reproduce it. What do you send them, beyond &quot;it failed&quot;? Be specific about what makes
+a history persuasive.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — Your own stack.</strong> You run a Spring Boot service on PostgreSQL with a
+connection pooler (PgBouncer in transaction mode) and a read replica behind a routing
+layer. PostgreSQL itself is serializable and you trust it. Design a test for the
+claim <em>&quot;our application's transactions are serializable end to end.&quot;</em></p>
+<p>Address: what the workload should be and why; where you expect the guarantee to be
+weakened and by which component; which checker; whether you need a nemesis at all; and
+what you would monitor in production once the test passes.</p>
+<p><strong>8.2 — The counterfactual.</strong> Suppose Jepsen had no <code>:info</code> — only <code>:ok</code> and <code>:fail</code>,
+with the client forced to guess on a timeout. Describe how this changes what can be
+proven. Give one concrete false positive and one concrete false negative that this
+world produces, and say which is worse and why.</p>
+<p><strong>8.3 — Choosing the fault budget.</strong> You have four hours of cluster time per night for
+a nightly safety run against a Raft-based key-value store. You cannot run every fault.
+Rank the fault catalogue from section 15 of the README by expected bugs-found per hour
+for <em>this</em> system, and justify your top three and your bottom two. State the
+assumption about production that each of your top three encodes.</p>
+<p><strong>8.4 — When not to use Jepsen.</strong> Name two systems or properties where a Jepsen-style
+test is the wrong instrument, and say what you would use instead and why. At least one
+should be a case where the property is genuinely important — the point is not &quot;it
+doesn't matter&quot;, it is &quot;this tool cannot see it.&quot;</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-jepsen--solutions">Jepsen — Solutions</h1>
+<p>Attempt <a href="notes.html#exercises">EXERCISES.md</a> first. Rungs 7 and 8 are worked reasoning, not
+single answers — if yours differs and survives the same scrutiny, yours is fine.</p>
+<p>Every verdict quoted here was computed by the checker in
+<a href="visualization.html"><code>visualization.html</code></a>.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Three structurally different reasons:</p>
+<ol>
+<li><strong>It never attempted the thing you care about.</strong> The claim is about behaviour under
+failure. A test on a healthy cluster exercises the happy path and concludes nothing
+about the unhappy one.</li>
+<li><strong>The final state is where the evidence isn't.</strong> Many violations — a stale read
+above all — are transient events that corrupt a decision and then vanish, leaving
+the final state perfect. Errors in opposite directions also cancel.</li>
+<li><strong>&quot;Right&quot; is not a single value.</strong> A correct concurrent system has many legal
+outcomes and an incorrect one can produce a legal-looking outcome. Equality against
+a predicted value only works when the answer is deterministic.</li>
+</ol>
+<p><strong>1.2</strong> A request either succeeded, definitely failed, or <strong>you never found out</strong> —
+and the third case is not rare, it is what every timeout is. <code>:ok</code> = definitely
+happened, has a logical effect. <code>:fail</code> = definitely did not, has <em>no</em> logical effect.
+<code>:info</code> = may or may not have, now or at any later time.</p>
+<p>What the checker may assume: an <code>:ok</code> operation <strong>must</strong> appear in the linearization;
+a <code>:fail</code> operation <strong>must not</strong>; an <code>:info</code> operation may be placed or omitted freely,
+and if placed, may go anywhere from its invocation to the <strong>end of the history</strong>.</p>
+<p><strong>1.3</strong> Red: <em>there exists a set of client-observable operations that no correct
+implementation could have produced</em> — a self-contained proof, independent of hardware
+or luck. Green: <em>this workload, these faults, this concurrency, this version, this
+duration produced no violation.</em> The asymmetry is falsification: a counterexample
+settles the question forever; its absence settles nothing.</p>
+<p><strong>1.4</strong> A unit test knows the answer in advance and compares. A checker does not know
+the answer and cannot — there isn't one. It <strong>searches</strong> for any ordering of the
+recorded operations that a correct implementation could have produced, and only
+reports a violation when the search is exhausted. The ordinary approach cannot work
+because the set of legal outcomes is enormous and depends on timing you do not
+control.</p>
+<p><strong>1.5</strong> Because the operation may still be in flight. If the same process issued a new
+operation and the old one landed afterwards, the history would contain two overlapping
+operations from a supposedly single-threaded process — breaking the one modelling
+assumption the whole search rests on. Jepsen burns the process number and starts a
+fresh one on the same thread.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> p2's read <code>[1,3]</code> and p3's read <code>[5,7]</code> do not overlap — p2 was finished two
+ticks before p3 asked. That forces p2's read to be linearized before p3's, which means
+the value went 1 → 0 with no write of 0 available. Delete <strong>either read</strong> and it
+becomes legal; the checker confirms that deleting p3 leaves a valid history. <strong>Three
+operations is the minimum for this violation.</strong></p>
+<p><strong>2.2</strong> Because an <code>:info</code> operation's interval is extended to the <strong>end of the
+history</strong>. The request may still be queued somewhere and take effect in ten seconds.
+Confining it to <code>[0,8]</code> would be claiming knowledge you do not have — and would make
+the checker reject histories that are actually fine.</p>
+<p><strong>2.3</strong> Red: <strong><code>:info → it failed</code></strong>. Jepsen's is the middle one, <code>:info → may or may not</code>. The consequence of shipping the red one: it reports a violation every time a
+partition causes a timeout — which is every run — so within a week nobody believes the
+test, and the real violation, when it comes, is dismissed with the rest.</p>
+<p><strong>2.4</strong> Constrained pairs are exactly those where one <em>completed</em> before the other was
+<em>invoked</em>:</p>
+<ul>
+<li><code>w1 [0,10]</code> before <code>r4 [14,16]</code> (10 &lt; 14) ✓</li>
+<li><code>w2 [2,12]</code> before <code>r4</code> (12 &lt; 14) ✓</li>
+<li><code>r3 [4,6]</code> before <code>r4</code> (6 &lt; 14) ✓</li>
+</ul>
+<p>Everything else overlaps and is free — in particular <code>w1</code>, <code>w2</code> and <code>r3</code> may be
+arranged in any order. <strong>The rule: A must precede B in the linearization if and only
+if A's completion is earlier than B's invocation.</strong> Overlapping operations are
+unordered.</p>
+<p><strong>2.5</strong> <code>T1 → T2</code> on <code>x</code> is a <strong>wr</strong> edge, derived from what T2 <em>read</em> (x contained
+T1's value 1). <code>T2 → T1</code> on <code>y</code> is derived from what T2 <em>did not</em> read — it saw
+<code>y = []</code>, the version before T1 appended — so T2 must precede T1. That second kind is
+an <strong>anti-dependency</strong> (<code>rw</code> edge). It is the one that catches the hard anomalies,
+because it extracts an ordering from an absence.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> <strong>VIOLATION under all three readings.</strong> The fact that defeats &quot;valid&quot;: only two
+values can ever exist here — the initial 0 and the single write of 1. Three
+non-overlapping reads saw 1, then 0, then 1, which requires the value to change twice.
+<code>:info</code> grants the <em>write</em> freedom; it grants the <em>reads</em> nothing, and three <code>:ok</code>
+reads are three hard facts.</p>
+<p><strong>3.2</strong> Red chip: <strong><code>:info → it succeeded</code></strong>. Verified: <code>fail=valid, ok=VIOLATION, jepsen=valid</code>.</p>
+<p>The mirror image of S3: there, the naive-restrictive reading manufactured a bug that
+did not exist (false alarm). Here, the <em>correct</em> reading lets a bug that does exist go
+unreported — because the client destroyed the evidence by recording a known success as
+unknown. <strong>S3 punishes over-claiming; S6 punishes under-claiming.</strong> And note the trap
+in S6: the red chip is &quot;right&quot; only by accident. Jepsen's verdict is correct <em>given
+this transcript</em>. The transcript is the defect.</p>
+<p><strong>3.3</strong> list-append: <strong>G0, a write cycle.</strong> register: <strong>no cycle found</strong> — Elle reports
+a clean run against a database doing exactly the same wrong thing. Both <code>ww</code> edges came
+from reading <code>x = [1, 2]</code> and <code>y = [1, 2]</code>, and a register read returns only the latest
+value, so the order of everything before it is unrecoverable.</p>
+<p><strong>3.4</strong> Register mode does <strong>not</strong> hide E5. Both its edges are anti-dependencies
+derived from reading the <em>initial</em> (empty/nil) version of a key, and &quot;I saw the version
+before you wrote&quot; is just as visible with a register.</p>
+<p>The one-sentence difference: <strong>E2's evidence is the order of past writes, which a
+register destroys; E5's evidence is the absence of a write, which a register
+preserves.</strong></p>
+<p><strong>3.5</strong> At k=8 the measured factor is <strong>30.5×</strong> (109,601 unpruned vs 3,593 pruned). At
+k=9 it would be roughly 60–100× — the ratio has been doubling with each step (1.2, 2.0,
+4.0, 10.1, 30.5). You cannot check it on this page because the slider is capped at 8:
+unpruned growth tracks <code>k!</code>, so k=9 is ~1M recursive calls and k=12 would hang the
+browser. <strong>That cap is the lesson, not a limitation of the page.</strong></p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> <strong>No longer a violation.</strong> Verified valid; the checker's order is
+<code>read→0 @p3 → write(1) @p1 → read→1 @p2</code>. All three points sit inside their own bars,
+and the sequence is exactly what one register does.</p>
+<p>The design principle: <strong>constraints come only from non-overlapping operations.</strong> A
+history in which everything overlaps everything is nearly unfalsifiable. This is why
+Jepsen keeps client concurrency low and deliberately staggers operations — a test that
+maximises concurrency maximises the checker's freedom to explain the results away.</p>
+<p><strong>4.2</strong> The <strong><code>:info → may or may not</code> chip flips from red to green</strong> — that is,
+Jepsen's own verdict flips. Verified: S5 is <code>FFF</code> (violation under all readings), S6 is
+<code>TFT</code>.</p>
+<p>What that tells you: <strong>a Jepsen test's power comes from the client's honesty, not from
+the checker.</strong> The checker is a fixed piece of mathematics. The variable is how well
+the client library maps the database's responses onto <code>:ok</code> / <code>:fail</code> / <code>:info</code>. Get
+that wrong in the &quot;safe-looking&quot; direction and you have a green test over a broken
+database.</p>
+<p><strong>4.3</strong> <strong>All three valid.</strong> With <code>read → 0</code>, the read is returning the initial value,
+and the write overlaps it, so the order <code>read→0, write(1)</code> works under every reading —
+including <code>:info → it succeeded</code>, where the write is forced into the history but is
+free to sit after the read. Under <code>:info → it failed</code> the write simply is not there.</p>
+<p><strong>4.4</strong> Erasing invocation times destroys the real-time precedence relation entirely
+(no operation can be shown to have completed before another started). Measured
+consequence:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Scenario</th>
+  <th>With invocation times</th>
+  <th>Without</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>S2 stale read</td>
+  <td>VIOLATION</td>
+  <td><strong>valid — invisible</strong></td>
+</tr>
+<tr>
+  <td>S4 value changes twice</td>
+  <td>VIOLATION</td>
+  <td><strong>valid — invisible</strong></td>
+</tr>
+<tr>
+  <td>S5 lost acknowledged write</td>
+  <td>VIOLATION</td>
+  <td><strong>valid — invisible</strong></td>
+</tr>
+<tr>
+  <td>garbage read (value nobody wrote)</td>
+  <td>VIOLATION</td>
+  <td>VIOLATION — still caught</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Every ordering violation becomes unjudgeable. Only value-provenance violations
+survive.</strong> The invocation timestamp carries the entire <em>real-time</em> axis of
+linearizability — the &quot;time must not run backwards&quot; half. Without it you are left
+checking little more than &quot;did the database invent a value&quot;, which is a far weaker
+claim than any vendor makes.</p>
+<p><strong>4.5</strong> If T2 read <code>y = [1]</code>, it saw both of T1's appends. The <code>rw</code> edge <code>T2 → T1</code>
+disappears (T2 no longer read a version older than T1's write), leaving only
+<code>T1 → T2</code> on x. <strong>No cycle — the history is fine.</strong> T2 would have observed T1's
+transaction <em>atomically</em>: all of it rather than half of it. The anomaly in E4 was
+precisely the &quot;half&quot;.</p>
+<hr />
+<h2 id="solutions-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1 — S2.</strong> Ops: <code>w1=write(1)[0,9]</code>, <code>r2=read→1 [1,3]</code>, <code>r3=read→0 [5,7]</code>. Value = 0.</p>
+<p>Candidates initially: <code>w1</code> (nothing completed before t=0) and <code>r2</code> (nothing remaining
+completed before t=1). <strong><code>r3</code> is blocked</strong>, because <code>r2</code> completes at 3 and 3 &lt; 5.</p>
+<ul>
+<li><strong>Pick <code>w1</code></strong> → value 1. Remaining <code>{r2, r3}</code>; <code>r3</code> still blocked by <code>r2</code>. Pick <code>r2</code>:
+wants 1, value is 1 ✓ → value 1. Remaining <code>{r3}</code>: wants 0, value is 1 ✗. <strong>Dead.</strong></li>
+<li><strong>Pick <code>r2</code></strong> → wants 1, value is 0 ✗. <strong>Dead immediately.</strong></li>
+</ul>
+<p>No candidates left. <strong>Not linearizable.</strong></p>
+<p><strong>5.2 — S7.</strong> Ops: <code>w1=write(1)[0,10]</code>, <code>w2=write(2)[2,12]</code>, <code>r3=read→1 [4,6]</code>,
+<code>r4=read→2 [14,16]</code>. Candidates: <code>w1</code>, <code>w2</code>, <code>r3</code>. <code>r4</code> is blocked by all three.</p>
+<ul>
+<li><strong>Abandoned branch:</strong> pick <code>w1</code> → value 1; pick <code>w2</code> → value 2; now <code>r3</code> wants 1 but
+value is 2 ✗. Back up.</li>
+<li><strong>Winning branch:</strong> <code>w1</code> → value 1; <code>r3</code> wants 1 ✓; <code>w2</code> → value 2; <code>r4</code> wants 2 ✓.</li>
+</ul>
+<p><strong>Order: <code>write(1) → read→1 → write(2) → read→2</code>. Linearizable.</strong></p>
+<p><strong>5.3 — S6.</strong> Ops: <code>w1=write(1)[0,4] :info</code>, <code>r2=read→0 [8,10] :ok</code>.</p>
+<ul>
+<li><strong>Branch A — &quot;the write did not take effect&quot;:</strong> history is just <code>r2</code>. Value is the
+initial 0; <code>r2</code> wants 0 ✓. <strong>Succeeds.</strong></li>
+<li><strong>Branch B — &quot;the write took effect&quot;:</strong> its interval becomes <code>[0, ∞)</code>, so it is
+unconstrained. Place it <em>after</em> <code>r2</code>: order <code>read→0, write(1)</code> ✓. <strong>Also succeeds.</strong></li>
+</ul>
+<p>Both branches are needed in general because either alone can be the only one that
+works — S3 is rescued by branch B, S6 by branch A (and here also B). Jepsen returns
+valid if <strong>any</strong> branch succeeds, which is what makes it sound: it never convicts on
+an assumption it was not entitled to make.</p>
+<p><strong>5.4 — E3.</strong></p>
+<ul>
+<li><em>&quot;T1 must have committed before T2, because T2 read <code>x</code> containing the value 1, and
+only T1 appended 1 to x.&quot;</em></li>
+<li><em>&quot;T2 must have committed before T1, because T1 read <code>y</code> containing the value 1, and
+only T2 appended 1 to y.&quot;</em></li>
+</ul>
+<p>Contradiction without the word cycle: <strong>each transaction must have finished before the
+other one started, which is impossible.</strong></p>
+<p><strong>5.5 — the extra history.</strong> Verified: <strong>VIOLATION under all three readings.</strong></p>
+<p>The reasoning that matters is the Jepsen branch where <code>w2 = write(2)</code> <em>did</em> take
+effect, since that is the permissive one. Its interval becomes <code>[1, ∞)</code>, so it is
+completely free. But:</p>
+<ul>
+<li><code>w1</code> completes at 6, before <code>r3</code> is invoked at 8 → <strong><code>w1</code> must precede <code>r3</code></strong>.</li>
+<li><code>r3</code> completes at 9, before <code>r4</code> is invoked at 10 → <strong><code>r3</code> must precede <code>r4</code></strong>.</li>
+<li><code>r3</code> returned 2, so the last write before it is <code>w2</code>.</li>
+<li><code>r4</code> returned 1, so a write of 1 must fall <strong>between <code>r3</code> and <code>r4</code></strong>.</li>
+</ul>
+<p>The only write of 1 is <code>w1</code>, and <code>w1</code> is pinned before <code>r3</code>. There is nothing left to
+produce the 1 that <code>r4</code> saw. Violation.</p>
+<p><strong>The trap:</strong> it is tempting to think a fully-unconstrained <code>:info</code> write can rescue
+anything. It cannot. Here the conviction comes from the <em>pinned</em> <code>:ok</code> write and the
+<em>ordering of the two reads</em> — the indeterminate operation is irrelevant to the proof.</p>
+<hr />
+<h2 id="solutions-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p><strong>6.1</strong> Smallest failing history is <strong>two operations — S3 itself</strong>: <code>write(1)</code> recorded
+<code>:info</code>, then <code>read → 1</code>. Drop the write and a client has read a value nobody wrote;
+the checker reports a violation against a database that did nothing wrong.</p>
+<p><strong>Direction: false positives only, never missed bugs — and you can prove that.</strong>
+&quot;Drop all <code>:info</code> ops&quot; is <em>exactly</em> Jepsen's <code>mask = 0</code> branch. Jepsen returns valid if
+<strong>any</strong> branch succeeds, so dropping-everything valid ⇒ Jepsen valid. The naive
+strategy is strictly more restrictive, so it can only ever convict more often, never
+less.</p>
+<p>That sounds harmless and is not: a checker that raises a false alarm on every timeout
+raises one every run, and a test nobody believes is worse than no test, because it
+occupies the slot where a real one would go.</p>
+<p><strong>6.2</strong> The mishandled class is a <strong>definite, server-issued rejection delivered as an
+exception</strong> — &quot;aborted&quot;, &quot;constraint violation&quot;, &quot;rejected: not the leader, nothing
+was written&quot;. Those are <code>:fail</code>, not <code>:info</code>. The <code>catch (Exception e)</code> lumps them in
+with genuine timeouts.</p>
+<p>Smallest history where a real bug goes unreported (two operations):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>process</th>
+  <th>operation</th>
+  <th>result recorded</th>
+  <th>truth</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>p1</td>
+  <td><code>write(1)</code></td>
+  <td><code>:info</code></td>
+  <td>server explicitly replied <strong>aborted, no effect</strong></td>
+</tr>
+<tr>
+  <td>p2</td>
+  <td><code>read()</code> → 1</td>
+  <td><code>:ok</code></td>
+  <td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p>With the truth recorded as <code>:fail</code>, this is a <strong>dirty/garbage read</strong> — the client read
+a value from an operation the database said it had rejected. That is a serious
+violation. With <code>:info</code> recorded, the checker reasons &quot;the write may have happened
+after all&quot; and returns <strong>valid</strong>. The bug is invisible.</p>
+<p>The fix is unglamorous and is most of the work in a real Jepsen client: enumerate the
+database's error codes and classify each one deliberately, with a comment explaining
+why. <code>:info</code> is the correct answer only for genuine unknowns.</p>
+<p><strong>6.3</strong> From 2.4: <strong>ordering constraints come only from operations that do not
+overlap.</strong> At 500 concurrent processes on one key, almost every pair of operations
+overlaps, so almost no pair is constrained, so the checker has near-total freedom to
+arrange them into an explanation. The extreme case: <strong>if every operation overlaps every
+other operation, any history whose values are individually producible is linearizable</strong>
+— the test can no longer fail for ordering reasons at all.</p>
+<p>There is a second, independent cost: the search is exponential in concurrency (3.5), so
+the checker will also time out. You get a weaker test that takes longer to run.</p>
+<p><strong>6.4</strong> Two independent reasons:</p>
+<ol>
+<li><strong>Datatype.</strong> An rw-register workload has, in Elle's own words, weaker inference. As
+E2 demonstrates, whole classes of anomaly (anything whose evidence is the <em>order of
+past writes</em>) are structurally invisible to it. Finding nothing with registers is
+partly a statement about the instrument, not the system. Re-run with list-append.</li>
+<li><strong>Falsification.</strong> Two weeks of green is the weak half of the asymmetry. It is
+consistent with: the bug needs a fault they did not inject, or two faults at once, or
+a longer run, or a client that under-claims, or a checker that timed out and was
+recorded as a pass.</li>
+</ol>
+<p>The defensible sentence is: <em>&quot;Over N runs with faults X, Y, Z at concurrency C against
+version V, we observed no serializability violation.&quot;</em> Everything stronger is not
+supported.</p>
+<p><strong>6.5</strong> The smallest missed failure needs <strong>no clock error at all</strong>: a <strong>process
+pause</strong>. A leader <code>SIGSTOP</code>ped — or GC-paused, or descheduled on a noisy host, or
+live-migrated — for 12 seconds wakes up believing its 10-second lease is still valid
+and writes, while the rest of the cluster has already elected a successor. Every clock
+in the fleet was within 200ms of correct the entire time. NTP has nothing to say about
+a process that was not running.</p>
+<p>Two further gaps: &quot;synchronised within 200ms&quot; is an assertion about the <em>healthy</em> case,
+not a bound the system enforces — a failed <code>ntpd</code>, a VM snapshot restore, or a
+leap-second handling bug produces unbounded skew with no alarm; and NTP corrects by
+<em>stepping</em> the clock, so a node can observe time jumping backwards, which breaks any
+code that assumes monotonicity. If you take a lease's expiry from the wall clock and
+have no fencing at the resource, this is your outage.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1 — before blaming the vendor.</strong> In priority order:</p>
+<ol>
+<li><strong>Error classification.</strong> The most likely defect and the easiest to make. Audit
+every path that produces <code>:ok</code> and <code>:fail</code>: is each one <em>definitely</em> true? Rule out
+by re-running with the suspect operations forced to <code>:info</code> — if the violation
+survives, it did not depend on your classification.</li>
+<li><strong>Configuration.</strong> Are you running the consistency settings you think you are? The
+MongoDB 4.2.6 finding was partly a case of settings silently not applying. Rule out
+by asserting the effective settings from inside a session at runtime, not from the
+config file.</li>
+<li><strong>Whose claim is it?</strong> Check that the model you are checking is the one the vendor
+promises at these settings. A stale read at a weak read concern is not a bug.</li>
+<li><strong>The nemesis exceeded the contract.</strong> If you killed 3 of 5 nodes, a system promising
+minority tolerance owes you nothing. Check what the fault actually did, not what you
+meant it to do.</li>
+<li><strong>Clock on the control node.</strong> Your real-time ordering is only as good as that one
+clock. Confirm nothing is stepping it during the run.</li>
+</ol>
+<p>Only then: minimise the history, reproduce, and file.</p>
+<p><strong>7.2 — the checker that did not finish.</strong></p>
+<p>Why &quot;pass&quot; is wrong: the checker returned <strong>no verdict</strong>. <code>valid? true</code> means a search
+completed and found an explanation; a timeout means the search was abandoned. Recording
+&quot;unknown&quot; as &quot;pass&quot; is the same error as recording a definite failure as <code>:info</code> —
+throwing away the distinction between <em>knowing</em> and <em>not knowing</em>, which is the one
+thing this entire methodology exists to preserve. Report it as <strong>indeterminate</strong> and
+treat it as a broken test run.</p>
+<p>Three changes, each with its price:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Change</th>
+  <th>Why it helps</th>
+  <th>What you give up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Shorten the run</strong> (60s not 30min) and do many more of them</td>
+  <td>Cost is superlinear in history length; ten short histories check far faster than one long one and cover more fault timings</td>
+  <td>Bugs that need a long build-up — log growth, compaction, disk filling — become unreachable</td>
+</tr>
+<tr>
+  <td><strong>Cut client concurrency</strong> (5 processes, not 50)</td>
+  <td>Search cost is exponential in <em>overlap</em>; also makes the history more constrained and therefore stronger (6.3)</td>
+  <td>Fewer simultaneous races; some concurrency bugs need many writers</td>
+</tr>
+<tr>
+  <td><strong>Spread over more keys</strong> and check each key independently</td>
+  <td>Linearizability is local, so per-key checking is sound and turns one huge problem into many tiny ones</td>
+  <td>Nothing for linearizability — this one is nearly free. It is <strong>not</strong> available for serializability, which does not compose; there you must move to Elle</td>
+</tr>
+</tbody>
+</table></div>
+<p>A fourth, if the claim allows it: <strong>switch from Knossos to Elle</strong> with a list-append
+workload. Cycle detection is polynomial; permutation search is not.</p>
+<p><strong>7.3 — two claims, two tests.</strong></p>
+<p><em>&quot;Acknowledged writes are never lost&quot;</em> — this is a <strong>durability/availability</strong> claim, not
+a recency one, and it does not need a linearizability checker at all. Workload: a
+<strong>grow-only set</strong> — clients add unique elements and, at the end, one client reads the
+whole set. Checker: a set checker comparing acknowledged adds against the final read.
+Faults: <code>:kill</code> (does <code>fsync</code> mean what they say), partitions, and membership changes.
+Counterexample: an element whose <code>add</code> returned <code>:ok</code> and which is absent from the final
+read. <strong>This is a cheap, fast, extremely productive test and it is where I would start
+on any system.</strong> Note the deliberate design: elements added with <code>:info</code> are excluded
+from the &quot;must be present&quot; set but <em>permitted</em> to appear — the same three-outcome
+discipline, applied to a set.</p>
+<p><em>&quot;Reads never return uncommitted data&quot;</em> — this is an <strong>isolation</strong> claim at transaction
+scope. Workload: list-append transactions. Checker: <strong>Elle</strong>, watching for <code>G1a</code>
+(aborted read) and <code>G1b</code> (intermediate read). Faults matter less: as PostgreSQL 12.3
+showed, isolation bugs often appear with no faults at all. Counterexample: a read
+containing a value appended by a transaction that returned <code>:fail</code>.</p>
+<p><strong>7.4 — making an irreproducible finding persuasive.</strong> Send:</p>
+<ol>
+<li><strong>The history file itself</strong> — the raw log of every invocation and completion with
+timestamps. This is the evidence; everything else is commentary.</li>
+<li><strong>The minimised counterexample</strong> — the smallest set of operations that cannot be
+explained, with the constraint written out as in section 11 of the README. A vendor
+can verify three operations by eye in a minute; they cannot verify 20,000.</li>
+<li><strong>The nemesis timeline</strong>, aligned to the anomaly: &quot;partition started at 14.2s,
+healed at 21.7s, first bad read at 22.1s.&quot; Because the nemesis writes into the same
+history, this alignment is free — and it is usually what tells the vendor which code
+path to look at.</li>
+<li><strong>The exact version, configuration, and effective consistency settings.</strong></li>
+<li><strong>The complete test code</strong>, so they can run it themselves.</li>
+<li><strong>The failure rate</strong> — &quot;1 in 40 runs&quot; is information, not an apology. It tells them
+how narrow the window is, which is a clue about the mechanism.</li>
+<li><strong>Their server logs</strong> for the window, which Jepsen collects from every node.</li>
+</ol>
+<p>What makes it persuasive is that (1) and (2) together are <strong>checkable without trusting
+you or your tooling</strong>. That is the whole reason this methodology produces fixes rather
+than arguments.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — Spring Boot + PgBouncer + read replica.</strong></p>
+<p><em>The key insight to state first:</em> you said you trust PostgreSQL, and you should — but
+<strong>the guarantee you get is the weakest link in the path between your code and the
+storage engine</strong>, and you have deliberately installed two components in that path that
+can weaken it. The bug you are hunting is almost certainly yours, not PostgreSQL's.</p>
+<p><strong>Where the guarantee is likely lost:</strong></p>
+<ul>
+<li><strong>The read replica.</strong> Replicas are asynchronous. A transaction routed to a replica
+reads a stale snapshot. Your <code>linearizability-vs-serializability</code> lab's F1 exactly:
+the result may still be <em>serializable</em> (there is an order that explains it) while
+being badly stale. If your routing layer sends reads to a replica and writes to the
+primary within one logical unit of work, you have built read skew into the
+architecture.</li>
+<li><strong>PgBouncer in transaction mode.</strong> Server connections are handed back to the pool at
+each commit. Anything whose scope is the <em>session</em> rather than the transaction —
+<code>SET TRANSACTION ISOLATION LEVEL</code> issued once at connect, session-level advisory
+locks, prepared statements, <code>SET</code> variables — can silently apply to the wrong
+connection or be lost. A service that sets <code>SERIALIZABLE</code> at connection setup may be
+running at <code>READ COMMITTED</code>.</li>
+<li><strong>Spring's <code>@Transactional</code>.</strong> Boundaries are a <em>declaration</em>. Reads outside the
+annotation, a <code>readOnly = true</code> that routes to the replica, or a lazily-initialised
+entity loaded after commit all put operations outside the group the database was
+asked to protect. Your <code>isolation-levels</code> lab's central point: the guarantee cannot
+protect a group it was never told about.</li>
+</ul>
+<p><strong>Workload:</strong> list-append over a small key space (say 8 keys), transactions of 2–4
+operations mixing reads and appends, issued <strong>through the real application stack</strong> —
+your repository layer, your <code>@Transactional</code> boundaries, your pool, your router. Not
+through a raw JDBC connection. The whole point is to test the stack, not the database.</p>
+<p><strong>Checker:</strong> Elle, list-append, checking serializability — and also the strict variant,
+because a stale replica read is invisible to plain serializability and is probably your
+most likely real defect.</p>
+<p><strong>Do you need a nemesis?</strong> <strong>Not at first, and this is the important answer.</strong> PostgreSQL
+12.3 and MongoDB 4.2.6 both produced anomalies <em>with no faults at all</em>. Configuration
+and pooling bugs are steady-state bugs. Run clean first; if that is green, add replica
+lag (the most realistic fault here), then <code>:kill</code> on the primary to exercise failover.</p>
+<p><strong>Assert the effective isolation level at runtime</strong> from inside a transaction, not from
+config. That single check catches the PgBouncer class of bug on its own.</p>
+<p><strong>In production, monitor:</strong> replication lag as a <em>correctness</em> signal rather than a
+performance one, with an alert threshold derived from what your reads can tolerate;
+serialization-failure retry counts (a sudden drop can mean you silently stopped running
+at <code>SERIALIZABLE</code>); and the fraction of transactions routed to replicas.</p>
+<p><strong>8.2 — a world with no <code>:info</code>.</strong></p>
+<p>Both errors from section 6 become unavoidable rather than optional, because the client
+is <em>forced</em> to guess on every timeout, and the guess is wrong roughly half the time.</p>
+<ul>
+<li><strong>False positive:</strong> guess <code>:fail</code> on a write that actually landed. A later read
+returns the value, the checker sees a value nobody wrote, and reports a violation
+against a healthy database. This is S3, and under partition it happens constantly.</li>
+<li><strong>False negative:</strong> guess <code>:ok</code> on a write that never landed. The checker now <em>must</em>
+place it in the order, which is usually harmless — but the mirror case is the real
+danger: an acknowledged write recorded as <code>:fail</code> because the ack was lost. Now the
+checker cannot see that a genuinely lost write was ever promised, and the system's
+central durability claim becomes untestable. This is S6 without any option to do
+better.</li>
+</ul>
+<p><strong>Which is worse: the false negative.</strong> A false positive is loud — you investigate,
+find your own bug, fix the client. A false negative is silent, and it converts a safety
+test into a ritual. The deeper point is that <code>:info</code> is not a convenience: <strong>without it,
+the framework cannot represent the actual epistemic state of a network client</strong>, and a
+tool that cannot represent what you know cannot reason correctly about it.</p>
+<p><strong>8.3 — four hours a night against a Raft key-value store.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Rank</th>
+  <th>Fault</th>
+  <th>Reasoning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><strong><code>:pause</code> / <code>hammer-time</code></strong></td>
+  <td>Cheapest to run, closest to a real production event (a GC pause or a descheduled process), and attacks the assumption Raft leases and leader liveness rest on. <strong>Assumption it encodes: a leader can stop executing for longer than its election timeout, and production will do this to you without being asked.</strong></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><strong><code>:kill</code> + restart</strong></td>
+  <td>Directly tests durability — whether the log was actually <code>fsync</code>ed — and crash recovery, which is the least-exercised code path in most systems. NATS 2.10.22 lost entire streams to this alone. <strong>Assumption: processes die abruptly and must recover from disk, not from memory.</strong></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><strong><code>partition-majorities-ring</code></strong></td>
+  <td>Nastier than plain halves precisely because <em>every node sees a majority</em> — it breaks the common shortcut &quot;I can see a majority, therefore I am the only leader&quot;. <strong>Assumption: partitions are not always clean two-way splits.</strong></td>
+</tr>
+<tr>
+  <td>…</td>
+  <td><code>partition-random-halves</code>, <code>:membership</code>, <code>:packet</code></td>
+  <td>Valuable, especially membership changes (the hardest part of Raft), but slower to run and to diagnose</td>
+</tr>
+<tr>
+  <td>Bottom</td>
+  <td><strong><code>:clock</code></strong></td>
+  <td>Raft's safety does not depend on wall-clock time — only its <em>liveness</em> does. Clock skew should cause elections and unavailability, not data loss. Worth running occasionally to confirm exactly that, but it should find little. If it finds a safety bug, someone put a lease or a timestamp somewhere it does not belong — which is worth knowing, just not nightly.</td>
+</tr>
+<tr>
+  <td>Bottom</td>
+  <td><strong><code>:file-corruption</code></strong></td>
+  <td>Real and serious, but slow, noisy, and usually diagnosed as &quot;checksums missing&quot; once rather than nightly. Run it quarterly.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The general principle for ranking: <strong>inject the faults production will inject anyway,
+in rough order of how often production does it.</strong> Exotic faults find exotic bugs; pauses
+and crashes find the ones that will actually page you.</p>
+<p><strong>8.4 — when Jepsen is the wrong instrument.</strong></p>
+<ol>
+<li><p><strong>A property with no finite counterexample — liveness.</strong> &quot;The cluster always
+eventually elects a leader&quot; cannot be falsified by any finite history: no matter how
+long you waited, it might have elected one a second later. Jepsen can only measure
+<em>availability</em> (how long it was down), which is a different, weaker statement. Use
+a model checker such as <strong>TLA+</strong> for the design-level liveness argument, and SLOs plus
+production monitoring for the operational one. Your <code>flp-impossibility</code> lab explains
+why the theoretical version of this question has no answer at all.</p>
+</li>
+<li><p><strong>A rare bug you need to <em>reproduce</em>, not just find.</strong> Jepsen's non-determinism is
+the price of testing the real binary. Once a bug appears once in forty runs, Jepsen
+is a poor debugging tool — you cannot replay it. <strong>Deterministic simulation testing</strong>
+(FoundationDB, TigerBeetle, Antithesis) replays exactly from a seed, at the cost of
+needing the system built for it. The two are complements: Jepsen to find it from
+outside, DST to hold it still while you look at it.</p>
+</li>
+</ol>
+<p><em>Also defensible:</em> single-machine data-structure correctness (use property-based testing
+— faster and exhaustive-ish); security properties (a different threat model entirely);
+and performance regressions (Jepsen deliberately runs at low concurrency, so its latency
+numbers are not a benchmark).</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../43-distributed-locking/notes.html"><small>← Lab 43</small>distributed-locking</a><a href="../45-two-phase-commit/notes.html" style="text-align:right"><small>Lab 45 →</small>two-phase-commit</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-how-deep-this-goes">How deep this goes</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,1368 @@
+<!doctype html>
+<html lang="en" data-hub-lab="46-distributed-transactions">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>46. distributed-transactions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 46 of 71 · Stage 6</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 46 · Work That Spans Services</p><article id="readme"><h1 id="readme-distributed-transactions--a-learning-lab">Distributed Transactions — a learning lab</h1>
+<p><em>Audience: a backend engineer who has finished the two-phase-commit and
+isolation-levels labs. By the end you should be able to explain why 2PC alone
+does not give you a distributed transaction, walk a Percolator commit cell by
+cell, say precisely what Spanner buys with its atomic clocks, and argue about
+when a payments system genuinely needs any of this.</em></p>
+<p><strong>Lab contents</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>This document — the full story</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>Interactive simulator — two shards, six designs, an auditor you control, crash and clock-skew buttons</td>
+</tr>
+<tr>
+  <td><code>src/Core.java</code></td>
+  <td>Shards (multi-version data + lock tables), the oracle, the deterministic scheduler</td>
+</tr>
+<tr>
+  <td><code>src/Engines.java</code></td>
+  <td>Six transaction designs behind one step-driven framework</td>
+</tr>
+<tr>
+  <td><code>src/Fuzz.java</code></td>
+  <td>Randomized workloads + invariant counters (seeded, reproducible)</td>
+</tr>
+<tr>
+  <td><code>src/Tests.java</code></td>
+  <td>31 scenario-named checks — <code>java src/Tests.java</code> (add <code>broken</code> for the planted bugs)</td>
+</tr>
+<tr>
+  <td><code>src/Experiments.java</code></td>
+  <td>10 measured experiments — <code>java src/Experiments.java [1-10]</code></td>
+</tr>
+<tr>
+  <td><code>src/Sim.java</code></td>
+  <td>5 narrated scenes — <code>java src/Sim.java [1-5]</code></td>
+</tr>
+<tr>
+  <td><code>src/YourResolver.java</code></td>
+  <td>Implement the percolator read rule yourself (self-checking, 1/6 → 6/6)</td>
+</tr>
+<tr>
+  <td><code>validate-visualization.sh</code></td>
+  <td>Proves the page's JS engine agrees with the Java lab (11 checks; node or macOS JavaScriptCore)</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code> / <code>SOLUTIONS.md</code></td>
+  <td>The eight-rung ladder, answers separate</td>
+</tr>
+</tbody>
+</table></div>
+<p>No dependencies. Every command is plain <code>java src/File.java</code> from this directory.</p>
+<p>Builds directly on: <a href="../45-two-phase-commit/notes.html#readme"><code>../45-two-phase-commit/</code></a>
+(atomic commit — treated as known here),
+<a href="../08-isolation-levels/notes.html#readme"><code>../08-isolation-levels/</code></a> (anomalies, MVCC,
+snapshots, 2PL — the single-machine halves of everything below),
+<a href="../40-raft/notes.html#readme"><code>../40-raft/</code></a>, <a href="../26-linearizability/notes.html#readme"><code>../26-linearizability/</code></a>,
+<a href="../47-saga/notes.html#readme"><code>../47-saga/</code></a> and <a href="../48-transactional-outbox/notes.html#readme"><code>../48-transactional-outbox/</code></a>
+(the two patterns that exist to AVOID this lab).</p>
+<hr />
+<blockquote>
+<p><strong>Where you are: BEGINNER MODEL — stages 1–9.</strong> No prior knowledge of this
+concept assumed; everything from your earlier labs gets a one-line refresher
+when it appears.</p>
+</blockquote>
+<h2 id="readme-1-why-does-this-exist">1. WHY does this exist?</h2>
+<p>When a business action must change data that lives on <strong>several machines</strong> —
+money leaving an account on one and arriving on another — two things must be
+true at once: the changes must <strong>all happen or none happen</strong>, and everyone
+else looking at the data must <strong>never see the in-between</strong>. Get the first
+wrong and money is destroyed. Get the second wrong and every report, balance
+check, and fraud rule in the company computes on money that briefly doesn't
+exist. Databases solved both on one machine decades ago. This lab is about
+what it costs to get them back when the data is split.</p>
+<h2 id="readme-2-the-problem-as-a-story">2. THE PROBLEM, as a story</h2>
+<p>A bank has grown too big for one computer, so its accounts are split across
+branch machines: names starting A–M live on branch machine <strong>S0</strong>, N–Z on
+<strong>S1</strong>. (Your consistent-hashing lab called this <em>sharding</em>; here it just
+means &quot;alice's row and bob's row are on different computers&quot;.)</p>
+<p><strong>Priya</strong> the teller moves 50 from alice (on S0) to bob (on S1).</p>
+<p><strong>Omar</strong> the auditor has one job: at any moment he pleases, he sums every
+account across every branch, and the total must equal the money the bank
+actually holds — 200. Not &quot;usually 200&quot;. Always 200. An auditor who can be
+fooled by walking between branches at the wrong second is not an auditor.</p>
+<p>Priya's problem and Omar's problem are different, and the whole lab hangs on
+that difference. Priya needs her two changes to <strong>happen</strong> together. Omar
+needs them to <strong>appear</strong> together — to him, and to every other reader in the
+system, forever.</p>
+<h2 id="readme-3-the-naive-solution">3. THE NAIVE SOLUTION</h2>
+<p>Commit at S0, then commit at S1:</p>
+<div class="code"><pre><code class="language-java">shardS0.commit(debit(alice, 50));   // done!
+shardS1.commit(credit(bob, 50));    // done! ...probably
+</code></pre></div>
+<p>You already know this beast: it is the <strong>dual write</strong> from your outbox lab,
+and the two-phase-commit lab spent its whole story killing it. Measured here
+anyway (experiment 1): crash a few clients mid-transfer and money is
+permanently wrong in <strong>28 of 40 runs</strong>.</p>
+<p>So we reach for the fix we already own: <strong>two-phase commit</strong> — lock and stage
+on both shards (<em>prepare</em>), durably log the verdict, then commit both. The
+2PC lab proved this makes the pair all-or-nothing, and our experiment 1
+confirms it: with 2PC plus its crash recovery, money wrong in <strong>0 of 40
+runs</strong>, crashes and all.</p>
+<p>Job done?</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>With 2PC working perfectly — no crashes at all — can Omar's
+audit ever be wrong?</em></p>
+<details><summary>Reveal</summary>
+Yes, routinely. 2PC makes the two commits **both happen**, but it commits
+shard S0 at one moment and shard S1 at a slightly later moment. Omar can
+read S0 after its commit and S1 before its commit. In experiment 2, with
+**zero crashes**, auditors sweeping during commits got a wrong total **16
+times** under 2PC — barely better than the naive design's 14. 2PC was never
+designed to say anything about readers.
+</details>
+
+</blockquote>
+<h2 id="readme-4-the-failure-watched-closely">4. THE FAILURE, watched closely</h2>
+<p>Run <code>java src/Sim.java 1</code> and watch it happen:</p>
+<div class="code"><pre><code>Priya: COMMIT applied on S0. alice is now 50 — visible to everyone.
+Omar reads alice on S0: sees 50   (the new world)
+Omar reads bob on S1:   sees 100  (the old world)
+Omar&#x27;s total: 150. Fifty units of money do not exist.
+Priya: COMMIT applied on S1. bob is now 150. Total is correct again: 200
+</code></pre></div>
+<p>Nothing crashed. Nothing was misconfigured. 2PC kept every promise it ever
+made — and the audit was still wrong, because <strong>&quot;commit&quot; across two shards is
+not an instant, it is a window</strong>, and Omar walked through the window.</p>
+<p>This is the deeper problem the naive solution just uncovered, and it deserves
+its own names:</p>
+<ul>
+<li><strong>Atomic durability</strong> — the changes all end up on disk or none do. 2PC
+gives you this. It is a promise about the <em>final state</em>.</li>
+<li><strong>Atomic visibility</strong> — no observer, ever, sees some of the changes without
+the rest. 2PC does <strong>not</strong> give you this. It is a promise about <em>every
+moment along the way</em>.</li>
+</ul>
+<p>Omar's wrong total is a <strong>fractured read</strong>: a read that caught a transaction
+half-applied across shards. You have seen its single-machine cousin: the
+isolation-levels lab called it <em>read skew</em>, and fixed it there with a
+snapshot. Hold that thought — it is exactly where this lab is going, and
+exactly where it gets hard: on one machine a snapshot was cheap because one
+machine has one clock. Two shards have two clocks and no shared &quot;now&quot;.</p>
+<h2 id="readme-5-the-real-requirement">5. THE REAL REQUIREMENT</h2>
+<p>A <strong>distributed transaction</strong> — the thing this lab is named after — needs all
+three of:</p>
+<ol>
+<li><strong>All-or-nothing on disk</strong> (atomic durability). 2PC's job; solved.</li>
+<li><strong>All-or-nothing to every observer</strong> (atomic visibility). Every reader
+sees a transaction entirely or not at all — Omar's job.</li>
+<li><strong>A defensible order</strong> (isolation). Concurrent transactions must not
+corrupt each other — the isolation-levels lab's job, now spread over
+machines that share nothing.</li>
+</ol>
+<p>And one more, which you won't miss until stage 10's ending: once the system
+tells a client &quot;done&quot;, <strong>no later reader may see a world without that
+transaction</strong> — the real-time rule you met in the linearizability lab,
+wearing a new costume (&quot;external consistency&quot;).</p>
+<h2 id="readme-6-the-key-idea">6. THE KEY IDEA</h2>
+<p>Two sentences, which the rest of the lab unfolds:</p>
+<blockquote>
+<p><strong>Give every transaction one position in a single, global order of time —
+one number — and make every commit and every read happen &quot;as of&quot; a
+number.</strong> Then a transaction is either entirely before your read or
+entirely after it, and the fractured in-between is not just avoided but
+<em>unobservable</em>.</p>
+</blockquote>
+<blockquote>
+<p><strong>Make the commit itself one local write in one durable place</strong> — so that
+the verdict &quot;did it commit?&quot; can be answered by anyone, even after every
+coordinator involved is dead.</p>
+</blockquote>
+<p>The first sentence is a snapshot made global. The second is the 2PC lab's
+<em>commit point</em>, moved out of the coordinator's private log and into data
+everyone can reach.</p>
+<h2 id="readme-7-terminology--the-words-now-that-youve-felt-the-problems">7. TERMINOLOGY — the words, now that you've felt the problems</h2>
+<p>The load-bearing terms. Each exists to make a distinction you have now
+watched matter.</p>
+<p><strong>Shard.</strong> One independent database holding a slice of the keys, committing
+its own changes atomically with its own local machinery. alice's shard can
+promise things about alice; nobody is in charge of alice-and-bob. That
+missing &quot;nobody&quot; is the subject of the lab.</p>
+<p><strong>Atomic visibility.</strong> The guarantee that no reader anywhere sees a
+transaction partially applied. Distinct from atomic durability — stage 4's
+whole point — and coined <em>atomic visibility</em> in the research literature (the
+RAMP papers) precisely because &quot;atomic&quot; alone had come to mean only
+durability. Example: experiment 2's TPC row — durable in 40/40 runs,
+fractured 16 times.</p>
+<p><strong>Fractured read.</strong> A read that observes some of a transaction's writes but
+not the rest (Omar's 150). The cross-shard sibling of the isolation-levels
+lab's read skew.</p>
+<p><strong>Snapshot / consistent cut.</strong> A single timestamp <code>s</code>, with reads returning
+each key's newest version committed at or below <code>s</code>. It is a <em>cut</em> through
+history: everything ≤ s is in, everything above is out. For the cut to be
+consistent across shards, &quot;committed at ts&quot; must mean the same thing on
+every shard — which is only true if timestamps come from one order.</p>
+<p><strong>Timestamp oracle.</strong> A service handing out numbers from one counter, so
+that &quot;one global order of time&quot; is trivially true. Two calls per write
+transaction (start, commit), one per read. The simplest possible correct
+answer, and a single point of failure and scale — measured in experiment 5,
+removed in stage 10's final act.</p>
+<p><strong>Prewrite / primary / secondary.</strong> Percolator's names. <em>Prewrite</em>: stage a
+value and take a lock on every written key. The <em>primary</em> is the one key the
+transaction appoints as the place its verdict will live; every other written
+key (<em>secondary</em>) carries a lock that points at the primary. Plain-English
+version: every sticky note on every branch says &quot;the decision is taped to
+alice's page&quot;.</p>
+<p><strong>Commit point (revisited).</strong> In the 2PC lab: the coordinator's durable
+decision record — one place, owned by one process, and the reason 2PC
+blocks. Here: <strong>replacing the primary's lock with a commit record, in one
+local shard write</strong>. Same concept, relocated into data. Scene 2 shows the
+exact line; experiment 9 proves it is the line.</p>
+<p><strong>Lock TTL / resolution.</strong> A reader that hits a lock consults the primary
+and then acts: <em>roll forward</em> (finish a committed-but-unfinished txn's
+cleanup), <em>wait</em> (fresh lock, txn alive), or <em>roll back</em> (stale lock, no
+commit record — bury the corpse). This is the mechanism that deletes the
+blocking problem.</p>
+<p><strong>External consistency.</strong> Spanner's name for the linearizability lab's
+real-time rule applied to transactions: if T1's client was told &quot;done&quot;
+before T2 started, T2 must see T1. A <em>stale snapshot</em> is the violation: a
+snapshot number smaller than an already-acknowledged commit's number.</p>
+<p><strong>Uncertainty interval (ε) / commit wait.</strong> A clock that might be wrong by
+at most ε doesn't know &quot;now&quot;; it knows &quot;now is somewhere in <code>[t−ε, t+ε]</code>&quot;.
+Commit wait: after choosing a commit timestamp, hold the &quot;done&quot; message
+until the timestamp is provably in the past for <em>every</em> clock in the system
+(~2ε). The ack gets slower; the clocks stay wrong; correctness returns.</p>
+<p>Minor terms defined on first use later: distributed deadlock, first-committer-wins
+(from isolation-levels), write skew (ditto), TrueTime, HLC.</p>
+<h2 id="readme-8-two-mental-models">8. TWO MENTAL MODELS</h2>
+<p><strong>The simple model: the numbered-ticket bank.</strong> Head office has one roll of
+numbered tickets. Every action — starting a piece of work, sealing a deal —
+tears off the next ticket, and every page of every ledger records the ticket
+number under which it was written. An audit is not &quot;walk around reading
+pages&quot;; it is &quot;tear off a ticket — say #40 — and read every page <em>as it
+stood at #40</em>&quot;, ignoring anything written under a later number. A deal
+touching two branches gets sticky notes on both pages saying &quot;pending — the
+decision will be taped to alice's page&quot;, and sealing the deal is one act:
+taping the verdict, with its ticket number, onto alice's page.</p>
+<p><strong>The engineering model.</strong> Each shard: <code>key → {commitTs → value}</code> (MVCC
+version chains — same picture as isolation-levels), plus a lock table of
+claims <code>(startTs, primaryKey)</code>, plus the primary's <code>commitRecord: startTs → commitTs</code>. A write transaction: <code>startTs</code> → prewrite all keys (primary
+first) → <code>commitTs</code> → <strong>one write at the primary</strong> → lazy cleanup. A read:
+one <code>snapTs</code> for all shards; per key, take the newest version ≤ snapTs,
+detouring through the resolution rule when a lock with <code>startTs ≤ snapTs</code>
+is present.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Simple model</th>
+  <th>Engineering model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>ticket roll at head office</td>
+  <td>timestamp oracle (later: clocks + ε)</td>
+</tr>
+<tr>
+  <td>ticket number on a ledger page</td>
+  <td><code>commitTs</code> on a version</td>
+</tr>
+<tr>
+  <td>&quot;read the world as of #40&quot;</td>
+  <td>snapshot read at <code>snapTs=40</code></td>
+</tr>
+<tr>
+  <td>sticky note &quot;decision on alice's page&quot;</td>
+  <td>secondary lock pointing at the primary</td>
+</tr>
+<tr>
+  <td>taping the verdict to alice's page</td>
+  <td>the primary commit record — the commit point</td>
+</tr>
+<tr>
+  <td>a note left by a teller who went home</td>
+  <td>an abandoned lock, past its TTL</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the analogy breaks.</strong> (1) A ticket roll never runs out and never
+goes down; a real oracle is a process — TiDB runs one and engineers its
+availability hard. (2) The tempting upgrade &quot;skip head office, use
+wristwatches&quot; silently changes the model: tickets never go backwards, clocks
+do — that one difference is stages 10.5–10.6. (3) Tearing a ticket is
+instant; in the real system getting a timestamp is a network round trip that
+can reorder against other messages — the sim models it as one step, real
+systems batch it.</p>
+<h2 id="readme-9-visualization">9. VISUALIZATION</h2>
+<p>Open <strong><code>visualization.html</code></strong> (published: <a href="https://claude.ai/code/artifact/f4965258-05f4-4bcd-8eb2-a7984d745b85" target="_blank" rel="noopener">&quot;Two Branches, One Instant&quot;</a>). Two shards,
+version chains drawn as the ticket-book, every design from this README
+selectable, and Omar under your control. Recommended first ten minutes:</p>
+<ol>
+<li>Engine &quot;2PC&quot;, press <em>Run transfer</em>, and mid-commit press <em>Audit now</em> —
+watch the fractured read happen and get caught.</li>
+<li>Engine &quot;Percolator&quot;, same game — watch the audit detour through the lock,
+consult the primary, and come back whole.</li>
+<li>Press <em>Kill client</em> at each step of a percolator commit (the step slider
+chooses where) and watch a later audit roll the corpse back or forward.</li>
+<li>Engine &quot;Clocks (no wait)&quot;, skew slider up, and replay the scripted
+&quot;confirmed-then-invisible&quot; scenario; then flip to &quot;Clocks + commit wait&quot;.</li>
+</ol>
+<p>Every scenario asks for your prediction before it runs. The event log
+explains every transition in a full sentence; click any shard to inspect its
+locks, staged values, and version chain.</p>
+<blockquote>
+<p><strong>Checkpoint — you now hold the beginner model.</strong> You can say why 2PC is
+not enough (durability ≠ visibility), what a fractured read is, and what
+the two key ideas are (one global time order; commit = one local write).
+Next: the mechanism, built the way you would have built it — with each
+version breaking in your hands.</p>
+</blockquote>
+<hr />
+<blockquote>
+<p><strong>Where you are: INTERMEDIATE MODEL — stage 10.</strong> The mechanism, version
+by version. Every refinement below is the scar of a failure you watch.</p>
+</blockquote>
+<h2 id="readme-10-the-actual-mechanism--four-versions-three-funerals">10. THE ACTUAL MECHANISM — four versions, three funerals</h2>
+<h3 id="readme-v1--2pc--just-read-the-current-values">v1 — 2PC + &quot;just read the current values&quot;</h3>
+<p>This is stage 4. Engine <code>TPC</code> in the code. Durability perfect (0/40 lost),
+visibility broken (16 fractured audits with no crashes; scene 1 shows one).
+Buried. But its corpse defines the goal: the fix must close the <em>window</em>
+between the per-shard commits — or make the window unobservable.</p>
+<h3 id="readme-v2--close-the-window-with-locks-distributed-2pl">v2 — close the window with locks: distributed 2PL</h3>
+<p>The isolation-levels lab's answer on one machine was strict two-phase
+locking: readers take read locks, writers take write locks, everyone holds
+them to the end. Distribute it (engine <code>TPC_2PL</code>): Omar read-locks alice,
+then bob; Priya's prepare write-locks collide with Omar's read locks; whoever
+is second waits. Result: <strong>fractured audits: 0</strong> (experiment 2). Correct!
+Serializable, even — 2PL doesn't care how many machines the locks live on.</p>
+<p>Three prices, all measured:</p>
+<ul>
+<li><strong>Readers wait, always.</strong> Omar queues behind every in-flight transfer
+(experiment 8: 159 reader wait ticks vs 0 for the no-lock designs).</li>
+<li><strong>Distributed deadlock — and no one can see it.</strong> Priya locks alice→bob,
+a reverse transfer locks bob→alice. Each shard sees exactly one waiting
+transaction — the <em>cycle</em> exists only across shards, so no shard's local
+deadlock detector can ever fire. A <strong>distributed deadlock</strong> is a waits-for
+cycle whose edges live on different machines. The lab breaks it with
+timeouts: one victim aborts, the survivor commits (test
+<code>d2pl_cross_shard_deadlock_timeout_kills_one_victim_survivor_commits</code>).
+Experiment 4: 632 timeout aborts on a hot pair — and the isolation-levels
+lock-ordering fix still works across shards (632 → 320).</li>
+<li><strong>The blocking problem, now with victims.</strong> In the 2PC lab, a dead
+coordinator froze <em>participants</em>. Here it freezes <strong>innocent readers</strong>:
+kill coordinators mid-commit and <strong>281 auditors gave up waiting forever</strong>
+(experiment 3). 2PC's defining flaw, inherited by every read in the
+system.</li>
+</ul>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Could we let Omar read old versions instead of waiting —
+each shard keeps its version history (MVCC, like isolation-levels), and
+Omar reads &quot;as of when my audit started&quot; per shard?</em></p>
+<details><summary>Reveal</summary>
+Per shard, yes. Across shards, "when my audit started" is not one moment —
+S0's version numbers (its local sequence) and S1's have no relation to
+each other. A cut at "S0's seq 17, S1's seq 12" can still land after the
+transfer's commit on one shard and before it on the other: the same
+fracture, wearing MVCC clothing. A snapshot only works if **one order of
+time spans all shards.** That is the next version.
+</details>
+
+</blockquote>
+<h3 id="readme-v3--one-order-of-time-the-oracle-and-percolator">v3 — one order of time: the oracle, and Percolator</h3>
+<p>Give the cluster a <strong>timestamp oracle</strong> — one counter. This is Google
+Percolator's design (2010, built on Bigtable; today the heart of TiDB), and
+it answers both halves of the key idea at once. Engine <code>PERCO</code>. The commit
+protocol, with the real values from scene 2 (<code>java src/Sim.java 2</code>):</p>
+<pre class="mermaid">sequenceDiagram
+    participant P as Priya (client)
+    participant O as Oracle
+    participant S0 as S0 (alice = PRIMARY)
+    participant S1 as S1 (bob = secondary)
+    P-&gt;&gt;O: start-ts?
+    O--&gt;&gt;P: 2
+    P-&gt;&gt;S0: PREWRITE alice: lock(start=2, primary=alice), stage 50
+    P-&gt;&gt;S1: PREWRITE bob: lock(start=2, primary=alice), stage 150
+    P-&gt;&gt;O: commit-ts?
+    O--&gt;&gt;P: 3
+    rect rgb(255, 235, 205)
+    P-&gt;&gt;S0: COMMIT PRIMARY: alice=50@3, drop lock, commitRecord{2→3}
+    Note over S0: ← THE COMMIT POINT (one local write)
+    end
+    P-&gt;&gt;S1: COMMIT bob: 150@3, drop lock (lazy cleanup)
+</pre>
+<p>Walk it with the story's eyes:</p>
+<ol>
+<li><strong>start-ts = 2</strong> — Priya's snapshot. All her reads are &quot;as of ticket 2&quot;.</li>
+<li><strong>Prewrite, primary first.</strong> Every written key gets a lock + staged
+value. bob's lock <em>points at alice</em>: &quot;my verdict will live there&quot;. A
+prewrite fails if the key is locked (someone mid-flight) or has a
+committed version above start-ts — the <strong>first-committer-wins</strong> rule from
+isolation-levels, now enforced per shard with no coordination.</li>
+<li><strong>commit-ts = 3</strong>, then <strong>the flip</strong>: in one local write on S0, alice's
+lock becomes the committed version <code>alice=50@3</code> plus the record <code>2→3</code>.
+<em>This single write commits the whole transaction</em> — experiment 9 kills
+the client at every one of the seven steps and the outcome flips exactly
+there: steps 1–5 → rolled back, money 200; steps 6–7 → rolled forward,
+money 200. Never anything else.</li>
+<li><strong>Secondaries commit lazily.</strong> Pure cleanup — the verdict already exists.</li>
+</ol>
+<p>And the read side, which is where the magic actually lives. Omar, snapshot
+<code>s</code>, hits a lock with <code>startTs ≤ s</code>:</p>
+<pre class="mermaid">stateDiagram-v2
+    [*] --&gt; AskPrimary: lock with startTs ≤ s
+    AskPrimary --&gt; RollForward: commitRecord[startTs]=cts, cts ≤ s
+    AskPrimary --&gt; ReadBelow: cts &gt; s (committed after me)
+    AskPrimary --&gt; Wait: no record, primary lock alive &amp; fresh
+    AskPrimary --&gt; RollBack: no record, lock past TTL or primary lock gone
+    RollForward --&gt; [*]: apply staged@cts here, then read
+    ReadBelow --&gt; [*]: newest version ≤ s
+    Wait --&gt; AskPrimary: retry shortly
+    RollBack --&gt; [*]: clean lock+staged, then read
+</pre>
+<p>This rule (in code: <code>Engines.resolveAndRead</code>, ~30 lines — and
+<code>src/YourResolver.java</code> makes you write it yourself) is what deletes v2's
+funerals in one stroke, measured:</p>
+<ul>
+<li><strong>Fractured audits: 0</strong>, with readers never blocking behind healthy
+commits (experiment 2; scene 4 shows Omar <em>finishing</em> a dead client's
+commit himself, <code>rollForwards=47</code> across experiment 3's crash storm).</li>
+<li><strong>The blocking problem: gone.</strong> Same crash storm that stranded 281 locked
+readers forever strands <strong>0</strong> percolator readers — the worst case is
+waiting out one TTL (30 ticks), after which any reader buries the corpse
+(scene 3). The verdict lives in a shard, and shards outlive coordinators.</li>
+<li>Atomicity under every crash: 0/40 money-wrong with clients dying at
+random steps (experiment 1).</li>
+</ul>
+<p>Why is it safe for random readers to roll transactions back and forward?
+Because the primary is a <strong>single arbitration cell</strong>: a committing client
+flips it only if its lock is still there; a cleaning reader removes the lock
+first. Both race to one row on one shard, and one of them loses cleanly —
+the loser's next step observes it lost (test: a rolled-back client's commit
+attempt finds its lock gone and aborts; counter <code>rolledBackByReader</code>).</p>
+<p>What percolator does <em>not</em> fix — it is honest snapshot isolation,
+distributed: <strong>write skew survives</strong> (experiment 7: two doctors, one
+invariant &quot;someone on call&quot;, each on-call flag on a <em>different shard</em>; both
+transactions read {1,1} under their snapshots, write different keys, both
+commit, on-call count 0). Same anomaly, same mechanism-shaped hole as the
+isolation-levels lab, and 2PL — which locks what was <em>read</em> — still
+prevents it. Remember the closing line of that lab: snapshot checks what
+you wrote; serializable also checks what you read. Distribution changed
+nothing about that sentence.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>The oracle is one process handing out numbers. What
+exactly goes wrong when you try to run this design across two continents —
+or when the oracle dies?</em></p>
+<details><summary>Reveal</summary>
+Every transaction — reads included — makes a round trip to the oracle
+before its first byte of work (experiment 5: ~2 calls per write, 1 per
+read, 1,913 calls in 40 small runs). Cross-continent, that is +100ms on
+*everything*, and the counter itself becomes the throughput ceiling and
+the availability linchpin. TiDB accepts this trade and engineers around
+it (a Raft-replicated "PD" service, batched timestamp grants). Google,
+building Spanner planet-wide, could not. Their way out is the last act.
+</details>
+
+</blockquote>
+<h3 id="readme-v4--fire-the-oracle-clocks-the-lie-and-commit-wait">v4 — fire the oracle: clocks, the lie, and commit wait</h3>
+<p>Replace the oracle with each client's own clock (engine <code>PERCO_CLOCK</code>):
+<code>start-ts = my clock now</code>, <code>commit-ts = my clock now</code>. Everything else
+identical. Fractured reads: still 0 — the lock check never depended on
+<em>where</em> timestamps came from. But scene 5 (<code>java src/Sim.java 5</code>):</p>
+<div class="code"><pre><code>tick 16: Priya&#x27;s transfer commits at ts=18001 and she is told: DONE.
+tick 18 (AFTER the ack): Omar starts an audit. His slow clock hands him
+snapshot 13002 — which is LESS than 18001. He reads alice=100.
+A transfer that was confirmed done... is invisible.
+</code></pre></div>
+<p>Priya's clock runs 5 ticks fast, Omar's 5 slow. Omar begins <em>after</em> Priya
+was told &quot;done&quot; and reads a world without her transfer — the real-time rule
+from the linearizability lab, violated by a wristwatch. Experiment 6
+measures it: at skew 8 ticks, 10 stale snapshots; at 20, 25 — and remember
+that lab's darker lesson, which repeats here: <strong>at skew 0–2 the count is 0.
+A design with no guarantee is indistinguishable from a correct one while
+the clocks happen to behave.</strong></p>
+<p>The fix is not better clocks — no clock is perfect. It is admitting
+imperfection <em>into the protocol</em>. <strong>TrueTime</strong> (Spanner's clock API) returns
+an interval <code>[earliest, latest]</code> guaranteed to contain true time, ε wide on
+each side. Then (engine <code>PERCO_CLOCK_WAIT</code>):</p>
+<ul>
+<li>take <code>commit-ts = now().latest</code> — a timestamp that is, if anything, in
+the future;</li>
+<li><strong>commit wait</strong>: before telling the client &quot;done&quot;, spin until
+<code>now().earliest &gt; commit-ts</code> — until the commit timestamp is provably in
+the <em>past</em> for every honest clock on Earth.</li>
+</ul>
+<p>Now anyone who starts after the ack gets <code>snap-ts = now().latest ≥ real time &gt; commit-ts</code>. Measured: stale snapshots 0 at every skew; the bill is
+the ack — average commit latency 6.7 → 24.8 ticks at ε=8, 51.0 at ε=20
+(~2ε, exactly as predicted by the two inequalities). And the second-order
+bill: locks are held ~2ε longer, so <em>reader</em> waiting rises too (experiment
+8). Spanner's bet is engineering, not mathematics: GPS receivers and atomic
+clocks in every datacenter push ε to a few milliseconds, so commit wait
+costs less than a disk sync. <strong>Nobody's clock got better. The ack got
+slower.</strong></p>
+<blockquote>
+<p><strong>Checkpoint — you now hold the intermediate model.</strong> You can run a
+percolator commit in your head, name the exact write that is the commit
+point, execute the read-resolution rule, and explain both timestamp
+designs and their price tags. Next: everything that can go wrong, on
+purpose.</p>
+</blockquote>
+<hr />
+<blockquote>
+<p><strong>Where you are: ENGINEERING MODEL — stages 11–14.</strong> Failure by failure,
+guarantee by guarantee.</p>
+</blockquote>
+<h2 id="readme-11-failure-scenarios">11. FAILURE SCENARIOS</h2>
+<p>Each: how to create it → where to watch → what happens, why, what holds,
+what bends, and the production face of it.</p>
+<p><strong>Client/coordinator dies mid-commit (percolator).</strong> Create: <code>killAtStep</code>
+1–7; watch: experiment 9 (the table), scenes 3–4, visualization <em>Kill
+client</em>. Before the primary flip: no commit record can ever appear, so the
+first reader past the TTL rolls everything back — the transaction never
+happened. After the flip: the record exists, so every reader rolls the
+leftovers forward — it fully happened. Holds: atomicity, visibility,
+non-blocking reads (worst wait = one TTL). Bends: the <em>writer's</em> latency
+promise — a transaction can be committed and its owner never learns it, so
+<strong>client retries must be idempotent</strong> (your outbox lab's law, resurfacing).
+Production: TiDB readers do exactly this resolution; its TTLs scale with
+transaction size, and monitoring watches &quot;resolve lock&quot; rates.</p>
+<p><strong>Coordinator dies holding locks (distributed 2PL).</strong> Create: <code>kills(2)</code> on
+<code>TPC_2PL</code>; watch: experiment 3. 281 readers strand forever (until recovery)
+because the verdict lives only in the dead coordinator's log — the 2PC
+lab's blocking problem, now taxing every reader in the cluster. Holds:
+safety — nobody reads a wrong value. Bends: liveness, catastrophically.
+Production: this is why lock-based XA across services is feared in
+operations — a wedged transaction manager turns into a cluster-wide
+brownout, and DBAs end up making <strong>heuristic decisions</strong> (manually forcing
+commit/abort per participant — breaking atomicity by hand, under pressure).</p>
+<p><strong>Distributed deadlock.</strong> Create: opposite-direction transfers on a hot
+pair; watch: experiment 4, test <code>..._survivor_commits</code>. Each shard sees
+half a cycle; no local detector can fire; a timeout kills one victim and
+the survivor commits. Holds: atomicity, consistency. Bends: latency and
+throughput (632 timeout aborts), fairness (victims are arbitrary).
+Production: real systems use lock-wait timeouts (MySQL XA), global waits-for
+sampling, or avoid it structurally — deterministic databases (stage 15)
+order transactions <em>before</em> executing them.</p>
+<p><strong>Clock skew beyond ε.</strong> Create: give <code>ClockTs</code> an offset larger than the
+eps you pass; not measured above because it breaks the model's honesty —
+TrueTime's entire contract is that the interval <em>contains true time</em>. If a
+clock drifts outside its promised bound, commit wait's inequality is built
+on sand and external consistency silently fails — the linearizability
+lesson again: no violation until the day there is one. Production: Spanner
+evicts nodes whose clocks misbehave; CockroachDB crashes a node whose
+offset exceeds the configured maximum (default 500ms) — <em>crashing is the
+correct response to a lying clock</em>.</p>
+<p><strong>Straggler locks from slow (not dead) clients.</strong> Create: lower <code>LOCK_TTL</code>
+below a healthy commit's duration — a reader will roll back a <em>live</em>
+transaction; the client's own commit then finds its lock gone and aborts
+(counter <code>rolledBackByReader</code>). The TTL is a bet: too long → readers wait
+on corpses; too short → healthy writers get murdered. Holds: safety, always
+(the primary cell arbitrates). Bends: write availability under load spikes.
+Production: TiDB heartbeats long transactions to extend their TTL.</p>
+<p><strong>Oracle down / partitioned.</strong> Every new transaction in the cluster stalls
+at <code>startTs</code> — reads included. Not modeled (the oracle here is an object);
+the mitigation is the v4 story, or TiDB's: make the oracle a Raft group
+(your raft lab: elections in ~1.5 timeouts) and grant timestamps in batches.</p>
+<h2 id="readme-12-correctness--what-each-design-actually-promises">12. CORRECTNESS — what each design actually promises</h2>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>atomic durability</th>
+  <th>atomic visibility</th>
+  <th>isolation</th>
+  <th>external consistency</th>
+  <th>reads block?</th>
+  <th>deadlock?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>NAIVE</td>
+  <td>✗ (28/40)</td>
+  <td>✗ (14)</td>
+  <td>none</td>
+  <td>✗</td>
+  <td>no</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>TPC</td>
+  <td>✓</td>
+  <td>✗ (16)</td>
+  <td>write-locks only</td>
+  <td>✗</td>
+  <td>no</td>
+  <td>writers</td>
+</tr>
+<tr>
+  <td>TPC_2PL</td>
+  <td>✓</td>
+  <td>✓ (0)</td>
+  <td>serializable</td>
+  <td>✓*</td>
+  <td><strong>yes</strong></td>
+  <td>writers+readers</td>
+</tr>
+<tr>
+  <td>PERCO</td>
+  <td>✓</td>
+  <td>✓ (0)</td>
+  <td>snapshot (write skew!)</td>
+  <td>✓ (oracle orders acks)</td>
+  <td>no</td>
+  <td>no (aborts instead)</td>
+</tr>
+<tr>
+  <td>PERCO_CLOCK</td>
+  <td>✓</td>
+  <td>✓ (0)</td>
+  <td>snapshot</td>
+  <td>✗ (10 stale @ skew 8)</td>
+  <td>no</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>PERCO_CLOCK_WAIT</td>
+  <td>✓</td>
+  <td>✓ (0)</td>
+  <td>snapshot</td>
+  <td>✓ (0 stale)</td>
+  <td>no</td>
+  <td>no</td>
+</tr>
+</tbody>
+</table></div>
+<p>* 2PL's external consistency comes free from blocking: you cannot read
+around a lock you are waiting on.</p>
+<p>The shape to internalize — <strong>nothing in the right columns is free</strong>:</p>
+<ul>
+<li>Visibility via <strong>locks</strong> costs <em>reader waiting</em> and inherits 2PC blocking.</li>
+<li>Visibility via <strong>snapshots</strong> costs <em>a global time order</em> — an oracle
+(SPOF, round trips) or clocks+ε (commit wait ≈ 2ε on every write ack).</li>
+<li>Isolation above snapshot costs <em>aborts</em> (SSI-style read tracking) or
+<em>waiting</em> (2PL). Percolator alone leaves write skew alive — the one row
+of the table where distribution changed nothing at all.</li>
+<li>And everything above assumes each shard itself survives — in production
+every shard and the oracle are themselves Raft/Paxos groups (stage 15),
+paying that lab's price underneath this one.</li>
+</ul>
+<p>Safety vs liveness, one more time: every mechanism here keeps <strong>safety</strong>
+unconditionally (no run in 40×10 experiments showed wrong money or a
+fractured read on the ✓ designs — and the planted bugs each break exactly
+one cell: run <code>java src/Tests.java broken</code>). What failures attack is
+<strong>liveness</strong>: who waits, for how long, and whether a corpse can make the
+waiting permanent. The design progression of this whole lab is liveness
+repair: 2PC blocks participants → 2PL blocks readers too → percolator
+blocks nobody beyond a TTL → commit wait <em>deliberately</em> blocks only the
+final ack, because that is the cheapest place in the system to pay.</p>
+<h2 id="readme-13-the-code--the-lines-that-carry-the-guarantees">13. THE CODE — the lines that carry the guarantees</h2>
+<p>Read in this order (all in <code>src/Engines.java</code>):</p>
+<ol>
+<li><strong><code>resolveAndRead</code></strong> — the percolator read rule; the diagram in stage 10
+as ~30 lines. The load-bearing branches: <code>l.startTs &gt; snapTs</code> (a lock
+from a <em>later</em> transaction is none of your business — miss this and
+readers stall on the future); <code>cts &lt;= snapTs</code> roll-forward (a reader
+completing a stranger's commit); the TTL rollback (liveness); the final
+<code>else</code> (aborted leftovers). <code>YourResolver.java</code> is this method with the
+decisions blanked out.</li>
+<li><strong><code>PercoTransfer.commitPrimary</code></strong> — the commit point. Note the guard: if
+our lock is gone, <em>a reader outran us and we are already rolled back</em> —
+the primary cell arbitrating the race. The line writing <code>commitRecord</code>
+is the single write experiment 9 pivots on.</li>
+<li><strong><code>PercoTransfer.doStep</code> prewrite arm</strong> — <code>latestCommitTs(key) &gt; startTs → abort</code>: first-committer-wins with zero cross-shard coordination,
+because a snapshot plus that one local check <em>is</em> the conflict check.</li>
+<li><strong><code>ClockTs.commitWaitDone</code></strong> — one inequality, <code>now().earliest &gt; commitTs</code>; the entire content of &quot;Spanner waits out the uncertainty&quot;.</li>
+<li><strong><code>TpcTransfer</code></strong> + <strong><code>LockingReader</code></strong> — v1/v2 for contrast; the
+<code>readersLock</code> flag is the only difference between &quot;fractured 16&quot; and
+&quot;fractured 0 but 281 stranded readers&quot;.</li>
+</ol>
+<p>The scheduler (<code>Core.Sched</code>) steps one random live driver per tick, so
+every interleaving and crash the doc describes is just a sequence of
+<code>step()</code> calls — which is also why every number above is reproducible from
+its seed.</p>
+<h2 id="readme-14-experiments--break-it-yourself">14. EXPERIMENTS — break it yourself</h2>
+<p>Predict first, then run. All ten: <code>java src/Experiments.java</code>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Command</th>
+  <th>Ask yourself first</th>
+  <th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><code>... 1</code></td>
+  <td>can recovery fix a dual write?</td>
+  <td>NAIVE 28/40 wrong; TPC &amp; PERCO 0/40</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>... 2</code></td>
+  <td>who fractures with <strong>zero</strong> crashes?</td>
+  <td>NAIVE 14, TPC 16, all lock/snapshot designs 0</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>... 3</code></td>
+  <td>kill coordinators: who gets stuck?</td>
+  <td>281 stranded 2PL readers vs 0 percolator</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>... 4</code></td>
+  <td>can any shard see the deadlock?</td>
+  <td>632 timeout aborts → 320 with lock ordering</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>... 5</code></td>
+  <td>what does the oracle cost?</td>
+  <td>~2 calls/write, 1/read — every txn queues there</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>... 6</code></td>
+  <td>skew 0: is the clock design safe?</td>
+  <td>0 stale at skew ≤2 — then 10, 25; wait: 0 at 2ε cost</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>... 7</code></td>
+  <td>both doctors commit — legal?</td>
+  <td>on-call 0 under PERCO; prevented by 2PL</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>... 8</code></td>
+  <td>where does each design charge?</td>
+  <td>latency ladder 1.1 → 24.8; reader-wait column</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>... 9</code></td>
+  <td>which step is the commit point?</td>
+  <td>rolled back through step 5, forward from 6</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><code>... 10</code></td>
+  <td>optimistic vs pessimistic, hot keys</td>
+  <td>255 conflict aborts vs 632 timeout aborts</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>Checkpoint — you now hold the engineering model.</strong> You can name each
+design's guarantees and their price, walk every failure, and point at the
+exact line of code carrying each invariant. Next: what the real systems
+add, and when to refuse to play this game at all.</p>
+</blockquote>
+<hr />
+<blockquote>
+<p><strong>Where you are: PRODUCTION MODEL — stage 15.</strong></p>
+</blockquote>
+<h2 id="readme-15-production--from-this-toy-to-real-systems">15. PRODUCTION — from this toy to real systems</h2>
+<p><strong>The chain:</strong> this lab's percolator → real Percolator/TiDB → Spanner /
+CockroachDB → and, running the other direction, the patterns that avoid the
+whole game.</p>
+<p><strong>What the toy deliberately omits, and who supplies it:</strong></p>
+<ul>
+<li><strong>Replication.</strong> Our shards are objects that never die. In every real
+system each shard is a <strong>Raft/Paxos group</strong> (your raft lab, verbatim:
+Spanner = 2PC <em>over Paxos groups</em>; TiDB = percolator over Raft-replicated
+regions; CockroachDB likewise). The 2PC-lab's closing line — &quot;the two
+compose&quot; — is these systems' literal architecture. The coordinator state
+itself lives in a group, so the <em>participant-side</em> blocking problem is
+solved by replication even before percolator's reader-resolution.</li>
+<li><strong>The oracle's availability.</strong> TiDB's PD is a Raft group granting
+timestamp <em>batches</em>; the toy's single object stands in for all of that.</li>
+<li><strong>Version GC.</strong> Version chains grow forever here; real systems garbage-
+collect below a safe timestamp — the same &quot;one open snapshot pins
+cleanup&quot; story as isolation-levels' VACUUM, now cluster-wide.</li>
+<li><strong>Latency engineering.</strong> Real Percolator/TiDB add <em>async commit</em> and
+<em>1PC</em> fast paths; CockroachDB's <strong>parallel commits</strong> write an explicit
+transaction record and prewrites concurrently, cutting a round trip.
+Spanner holds locks at Paxos leaders, and read-only transactions run
+lock-free entirely on snapshots (this lab's <code>SnapshotReader</code> is that).</li>
+<li><strong>Serializable-and-above.</strong> CockroachDB layers SSI-style read tracking
+(isolation-levels' rw-antidependency machinery) on its snapshot core, so
+write skew aborts instead of committing; Spanner's read-write
+transactions use pessimistic locks. Our PERCO row's write-skew hole is a
+<em>choice</em> real vendors patch, each in one of the two ways stage 12 priced.</li>
+<li><strong>Clock honesty.</strong> TrueTime is hardware + an eviction discipline;
+CockroachDB substitutes <strong>HLC</strong> (hybrid logical clocks — a Lamport
+counter piggybacking on wall clocks) plus per-read <em>uncertainty
+restarts</em> instead of commit wait, trading Spanner's write-side wait for
+occasional read-side retries — same ε, charged to a different account.</li>
+</ul>
+<p><strong>The Java/Spring face of this topic — XA/JTA.</strong> <code>XADataSource</code>, JTA
+transaction managers (Narayana, Atomikos), <code>@Transactional</code> spanning two
+resources: that is v2 of this lab — lock-based 2PC — living in your app
+tier. It works, and operations teams dread it for exactly the reasons you
+measured: in-doubt transactions holding locks (experiment 3), heuristic
+outcomes when humans break ties, and a transaction manager whose log is a
+non-replicated commit point. Modern practice: one ACID database per
+service; the <strong>outbox</strong> for state-change + message (its lab called 2PC &quot;the
+road not taken&quot; — now you've priced the road); <strong>sagas</strong> for multi-service
+flows, accepting visible intermediate states (that lab's &quot;trades atomicity
+and isolation for availability&quot; is precisely &quot;fractured reads by design,
+with compensations instead of rollback&quot;). Kafka's &quot;exactly-once&quot;
+transactions are also this lab: a transaction coordinator, markers in
+partitions as the commit point, and readers (<code>read_committed</code> consumers)
+that skip uncommitted data — percolator-shaped, not 2PL-shaped.</p>
+<p><strong>The decision ladder</strong> an architect actually walks:</p>
+<ol>
+<li>Can the keys live in <strong>one database</strong>? Do that. <code>BEGIN…COMMIT</code> plus
+isolation-levels knowledge beats everything in this lab.</li>
+<li>Can they be <strong>co-located onto one shard</strong> (same account family, same
+region)? Single-shard transactions are the fast path of every system
+here — TiDB 1PC, Cockroach's single-range fast path.</li>
+<li>Is &quot;state change + notify others&quot; the real need? <strong>Outbox.</strong></li>
+<li>Is it a multi-step business flow that can tolerate visible intermediate
+states with compensation? <strong>Saga.</strong></li>
+<li>Only now — cross-shard invariants that must never be seen broken
+(ledgers, uniqueness, inventory holds) — pay for a distributed
+transaction, and pick which currency: reader waiting (2PL/XA), oracle
+round trips (TiDB), or commit wait ε (Spanner-style).</li>
+</ol>
+<p><strong>What on-call sees.</strong> Commit latency p99 tracking clock ε (Spanner
+publishes ε; a GPS outage widens commit wait cluster-wide); &quot;resolve lock&quot;
+/ transaction-retry rates (TiDB) — spikes mean crashing clients or hot
+keys; lock-wait queues and in-doubt XA transactions (the page at 3 a.m. is
+&quot;decide this heuristic outcome&quot;); clock-offset alarms (CockroachDB nodes
+<em>suicide</em> past max offset — a crashed node beats a lying one); and the
+GC/oldest-snapshot age, this lab's version chains meeting isolation-levels'
+VACUUM lesson at production scale.</p>
+<h2 id="readme-16-exercises">16. EXERCISES</h2>
+<p>The eight-rung ladder is in <a href="notes.html#exercises"><code>EXERCISES.md</code></a> — explain,
+identify, predict, modify, implement (<code>YourResolver.java</code>), debug (the four
+planted bugs), handle failure, design (a 3-region payments ledger). Attempt
+before opening <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<h2 id="readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">graph TD
+    IL[isolation-levels&lt;br/&gt;snapshots, 2PL, write skew] --&gt; DT
+    TPC2[two-phase-commit&lt;br/&gt;atomic commit, blocking] --&gt; DT
+    LIN[linearizability&lt;br/&gt;the real-time rule] --&gt; DT
+    RAFT[raft&lt;br/&gt;what replicates every shard] --&gt; DT
+    DT[distributed transactions&lt;br/&gt;THIS LAB]
+    DT --&gt; SPAN[Spanner / CockroachDB / TiDB / YugabyteDB]
+    DT --&gt; KAFKA_TX[Kafka transactions]
+    DT -.avoided by.-&gt; SAGA[saga]
+    DT -.avoided by.-&gt; OUTBOX[transactional-outbox]
+    DT --&gt; HLC[hybrid-logical-clocks?]
+    DT --&gt; CALVIN[deterministic-databases?]
+    DT --&gt; RAMP[RAMP / atomic visibility research]
+</pre>
+<p>Commonly confused, one sentence each:</p>
+<ul>
+<li><strong>2PC vs distributed transaction</strong>: 2PC is one <em>component</em> (atomic
+durability); a distributed transaction is durability <strong>plus visibility
+plus isolation</strong> — this lab measured a system with perfect 2PC and 16
+broken audits.</li>
+<li><strong>Saga vs distributed transaction</strong>: a saga <em>chooses</em> fractured
+visibility and buys availability with compensations; it is the same
+trade-off table, opposite corner — not a cheaper implementation of the
+same guarantee.</li>
+<li><strong>Snapshot vs serializable, distributed</strong>: identical to one machine —
+percolator ships write skew; check what you <em>read</em>, not just what you
+wrote, to close it.</li>
+<li><strong>Linearizability vs external consistency</strong>: the same real-time rule —
+for single operations vs whole transactions (strict serializability).</li>
+<li><strong>Percolator's primary vs 2PC's coordinator log</strong>: the same commit point,
+but one is data any reader can reach; that single relocation deletes the
+blocking problem.</li>
+</ul>
+<p>Next, ready to type:</p>
+<ul>
+<li><code>/learn hybrid-logical-clocks</code> — CockroachDB's answer to TrueTime without
+the hardware (earned twice now: causal-consistency suggested it too).</li>
+<li><code>/learn deterministic-databases</code> — Calvin/FaunaDB: agree on the order
+<em>first</em> (raft!), execute without 2PC at all; the road this lab didn't take.</li>
+<li><code>/learn change-data-capture</code> — how the outbox's relay works at production
+scale; the practical alternative you'll deploy more often than Spanner.</li>
+<li><code>/learn jepsen</code> — now you can read its reports fluently: every anomaly
+named here has a Jepsen test that hunts it.</li>
+</ul>
+<h2 id="readme-18-glossary">18. GLOSSARY</h2>
+<p>In order of appearance:</p>
+<ul>
+<li><strong>shard</strong> — one independent database owning a slice of the keys.</li>
+<li><strong>dual write</strong> — committing to two systems separately and hoping; no
+atomicity (28/40 runs lost money under crashes).</li>
+<li><strong>two-phase commit (2PC)</strong> — prepare everywhere, log a verdict, commit
+everywhere; atomic durability with a blocking coordinator (prior lab).</li>
+<li><strong>atomic durability</strong> — all of a transaction's writes survive, or none.</li>
+<li><strong>atomic visibility</strong> — no reader ever observes a transaction partially
+applied; NOT implied by atomic durability.</li>
+<li><strong>fractured read</strong> — a read catching a transaction half-applied across
+shards (Omar's 150); read skew's cross-shard sibling.</li>
+<li><strong>distributed transaction</strong> — atomic durability + atomic visibility +
+isolation, across shards.</li>
+<li><strong>external consistency</strong> — if T1 was acknowledged before T2 began, T2
+sees T1; the real-time rule for transactions (= strict serializability).</li>
+<li><strong>snapshot / consistent cut</strong> — one timestamp; read each key's newest
+version at or below it.</li>
+<li><strong>timestamp oracle</strong> — a single counter service defining the global time
+order; ~2 calls per write txn, 1 per read.</li>
+<li><strong>distributed 2PL</strong> — strict two-phase locking with lock tables on many
+shards; serializable, blocking, deadlock-prone.</li>
+<li><strong>distributed deadlock</strong> — a waits-for cycle whose edges live on
+different shards; invisible to every local detector.</li>
+<li><strong>victim</strong> — the transaction a timeout (or detector) aborts to break a
+deadlock; its release lets the survivor commit.</li>
+<li><strong>Percolator</strong> — Google's snapshot-isolation transaction protocol over a
+sharded store (TiDB's core): prewrite → primary flip → lazy cleanup.</li>
+<li><strong>prewrite</strong> — stage a value + take a lock on every written key before
+any commit.</li>
+<li><strong>primary / secondary</strong> — the one key holding the transaction's verdict /
+every other written key, whose locks point at the primary.</li>
+<li><strong>commit point</strong> — the single durable write that decides the transaction;
+here, replacing the primary's lock with a commit record.</li>
+<li><strong>commit record</strong> — <code>startTs → commitTs</code> at the primary; the verdict any
+reader can consult.</li>
+<li><strong>first-committer-wins</strong> — a prewrite finding a committed version newer
+than its snapshot aborts (isolation-levels' rule, per-shard here).</li>
+<li><strong>lock TTL</strong> — how long a lock may sit before readers may presume its
+owner dead and roll it back.</li>
+<li><strong>resolution / roll forward / roll back</strong> — a reader finishing or undoing
+a dead client's transaction by consulting the primary.</li>
+<li><strong>write skew</strong> — two snapshot transactions reading a shared rule and
+writing disjoint keys, jointly breaking the rule; survives distribution
+(doctors: on-call 0).</li>
+<li><strong>stale snapshot</strong> — a snapshot below an already-acknowledged commit
+timestamp; the external-consistency violation.</li>
+<li><strong>uncertainty interval (ε)</strong> — the honest error bound around a clock
+reading: true time ∈ [t−ε, t+ε].</li>
+<li><strong>TrueTime</strong> — Spanner's clock API returning that interval, backed by
+GPS + atomic clocks.</li>
+<li><strong>commit wait</strong> — holding the client's ack until commit-ts is provably
+past for every clock (~2ε); buys external consistency from lying clocks.</li>
+<li><strong>hybrid logical clock (HLC)</strong> — wall clock + Lamport counter;
+CockroachDB's TrueTime substitute (with read-side uncertainty restarts).</li>
+<li><strong>parallel commits / async commit / 1PC</strong> — production fast paths
+shaving commit round trips (CockroachDB, TiDB).</li>
+<li><strong>XA / JTA</strong> — the Java standard for app-tier lock-based 2PC across
+resources; works, blocks, pages people.</li>
+<li><strong>heuristic outcome</strong> — a human manually forcing one participant's
+commit/abort in a wedged XA transaction; atomicity broken by hand.</li>
+<li><strong>in-doubt transaction</strong> — a participant prepared but verdict-less; the
+thing heuristics get applied to.</li>
+</ul>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--distributed-transactions">Exercises — distributed transactions</h1>
+<p>Climb in order; each rung uses the one below it. Answers in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a> — attempt first, in writing, before opening it.</p>
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p>1.1 In your own words, no jargon: why is &quot;we use two-phase commit&quot; not the
+end of the conversation about moving money between two shards? What second
+promise is missing, and who notices when it breaks?</p>
+<p>1.2 The lab's key idea has two halves — one about <em>time</em>, one about <em>place</em>.
+State both in plain sentences, and say which failure each half kills.</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Run <code>java src/Sim.java 2</code> (the cell-by-cell percolator commit).</p>
+<p>2.1 Which key is the primary, and what decided that?</p>
+<p>2.2 After step &quot;PREWRITE bob&quot;, read the printed shard state: what three
+pieces of information does bob's shard hold about the in-flight transaction,
+and which one would a reader follow to find the verdict?</p>
+<p>2.3 Point to the exact printed line where the transaction becomes committed.
+What is on shard S1 at that moment?</p>
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Write your answer down BEFORE running the command.</p>
+<p>3.1 An auditor's snapshot is ts=10. It meets a lock with startTs=12 on a
+key. May it simply read the newest version ≤10 and move on — even though it
+has no idea whether that transaction will commit? Why? Check with scenario 1
+in <code>java src/YourResolver.java</code> (read the case list) or the <code>l.startTs &gt; snapTs</code> branch in <code>Engines.resolveAndRead</code>.</p>
+<p>3.2 In experiment 3, coordinators die mid-commit in both TPC_2PL and PERCO.
+Predict the two &quot;readers who gave up&quot; numbers before running
+<code>java src/Experiments.java 3</code>. What single design difference produces the gap?</p>
+<p>3.3 Clock engine, no commit wait, skew=2 ticks: predict the stale-snapshot
+count in experiment 6's first row block (<code>java src/Experiments.java 6</code>).
+Then say why that number is the most dangerous one in the whole table.</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>4.1 In <code>Engines.java</code>, set <code>LOCK_TTL = 2</code>. Run <code>java src/Tests.java</code>. Which
+tests fail, and what real-world incident does this misconfiguration
+correspond to? Which side of the safety/liveness line is hurt? (Put it back.)</p>
+<p>4.2 In <code>Engines.resolveAndRead</code>, delete the <code>l.startTs &gt; snapTs</code> early
+return (make every lock trigger resolution). What behavior degrades, and
+does anything become <em>incorrect</em>?</p>
+<p>4.3 Make the percolator prewrite skip the <code>latestCommitTs(key) &gt; startTs</code>
+check. Which isolation property dies, which test notices, and what is the
+single-machine name for the anomaly you just legalized?</p>
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p>5.1 <code>java src/YourResolver.java</code> — implement the read rule until 6/6. Do not
+look at <code>Engines.resolveAndRead</code> first; the six cases plus the hints are
+sufficient.</p>
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><code>java src/Tests.java broken</code> runs four planted bugs. For each one, before
+reading the printed explanation: which of the four core guarantees
+(durability-atomicity, visibility, isolation strictness, liveness) does it
+break, and what is the smallest scenario that exposes it? Which of the four
+is the most dangerous in production, and why does &quot;most dangerous&quot; not mean
+&quot;most visible&quot;?</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>7.1 A percolator client calls commit and the process hosting it dies before
+any response arrives. The user hits &quot;retry&quot;. Today's lab client would run a
+brand-new transaction — possibly transferring twice. Using only mechanisms
+that already exist in this lab (start-ts, primary, commit records), design a
+safe retry: what must the client persist before prewriting, and what does
+the retry check? Which earlier lab's law did you just re-derive?</p>
+<p>7.2 The oracle process dies. Nothing in the lab models it — describe what
+actually stops, in order, and sketch the two production escapes (one from
+TiDB's playbook, one from Spanner's).</p>
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p>A payments company runs a ledger sharded across 3 regions (EU, US, APAC),
+~50ms apart. Requirements: an account's balance must never go negative;
+transfers within a region are 95% of traffic; cross-region transfers must
+never be observed half-done by the fraud pipeline (which reads at high
+volume); regulators demand that a confirmed transfer is visible to any
+subsequent read anywhere.</p>
+<p>Design the transaction layer: which of this lab's designs (or production
+descendants) per traffic class, where the timestamps come from, what the
+fraud pipeline reads, what you monitor, and — explicitly — which parts of
+the problem you refuse to solve with distributed transactions at all
+(decision ladder, stage 15). State what each choice costs.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--distributed-transactions">Solutions — distributed transactions</h1>
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> 2PC promises that both shards' changes <em>end up</em> applied or neither
+does — a promise about the final state of the disks. It says nothing about
+what other people see while it happens: the two shards commit at two
+different moments, and any reader arriving between them sees money that has
+left one account and not reached the other. The auditor notices; so does
+every report, fraud check, and balance API. The missing promise is atomic
+<em>visibility</em>: nobody, ever, sees half a transaction. Measured: with perfect
+2PC and zero crashes, 16 of the lab's audits were wrong.</p>
+<p><strong>1.2</strong> <em>Time:</em> give every transaction one number in a single global order,
+commit &quot;at&quot; a number, read &quot;as of&quot; a number — then any transaction is
+entirely before your snapshot or entirely after it, which kills fractured
+reads. <em>Place:</em> make the commit one local durable write (the primary's
+commit record) — then the verdict can be learned by anyone even when the
+coordinator is dead, which kills the blocking problem.</p>
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> <code>alice</code> — the first key the transaction writes. Nothing deeper: some
+deterministic choice must appoint the verdict's home, and &quot;first write&quot;
+is Percolator's.</p>
+<p><strong>2.2</strong> The lock (with startTs=2), the staged value 150, and the pointer
+<code>primary=alice</code> inside the lock. A reader follows the pointer — the lock's
+<code>primaryKey</code> — to alice's shard and looks up <code>commitRecord[2]</code>.</p>
+<p><strong>2.3</strong> <code>COMMIT PRIMARY on S0: ... commitRecord{2-&gt;3}</code>. At that moment S1
+still holds only the lock and the staged 150 — it has not heard anything —
+and yet the transaction is committed: any reader from now on will roll bob
+forward using the record.</p>
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> Yes. A transaction's commit-ts is always greater than its start-ts,
+so a lock born at ts=12 can only ever commit above 12 — strictly above the
+reader's snapshot of 10. Whether it commits or aborts, it is invisible at
+ts=10 by definition; the newest version ≤10 is the correct answer either
+way. This branch is why readers don't stall on the future.</p>
+<p><strong>3.2</strong> 281 vs 0. In lock-based 2PC the verdict lives in the dead
+coordinator's memory/log, so a reader waiting on a lock has nobody to ask;
+in percolator it lives in the primary's commit record, so any reader
+resolves the lock itself (rolling forward 47 times and back 272 in that
+experiment).</p>
+<p><strong>3.3</strong> 0 — and that is the danger. The design has <em>no</em> external-consistency
+guarantee, yet at small skew it produces zero violations, making it
+indistinguishable from a correct system in every test that doesn't inject
+skew. Same lesson as the linearizability lab's calm-network row: a green
+result without injected asymmetry is close to worthless.</p>
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Measured: exactly one test fails —
+<code>perco_dead_client_before_flip_gets_rolled_back_by_a_reader</code>, and on a
+telling assertion: the reader was supposed to <em>wait</em> when it met a fresh
+lock (<code>blocked == null</code>), but with TTL=2 no lock is ever &quot;fresh&quot; — the WAIT
+branch becomes unreachable and readers instantly bury possibly-live
+transactions. In experiment 3's crash storm the reader wait ticks drop 254
+→ 0 and roll-backs rise 272 → 277: patience has been replaced by murder.
+Real-world face: an over-aggressive lock-resolution timeout killing slow
+(not dead) transactions under load spikes. Safety is untouched — money
+never goes wrong, because the primary cell arbitrates the race and the
+writer's <code>commitPrimary</code> discovers it lost — it is <em>liveness for writers</em>
+that dies. (TiDB's fix: long transactions heartbeat their TTL upward.)</p>
+<p><strong>4.2</strong> Every reader now pays a primary lookup for locks that could not
+possibly concern it (transactions that started after its snapshot), and
+readers can be made to wait on transactions that began <em>after</em> they did —
+gratuitous latency and, under a steady write stream, reader starvation.
+Correctness survives: the resolution rule still answers correctly in every
+case; the early return is purely an efficiency-and-liveness branch.</p>
+<p><strong>4.3</strong> First-committer-wins is the <em>only</em> write-write conflict check the
+design has — snapshots never see each other, so this per-shard comparison
+is what stops two transactions overwriting each other blindly. Delete it
+and concurrent writers to the same key both commit, the later commit-ts
+silently winning: the <strong>lost update</strong>, straight from isolation-levels.
+Measured blast radius: <strong>5 tests fail</strong>, not just
+<code>perco_first_committer_wins_conflict_abort</code> — the fuzz money checks go red
+too, because a transfer stages <code>value-at-snapshot + delta</code>, so an
+overwritten concurrent debit doesn't just lose an update, it loses <em>money</em>
+(the two-transfers-from-alice case double-counts her old balance).</p>
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p>The rule, in the shape of <code>YourResolver.decide</code>:</p>
+<div class="code"><pre><code class="language-java">if (lockStartTs &gt; snapTs) return Action.READ_BELOW_SNAPSHOT;
+if (primaryCommitTs != null)
+    return primaryCommitTs &lt;= snapTs ? Action.ROLL_FORWARD_THEN_READ
+                                     : Action.READ_BELOW_SNAPSHOT;
+if (primaryLockHeld)
+    return lockAgeTicks &gt; TTL ? Action.ROLL_BACK_THEN_READ
+                              : Action.WAIT_AND_RETRY;
+return Action.ROLL_BACK_THEN_READ;   // no record, no primary lock: it aborted
+</code></pre></div>
+<p>Verified 6/6 against the harness. The three hints decoded: the verdict
+lives at the <em>primary</em> (never guess from the secondary); a lock from a
+transaction younger than your snapshot is none of your business; the only
+case for patience is a fresh lock whose primary is still held — a live
+commit in progress.</p>
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>bug</th>
+  <th>guarantee broken</th>
+  <th>smallest exposure</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>readerIgnoresLocks</code></td>
+  <td>atomic <strong>visibility</strong></td>
+  <td>one commit paused after the primary flip + one audit: sum 150</td>
+</tr>
+<tr>
+  <td><code>commitSecondariesFirst</code></td>
+  <td><strong>atomicity</strong> itself</td>
+  <td>crash between secondary-commit and primary-commit: credit committed, debit later rolled back — money 250</td>
+</tr>
+<tr>
+  <td><code>resolveWithoutPrimaryCheck</code></td>
+  <td>atomicity (destroys a <strong>committed</strong> write)</td>
+  <td>client dies after the flip; a &quot;helpful&quot; reader rolls the secondary back — money 150</td>
+</tr>
+<tr>
+  <td><code>earlyReadLockRelease</code></td>
+  <td>isolation strictness (strict→non-strict 2PL)</td>
+  <td>reader releases alice's lock, transfer commits in the gap, reader reads bob: sum 250</td>
+</tr>
+</tbody>
+</table></div>
+<p>Most dangerous in production: <code>resolveWithoutPrimaryCheck</code> — it silently
+destroys committed data, and only under the crash+resolution path, so it
+passes every happy-path test and every crash test that doesn't audit final
+balances. &quot;Most visible&quot; would be <code>readerIgnoresLocks</code> (wrong audits all day
+under load); danger is inverse to visibility because invisible corruption
+compounds before anyone looks.</p>
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> Before prewriting, the client durably records its own transaction
+intent keyed by a client-chosen idempotency id, including the start-ts it
+obtained. On retry, it first asks the primary shard for
+<code>commitRecord[startTs]</code>: present → the transfer committed, report success
+(and optionally finish secondaries); absent with the primary lock gone →
+it aborted (or was rolled back), safe to run a fresh transaction; absent
+with the lock still held → the original attempt may still be in flight —
+resolve via the normal TTL rule before retrying. The re-derived law: <strong>a
+timeout is not a failure; retries must be idempotent</strong> — the
+transactional-outbox / raft-lab rule, now with the commit record as the
+deduplication truth.</p>
+<p><strong>7.2</strong> Order of stoppage: new write transactions stall at start-ts; then
+new <em>reads</em> stall (they need snapshots too); in-flight transactions that
+already hold both timestamps still finish, and lock resolution still works
+(it needs no oracle) — so the cluster freezes politely rather than
+corrupting. Escapes: (TiDB) make the oracle a Raft-replicated service that
+grants timestamps in batches, so its failover is an election (~seconds) and
+its throughput is amortized; (Spanner) remove the oracle entirely — clocks</p>
+<ul>
+<li>ε + commit wait, paying ~2ε on every write ack instead of a round trip
+on every transaction.</li>
+</ul>
+<h2 id="solutions-rung-8--design-worked-discussion-not-a-single-right-answer">Rung 8 — Design (worked discussion, not a single right answer)</h2>
+<p><strong>Traffic classes.</strong> In-region transfers (95%): keep both accounts on the
+same shard group — single-shard ACID transactions, no distributed protocol
+at all (decision-ladder rungs 1–2; this is also why account→region
+assignment is a product decision, not just an infra one). Cross-region
+transfers: percolator-style snapshot transactions with primary = the
+debited account's shard, so the &quot;never negative&quot; check and the verdict live
+together — the balance check is a read at start-ts plus first-committer-wins
+on the debit row, and <em>its</em> strictness matters: &quot;never negative&quot; is a
+constraint on a row you WRITE, so snapshot isolation suffices (no write-skew
+exposure for that specific invariant; document this reasoning — if the
+invariant ever spans rows you only read, you need SSI or locks).</p>
+<p><strong>Timestamps.</strong> 50ms inter-region rules out a naive central oracle for the
+read path (every read pays a cross-region hop). Either (a) TiDB-shape:
+oracle in one region, co-locate each account's transactions with it, accept
+the hop for cross-region commits only, and serve in-region reads from
+region-local &quot;safe timestamp&quot; watermarks; or (b) Spanner/Cockroach-shape:
+HLC or bounded clocks with commit wait / uncertainty restarts. With ~ms NTP
+bounds and no atomic clocks, (b) means hundreds of ms of ε — likely
+unacceptable — so (a) with engineering, or rented Spanner, is the honest
+answer.</p>
+<p><strong>Fraud pipeline.</strong> Snapshot reads at a slightly stale timestamp
+(follower/watermark reads): atomic visibility without touching locks or the
+oracle — it must <em>never</em> run at read-latest (that reintroduces Omar's 150),
+and staleness of a few hundred ms is fine for scoring. The regulator's
+requirement (&quot;confirmed ⇒ visible to any subsequent read&quot;) is external
+consistency and binds only <em>confirmed-then-read</em> flows: enforce commit wait
+(or read-refresh) on the confirmation path specifically.</p>
+<p><strong>Refuse distributed transactions for:</strong> notification/analytics fan-out
+(outbox + CDC), multi-step flows with human time in them — refunds, KYC,
+disputes (sagas with compensations; intermediate states are visible <em>and
+that's correct</em> for these), and anything expressible as a UNIQUE/CHECK
+constraint on one shard (isolation-levels' law: a constraint beats a
+protocol).</p>
+<p><strong>Monitor:</strong> cross-region commit p99 vs ε / oracle RTT; transaction retry</p>
+<ul>
+<li>resolve-lock rates (hot accounts show up here first); oldest-running
+snapshot &amp; version-GC lag; in-doubt/stranded-lock age; clock-offset alarms
+with eviction, not tolerance; and per-region ledger-sum drift checks — the
+auditor Omar, productionized, because the whole lab began with him.</li>
+</ul>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../45-two-phase-commit/notes.html"><small>← Lab 45</small>two-phase-commit</a><a href="../47-saga/notes.html" style="text-align:right"><small>Lab 47 →</small>saga</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-exist">1. WHY does this exist?</a><a href="#readme-2-the-problem-as-a-story">2. THE PROBLEM, as a story</a><a href="#readme-3-the-naive-solution">3. THE NAIVE SOLUTION</a><a href="#readme-4-the-failure-watched-closely">4. THE FAILURE, watched closely</a><a href="#readme-5-the-real-requirement">5. THE REAL REQUIREMENT</a><a href="#readme-6-the-key-idea">6. THE KEY IDEA</a><a href="#readme-7-terminology--the-words-now-that-youve-felt-the-problems">7. TERMINOLOGY — the words, now that you&#x27;ve felt the problems</a><a href="#readme-8-two-mental-models">8. TWO MENTAL MODELS</a><a href="#readme-9-visualization">9. VISUALIZATION</a><a href="#readme-10-the-actual-mechanism--four-versions-three-funerals">10. THE ACTUAL MECHANISM — four versions, three funerals</a><a href="#readme-11-failure-scenarios">11. FAILURE SCENARIOS</a><a href="#readme-12-correctness--what-each-design-actually-promises">12. CORRECTNESS — what each design actually promises</a><a href="#readme-13-the-code--the-lines-that-carry-the-guarantees">13. THE CODE — the lines that carry the guarantees</a><a href="#readme-14-experiments--break-it-yourself">14. EXPERIMENTS — break it yourself</a><a href="#readme-15-production--from-this-toy-to-real-systems">15. PRODUCTION — from this toy to real systems</a><a href="#readme-16-exercises">16. EXERCISES</a><a href="#readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-18-glossary">18. GLOSSARY</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

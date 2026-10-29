@@ -1,0 +1,2845 @@
+<!doctype html>
+<html lang="en" data-hub-lab="71-google-docs-system-design">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>71. google-docs-system-design</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 71 of 71 · Stage 8</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 71 · Whole Systems</p><article id="readme"><h1 id="readme-google-docs--how-a-hundred-people-type-into-one-sentence-without-losing-a-word">Google Docs — how a hundred people type into one sentence without losing a word</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Alice and Bob edit the same shopping list from two cities,
+and both change it at the same moment. Simple designs either lose one person's
+letter, or leave the two screens showing different text with nobody told. The
+fix is to stop sending the document and to send the change instead: &quot;put an S
+at position 3&quot;. Every machine then rewrites that instruction before running
+it, so it still means what its author meant on a page that has moved on. One
+product decision forces all of this. Your keystroke appears on your own screen
+before any server has agreed to it, and everything else in this lab is the
+bill for that decision.</p>
+</blockquote>
+<p><strong>Play with it:</strong> <a href="visualization.html"><code>visualization.html</code></a> — <em><a href="https://claude.ai/code/artifact/279bb5b7-a1d4-4cfb-9fda-7f803f1fd25e" target="_blank" rel="noopener">Two Cursors, One
+Sentence</a></em>.</p>
+<hr />
+<h2 id="readme-1-why-does-emailing-the-document-round-lose-somebodys-work">1. Why does emailing the document round lose somebody's work?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> When everyone edits their own copy, someone has to merge
+the copies later. Somewhere in that merge, one person's work quietly
+disappears. Nobody is told.</p>
+</blockquote>
+<p>Alice and Bob work on the same team. They are writing a plan together, and the
+plan goes round by email.</p>
+<p>Three people edit their own copy on the same afternoon. Then somebody spends an
+evening merging four files, one of which is called
+<code>plan_final_v2_REALLY_FINAL.docx</code>. You have almost certainly lived this.</p>
+<p>Somewhere in that merge, an edit is lost. Not deleted with a warning. Just gone,
+because a later save overwrote an earlier one.</p>
+<p>Now change the product. Put every one of those people inside one document at the
+same time. Show them each other's cursors. Let their letters appear on each
+other's screens as they type.</p>
+<p>That is Google Docs. The entire engineering problem is three words from the
+sentence you just read: <strong>at the same time</strong>.</p>
+<p>Everything else is ordinary web engineering you have built before. Storage,
+sharing, comments, version history: none of that is new. The concurrent editing
+is new, and it is where this lab spends almost all of its time.</p>
+<p>What happens if nobody solves it? You ship one of two bad products.</p>
+<p>The first locks the document, so only one person may type. That is a fancier
+shared drive. The second lets two people type at once, and silently produces
+text that neither of them wrote.</p>
+<p>This lab builds the second product properly. Alice and Bob carry the story the
+whole way. Carol joins in section 11 with a terrible Wi-Fi connection, and Meera
+takes the pager in section 15.</p>
+<hr />
+<h2 id="readme-2-what-should-the-fridge-list-say-when-alice-and-bob-both-change-it">2. What should the fridge list say when Alice and Bob both change it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two people, one three-letter list, one change each. Nearly
+everybody agrees on the right answer. Delivering it is the hard part.</p>
+</blockquote>
+<p>Alice and Bob share a shopping list stuck to a fridge. It says:</p>
+<div class="code"><pre><code>HAT
+</code></pre></div>
+<p>It is a strange shopping list. It is also short enough that you can follow every
+single character, which is exactly why we are using it.</p>
+<p>Alice thinks it should say <strong>CHAT</strong>. Bob thinks it should say <strong>HATS</strong>.</p>
+<p>They are in different cities. Each is looking at their own photo of the list.
+They both make their change at the same moment.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> What should the fridge say afterwards? Commit to one word
+before you read on.</p>
+<details><summary>Reveal</summary>
+Almost everybody answers <code>CHATS</code>: Alice's C at the front, Bob's S
+at the end, both there, nothing lost. If you answered <code>CHAT</code> or
+<code>HATS</code>, you picked a winner between two people who were not even
+arguing. Picking a winner is the failure this whole lab exists to avoid. Hold
+on to <code>CHATS</code>. It is the specification for everything that follows,
+and it is surprisingly hard to deliver.
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-3-what-does-a-reasonable-person-try-first-and-what-does-it-cost">3. What does a reasonable person try first, and what does it cost?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Everybody edits their own copy and sends the whole document
+back to a server. Whoever saves last wins, and the other person's letter is
+gone with no error at all.</p>
+</blockquote>
+<p>This is not a strawman. It is exactly how a file on a shared drive works. It is
+also how the first generation of document-sync products worked.</p>
+<p>Run it:</p>
+<div class="code"><pre><code class="language-bash">java src/Demo.java
+</code></pre></div>
+<div class="code"><pre><code>DESIGN 1 — send the whole document, last save wins
+   everybody starts at &quot;HAT&quot;
+   Alice types &#x27;C&#x27;          her copy: &quot;CHAT&quot;
+   Bob types &#x27;S&#x27;            his copy: &quot;HATS&quot;
+   Alice saves              server: &quot;CHAT&quot;
+   Bob saves                server: &quot;HATS&quot;
+
+   Final document: &quot;HATS&quot;
+</code></pre></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Alice's C is gone. What does Alice's screen show at this
+moment, and when will she find out?</p>
+<details><summary>Reveal</summary>
+Her screen still says <code>CHAT</code> — her own copy was never touched. She
+finds out the next time she reloads, or never. There was no error, no
+conflict, no prompt. The system did exactly what it was told: store the most
+recent document it was given. This failure mode has a name we will keep using:
+a <b>lost update</b>. Two people read the same starting value, both changed it,
+and one change vanished under the other.
+<br><br>
+If you guessed her screen would jump to <code>HATS</code>, you are imagining a
+system that pushes the truth back to her. Nothing in this design does that.
+Nobody told her anything, because nobody noticed anything.
+</details>
+
+</blockquote>
+<p>A lost update is the worst shape a bug can take. It is silent, it is
+unrecoverable, and the only person who could notice is the one who is no longer
+looking.</p>
+<hr />
+<h2 id="readme-4-why-does-sending-just-the-change-break-too">4. Why does sending just the change break too?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Locking and merging both fail for a text editor. So you
+send the change instead of the whole document. That breaks for a new reason:
+the change was written for a page that has since moved underneath it.</p>
+</blockquote>
+<p>The lost update is the visible failure. Two familiar fixes both fail as well,
+and watching them fail is what uncovers the real problem.</p>
+<p><strong>The first fix is a lock.</strong> One person edits, everybody else is read-only.
+Microsoft Word did this for years, with a message reading &quot;Locked for editing by
+Ravi&quot;. It works, and it produces a product nobody wants. The whole point is that
+four people can work on one document during a meeting.</p>
+<p>A lock also inherits the blocking problem you already met in the
+<a href="../45-two-phase-commit/notes.html#readme">two-phase-commit lab</a>. If the lock holder's laptop
+dies, the document is stuck until something times out.</p>
+<p><strong>The second fix is to merge on save, the way Git does.</strong> Send both versions,
+compute a diff, merge them.</p>
+<p>That is a real answer for source code. Merges happen a few times a day there,
+and a human is standing by to resolve conflicts. In a document, edits happen
+several times <em>per second</em> per person. Nobody is going to resolve a three-way
+merge conflict between keystrokes.</p>
+<p>So the deeper problem is not &quot;how do we merge?&quot;. It is this:</p>
+<blockquote>
+<p>We have to merge <strong>continuously</strong>, many times a second, and <strong>with no human
+involved</strong>. We also have to do it <strong>without anybody ever waiting</strong>, because a
+text editor that pauses after each letter is not a text editor.</p>
+</blockquote>
+<p>Now try the honest version of that. Instead of sending the whole document, send
+only what changed: <em>&quot;put an S at position 3.&quot;</em></p>
+<p>That is far less data. It also looks like it should merge naturally, because two
+different instructions do not obviously overwrite each other. Run it:</p>
+<div class="code"><pre><code>DESIGN 2 — send the change (position + character), apply it as sent
+   Alice typed insert(&#x27;C&#x27; at 0)         her screen: &quot;CHAT&quot;
+   Bob typed   insert(&#x27;S&#x27; at 3)         his screen: &quot;HATS&quot;
+   server accepted insert(&#x27;C&#x27; at 0)     server: &quot;CHAT&quot;
+   server accepted insert(&#x27;S&#x27; at 3)     server: &quot;CHAST&quot;
+   Alice received insert(&#x27;S&#x27; at 3)      her screen: &quot;CHAST&quot;
+   Bob received   insert(&#x27;C&#x27; at 0)      his screen: &quot;CHATS&quot;
+
+   server=&quot;CHAST&quot;  Alice=&quot;CHAST&quot;  Bob=&quot;CHATS&quot;
+</code></pre></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Every instruction in that run is correct. Every instruction was
+delivered to everybody. So why are Alice's screen and Bob's screen different,
+and which of them is right?</p>
+<details><summary>Reveal</summary>
+Neither is right, and that is the point. Alice's screen says
+<code>CHAST</code>, which nobody typed and nobody wanted. Bob's says
+<code>CHATS</code>, which is the answer we want but arrived by luck. If you
+guessed that the server would referee the disagreement, look again: the server
+itself holds <code>CHAST</code>. Everybody followed the rules and the rules
+were wrong.
+</details>
+
+</blockquote>
+<p>Here is the whole bug in one sentence. Bob wrote <em>&quot;put an S at position 3&quot;</em>
+while looking at <code>HAT</code>, where position 3 was the end of the word.</p>
+<p>By the time that instruction reached Alice, her own C had pushed every letter
+one place to the right. Position 3 now sat between the A and the T.</p>
+<p><strong>The instruction was correct when it was written and wrong when it was run</strong>,
+because the document underneath it had changed.</p>
+<p>Notice the second thing, which is worse than the first. Alice and Bob's screens
+now show different text, and neither of them will ever be told. There is no
+error to catch. The system is confidently wrong.</p>
+<hr />
+<h2 id="readme-5-what-exactly-must-the-system-promise">5. What exactly must the system promise?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four promises. Your letter appears instantly, everyone ends
+up with the same text, what each person meant survives, and nobody ever waits
+for anybody else.</p>
+</blockquote>
+<p>Every design decision in the rest of this lab exists to keep one of these four.
+Read the last column first: it says what Alice or Bob would actually experience
+if that promise were dropped.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>The promise</th>
+  <th>In plain words</th>
+  <th>What its absence feels like</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Instant local response</td>
+  <td>your letter is on your screen before any server hears about it</td>
+  <td>a 200 ms stutter on every single keystroke</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Convergence</td>
+  <td>when the typing stops, every copy holds identical text</td>
+  <td>Alice reads <code>CHAST</code>, Bob reads <code>CHATS</code>, forever</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Intention preservation</td>
+  <td>Alice's C lands at the front, Bob's S at the end</td>
+  <td>the merge is tidy and the sentence is not what anyone wrote</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Nobody waits</td>
+  <td>no locks, no turn-taking, no &quot;your edit is pending approval&quot;</td>
+  <td>one person types and three people watch</td>
+</tr>
+</tbody>
+</table></div>
+<p>Promise 1 is the product decision that creates the whole problem. A round trip
+to a server is 50 to 300 ms. You would feel that on every letter, so the letter
+has to be drawn before the server has agreed to anything.</p>
+<p>Promises 2 and 3 are separate, and the difference matters more than it looks. A
+design can satisfy one and fail the other. Design 2 in section 4 failed promise
+2 outright. A design that resolved every conflict by blanking the document would
+keep promise 2 perfectly and destroy promise 3.</p>
+<p>You need words for that difference, which is what section 7 is for.</p>
+<p>Promise 4 is invisible until it breaks. It rules out the lock from section 4,
+and it rules out every scheme where the server has to approve an edit before you
+may see it.</p>
+<hr />
+<h2 id="readme-6-what-is-the-one-key-idea">6. What is the one key idea?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Send the change, not the document. Then, before you run
+somebody else's change, rewrite it to account for everything it was written
+without knowing about.</p>
+</blockquote>
+<p>Two sentences carry the whole lab.</p>
+<blockquote>
+<p><strong>Send the change, not the document</strong> — an instruction like <em>insert 'S' at
+position 3</em>, so two people's work can be combined instead of overwriting each
+other.</p>
+<p><strong>Before running somebody else's instruction, rewrite it</strong> to account for the
+changes it was written without knowing about. Bob's <em>&quot;S at 3&quot;</em> becomes <em>&quot;S at
+4&quot;</em> once you know a character was inserted in front of it.</p>
+</blockquote>
+<p>That rewriting step is the invention. Everything else in this lab is bookkeeping
+in service of doing the rewriting correctly, in the right order, on every
+machine. The servers, the numbering, the queues and the retries are all bill,
+not idea.</p>
+<p>Here is where the lab goes, and what you can do at the end of each stretch.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–9</td>
+  <td>say why sending documents cannot work, and what a lost update is</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>10</td>
+  <td>trace one concurrent edit through every machine, by hand</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>11–14</td>
+  <td>reason about nine failures and state what is guaranteed</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>15</td>
+  <td>draw the architecture, size it, and argue OT against CRDTs</td>
+</tr>
+</tbody>
+</table></div>
+<p>Each of those four stretches ends with a checkpoint and a <strong>Say it back</strong> box.
+If you cannot say it back, the next stretch will not stick.</p>
+<hr />
+<h2 id="readme-7-which-words-do-you-now-need-and-what-does-each-name">7. Which words do you now need, and what does each name?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten words carry the rest of the lab. Every one of them
+names something that has already happened to Alice and Bob, so nothing here is
+new. Only the labels are.</p>
+</blockquote>
+<p>This is the whole vocabulary you need to read a real paper or a real codebase on
+this subject. Each word arrives at the moment you have already felt the thing it
+names.</p>
+<h3 id="readme-what-is-an-operation-and-why-is-it-not-a-document">What is an operation, and why is it not a document?</h3>
+<p>Bob typed an S at the end of <code>HAT</code>. There are two ways to tell the world about
+that.</p>
+<p>Design 1 sent the <em>result</em>: the four characters <code>HATS</code>. Design 2 sent the
+<em>description</em>: put an S at position 3. Engineers call that description an
+<strong>operation</strong>.</p>
+<p>Precisely, an operation is a small immutable value describing one edit. In this
+lab there are exactly two kinds, <code>insert(position, character)</code> and
+<code>delete(position)</code>. An operation can be sent over a network, stored in a log and
+applied to a document. It can also be rewritten, which is the ability the rest
+of this lab is built on.</p>
+<p>The word exists to keep the description of a change apart from the result of a
+change. Results can only overwrite each other. Descriptions can be combined.</p>
+<p>Bob's keystroke becomes the operation <code>insert(3, 'S')</code>, which is roughly 30
+bytes on the wire instead of the whole document.</p>
+<p>You have made this exact move before. In the
+<a href="../50-event-sourcing/notes.html#readme">event-sourcing lab</a> you stored what happened rather than
+what is. A document here <em>is</em> a fold over its operations, in the same way that
+an account balance is a fold over its transactions.</p>
+<h3 id="readme-what-does-it-mean-to-apply-an-operation">What does it mean to apply an operation?</h3>
+<p>To <strong>apply</strong> an operation is to actually carry it out on some text. Written as
+code it is a pure function: <code>apply(document, operation) → document</code>. In this lab
+it is nine lines of <code>String</code> surgery in <span class="missing" title="Not in the hub: src/Ot.java is in the lab folder on your laptop"><code>src/Ot.java</code></span>.</p>
+<p>Purity is doing real work here. The function looks at nothing but its two
+arguments. So the same operation applied to the same document gives the same
+answer on Alice's laptop, on Bob's laptop and on the server, always.</p>
+<p>That is what makes the whole design testable. Every disagreement between two
+machines must come from a difference in the <em>inputs</em>, never from the function.</p>
+<h3 id="readme-what-is-a-revision-number-really-counting">What is a revision number really counting?</h3>
+<p>A <strong>revision</strong> is how many edits the document has been through. It is an integer
+counter, and nothing more.</p>
+<p>The server assigns revision <em>n</em> to the <em>n</em>-th operation it accepts. Each client
+remembers the revision it has caught up to, and stamps every operation it sends
+with that number. The stamp reads: <em>&quot;this was written against revision 4.&quot;</em></p>
+<p>The word exists to turn a vague question into a number. The question is &quot;what
+did this person know when they wrote that?&quot;, and the number is the input to the
+rewriting rule.</p>
+<p>Watch it happen. Bob sends <code>insert(3,'S')</code> stamped revision 0. The server's log
+is already at revision 1, because Alice's C arrived first.</p>
+<p>The gap between those two numbers, revisions 0 to 1, is exactly the set of edits
+Bob had not seen. It is also exactly what his operation must be rewritten
+against. The whole protocol lives in that gap.</p>
+<h3 id="readme-why-is-the-log-the-document">Why is the log the document?</h3>
+<p>The <strong>log</strong> is the official list of everything that has happened to this
+document, in order. It is an append-only sequence of operations, held by the
+server.</p>
+<p>The document is <em>defined</em> as the log replayed from the beginning. Revision
+numbers are simply positions in it. There is no other definition of &quot;the truth&quot;
+anywhere in the design.</p>
+<p>This is the event store from the <a href="../50-event-sourcing/notes.html#readme">event-sourcing lab</a>
+again, right down to the reason snapshots exist. Nobody wants to replay a
+million operations just to open a document, so the folded-up result is stored
+from time to time. Section 15 does that properly.</p>
+<p>If you find yourself thinking &quot;this is just an event log with a projection&quot;, you
+are correct.</p>
+<h3 id="readme-why-does-everybody-agrees-need-two-words-not-one">Why does &quot;everybody agrees&quot; need two words, not one?</h3>
+<p>Because two very different things can go wrong, and you need to be able to say
+which one did.</p>
+<p><strong>Convergence</strong> means everybody's screen ends up the same. Once every operation
+has been delivered everywhere, every copy of the document is byte-identical, no
+matter what order things arrived in.</p>
+<p>The word exists because &quot;consistent&quot; is overloaded to the point of uselessness.
+Convergence says nothing at all about <em>what</em> the final text is. It only says
+there is one of it. Design 2 failed convergence: <code>CHAST</code> on one screen, <code>CHATS</code>
+on the other.</p>
+<p><strong>Intention preservation</strong> means what you meant still happened. Precisely: the
+effect of each operation in the final document matches the effect it would have
+had on the document its author was looking at when they wrote it.</p>
+<p>That word exists exactly because convergence alone is not enough. Here is the
+cheapest proof. &quot;When two people edit at once, delete the whole document&quot;
+converges beautifully. It is also useless.</p>
+<p>Intention preservation is much harder to state formally than convergence, which
+is why real papers state convergence as a theorem and intention as a design
+goal.</p>
+<p>Look at our two candidate answers through both words. Alice meant <em>&quot;a C at the
+front&quot;</em>. In <code>CHATS</code> there is a C at the front, and Bob's S is at the end: both
+intentions preserved. In <code>CHAST</code>, Bob's S is not at the end, so his intention was
+lost even though nothing crashed and nobody complained.</p>
+<h3 id="readme-what-does-it-mean-to-transform-an-instruction">What does it mean to transform an instruction?</h3>
+<p>To <strong>transform</strong> is to rewrite an instruction so that it still does the right
+thing on a document that has moved on.</p>
+<p>Written as code it is a function, <code>transform(a, b) → a′</code>. It answers one
+question: operation <code>a</code> was written for a document that does not contain <code>b</code>, so
+what must <code>a</code> become to have the same effect on a document that does contain <code>b</code>?</p>
+<p>The word exists because &quot;merge&quot; implies combining two results. This combines
+nothing. It produces a modified instruction, which is then applied completely
+normally.</p>
+<p>Bob's edit is the worked example. <code>transform(insert(3,'S'), insert(0,'C'))</code> is
+<code>insert(4,'S')</code>. In words: something was inserted in front of me, so I shift
+right by one.</p>
+<p>The whole family of techniques built on that function is called <strong>operational
+transformation</strong>, usually shortened to <strong>OT</strong>. When you see &quot;OT&quot; in a paper
+about editors, this is it. Its rival, which gives every character a permanent
+name instead of rewriting positions, is the <a href="../32-crdts/notes.html#readme">CRDT</a> family, and
+section 15 argues the two against each other properly.</p>
+<h3 id="readme-who-goes-first-when-alice-and-bob-type-in-the-same-spot">Who goes first when Alice and Bob type in the same spot?</h3>
+<p>Somebody has to, and every machine has to pick the same somebody. That rule is
+the <strong>tie-break</strong>.</p>
+<p>For two concurrent inserts at exactly the same position, transformation orders
+them by a value that is identical on every machine. Here it is the site id, the
+per-client name, and <code>&quot;Alice&quot; &lt; &quot;Bob&quot;</code> decides it.</p>
+<p>The rule is arbitrary. It must not be <em>random</em>, and it must not be arrival time,
+because those differ from machine to machine.</p>
+<p>It matters far more than it looks. Delete this one rule and the system diverges
+in 493 of 500 random runs. That experiment is
+<span class="missing" title="Not in the hub: src/BrokenOt.java is in the lab folder on your laptop"><code>src/BrokenOt.java</code></span>, and it is exercise 6.</p>
+<h3 id="readme-what-does-each-client-keep-in-its-pocket">What does each client keep in its pocket?</h3>
+<p>Two things: the edit it has sent and not heard back about, and everything it has
+typed since.</p>
+<p>The first is called the <strong>outstanding</strong> operation. Each client holds at most one
+of them in flight to the server, ever.</p>
+<p>The second is the <strong>buffer</strong>: operations typed while waiting, in order. When the
+confirmation for the outstanding operation arrives, the next queued one is sent.</p>
+<p>This rule is not a design flourish. It was discovered by failure, and you will
+watch it be discovered in section 10. With two operations in flight, the client
+and the server disagree about what each one was written against, and
+transformation is then applied against the wrong history.</p>
+<h3 id="readme-who-decides-the-official-order">Who decides the official order?</h3>
+<p>One place, and only one. That place is the <strong>sequencer</strong>.</p>
+<p>A single server owns a given document, and it is the only thing that appends to
+that document's log. &quot;Concurrent&quot; edits become &quot;ordered&quot; edits the moment they
+pass through it.</p>
+<p>Why does it have to be one? Suppose two servers both accepted edits for one
+document. There would be two logs and two revision-4s. The sentence &quot;written
+against revision 4&quot; would stop having a meaning, and every guarantee in this lab
+is stated over one log.</p>
+<p>Section 15 covers what that costs. It is the single most important architectural
+constraint in the whole design, and most of the production complexity is its
+bill.</p>
+<h3 id="readme-the-ten-words-on-two-cards">The ten words on two cards</h3>
+<p>Read these as a map back into the story, not as a dictionary. The last column
+says where the thing happened to Alice and Bob.</p>
+<p>Words for what is sent and what is stored:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>In plain words</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>operation</strong></td>
+  <td>one change described rather than performed</td>
+  <td>Bob's <code>insert(3,'S')</code>, section 4</td>
+</tr>
+<tr>
+  <td><strong>apply</strong></td>
+  <td>actually carry an operation out on some text</td>
+  <td>every screen update since section 3</td>
+</tr>
+<tr>
+  <td><strong>revision</strong></td>
+  <td>how many edits the document has been through</td>
+  <td>the stamp on Bob's edit, section 7</td>
+</tr>
+<tr>
+  <td><strong>the log</strong></td>
+  <td>the append-only official list; the document is it, replayed</td>
+  <td>the server's side of section 4</td>
+</tr>
+<tr>
+  <td><strong>transformation</strong></td>
+  <td>rewriting an operation for a document that moved on</td>
+  <td><code>insert(3,'S')</code> becoming <code>insert(4,'S')</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Words for the promises and for the plumbing that keeps them:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>In plain words</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>convergence</strong></td>
+  <td>every copy ends up holding identical text</td>
+  <td>broken by <code>CHAST</code> vs <code>CHATS</code>, section 4</td>
+</tr>
+<tr>
+  <td><strong>intention preservation</strong></td>
+  <td>each edit still does what its author meant</td>
+  <td>Alice's C at the front of <code>CHATS</code>, section 2</td>
+</tr>
+<tr>
+  <td><strong>tie-break</strong></td>
+  <td>the fixed rule for who goes first in a dead heat</td>
+  <td><code>&quot;Alice&quot; &lt; &quot;Bob&quot;</code>, section 7</td>
+</tr>
+<tr>
+  <td><strong>outstanding / buffer</strong></td>
+  <td>the one edit in flight, and the queue behind it</td>
+  <td>the client's pocket, section 10</td>
+</tr>
+<tr>
+  <td><strong>sequencer</strong></td>
+  <td>the single process that decides the official order</td>
+  <td>the one server that owns this document</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-8-which-two-mental-models-should-you-carry-and-where-does-the-story-lie">8. Which two mental models should you carry, and where does the story lie?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Picture a room with a noticeboard and a clerk who corrects
+every slip of paper before pinning it up. That picture is right about almost
+everything, and it lies to you in three specific places.</p>
+</blockquote>
+<h3 id="readme-what-does-the-room-look-like">What does the room look like?</h3>
+<p>There is a <strong>noticeboard</strong> at the front of a room. Everyone has their own copy
+of the list on their own desk.</p>
+<p>When you make a change, you write it on a slip of paper. The slip says something
+like <em>&quot;add an S after the T&quot;</em>. You post it to a <strong>clerk</strong> who stands at the
+noticeboard.</p>
+<p>The clerk does three things with every slip, always in this order:</p>
+<ol>
+<li>Looks at what has been pinned up since the slip was written.</li>
+<li><strong>Corrects the slip</strong> so that it still means the right thing now. <em>&quot;After the
+T&quot;</em> might have to become <em>&quot;the fifth character&quot;</em>.</li>
+<li>Pins the corrected slip up, numbers it, and posts a copy of the <em>corrected</em>
+slip to everybody.</li>
+</ol>
+<p>Meanwhile you never wait for the clerk. You made your change on your own desk
+copy the instant you wrote the slip.</p>
+<p>That last sentence is promise 1 from section 5, and it is the reason the clerk
+has any work to do at all.</p>
+<h3 id="readme-what-does-each-machine-actually-hold">What does each machine actually hold?</h3>
+<p>Now the same room in real names. Each client holds four things.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What the client holds</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>doc</code></td>
+  <td>its own copy of the text</td>
+</tr>
+<tr>
+  <td><code>revision</code></td>
+  <td>the last server revision it has incorporated</td>
+</tr>
+<tr>
+  <td><code>outstanding</code></td>
+  <td>the one operation sent and not yet confirmed, or none</td>
+</tr>
+<tr>
+  <td><code>buffer</code></td>
+  <td>operations typed since then, in order</td>
+</tr>
+</tbody>
+</table></div>
+<p>The server holds two things: <code>doc</code>, and <code>log</code>, the ordered list of operations.
+Its revision is simply the log's length.</p>
+<p>Three rules run the whole protocol, and this diagram is all three. Follow the
+arrows out of <code>Waiting</code>: they are the reason your fast typing does not turn into
+twenty messages.</p>
+<pre class="mermaid">stateDiagram-v2
+    [*] --&gt; Idle
+    Idle --&gt; Waiting: you type → apply locally, send it
+    Waiting --&gt; Waiting: you type again → queue it in the buffer
+    Waiting --&gt; Idle: confirmation arrives, buffer empty
+    Waiting --&gt; Waiting: confirmation arrives, send next queued edit
+    Idle --&gt; Idle: someone else&#x27;s edit arrives → transform, apply
+</pre>
+<h3 id="readme-how-does-the-room-map-onto-the-system">How does the room map onto the system?</h3>
+<p>Two small tables. The first is the furniture, the second is the paperwork in
+motion.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In the room</th>
+  <th>In the system</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>noticeboard</td>
+  <td>the server's document and log</td>
+</tr>
+<tr>
+  <td>clerk</td>
+  <td>the server process that owns this document</td>
+</tr>
+<tr>
+  <td>slip of paper</td>
+  <td>an operation</td>
+</tr>
+<tr>
+  <td>your desk copy</td>
+  <td>the client's local document</td>
+</tr>
+<tr>
+  <td>the number the clerk writes on it</td>
+  <td>the revision number</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>In the room</th>
+  <th>In the system</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>&quot;what was pinned since you wrote this&quot;</td>
+  <td>operations from your <code>revision</code> to the log's end</td>
+</tr>
+<tr>
+  <td>correcting the slip</td>
+  <td><code>transform</code></td>
+</tr>
+<tr>
+  <td>a slip you posted but haven't seen pinned</td>
+  <td><code>outstanding</code></td>
+</tr>
+<tr>
+  <td>slips in your pocket, waiting</td>
+  <td><code>buffer</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-the-story-lies-to-you">Where the story lies to you</h3>
+<p>Three places. Each lie hides a real property of the system, so each one is worth
+replacing carefully.</p>
+<p><strong>The clerk corrects the slip once. In the system, every desk corrects it
+again.</strong> In the room, the clerk's corrected slip is final. In the system, a
+client that receives that operation may have to transform it a second time,
+against its own outstanding and buffered edits, which the server has never seen.
+Transformation happens on both ends, for different reasons.</p>
+<p><strong>There is no queue at the noticeboard.</strong> Slips do not politely line up. They
+cross in the post, arrive out of order relative to other people's slips, get
+lost, and sometimes arrive twice. The clerk sees whatever arrives, in whatever
+order it arrives.</p>
+<p><strong>Everyone posting to one clerk is a design constraint, not a convenience.</strong> In
+a real room, a second clerk would obviously help. In this system, a second clerk
+for the same noticeboard destroys the design. Section 11 shows why, under F8,
+and it is why the whole architecture is shaped around one document with one
+owner.</p>
+<hr />
+<h2 id="readme-9-what-should-you-watch-on-the-page-before-reading-the-mechanism">9. What should you watch on the page before reading the mechanism?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Everything so far is running live on one page, and nothing
+on it moves unless you move it. You type on Alice's screen and Bob's, and you
+decide when each message crosses the network.</p>
+</blockquote>
+<p>Everything above is running, live, here:</p>
+<p><strong>▶ <a href="https://claude.ai/code/artifact/279bb5b7-a1d4-4cfb-9fda-7f803f1fd25e" target="_blank" rel="noopener">Two Cursors, One Sentence</a></strong>
+(also saved locally as <a href="visualization.html"><code>visualization.html</code></a> — open it in a
+browser, no server needed)</p>
+<p>That is the point of the page: every race condition in this lab is one you
+schedule by hand, and can therefore watch happen.</p>
+<p>Three things to do first, in this order.</p>
+<p><strong>One.</strong> Leave the mode on &quot;Send the whole document&quot; and play the first
+scenario. Watch a keystroke disappear with no error. That is section 3.</p>
+<p><strong>Two.</strong> Switch to &quot;Send edits, apply as sent&quot; and run the second scenario.
+Watch the two screens end up different. That is section 4. Look at the event
+feed: the sentence <em>&quot;Bob received Alice's edit&quot;</em> is where it goes wrong.</p>
+<p><strong>Three.</strong> Switch to &quot;Send edits, rewrite them&quot; and run the third. Same typing,
+same delivery order. Watch the server's log: the line that reads
+<code>Bob: insert 'S' at 4</code>, when Bob's finger pressed S at position 3, is the whole
+lesson.</p>
+<p>Then start breaking things. Drop a message. Take Bob offline and keep typing.
+Deliver messages in an order you choose. Each of the five scenarios asks you to
+predict before it runs.</p>
+<p>Here is the same system as a picture, so that the shapes on that page and the
+shapes in this document are the same shapes. Read it top to bottom: edits go up
+to the middle, rewritten edits come back down.</p>
+<pre class="mermaid">flowchart TD
+    A1[&quot;Alice&#x27;s browser&lt;br&gt;document&lt;br&gt;revision&lt;br&gt;outstanding + buffer&quot;]
+    B1[&quot;Bob&#x27;s browser&lt;br&gt;document&lt;br&gt;revision&lt;br&gt;outstanding + buffer&quot;]
+    S1[&quot;the server that&lt;br&gt;owns this document&lt;br&gt;document&quot;]
+    S2[&quot;log:&lt;br&gt;r1 insert C at 0&lt;br&gt;r2 insert S at 4&quot;]
+    A1 -- &quot;edit + the revision&lt;br&gt;it was written against&quot; --&gt; S1
+    B1 -- &quot;edit + the revision&lt;br&gt;it was written against&quot; --&gt; S1
+    S1 -- &quot;the rewritten edit&lt;br&gt;+ its revision&quot; --&gt; A1
+    S1 -- &quot;the rewritten edit&lt;br&gt;+ its revision&quot; --&gt; B1
+    S1 --- S2
+</pre>
+<blockquote>
+<p><strong>CHECKPOINT — end of the BEGINNER model.</strong>
+You can now explain why collaborative editing cannot be done by sending
+documents, what a lost update is, and why an edit has to be rewritten before
+it is applied. If you stopped here you could hold a conversation about it.
+What is missing is the mechanism: exactly what each machine does, message by
+message, and why the details are the shape they are. That is next.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>operation</em>, <em>transform</em> or
+<em>convergence</em>, explain to a friend why Alice's screen ended up saying <code>CHAST</code>
+when both instructions were correct and both were delivered.</p>
+<details><summary>A good answer sounds like</summary>
+"Bob wrote down a place, not a letter: third along. That was the right place
+on his copy. By the time his note reached Alice, she had already stuck a
+letter in front, so everything had shifted and third along was somewhere else.
+Nobody made a mistake. His note just went stale on the way."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-10-how-does-the-mechanism-get-invented-one-broken-design-at-a-time">10. How does the mechanism get invented, one broken design at a time?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The finished protocol has four rules that look arbitrary
+until you watch each one get invented. So we build it wrong four times, and
+each time the breakage hands us the next rule.</p>
+</blockquote>
+<h3 id="readme-v1--what-if-the-server-does-the-rewriting">v1 — what if the server does the rewriting?</h3>
+<p>The obvious home for transformation is the server. It is the one machine that
+knows the official order, so let it correct every slip.</p>
+<blockquote>
+<p><strong>Rule 1.</strong> Every edit is stamped with the revision it was written against.
+When the server receives an edit, it rewrites it against every log entry from
+that revision onwards, then appends it, numbers it, and broadcasts the
+<em>rewritten</em> version to everyone.</p>
+</blockquote>
+<p>Here is that rule doing its job. The document is <code>HAT</code>, the log is empty, and
+the revision is 0. Read the last two columns as the server's own memory after
+each step.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>step</th>
+  <th>what happens</th>
+  <th>server log</th>
+  <th>server doc</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Alice types C at 0. Her screen: <code>CHAT</code>. She sends <code>insert(0,'C')</code>, based on revision 0.</td>
+  <td>—</td>
+  <td><code>HAT</code></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Bob types S at 3. His screen: <code>HATS</code>. He sends <code>insert(3,'S')</code>, based on revision 0.</td>
+  <td>—</td>
+  <td><code>HAT</code></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Alice's edit arrives first. Nothing logged since revision 0, so no rewriting. Logged as revision 1.</td>
+  <td><code>r1: insert(0,'C')</code></td>
+  <td><code>CHAT</code></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Bob's edit arrives, based on revision 0. The log has moved to 1, so it is rewritten against <code>r1</code>: something was inserted at 0, which is before 3, so <code>insert(3,'S')</code> becomes <strong><code>insert(4,'S')</code></strong>. Logged as revision 2.</td>
+  <td><code>r1, r2: insert(4,'S')</code></td>
+  <td><code>CHATS</code></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Everyone is sent the rewritten <code>insert(4,'S')</code> and Alice's <code>insert(0,'C')</code>.</td>
+  <td></td>
+  <td><code>CHATS</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Both screens end at <code>CHATS</code>, which is the answer everybody wanted back in
+section 2. Run it yourself with <code>java src/Demo.java</code>, third block.</p>
+<p>So we are done? Change one thing: the order in which the two edits reach the
+server.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Now run the <em>same</em> two edits, but let Bob's reach the server
+first. Alice's screen already says <code>CHAT</code> (her own C, not yet confirmed by
+anyone). The server broadcasts Bob's <code>insert(3,'S')</code> untouched — because when
+it processed that edit, Alice's C did not exist anywhere it could see. What
+does Alice's screen show if she just applies what she was sent?</p>
+<details><summary>Reveal</summary>
+<code>CHAST</code> — the exact corruption from section 4, back again. The
+server did nothing wrong: it correctly rewrote Bob's edit against everything
+it knew, and it did not know about Alice's C. The missing piece is that
+<b>Alice knows something the server does not</b> — her own un-confirmed edit.
+Nobody but Alice can do that rewriting.
+<br><br>
+If you guessed <code>CHATS</code>, you assumed the server could see Alice's
+screen. It cannot, and promise 1 is the reason: her C was drawn before anyone
+else heard about it.
+</details>
+
+</blockquote>
+<p>That reveal is worth pausing on. Promise 1 is what created the gap. Alice's
+screen contains a letter that exists nowhere else in the world, so Alice's
+screen is the only place that particular correction can be made.</p>
+<h3 id="readme-v2--so-the-client-rewrites-too-in-both-directions">v2 — so the client rewrites too, in both directions</h3>
+<blockquote>
+<p><strong>Rule 2.</strong> When an edit arrives from the server, the client transforms it
+against its own outstanding and buffered edits — and transforms those against
+it. Both sides move.</p>
+</blockquote>
+<p>That second half is easy to miss, so say it slowly. Alice's incoming
+<code>insert(3,'S')</code> becomes <code>insert(4,'S')</code> because of her C. Her own C, once it
+reaches the server, will need to have been transformed against Bob's S.</p>
+<p>Every operation in the system ends up expressed against the same document state,
+approached from two directions.</p>
+<div class="code"><pre><code class="language-bash">java src/Demo.java     # fourth block: &quot;why the CLIENT transforms too&quot;
+</code></pre></div>
+<div class="code"><pre><code>   Alice received Bob:insert(&#x27;S&#x27; at 3) from Bob
+       (their own editor rewrote it to Bob:insert(&#x27;S&#x27; at 4), against their un-confirmed edit)
+       their screen now reads &quot;CHATS&quot;
+</code></pre></div>
+<p>Now break it again. This time Alice types fast.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Alice types two letters quickly. First an S at the end of
+<code>HAT</code>, then a <code>!</code> after it, and she sends both immediately without waiting.
+Both say &quot;written against revision 0&quot;, because no confirmation has come back
+yet to move her revision on. What does the server do with the second one?</p>
+<details><summary>Reveal</summary>
+It rewrites it against the first one — <i>again</i>. Alice's second edit was
+typed on a screen that already contained the S, so it needs no adjustment at
+all; but its stamp says revision 0, which claims it has never seen the S. Run
+<code>java src/Experiments.java two-in-flight</code>:
+<pre>server applied Alice:insert('S' at 3)  -> "HATS"  (revision 1)
+server THREW: insert at 5 but doc is only 4 long: "HATS"</pre>
+Here it happens to crash, which is lucky. With different positions it would
+silently put the character in the wrong place.
+<br><br>
+If you guessed "nothing, the second edit is already correct", you are right
+about the edit and wrong about the stamp. The server trusts the stamp, not the
+edit.
+</details>
+
+</blockquote>
+<h3 id="readme-v3--one-edit-in-flight-everything-else-queues">v3 — one edit in flight, everything else queues</h3>
+<p>The stamp &quot;written against revision <em>r</em>&quot; is only true under one condition. The
+client's document must be exactly the log up to <em>r</em>, plus at most one
+un-confirmed edit that the server is about to see.</p>
+<p>Two edits in flight breaks that arithmetic, which is what you just watched.</p>
+<blockquote>
+<p><strong>Rule 3.</strong> A client keeps at most one edit in flight. Anything typed while
+waiting goes into a local buffer and is sent when the confirmation arrives —
+after being transformed against everything that arrived in the meantime.</p>
+</blockquote>
+<p>This is why the visualization shows &quot;waiting for confirmation: 1&quot; and &quot;queued
+behind it: 3&quot;. Typing fast does not send faster. It makes the queue longer.</p>
+<p>Real editors turn that into an advantage. They <em>compose</em> the queue into one
+bigger operation before sending it, which is why a burst of typing arrives as
+one message rather than twenty.</p>
+<p>One case is still undecided, and it is the one that looks harmless.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Alice and Bob both type at exactly the same position — Alice an
+S at position 3 of <code>HAT</code>, Bob a <code>!</code> at position 3. Neither is &quot;before&quot; the
+other in any meaningful sense. What has to be decided, and what happens if each
+machine decides it for itself?</p>
+<details><summary>Reveal</summary>
+Somebody's character has to come first, and every machine must pick the same
+somebody. If each machine simply keeps its own edit where it is, Alice ends at
+<code>HAT!S</code> and Bob at <code>HATS!</code> — forever. Run
+<code>java src/BrokenOt.java</code>: that one missing rule diverges in
+<b>493 of 500</b> random runs. The fix is one line: order concurrent inserts at
+the same position by site id. It is arbitrary — Alice's letter goes first
+because "Alice" &lt; "Bob" — but it is <i>identically</i> arbitrary everywhere.
+<br><br>
+If you guessed "whoever reached the server first wins", look at what each
+machine can see. Alice's laptop never learns the arrival order of its own
+un-confirmed edit, so it cannot use one.
+</details>
+
+</blockquote>
+<blockquote>
+<p><strong>Rule 4.</strong> Concurrent inserts at the same position are ordered by a
+tie-break. That tie-break is a fixed function of the operations themselves.
+Never arrival time, and never a random number.</p>
+</blockquote>
+<h3 id="readme-what-are-the-four-rules-side-by-side">What are the four rules, side by side?</h3>
+<p>Four rules, four failures that produced them. The last column is what you saw
+with your own eyes before the rule existed.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Rule</th>
+  <th>In words</th>
+  <th>Without it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>stamp each edit with its revision; the server rewrites it against the log since then</td>
+  <td>Design 2's <code>CHAST</code>: correct instructions, wrong positions</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>the receiving client rewrites too, against its own unsent edits, in both directions</td>
+  <td><code>CHAST</code> again, on the screen of whoever is holding an unconfirmed edit</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>at most one edit in flight per client; the rest wait in a buffer</td>
+  <td><code>insert at 5 but doc is only 4 long</code> — the stamp is a lie</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>concurrent inserts at one position are ordered by site id, not by arrival</td>
+  <td><code>HAT!S</code> and <code>HATS!</code>, permanently, in 493 of 500 runs</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-is-the-protocol-still-quietly-assuming">What is the protocol still quietly assuming?</h3>
+<p>One thing is still being assumed silently: that each client receives the
+server's broadcasts <strong>in log order</strong>. Break it and watch.</p>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java out-of-order
+</code></pre></div>
+<div class="code"><pre><code>   messages waiting for Bob, in log order:
+      server -&gt; Bob  Alice:insert(&#x27;C&#x27; at 0)  (revision 1)
+      server -&gt; Bob  Alice:insert(&#x27;S&#x27; at 4)  (revision 2)
+   delivering them BACKWARDS (revision 2 before revision 1):
+      Bob&#x27;s editor threw: insert at 4 but doc is only 3 long: &quot;HAT&quot;
+</code></pre></div>
+<p>Revision 2 assumes revision 1 has already happened. This is not something the
+protocol fixes. It is something the protocol <strong>requires</strong>.</p>
+<p>You buy it by giving each client exactly one ordered connection: a WebSocket
+over TCP, from the
+<a href="../02-communication-protocols/notes.html#readme">communication-protocols lab</a>. Load-balance one
+client's messages across two sockets and you have re-created this bug yourself.</p>
+<h3 id="readme-the-whole-protocol-on-one-page">The whole protocol, on one page</h3>
+<p>Here are Alice, Bob and the server for one full round. Read the notes over the
+server: they are the two rewriting decisions that make the whole thing work.</p>
+<pre class="mermaid">sequenceDiagram
+    participant A as Alice
+    participant S as Server
+    participant B as Bob
+    Note over A: types C at 0 → screen &quot;CHAT&quot;
+    Note over B: types S at 3 → screen &quot;HATS&quot;
+    A-&gt;&gt;S: insert(0,&#x27;C&#x27;) based on r0
+    B-&gt;&gt;S: insert(3,&#x27;S&#x27;) based on r0
+    Note over S: nothing logged since r0 → no rewrite&lt;br&gt;log r1 = insert(0,&#x27;C&#x27;), doc &quot;CHAT&quot;
+    S--&gt;&gt;A: r1 insert(0,&#x27;C&#x27;) — your edit, confirmed
+    S--&gt;&gt;B: r1 insert(0,&#x27;C&#x27;)
+    Note over S: Bob&#x27;s edit is based on r0, log is at r1&lt;br&gt;rewrite against r1 → insert(4,&#x27;S&#x27;)&lt;br&gt;log r2, doc &quot;CHATS&quot;
+    S--&gt;&gt;A: r2 insert(4,&#x27;S&#x27;)
+    S--&gt;&gt;B: r2 insert(4,&#x27;S&#x27;) — your edit, confirmed
+    Note over B: had already applied his own S locally#59;&lt;br&gt;the confirmation just moves him to r2
+    Note over A: applies insert(4,&#x27;S&#x27;) → &quot;CHATS&quot;
+</pre>
+<p>The same thing in twelve lines. The server, on receiving an edit, its base
+revision and its sender, which together are written <code>(op, base, from)</code>:</p>
+<div class="code"><pre><code>for each entry in log[base .. end]:  op = transform(op, entry)
+append op to log; doc = apply(doc, op)
+broadcast (op, revision = log.length, origin = from) to everyone
+</code></pre></div>
+<p>And the client, on receiving an edit, its revision and who wrote it, written
+<code>(op, revision, origin)</code>:</p>
+<div class="code"><pre><code>if origin is me:
+    revision = revision
+    outstanding = buffer.pop()        # and send it, stamped with the new revision
+else:
+    if outstanding: op, outstanding = transform(op, outstanding), transform(outstanding, op)
+    for each b in buffer:  op, b = transform(op, b), transform(b, op)
+    doc = apply(doc, op); revision = revision
+</code></pre></div>
+<p>That is the entire algorithm. It is about forty lines in
+<span class="missing" title="Not in the hub: src/Collab.java is in the lab folder on your laptop"><code>src/Collab.java</code></span>.</p>
+<p>It is also, with richer operations, what Google's published design does. That
+design is the Wave protocol, itself a descendant of the 1995 Jupiter system.</p>
+<blockquote>
+<p><strong>CHECKPOINT — end of the INTERMEDIATE model.</strong>
+You can now trace a concurrent edit through the system by hand, and say what
+every machine holds at each step. You also know why each of the four rules
+exists, because you watched the system break without it. What is missing is
+everything that happens when the network and the machines misbehave — which
+is most of the work in a real system.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>outstanding</em>, <em>buffer</em> or
+<em>revision</em>, explain why the server's rewriting is not enough on its own, and
+why Alice's own laptop has to rewrite Bob's edit a second time.</p>
+<details><summary>A good answer sounds like</summary>
+"Alice's screen has a letter on it that nobody else has seen yet, because it
+was drawn the moment she pressed the key. The clerk cannot correct Bob's note
+for a letter he does not know exists. Only Alice can, so she does it herself
+just before she uses the note."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-11-which-nine-failures-should-you-be-able-to-name">11. Which nine failures should you be able to name?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nine things go wrong. Four of them turn out to be nothing
+much, which is the design working. The other five are where the real
+engineering is, and two of them corrupt the document silently.</p>
+</blockquote>
+<p>Every one of these is runnable, except the last two. Each is told the same way:
+what happens to Alice, Bob or Carol, what you would see, why it happens, and
+which of the four promises from section 5 bends.</p>
+<h3 id="readme-f1--what-if-the-edit-never-reaches-the-server">F1 — what if the edit never reaches the server?</h3>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java lost-request
+</code></pre></div>
+<p>Alice types C, and the network eats the message. She keeps typing, and her queue
+grows. The experiment prints <code>Alice pending edits: 2</code>.</p>
+<p>Her screen is fine and self-consistent. The server and Bob simply never hear
+from her.</p>
+<p><strong>Convergence is not violated. It is postponed.</strong> Nothing is corrupted, because
+a client that never gets a confirmation never advances its revision and never
+sends its queue. The design is stuck rather than wrong, which is the good kind
+of broken.</p>
+<p>The fix is a timeout and a retry, which the experiment then runs:
+<code>Alice heard nothing back and re-sent insert('C' at 0)</code>, and everything
+converges to <code>CHHATS</code>.</p>
+<p>In production, this same event happens on every laptop that closes its lid.</p>
+<h3 id="readme-f2--what-if-the-edit-arrives-but-the-confirmation-is-lost">F2 — what if the edit arrives but the confirmation is lost?</h3>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java lost-ack
+</code></pre></div>
+<p>This is the dangerous one, and it is the reason retries are not free.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Alice's edit reached the server and was applied. Only the
+confirmation was lost, so Alice re-sends the same keystroke. What is in the
+document now, and is it the same on every screen?</p>
+<details><summary>Reveal</summary>
+Her single keystroke happened <i>twice</i>, and the screens disagree about it.
+The run is printed below, with duplicate suppression off and then on. If you
+guessed the retry was harmless because the network lost something, notice what
+the server lost: nothing at all. From the server's side, "Alice typed C" and
+"that C again" are the same bytes.
+</details>
+
+</blockquote>
+<div class="code"><pre><code>duplicate suppression OFF : server=&quot;CCHAT&quot;  Alice=&quot;CHAT&quot;  Bob=&quot;CCHAT&quot;   converged=false
+duplicate suppression ON  : server=&quot;CHAT&quot;   Alice=&quot;CHAT&quot;  Bob=&quot;CHAT&quot;    converged=true
+</code></pre></div>
+<p>The fix has three parts, and all three are needed. Each client numbers its
+edits. The server remembers the last number it saw from each client, and ignores
+anything at or below it. Then the server <strong>re-sends the original confirmation</strong>,
+because the same edit must not get a second revision number.</p>
+<p>That is an idempotency key in its smallest possible form. You have met the same
+mechanism in the <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> and
+<a href="../47-saga/notes.html#readme">saga</a> labs, where at-least-once delivery forces every consumer to be
+idempotent. Same physics, different content.</p>
+<h3 id="readme-f3--what-if-messages-arrive-out-of-order">F3 — what if messages arrive out of order?</h3>
+<p>You caused this one yourself in section 10. <code>java src/Experiments.java out-of-order</code> throws <code>insert at 4 but doc is only 3 long</code>.</p>
+<p>Here is the distinction worth carrying out of this lab. The guarantee the
+protocol <em>assumes</em> is per-client ordered delivery. The guarantee it <em>provides</em>
+is convergence, and it provides that only while the assumption holds.</p>
+<p>Two consequences follow directly. The transport is one persistent ordered
+connection per client. And reconnect logic must resume from a revision number,
+never from &quot;start listening again&quot;.</p>
+<h3 id="readme-f4--what-if-a-client-goes-away-and-comes-back">F4 — what if a client goes away and comes back?</h3>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java offline-burst
+</code></pre></div>
+<p>Bob edits on a plane while 200 edits land without him. Read the third row: it is
+the price of the healing, not the size of the document.</p>
+<div class="code"><pre><code>   server log length      : 220
+   Bob&#x27;s offline edits    : 20
+   transformations to heal: 8200
+   converged              : true, document length 223
+</code></pre></div>
+<p>Nobody was asked to resolve anything. Nobody saw a conflict prompt. But look at
+the cost, which is roughly <em>(edits you missed) × (edits you made)</em>.</p>
+<p>Twenty edits against two hundred is 8,200 transformations, which is nothing.
+Twenty edits against a million is not nothing. <strong>The guarantee holds. The
+liveness does not scale.</strong></p>
+<p>That is why real clients that have been away too long throw their local state
+away and re-download the document. It is also why servers keep a bounded log
+tail plus snapshots, which section 15 builds properly.</p>
+<h3 id="readme-f5--what-if-the-server-confirms-an-edit-it-has-not-written-down">F5 — what if the server confirms an edit it has not written down?</h3>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java stale-server
+</code></pre></div>
+<div class="code"><pre><code>   before the crash: server=&quot;CHATS!?&quot; ... revision 4
+   after the restart: server=&quot;CHATS&quot; revision 2 but Alice still believes she is at revision 4
+   server=&quot;CXHATS&quot;  Alice=&quot;CXHATS!?&quot;  Bob=&quot;CXHATS!?&quot;   converged=false
+</code></pre></div>
+<p>Follow what happened. The server acknowledged revisions 3 and 4 while they were
+still only in memory. Then it restarted from a snapshot that had two entries.</p>
+<p>Now every client's revision number refers to a history that no longer exists.
+Their edits are transformed against the wrong set of operations. The corruption
+is silent, and it is permanent.</p>
+<p><strong>The rule that prevents it: never confirm an edit you have not durably written
+down.</strong> A confirmation is a promise about the log, so the log write has to come
+first.</p>
+<p>You have arrived at this rule from three other directions already. The
+<a href="../69-whatsapp-system-design/notes.html#readme">WhatsApp lab</a> reached it as &quot;never acknowledge
+what is not yet durable&quot;. It is the same discipline as a write-ahead log in the
+<a href="../05-btree-and-lsm/notes.html#readme">b-tree/LSM lab</a>, and as <code>appendfsync</code> in the
+<a href="../13-redis/notes.html#readme">redis lab</a>. &quot;We accepted it&quot; and &quot;it survives a crash&quot; are two
+different moments. Users forgive you for conflating them only until the first
+crash.</p>
+<h3 id="readme-f6--what-does-one-slow-client-cost-everybody-else">F6 — what does one slow client cost everybody else?</h3>
+<p>Carol joins the document from a café with terrible Wi-Fi. Her connection stalls.</p>
+<div class="code"><pre><code class="language-bash">java src/Experiments.java slow-client
+</code></pre></div>
+<div class="code"><pre><code>   edits made while Carol was stalled : 100
+   messages queued for Carol alone    : 100
+</code></pre></div>
+<p>Everyone else keeps working. The design has no shared lock, so one slow
+participant cannot block anybody. Promise 4 holds even for Carol's neighbours.</p>
+<p>But somebody is holding Carol's backlog, and that somebody is the server. Put
+200 people in a document, each on their own flaky café Wi-Fi, and that is 200
+backlogs in one process's heap.</p>
+<p>Production answers with a cap on the per-client queue. When it overflows, the
+server disconnects that client and makes them reload the document from a
+snapshot. That is backpressure, from the
+<a href="../03-io-multiplexing/notes.html#readme">io-multiplexing</a> and
+<a href="../02-communication-protocols/notes.html#readme">communication-protocols</a> labs, in its
+document-shaped form.</p>
+<h3 id="readme-f7--what-happens-when-everybody-edits-the-same-word">F7 — what happens when everybody edits the same word?</h3>
+<p>A hundred people in one document, all typing in the same paragraph, is not a
+correctness problem. The tie-break rule handles it exactly as it handles two.</p>
+<p>It is a <em>hot key</em> problem, and this is the shape a hot key takes here: one
+document, one owning process, one CPU.</p>
+<p>You cannot shard a document by user, because every edit must pass through the
+same sequencer. That is the constraint from section 7 collecting its bill.</p>
+<p>Google's answer is a hard limit. Docs stops accepting new editors past a
+documented cap, and read-only viewers are served from a different path
+altogether. The general lesson is the one from the
+<a href="../60-distributed-rate-limiting/notes.html#readme">distributed-rate-limiting lab</a>: sharding
+spreads keys, and it does nothing at all for one hot key.</p>
+<h3 id="readme-f8--what-if-two-servers-own-one-document">F8 — what if two servers own one document?</h3>
+<p>This is the one failure the lab does not simulate, because the fix is
+architectural rather than algorithmic.</p>
+<p>If two servers both accept edits for the same document, there are two logs and
+two revision-4s. The phrase &quot;written against revision 4&quot; stops having a meaning.
+Every guarantee in section 12 is stated over one log.</p>
+<p>So the document's owning process must be unique. That turns out to be the
+central architectural constraint of the whole system. Section 15 pays for it,
+with routing by document id, sticky sessions, careful handover on deploy, and a
+fencing mechanism.</p>
+<p>The fencing mechanism deserves its own sentence. A server that <em>thinks</em> it still
+owns a document, but has been replaced, must not be able to keep appending.</p>
+<p>You met that exact hazard in the <a href="../13-redis/notes.html#readme">redis lab</a> with expiring locks,
+and it needs the same answer here. A fencing token, checked by the thing being
+written to, not by the thing that believes it holds the lease.</p>
+<h3 id="readme-f9--which-conflict-can-nothing-fix">F9 — which conflict can nothing fix?</h3>
+<p>Alice changes &quot;shall&quot; to &quot;must&quot;. Bob deletes the sentence.</p>
+<p>The system converges on a sentence that does not exist, containing an edit that
+no longer means anything. No transformation rule can help. The conflict is in
+the meaning, not in the positions.</p>
+<p>This is the honest limit of the whole approach. The product answer is social
+rather than technical: you can see each other's cursors, so you do not type in
+the same sentence.</p>
+<h3 id="readme-the-nine-side-by-side">The nine, side by side</h3>
+<p>One table, so you can compare them without re-reading nine stories. &quot;Bends&quot;
+names the promise from section 5 that gives way.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>What goes wrong</th>
+  <th>Which promise bends</th>
+  <th>How you cause it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1</td>
+  <td>the request is lost</td>
+  <td>2, and only until the retry</td>
+  <td><code>java src/Experiments.java lost-request</code></td>
+</tr>
+<tr>
+  <td>F2</td>
+  <td>the confirmation is lost, the retry duplicates a keystroke</td>
+  <td>2 and 3</td>
+  <td><code>java src/Experiments.java lost-ack</code></td>
+</tr>
+<tr>
+  <td>F3</td>
+  <td>broadcasts arrive out of order</td>
+  <td>2, by breaking an assumption</td>
+  <td><code>java src/Experiments.java out-of-order</code></td>
+</tr>
+<tr>
+  <td>F4</td>
+  <td>a client returns after 200 edits</td>
+  <td>none; the cost is time</td>
+  <td><code>java src/Experiments.java offline-burst</code></td>
+</tr>
+<tr>
+  <td>F5</td>
+  <td>a confirmed edit was never durable</td>
+  <td>2, silently and permanently</td>
+  <td><code>java src/Experiments.java stale-server</code></td>
+</tr>
+<tr>
+  <td>F6</td>
+  <td>one client stalls and the server holds its backlog</td>
+  <td>none, until memory runs out</td>
+  <td><code>java src/Experiments.java slow-client</code></td>
+</tr>
+<tr>
+  <td>F7</td>
+  <td>a hundred editors in one paragraph</td>
+  <td>1, as the owning process saturates</td>
+  <td>not simulated; it is a capacity limit</td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>two servers own one document</td>
+  <td>all of them</td>
+  <td>not simulated; prevented by architecture</td>
+</tr>
+<tr>
+  <td>F9</td>
+  <td>both edits land and the sentence is nonsense</td>
+  <td>3, and no rule can save it</td>
+  <td>not simulated; it is a limit, not a bug</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-12-what-is-guaranteed-what-is-not-and-what-did-it-cost">12. What is guaranteed, what is not, and what did it cost?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five things are true no matter how the network behaves.
+Five things are explicitly not promised, and one of them surprises people.
+Four costs were paid to get here, and you can see all four in the
+architecture.</p>
+</blockquote>
+<h3 id="readme-what-is-true-always">What is true, always?</h3>
+<p>These five hold whatever order messages arrive in, and whoever is offline.</p>
+<p><strong>One order.</strong> There is exactly one log per document, and its order is the
+definition of what happened. Everything else is derived from it.</p>
+<p><strong>Convergence.</strong> Once the network is quiet, every replica's text equals the log
+replayed from the start. The test suite runs 3 clients making 30 edits each,
+over 1,000 different random delivery schedules, and finds <strong>0 divergences</strong>
+(<code>java src/Tests.java</code>). The naive design, under the identical harness, diverges
+in <strong>500 of 500</strong> runs (<code>java src/Experiments.java raw-vs-ot</code>).</p>
+<p><strong>Intention preservation, for the operations we support.</strong> An insert lands
+between the same two characters its author saw. A delete removes the same
+character its author saw, or nothing at all if it is already gone. This is not a
+theorem here. It is a design property that the tests check case by case.</p>
+<p><strong>Local responsiveness.</strong> No operation ever waits for a network round trip
+before appearing on its author's screen. That is promise 1, and it is the one
+that never bends.</p>
+<p><strong>At most one edit in flight per client.</strong> That is what makes the revision
+stamps arithmetically true, and it is Rule 3 restated as an invariant.</p>
+<p>Those two numbers deserve to sit next to each other, because the gap between
+them is the whole argument for this lab.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Design</th>
+  <th>Divergences</th>
+  <th>Out of</th>
+  <th>What the number means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>operational transformation</td>
+  <td>0</td>
+  <td>1,000 random schedules</td>
+  <td>the rewriting holds under every order the harness could invent</td>
+</tr>
+<tr>
+  <td>apply as sent (Design 2)</td>
+  <td>500</td>
+  <td>500 runs</td>
+  <td>not &quot;risky under load&quot;; broken on essentially every run</td>
+</tr>
+<tr>
+  <td>no tie-break (Rule 4 removed)</td>
+  <td>493</td>
+  <td>500 runs</td>
+  <td>one missing line, and the copies disagree forever</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-is-explicitly-not-guaranteed">What is explicitly not guaranteed?</h3>
+<p><strong>Any particular final text when two people type at the same spot.</strong> You get <em>a</em>
+deterministic answer, ordered by site id. You do not get the &quot;right&quot; one, and
+there is no right one.</p>
+<p><strong>Meaningful merges.</strong> That is F9. Positions merge. Meaning does not.</p>
+<p><strong>Real-time ordering.</strong> &quot;Alice typed first&quot; by wall clock has no standing here.
+The log order is the arrival order at the server, which is a race, and the system
+is correct either way. If you need wall-clock fairness, this is the wrong
+architecture.</p>
+<p><strong>Undo as the inverse of your last operation.</strong> Once other people's edits have
+been transformed into your document, &quot;undo my last edit&quot; is a fresh operation
+that must itself be transformed. Selective undo in a collaborative editor is a
+research-grade problem, and real editors implement a restricted version of it.</p>
+<p><strong>Availability during a partition.</strong> The document has exactly one owner. If you
+cannot reach it, you edit locally and cannot see anyone else. That is the
+<a href="../24-cap-theorem/notes.html#readme">CAP</a> trade made per document: <strong>CP for the shared document,
+and AP for your own copy.</strong> That combination is only possible because the read
+everyone cares about is their <em>own</em> screen.</p>
+<h3 id="readme-what-did-it-cost-to-get-here">What did it cost to get here?</h3>
+<p>Four bills, and every one of them shows up again in section 15.</p>
+<p><strong>A single point of ordering per document.</strong> Simple, and the source of F7, F8
+and every deployment complication in the production section.</p>
+<p><strong>Transform work proportional to how far behind you are.</strong> That is F4's 8,200
+transformations, and it is why snapshots and forced reloads exist.</p>
+<p><strong>Every client needs the algorithm.</strong> The rewriting is not a server feature. It
+is a protocol, so browser, Android, iOS and the export pipeline must all agree,
+forever, including for documents written years ago.</p>
+<p><strong>A case matrix that grows as the square of the number of operation types.</strong> Two
+types here means four cases. Add &quot;apply bold to a range&quot; and &quot;insert a table&quot;,
+and the matrix is where real OT implementations earn their reputation for being
+hard. This is the single strongest argument for the alternative in section 15.</p>
+<blockquote>
+<p><strong>CHECKPOINT — end of the ENGINEERING model.</strong>
+You can now state the guarantees precisely, name what was traded for them, and
+reason about the failure modes. What is left is the product around the
+algorithm: storage, connections, scale, deployment, and what a real
+architecture diagram looks like.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Imagine a system that deletes the whole document whenever two
+people clash. Without using the words <em>convergence</em> or <em>intention</em>, explain to
+a friend why it passes one of this lab's two big tests and fails the other.</p>
+<details><summary>A good answer sounds like</summary>
+"Everybody's screen would definitely agree, because everybody's screen would
+be empty. So it passes the 'do the copies match' test perfectly. It fails the
+other one, which is 'did what each person meant actually happen', because
+nothing anybody meant survived at all."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-13-in-what-order-should-you-read-the-code">13. In what order should you read the code?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Start with the fifteen lines that do the rewriting, because
+everything else in the lab exists to feed them. Then read the client, which is
+the only place two machines disagree on purpose.</p>
+</blockquote>
+<p>There is no build tool and there are no dependencies. <code>java src/Foo.java</code>
+compiles the whole directory and runs it, on JDK 22 or later.</p>
+<p>Two files hold the idea:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>file</th>
+  <th>what it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Ot.java is in the lab folder on your laptop"><code>src/Ot.java</code></span></td>
+  <td>operations, <code>apply</code>, and <code>transform</code> — the entire idea, ~60 lines of logic</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Collab.java is in the lab folder on your laptop"><code>src/Collab.java</code></span></td>
+  <td>server, client, and a network you drive by hand</td>
+</tr>
+</tbody>
+</table></div>
+<p>Four files hold things to run, break and finish:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>file</th>
+  <th>what it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Demo.java is in the lab folder on your laptop"><code>src/Demo.java</code></span></td>
+  <td>the four designs from sections 3, 4 and 10, narrated</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Tests.java is in the lab folder on your laptop"><code>src/Tests.java</code></span></td>
+  <td>10 scenario tests, named after the scenarios</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Experiments.java is in the lab folder on your laptop"><code>src/Experiments.java</code></span></td>
+  <td>the eight failure experiments</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/BrokenOt.java is in the lab folder on your laptop"><code>src/BrokenOt.java</code></span></td>
+  <td>one line changed, for exercise 6</td>
+</tr>
+</tbody>
+</table></div>
+<p>And two more that exist for the exercises and for the argument in section 15:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>file</th>
+  <th>what it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/YourTransform.java is in the lab folder on your laptop"><code>src/YourTransform.java</code></span></td>
+  <td>the same file with the rules blanked out, for exercise 5 — it self-checks</td>
+</tr>
+<tr>
+  <td><span class="missing" title="Not in the hub: src/Crdt.java is in the lab folder on your laptop"><code>src/Crdt.java</code></span></td>
+  <td>the other design, with no server at all</td>
+</tr>
+</tbody>
+</table></div>
+<div class="code"><pre><code class="language-bash">java src/Demo.java          # the story, in four runs
+java src/Tests.java         # 10 passed, 0 failed
+java src/Experiments.java   # all eight failure experiments
+java src/Crdt.java          # the CRDT alternative
+java src/BrokenOt.java      # the planted bug
+java src/YourTransform.java # exercise 5: write transform() yourself, self-checking
+</code></pre></div>
+<h3 id="readme-which-lines-actually-carry-the-design">Which lines actually carry the design?</h3>
+<p>Everything load-bearing is in <code>transform</code>. Here is the case where both people
+insert, which is Alice's C meeting Bob's S:</p>
+<div class="code"><pre><code class="language-java">if (a.kind == Kind.INSERT &amp;&amp; b.kind == Kind.INSERT) {
+    if (b.pos &lt; a.pos) return a.withPos(a.pos + 1);   // something appeared before me → shift right
+    if (b.pos &gt; a.pos) return a;                      // it appeared after me → I am unaffected
+    // Exact same spot. Somebody has to go first, and BOTH sides must pick the same
+    // somebody or the two copies end up with the letters in opposite orders.
+    return a.site.compareTo(b.site) &lt; 0 ? a : a.withPos(a.pos + 1);
+}
+</code></pre></div>
+<p>Three lines, three situations: before me, after me, and the dead heat that
+needs Rule 4.</p>
+<p>Now the case people forget, where both people delete:</p>
+<div class="code"><pre><code class="language-java">if (b.pos &lt; a.pos) return a.withPos(a.pos - 1);
+if (b.pos &gt; a.pos) return a;
+// We both deleted the SAME character. It is already gone; deleting again
+// would eat an innocent neighbour. My op becomes nothing at all.
+return Op.noop(a.site);
+</code></pre></div>
+<p>That <code>noop</code> is not tidiness. Without it, two people deleting the same letter of
+<code>CHATS</code> produce <code>CHA</code>. The T disappears as well as the S, because the second
+delete removes whatever slid into the vacant position.</p>
+<p>The test named <code>ot_two_people_delete_the_same_character</code> is what catches that.</p>
+<p>On the client, four lines implement Rule 2, and they are worth reading slowly:</p>
+<div class="code"><pre><code class="language-java">if (outstanding != null) {
+    Ot.Op newOutstanding = xform.apply(outstanding, incoming);
+    incoming = xform.apply(incoming, outstanding);
+    outstanding = newOutstanding;
+}
+</code></pre></div>
+<p>Note the temporary variable. Transforming <code>incoming</code> first, then using the <em>new</em>
+<code>incoming</code> to transform <code>outstanding</code>, would transform against an operation that
+never existed in that form. Both results must be computed from the originals.</p>
+<p>That is the smallest bug in this lab and one of the hardest to see.</p>
+<h3 id="readme-what-do-the-tests-say-and-what-do-they-quietly-admit">What do the tests say, and what do they quietly admit?</h3>
+<div class="code"><pre><code>PASS  lww_silently_loses_an_edit
+PASS  raw_operations_diverge_when_two_people_type_at_once
+PASS  ot_converges_and_keeps_both_intentions
+PASS  ot_insert_next_to_a_delete
+PASS  ot_two_people_delete_the_same_character
+PASS  ot_same_position_inserts_land_in_the_same_order_everywhere
+PASS  ot_typing_a_burst_faster_than_the_round_trip
+PASS  ot_client_edits_while_offline_then_reconnects
+PASS  ot_late_joiner_catches_up
+PASS  ot_converges_under_1000_random_schedules
+        3 clients x 30 edits x 1000 different delivery schedules, diverged 0 times
+
+10 passed, 0 failed
+</code></pre></div>
+<p>The test names are the documentation. Read them as a list of sentences about
+Alice and Bob, because that is what they are.</p>
+<p>Five simplifications are deliberate, and every one of them is a thing a real
+editor has to do that this lab does not.</p>
+<p><strong>One character per operation.</strong> Real editors send <em>deltas</em>, such as &quot;keep 40
+characters, insert this string, delete 3&quot;. One operation per keystroke is far
+too many messages. The transform rules are the same idea over ranges, with much
+fiddlier arithmetic.</p>
+<p><strong>Plain text only.</strong> No formatting, no tables, no images, and no comments
+anchored to a range of text. Each of those adds operation types, and the
+transform case matrix grows as the square of the number of types.</p>
+<p><strong>No persistence.</strong> Everything is in memory, and F5 shows exactly what that
+costs.</p>
+<p><strong>No cursors and no presence,</strong> meaning who else is in the document and where
+they are typing. No access control either.</p>
+<p><strong>Time only moves when a test calls <code>deliver()</code>.</strong> There are no threads, so
+there is no concurrency in the Java sense anywhere in this lab. That is exactly
+why every race in it can be replayed exactly.</p>
+<hr />
+<h2 id="readme-14-which-experiments-break-it-and-can-you-call-them-first">14. Which experiments break it, and can you call them first?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight commands. Each one is a question with a number for an
+answer, and the point is to commit to your number before you run it.</p>
+</blockquote>
+<p>Read the question, commit to an answer out loud, then run the command.</p>
+<p>Two experiments ask whether the algorithm is needed at all:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>command</th>
+  <th>the question to answer first</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>E0</td>
+  <td><code>java src/Experiments.java two-in-flight</code></td>
+  <td>If a client sends two edits without waiting, and both say &quot;based on revision 0&quot;, what does the server do with the second?</td>
+</tr>
+<tr>
+  <td>E1</td>
+  <td><code>java src/Experiments.java raw-vs-ot</code></td>
+  <td>Skipping transformation is a bug — but how often does it actually bite? One run in fifty?</td>
+</tr>
+</tbody>
+</table></div>
+<p>Six ask what the network and the machines can do to it:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>command</th>
+  <th>the question to answer first</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>E2</td>
+  <td><code>java src/Experiments.java lost-request</code></td>
+  <td>The network eats Alice's edit. Is the document corrupted, or just stuck?</td>
+</tr>
+<tr>
+  <td>E3</td>
+  <td><code>java src/Experiments.java lost-ack</code></td>
+  <td>The edit arrived; the <em>confirmation</em> was lost, so Alice retries. What is in the document now?</td>
+</tr>
+<tr>
+  <td>E4</td>
+  <td><code>java src/Experiments.java out-of-order</code></td>
+  <td>Two broadcasts reach Bob in the wrong order. Does the algorithm cope?</td>
+</tr>
+<tr>
+  <td>E5</td>
+  <td><code>java src/Experiments.java offline-burst</code></td>
+  <td>Bob makes 20 edits offline while 200 land without him. Does it heal, and what does healing cost?</td>
+</tr>
+<tr>
+  <td>E6</td>
+  <td><code>java src/Experiments.java stale-server</code></td>
+  <td>The server confirmed two edits it had not written to disk, then restarted. What do the clients believe?</td>
+</tr>
+<tr>
+  <td>E7</td>
+  <td><code>java src/Experiments.java slow-client</code></td>
+  <td>Carol's connection stalls for 100 edits. Who pays — Carol, everyone, or the server?</td>
+</tr>
+</tbody>
+</table></div>
+<p>The answers, with their numbers, are in section 11. Three of them are worth
+arguing about with somebody.</p>
+<p>E1 is the one that changes minds: the naive design fails 500 times out of 500,
+not &quot;rarely, under load&quot;. E3 shows a retry duplicating a keystroke unless the
+server can recognise a repeat. E6 shows silent, permanent corruption produced by
+a single premature acknowledgement.</p>
+<hr />
+<h2 id="readme-15-what-does-the-real-google-docs-add-on-top-of-this">15. What does the real Google Docs add on top of this?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The algorithm from section 10 survives untouched. Around it
+go storage, one long-lived connection per open tab, and a way to guarantee
+that exactly one process owns each document. Then a plan for the day a deploy
+drops a million connections at once.</p>
+</blockquote>
+<h3 id="readme-what-is-the-chain-from-this-lab-to-the-product">What is the chain from this lab to the product?</h3>
+<p>Three steps, and the first two are closer together than they look.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>This lab</strong></td>
+  <td>one document, in memory, one process, plain text, single-character operations</td>
+</tr>
+<tr>
+  <td><strong>A real OT library</strong></td>
+  <td>ShareDB / ot.js (JavaScript), the Wave protocol; range-based deltas, rich text, presence, undo. Same four rules</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>millions of concurrent sessions, documents that must outlive any machine, offline clients, access control, exports, mobile</td>
+</tr>
+</tbody>
+</table></div>
+<p>Operational transformation itself dates to the 1989 GROVE paper. The
+client/server form used here is the 1995 <strong>Jupiter</strong> system, which is what Google
+Wave's published protocol was built on. Google Docs' editor is publicly
+described as using operational transformation.</p>
+<p>Section 19 says which parts of this section are cited and which are ordinary
+architecture for this problem shape.</p>
+<h3 id="readme-what-does-the-architecture-look-like">What does the architecture look like?</h3>
+<p>Read this diagram from the top down. The only line that cannot be moved is the
+one out of the session router.</p>
+<pre class="mermaid">flowchart TB
+    subgraph Clients
+      W[&quot;browser editor&lt;br&gt;(model + view + undo stack)&quot;]
+      M[&quot;mobile app&lt;br&gt;(local queue, offline)&quot;]
+    end
+    LB[&quot;edge / load balancer&lt;br&gt;terminates TLS,&lt;br&gt;holds the WebSocket&quot;]
+    RT[&quot;session router&lt;br&gt;documentId → owning server&quot;]
+    subgraph Session[&quot;document session servers&quot;]
+      D1[&quot;doc 42: text in memory,&lt;br&gt;log tail, connected clients&quot;]
+      D2[&quot;doc 77: ...&quot;]
+    end
+    ACL[&quot;access control&lt;br&gt;(who may open this document)&quot;]
+    ST[(&quot;document store&lt;br&gt;snapshots + mutation log&quot;)]
+    MD[(&quot;metadata store&lt;br&gt;title, owner, sharing, folders&quot;)]
+    IDX[&quot;search index&quot;]
+    NOT[&quot;notifications, comment emails&quot;]
+
+    W &lt;--&gt; LB
+    M &lt;--&gt; LB
+    LB &lt;--&gt; RT
+    RT &lt;--&gt; D1
+    RT &lt;--&gt; D2
+    D1 &lt;--&gt; ACL
+    D1 &lt;--&gt; ST
+    D1 --&gt; IDX
+    D1 --&gt; NOT
+    ST --- MD
+</pre>
+<p>The one non-negotiable line in that diagram is <strong><code>documentId → owning server</code></strong>.
+Everything else is replaceable. That line is what makes the algorithm in section
+10 legal at all, and F8 is what happens when it fails.</p>
+<h3 id="readme-what-does-each-piece-actually-do">What does each piece actually do?</h3>
+<p><strong>The browser editor</strong> holds the document model, the view, the local undo stack,
+and the client half of section 10. That is <code>outstanding</code>, <code>buffer</code> and
+<code>transform</code>, exactly as Alice's laptop held them. It composes rapid keystrokes
+into one operation before sending, typically one message per 50 to 200 ms of
+typing rather than one per key.</p>
+<p><strong>The edge layer</strong> terminates TLS (<a href="../14-tls/notes.html#readme">tls lab</a>) and holds one
+long-lived WebSocket per open tab. It is the same connection-server tier you met
+in the <a href="../69-whatsapp-system-design/notes.html#readme">WhatsApp lab</a>: sockets, no durable state.
+Its scaling problem is idle connections, which is the
+<a href="../03-io-multiplexing/notes.html#readme">io-multiplexing lab</a> exactly. A million connections that
+are silent 95% of the time is that lab's whole subject.</p>
+<p><strong>The session router</strong> maps a document id to the one process that owns it right
+now. That is the placement problem from the
+<a href="../35-consistent-hashing/notes.html#readme">consistent-hashing lab</a>, with one extra requirement:
+ownership here is exclusive, not merely a preference.</p>
+<p>You get exclusivity from a lease in a strongly consistent store, of the
+etcd/Chubby/Spanner class, with <a href="../39-paxos/notes.html#readme">Paxos</a> underneath. Two properties
+matter. Only one owner at a time, and a <strong>fencing token</strong> so that a replaced
+owner's writes are rejected by the store rather than merely discouraged. F8 is
+the failure this prevents.</p>
+<p><strong>The document session server</strong> holds the document in memory, appends to the
+log, transforms, broadcasts, and tracks who is connected and where their cursors
+are. Everything is per-document and single-threaded per document, which makes
+the whole section 10 algorithm race-free without a lock.</p>
+<p>That is the trick the <a href="../13-redis/notes.html#readme">redis lab</a> taught. The fastest way to make
+concurrency correct is to not have any.</p>
+<p><strong>The document store</strong> holds the log and periodic <strong>snapshots</strong>. This is the
+storage pattern from the <a href="../50-event-sourcing/notes.html#readme">event-sourcing lab</a>, for the
+same reason. Replaying a million operations to open a document would be absurd,
+so you fold them into a snapshot and keep only the tail.</p>
+<p>Version history is free here, because the log <em>is</em> the history. &quot;Restore to
+yesterday 4pm&quot; is a position in it. That is also why the log is trimmed by
+snapshotting rather than by deletion.</p>
+<p><strong>The metadata store</strong> holds the title, the owner, the sharing rules and the
+folder location. It has a different access shape, queried by user rather than by
+document, so it is usually a different store from the document content. The
+search index is projected off it, which makes it a <a href="../51-cqrs/notes.html#readme">CQRS</a> read
+model.</p>
+<h3 id="readme-which-three-flows-should-you-be-able-to-draw">Which three flows should you be able to draw?</h3>
+<p><strong>Opening a document.</strong> The client asks for document 42, and access control runs
+first. The router then finds or elects the owning session server, which loads
+the newest snapshot plus the log tail and folds them into the current text. The
+client receives <code>{text, revision}</code>, then opens a WebSocket. Every later message
+is a delta, which is why the connection is worth its cost.</p>
+<p><strong>Typing.</strong> That is section 10, with one addition. The server writes the
+operation to durable storage <strong>before</strong> confirming it, batching writes across
+operations for throughput. F5 is what the addition buys.</p>
+<p><strong>Reconnecting.</strong> The client says &quot;I am at revision 812&quot;. If the server still has
+812 in its log tail, it replays 813 onwards. If not, because the client slept for
+a week or a snapshot has moved past it, the answer is &quot;your revision is too old&quot;.
+The client then discards its local state and re-opens. That is F4's cost turned
+into a product decision.</p>
+<h3 id="readme-how-do-you-size-this-in-an-interview">How do you size this in an interview?</h3>
+<p>Google has never published these numbers, so what follows is the method. Every
+input is an assumption you should say out loud before you use it.</p>
+<p>Start from two assumptions: 100M daily active editors, each with a document open
+for about 20 minutes a day.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Quantity</th>
+  <th>How you get it</th>
+  <th>Number</th>
+  <th>What the number means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Concurrent sessions</td>
+  <td>100M × 20 / (24 × 60)</td>
+  <td><strong>1.4M</strong> open tabs</td>
+  <td>the fleet is sized by tabs, not by users</td>
+</tr>
+<tr>
+  <td>Edge nodes</td>
+  <td>1.4M / 50k WebSockets per node</td>
+  <td>~30, call it 100+</td>
+  <td>connections alone, before headroom and regional spread</td>
+</tr>
+<tr>
+  <td>Edit rate</td>
+  <td>1.4M × 10% typing × 5 operations/second</td>
+  <td><strong>700k</strong> operations/second</td>
+  <td>the number an interviewer will push on; sanity-check it both ways</td>
+</tr>
+<tr>
+  <td>Fan-out</td>
+  <td>700k × 1.5 collaborators per document</td>
+  <td>~<strong>1M</strong> messages/second outbound</td>
+  <td>small messages, high count: the cost is syscalls and wakeups</td>
+</tr>
+<tr>
+  <td>Text storage</td>
+  <td>1B documents × 20 KB of text</td>
+  <td><strong>20 TB</strong>, plus logs</td>
+  <td>logs dominate unless snapshotted</td>
+</tr>
+<tr>
+  <td>Session memory</td>
+  <td>1M open documents × 200 KB each</td>
+  <td><strong>200 GB</strong> across the fleet</td>
+  <td>a few hundred machines, sized by document count not bytes</td>
+</tr>
+</tbody>
+</table></div>
+<p>A note on two of those rows. Most open tabs are being read, not typed into,
+which is where the 10% comes from. And a live document costs its text plus
+per-client state, which is 100 to 300 KB in practice.</p>
+<p>The point of the exercise is never the number. It is that you now know which
+resource binds first, which is connections and wakeups rather than storage or
+bandwidth. You also know where the cliff is: documents with hundreds of
+concurrent editors, which is F7.</p>
+<h3 id="readme-what-does-the-on-call-engineer-watch">What does the on-call engineer watch?</h3>
+<p>Meera carries the pager for this service. Here are her six panels, and what each
+one looks like when it is going wrong.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Signal</th>
+  <th>Why it matters</th>
+  <th>What bad looks like</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>p99 keystroke to confirmation</td>
+  <td>the user-visible number</td>
+  <td>&quot;the document feels laggy&quot;, said in a support ticket</td>
+</tr>
+<tr>
+  <td>per-client outbound backlog</td>
+  <td>F6, Carol's café Wi-Fi</td>
+  <td>one rising backlog is one doomed client; a fleet-wide rise means the server is slow</td>
+</tr>
+<tr>
+  <td>ownership churn</td>
+  <td>each handover is a moment where F8 could happen</td>
+  <td>steady churn means a deploy, or a flapping lease</td>
+</tr>
+<tr>
+  <td>reconnect rate</td>
+  <td>a deploy that drops 1.4M WebSockets</td>
+  <td>a thundering herd, fixed by jittered backoff and connection draining</td>
+</tr>
+<tr>
+  <td>snapshot age per document</td>
+  <td>old snapshots make opens slow</td>
+  <td>a long recovery after any crash</td>
+</tr>
+<tr>
+  <td>confirmed but unpersisted operations</td>
+  <td>F5</td>
+  <td>should be 0 by construction; if it can be non-zero, the design has a hole</td>
+</tr>
+</tbody>
+</table></div>
+<p>The reconnect row has a lab of its own behind it. The thundering herd is from
+<a href="../02-communication-protocols/notes.html#readme">communication-protocols</a>, and the two
+mitigations are jittered backoff on the client and connection draining rather
+than dropping.</p>
+<h3 id="readme-what-is-the-other-design-and-why-did-google-not-pick-it">What is the other design, and why did Google not pick it?</h3>
+<p>There is a second answer to the same problem. It is worth knowing precisely,
+because it changes the architecture rather than only the algorithm.</p>
+<p>A <strong>CRDT</strong>, short for conflict-free replicated data type, gives every character a
+permanent identity at the moment it is typed. The identity is a counter plus a
+site id. An edit then refers to that identity instead of a position: <em>&quot;put 'C'
+after the character named 3@Alice&quot;</em>.</p>
+<p>Identities never shift. So there is nothing to rewrite, and therefore <strong>no need
+for a central server to order anything</strong>. The <a href="../32-crdts/notes.html#readme">CRDT lab</a> builds
+this properly, including the sequence type that a text editor needs.</p>
+<div class="code"><pre><code class="language-bash">java src/Crdt.java
+</code></pre></div>
+<div class="code"><pre><code>   Alice&#x27;s op says: put &#x27;C&#x27; after the start of the document
+   Bob&#x27;s op says:   put &#x27;S&#x27; after &#x27;3@Alice&#x27;
+   after swapping ops: Alice=&quot;CHATS&quot;  Bob=&quot;CHATS&quot;
+
+   500 random delivery orders, 3 people, no server, duplicates included
+   diverged in 0 of 500 runs
+
+   visible characters : 100
+   cells still stored : 1000  (of which 900 are tombstones)
+</code></pre></div>
+<p>Read the last two lines together. A hundred visible characters cost a thousand
+stored cells, because 900 of them are <strong>tombstones</strong>: deleted characters that
+must be kept so later operations can still refer to them.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Same product, but offline-first on a phone, and a user has been
+away for a week. Which design would you choose, and what is the bill?</p>
+<details><summary>Reveal</summary>
+The CRDT, and the bill is memory. OT has to transform a week of your edits
+against a million operations you missed, which is F4's cost with the numbers
+turned up until it stops being trivial. A CRDT merges them with no replay at
+all. If you guessed OT because it is what Google Docs uses, notice the
+difference in the requirement: Docs assumes you are online and connected to
+the one owner, and the offline-first product assumes you are not. Exercise 8.2
+is exactly this argument.
+</details>
+
+</blockquote>
+<p>The trade, one line each:</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>operational transformation</th>
+  <th>CRDT</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>needs a central sequencer</td>
+  <td>yes — one owner per document</td>
+  <td>no; peer-to-peer works</td>
+</tr>
+<tr>
+  <td>document size on the wire and in memory</td>
+  <td>one byte per character</td>
+  <td>tens of bytes per character, plus <strong>tombstones</strong> for every deleted character, forever until garbage-collected</td>
+</tr>
+<tr>
+  <td>duplicate delivery</td>
+  <td>must be suppressed (F2)</td>
+  <td>harmless: applying an operation twice changes nothing</td>
+</tr>
+<tr>
+  <td>where the difficulty lives</td>
+  <td>the transform case matrix, which grows as the square of the number of operation types</td>
+  <td>the data structure and its garbage collection</td>
+</tr>
+<tr>
+  <td>what it is used by</td>
+  <td>Google Docs, Google Wave, ShareDB, Etherpad</td>
+  <td>Yjs, Automerge, Figma's multiplayer, Apple Notes, Redis CRDTs</td>
+</tr>
+</tbody>
+</table></div>
+<p>Note what the CRDT does <em>not</em> remove. It still needs causal delivery, because an
+insert whose anchor has not arrived must wait, and that buffering is in
+<code>Crdt.java</code>. A hosted product also still puts a server in the middle, for
+persistence, access control and fan-out.</p>
+<p>What it removes is the requirement that the server be the <em>only</em> place ordering
+is decided. That is why offline-first and peer-to-peer products reach for it.</p>
+<p>So why does Google Docs use OT? Two reasons, and neither is about elegance.</p>
+<p>History: Docs predates practical sequence CRDTs by years. Cost: a document that
+costs 30× its text in memory is a real bill at their scale, and they already had
+to run a central server for sharing and persistence. The sequencer was free.</p>
+<h3 id="readme-what-does-this-lab-leave-out-and-who-does-it-for-real">What does this lab leave out, and who does it for real?</h3>
+<p>Five gaps in the document itself:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>omitted here</th>
+  <th>how a real system handles it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>persistence</td>
+  <td>log + snapshots in a replicated store; confirm only after the durable write (F5)</td>
+</tr>
+<tr>
+  <td>rich text, tables, images, comments anchored to text</td>
+  <td>more operation types, a much larger transform matrix, or a rich-text CRDT</td>
+</tr>
+<tr>
+  <td>range operations</td>
+  <td>deltas (<code>retain 40, insert &quot;hi&quot;, delete 3</code>) instead of one character at a time</td>
+</tr>
+<tr>
+  <td>undo</td>
+  <td>a per-user undo stack of transformed inverse operations, restricted to make it tractable</td>
+</tr>
+<tr>
+  <td>version history</td>
+  <td>naming and pinning points in the log the system already keeps</td>
+</tr>
+</tbody>
+</table></div>
+<p>Five gaps in the product around it:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>omitted here</th>
+  <th>how a real system handles it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>presence and cursors</td>
+  <td>a separate, <em>unreliable</em> channel — cursor positions are lossy on purpose; nobody replays them</td>
+</tr>
+<tr>
+  <td>access control</td>
+  <td>checked at open, re-checked on change; revocation must be able to close live connections</td>
+</tr>
+<tr>
+  <td>offline</td>
+  <td>local operation queue + service worker; on reconnect, F4's cost with a &quot;your version is too old, reloading&quot; fallback</td>
+</tr>
+<tr>
+  <td>the export pipeline</td>
+  <td>a separate renderer that reads a snapshot, not the live session</td>
+</tr>
+<tr>
+  <td>security of the transport</td>
+  <td>TLS (<a href="../14-tls/notes.html#readme">tls lab</a>) and per-document authorization on every connection</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-how-do-you-answer-design-google-docs-in-45-minutes">How do you answer &quot;design Google Docs&quot; in 45 minutes?</h3>
+<p>Arjun is interviewing you, and he has 45 minutes. Here is the structure that
+fits, with the minutes each part deserves.</p>
+<p>The first half is about proving you found the real problem:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Time</th>
+  <th>Step</th>
+  <th>What you actually say</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>5 min</td>
+  <td>Requirements</td>
+  <td>multiple people edit one document at once, see changes within a second, see cursors, nobody loses work, history is recoverable, sharing is controlled</td>
+</tr>
+<tr>
+  <td>3 min</td>
+  <td>Name the hard part</td>
+  <td>&quot;the interesting problem is concurrent edits to the same text; everything else is standard web architecture — shall I go deep on that first?&quot;</td>
+</tr>
+<tr>
+  <td>5 min</td>
+  <td>The naive design and its failure</td>
+  <td>whole-document saves lose updates; position-based edits diverge</td>
+</tr>
+<tr>
+  <td>10 min</td>
+  <td>The core mechanism</td>
+  <td>operations, revision stamps, one owning server, transform on both ends, one edit in flight, deterministic tie-break</td>
+</tr>
+</tbody>
+</table></div>
+<p>Under non-functional requirements, ask Arjun for one number: how many concurrent
+editors per document? It is the question that determines the architecture, and
+F7 is why.</p>
+<p>For the naive design, use the <code>HAT</code> to <code>CHATS</code> example. It fits on a whiteboard
+and it makes the problem undeniable in about forty seconds.</p>
+<p>The second half is about proving you can run it:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Time</th>
+  <th>Step</th>
+  <th>What you actually say</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>8 min</td>
+  <td>Architecture</td>
+  <td>the diagram above; emphasise <code>documentId → owning server</code> and say why</td>
+</tr>
+<tr>
+  <td>5 min</td>
+  <td>Storage</td>
+  <td>snapshots plus log; version history falls out; confirm only after the durable write</td>
+</tr>
+<tr>
+  <td>7 min</td>
+  <td>Failure and scale</td>
+  <td>replay from a revision; ownership handover with fencing; slow-client backpressure; the hot document limit; deploy and reconnect storms</td>
+</tr>
+<tr>
+  <td>2 min</td>
+  <td>Trade-offs</td>
+  <td>OT against CRDT in the terms of the table above, and what you would choose for an offline-first product</td>
+</tr>
+</tbody>
+</table></div>
+<p>Naming the hard part early is the move that separates a good answer from a
+component inventory. Most candidates draw boxes for an hour and never reach the
+one problem the interviewer is listening for.</p>
+<p>Two sentences reliably impress and cost nothing to say. <em>&quot;I would confirm the
+edit only after the log write, because a confirmation is a promise about the
+log.&quot;</em> And: <em>&quot;retries need an edit sequence number per client, or a lost
+acknowledgement duplicates a keystroke.&quot;</em></p>
+<p>Both are section 11. Both generalise far outside documents, which is why they
+are worth carrying out of this lab.</p>
+<blockquote>
+<p><strong>CHECKPOINT — end of the PRODUCTION model.</strong>
+You can now design this system on a whiteboard, and defend the one
+architectural constraint that makes it work. You can estimate its load, name
+its failure modes, and argue OT against CRDT with numbers rather than taste.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>sequencer</em>, <em>lease</em> or <em>fencing</em>,
+explain to a friend why one document must be handled by exactly one machine.
+Then say what would go wrong on Alice's screen if two machines shared the job.</p>
+<details><summary>A good answer sounds like</summary>
+"Every note people send says which version of the page they were looking at,
+and that only means something if one machine is doing the numbering. Two
+machines would each start their own count, so both would hand out a number
+four. Alice's note would then be corrected against the wrong list of changes,
+and her letter would land in the wrong place with nobody able to tell."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-16-which-exercises-should-you-attempt-now">16. Which exercises should you attempt now?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, from &quot;explain it to your manager&quot; to &quot;design it
+for three datacentres&quot;. Write your answer down before you look, because the
+value is in being wrong on paper first.</p>
+</blockquote>
+<p><a href="notes.html#exercises"><code>EXERCISES.md</code></a> holds all eight rungs. The answers are in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>, and the ladder only works if you try first.</p>
+<p>Four are worth doing even if you skip the rest.</p>
+<p><strong>Rung 4, modify.</strong> Delete the site-id tie-break and predict which property
+breaks, safety or liveness, before you run it.</p>
+<p><strong>Rung 5, implement.</strong> <span class="missing" title="Not in the hub: src/YourTransform.java is in the lab folder on your laptop"><code>src/YourTransform.java</code></span> has the
+four transform rules blanked out. It checks your version against four named
+scenarios and 1,000 random schedules, and it starts at <code>0 passed, 5 failed</code>.</p>
+<p><strong>Rung 6, debug.</strong> <code>java src/BrokenOt.java</code> diverges in 493 of 500 runs. Which
+test in <code>Tests.java</code> catches it, and which guarantee does it violate?</p>
+<p><strong>Rung 8, design.</strong> The same product, offline-first on mobile. Which parts of
+this architecture survive?</p>
+<hr />
+<h2 id="readme-17-where-does-this-sit-and-what-should-you-learn-next">17. Where does this sit, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab is where five earlier labs meet. It hands you on
+to CRDTs, to clocks, and to the payments idea hiding inside F2.</p>
+</blockquote>
+<p>Read this diagram as an inheritance: everything above the middle box is
+something you already learned, and everything below is what this lab makes you
+ready for.</p>
+<pre class="mermaid">flowchart TB
+    CP[&quot;communication-protocols&lt;br&gt;(WebSocket, ordered channel,&lt;br&gt;at-least-once, idempotency)&quot;] --&gt; GD
+    ES[&quot;event-sourcing&lt;br&gt;(log + snapshot + fold)&quot;] --&gt; GD
+    CAP[&quot;cap-theorem&lt;br&gt;(one owner = CP)&quot;] --&gt; GD
+    IO[&quot;io-multiplexing&lt;br&gt;(a million idle connections)&quot;] --&gt; GD
+    WA[&quot;whatsapp-system-design&lt;br&gt;(connection tier, durability&lt;br&gt;before acknowledgement)&quot;] --&gt; GD
+    GD[&quot;GOOGLE DOCS&lt;br&gt;operational transformation&lt;br&gt;+ one sequencer per document&quot;]
+    GD --&gt; CRDT[&quot;CRDTs&lt;br&gt;(the serverless alternative)&quot;]
+    GD --&gt; LC[&quot;Lamport &amp; vector clocks&lt;br&gt;(what &#x27;concurrent&#x27;&lt;br&gt;formally means)&quot;]
+    GD --&gt; IDEM[&quot;idempotency keys&lt;br&gt;(F2, generalised)&quot;]
+    GD --&gt; LB[&quot;consistent-hashing&lt;br&gt;(documentId → owner,&lt;br&gt;exclusively)&quot;]
+    OUT[&quot;transactional-outbox / saga&lt;br&gt;(at-least-once →&lt;br&gt;idempotent consumers)&quot;] -.same idea.- GD
+    RD[&quot;redis&lt;br&gt;(single-threaded = no races;&lt;br&gt;fencing tokens)&quot;] -.same idea.- GD
+</pre>
+<h3 id="readme-what-is-this-commonly-confused-with">What is this commonly confused with?</h3>
+<p>Five pairs, each separated by one sentence.</p>
+<p><strong>Operational transformation against event sourcing.</strong> Both are append-only logs
+of changes. Event sourcing replays operations that were written against the
+state they are replayed onto; OT replays operations that were written against a
+<em>different</em> state, which is why it needs <code>transform</code> and event sourcing does not.</p>
+<p><strong>Convergence against consistency.</strong> Convergence says every copy ends up the
+same. It says nothing about <em>when</em>, or about what any single read returns, so a
+system can converge and still show you stale text for a second.</p>
+<p><strong>OT against CRDT.</strong> Both guarantee convergence. OT rewrites operations and
+needs a single ordering authority; a CRDT makes operations commute by giving
+every character an identity, and needs none.</p>
+<p><strong>Collaborative editing against multiplayer game state.</strong> Games mostly need the
+<em>latest</em> value of each thing, so last-writer-wins is often fine. Documents need
+every intermediate operation preserved, because the text is the accumulation of
+them.</p>
+<p><strong>A lost update against a conflict.</strong> A lost update is silent and
+unrecoverable; a conflict is at least visible. Design 1's failure is the worse
+kind.</p>
+<h3 id="readme-what-should-you-read-next">What should you read next?</h3>
+<div class="code"><pre><code>/learn crdt                      # the alternative design, properly: RGA, Yjs, tombstone GC
+/learn lamport-clocks            # &quot;concurrent&quot; and &quot;happened-before&quot;, made precise
+/learn idempotency-keys          # F2 generalised — and directly relevant to payments
+/learn websocket-at-scale        # a million connections, deploys, reconnect storms
+</code></pre></div>
+<p>Two of those are already in your workspace. The alternative design is
+<a href="../32-crdts/notes.html#readme">32-crdts</a>, which builds the RGA sequence type this lab only
+sketches. What &quot;concurrent&quot; formally means is
+<a href="../29-causal-consistency/notes.html#readme">29-causal-consistency</a>, which is where
+happened-before is made precise.</p>
+<p>Three more are worth re-reading next to this one.
+<a href="../35-consistent-hashing/notes.html#readme">consistent-hashing</a> shows how
+<code>documentId → owning server</code> is actually routed.
+<a href="../69-whatsapp-system-design/notes.html#readme">whatsapp-system-design</a> has the same connection
+tier and the same never-acknowledge-what-is-not-durable rule, for messages
+instead of characters. <a href="../70-uber-system-design/notes.html#readme">uber-system-design</a> is the
+other &quot;one owner per moving entity&quot; design.</p>
+<p>If your next stop is the payments track rather than the collaboration track,
+take <code>/learn idempotency-keys</code> first. F2 in this lab is exactly the
+duplicate-charge problem in a different costume.</p>
+<hr />
+<h2 id="readme-18-glossary--what-does-each-word-mean-precisely">18. Glossary — what does each word mean, precisely?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> In order of first appearance, with the place in Alice and
+Bob's story where each one was earned.</p>
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>lost update</strong></td>
+  <td>two people changed the same thing and one change vanished with no error — section 3</td>
+</tr>
+<tr>
+  <td><strong>operation</strong></td>
+  <td>one change described rather than performed — <code>insert(3,'S')</code>, section 4</td>
+</tr>
+<tr>
+  <td><strong>apply</strong></td>
+  <td>run an operation against a document: <code>apply(doc, op) → doc</code></td>
+</tr>
+<tr>
+  <td><strong>revision</strong></td>
+  <td>how many operations the server has accepted; a position in the log</td>
+</tr>
+<tr>
+  <td><strong>the log</strong></td>
+  <td>the append-only official list of operations; the document is the log replayed</td>
+</tr>
+<tr>
+  <td><strong>convergence</strong></td>
+  <td>once the network is quiet, every copy holds identical text</td>
+</tr>
+<tr>
+  <td><strong>intention preservation</strong></td>
+  <td>each edit still does what its author meant, in the final text</td>
+</tr>
+<tr>
+  <td><strong>transformation (OT)</strong></td>
+  <td>rewriting an operation so it has the same effect on a document that has moved on</td>
+</tr>
+<tr>
+  <td><strong>site id</strong></td>
+  <td>the per-client name used as the deterministic tie-break — <code>&quot;Alice&quot; &lt; &quot;Bob&quot;</code></td>
+</tr>
+<tr>
+  <td><strong>tie-break</strong></td>
+  <td>the fixed rule that orders two inserts at the same position identically everywhere</td>
+</tr>
+<tr>
+  <td><strong>outstanding</strong></td>
+  <td>the one operation a client has sent and not yet had confirmed</td>
+</tr>
+<tr>
+  <td><strong>buffer</strong></td>
+  <td>operations typed after the outstanding one, queued locally</td>
+</tr>
+<tr>
+  <td><strong>sequencer</strong></td>
+  <td>the single process that decides the official order for one document</td>
+</tr>
+<tr>
+  <td><strong>no-op</strong></td>
+  <td>an operation that does nothing — what a delete of an already-deleted character becomes</td>
+</tr>
+<tr>
+  <td><strong>late joiner</strong></td>
+  <td>a client that opens the document mid-session and starts from a snapshot plus a revision</td>
+</tr>
+<tr>
+  <td><strong>duplicate suppression</strong></td>
+  <td>the server remembering the last edit number per client, so a retry is not applied twice — F2</td>
+</tr>
+<tr>
+  <td><strong>idempotency key</strong></td>
+  <td>the general name for that: an identifier that makes &quot;do this again&quot; mean &quot;make sure this happened once&quot;</td>
+</tr>
+<tr>
+  <td><strong>backpressure</strong></td>
+  <td>what you do when a consumer cannot keep up — here, cap the queue and force a reload, F6</td>
+</tr>
+<tr>
+  <td><strong>hot document</strong></td>
+  <td>one document with so many editors that its single owning process is the bottleneck — F7</td>
+</tr>
+<tr>
+  <td><strong>fencing token</strong></td>
+  <td>a number carried with a write so a storage layer can reject a replaced owner's writes — F8</td>
+</tr>
+<tr>
+  <td><strong>snapshot</strong></td>
+  <td>the folded-up document at some revision, so you never replay the log from zero</td>
+</tr>
+<tr>
+  <td><strong>delta</strong></td>
+  <td>a range-based operation (<code>retain 40, insert &quot;hi&quot;, delete 3</code>) — what real editors send</td>
+</tr>
+<tr>
+  <td><strong>presence</strong></td>
+  <td>who else is here and where their cursors are; deliberately unreliable</td>
+</tr>
+<tr>
+  <td><strong>CRDT</strong></td>
+  <td>a data type whose operations commute, so replicas converge with no central ordering</td>
+</tr>
+<tr>
+  <td><strong>tombstone</strong></td>
+  <td>a deleted character a CRDT must keep, so later operations can still refer to it</td>
+</tr>
+<tr>
+  <td><strong>causal delivery</strong></td>
+  <td>the rule that an operation is not applied before the operations it depends on</td>
+</tr>
+<tr>
+  <td><strong>semantic conflict</strong></td>
+  <td>two edits that are both applied correctly and together mean something nobody intended — F9</td>
+</tr>
+<tr>
+  <td><strong>thundering herd</strong></td>
+  <td>every client reconnecting at once after a deploy or an outage — section 15</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-19-about-this-lab--what-is-in-it-and-where-do-the-numbers-come-from">19. About this lab — what is in it, and where do the numbers come from?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The hardest small problem in system design is two people,
+one line of text, and a network in between. Everything quoted above was
+printed by the Java in <code>src/</code>, and everything about Google's own internals is
+flagged below.</p>
+</blockquote>
+<h3 id="readme-what-is-in-the-lab">What is in the lab?</h3>
+<p>Four things. An interactive simulation you drive by hand. A working
+implementation in Java, with no build tool and no dependencies. Eight failure
+experiments. And the full high-level design of the product around the algorithm.</p>
+<p>The depth layers run BEGINNER (sections 1–9), then INTERMEDIATE (section 10),
+then ENGINEERING (sections 11–14), then PRODUCTION (section 15). Each transition
+carries a checkpoint and a Say-it-back box.</p>
+<h3 id="readme-where-do-the-numbers-come-from">Where do the numbers come from?</h3>
+<p>Every command printed in this document was run, and every number quoted is from
+its own output. The lab was built and verified on JDK 25, on macOS, with one
+representative run per experiment. Nothing was estimated by hand.</p>
+<p>Two families of numbers behave differently, and it is worth keeping them apart.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Kind of number</th>
+  <th>Examples</th>
+  <th>How to read it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>measured by the code</td>
+  <td>493 of 500, 500 of 500, 0 of 1,000, 8,200 transformations</td>
+  <td>reproducible: run the command and you get it</td>
+</tr>
+<tr>
+  <td>assumed for sizing</td>
+  <td>100M editors, 20 minutes, 10% typing, 50k sockets per node</td>
+  <td>inputs you state out loud and an interviewer may change</td>
+</tr>
+</tbody>
+</table></div>
+<p>The capacity table in section 15 is entirely the second kind. Google has never
+published those figures. The method is the deliverable there, never the answer.</p>
+<h3 id="readme-which-claims-about-google-are-public">Which claims about Google are public?</h3>
+<p>Three, and no more. Operational transformation dates to the 1989 GROVE paper.
+The client/server form is the 1995 Jupiter system, which Google Wave's published
+protocol was built on. And Google Docs' editor is publicly described as using
+operational transformation.</p>
+<p>Everything else in section 15 is standard architecture for this problem shape.
+It is not a claim about Google's code, and the current internals are not public.</p>
+<h3 id="readme-what-did-this-lab-assume-you-already-had">What did this lab assume you already had?</h3>
+<p>Five labs feed into this one, and the diagram in section 17 draws them.</p>
+<p>The two that matter most are <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>, which is
+where the log-plus-snapshot pattern comes from, and
+<a href="../02-communication-protocols/notes.html#readme">communication-protocols</a>, which is where the
+one-ordered-connection-per-client requirement comes from. Break either and this
+lab's guarantees stop holding, as F3 and F5 show from opposite directions.</p>
+<hr />
+<p><em>Alice's C and Bob's S both survive. That is the entire product, and everything
+in this lab was the bill.</em></p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--google-docs--collaborative-editing">Exercises — Google Docs / collaborative editing</h1>
+<p>Eight rungs. Do them in order; each assumes the one below it. Answers in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a> — write yours down before you look, because the
+value is in being wrong on paper first.</p>
+<p>Everything runs with <code>java src/&lt;File&gt;.java</code> from the lab directory.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p>No notation, no jargon. Say it out loud; if you stumble, you don't have it yet.</p>
+<p><strong>1.1</strong> Your manager asks why the team can't just keep emailing the spec around.
+Answer in four sentences, including what &quot;lost update&quot; means, without using the
+phrase &quot;lost update&quot;.</p>
+<p><strong>1.2</strong> Why can't the server simply apply edits in the order it receives them and
+send them on? It received them in <em>some</em> order — why isn't that enough?</p>
+<p><strong>1.3</strong> Why does your keystroke have to appear on your own screen before any
+server has agreed to it? What would the product feel like otherwise, and what
+does that decision force the rest of the design to deal with?</p>
+<p><strong>1.4</strong> In one sentence each: convergence, and intention preservation. Then give
+an example of a system that has the first and not the second.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open the visualization (<a href="visualization.html"><code>visualization.html</code></a>) and put it
+in &quot;Send edits, rewrite them&quot; mode.</p>
+<p><strong>2.1</strong> Run the third scenario (&quot;The same two edits, rewritten&quot;). On the finished
+screen: which panel holds the official order of events? What exactly does
+&quot;waiting for confirmation: 1&quot; mean about the state of the world? And what does
+the log line <code>Bob: insert 'S' at 4</code> prove, given that Bob's finger pressed S at
+position 3?</p>
+<p><strong>2.2</strong> In <span class="missing" title="Not in the hub: src/Ot.java is in the lab folder on your laptop"><code>src/Ot.java</code></span>, find the single line that implements the
+tie-break. In <span class="missing" title="Not in the hub: src/Collab.java is in the lab folder on your laptop"><code>src/Collab.java</code></span>, find the line that enforces
+&quot;at most one edit in flight&quot;, and the line that makes a retry safe.</p>
+<p><strong>2.3</strong> In the event feed, find a message that a <em>client</em> rewrote after the
+server had already rewritten it (the feed says so in words). Why did that
+operation need rewriting twice? Which machine knew something the other did not?</p>
+<p><strong>2.4</strong> Take Bob offline, type three characters on his screen, and read his
+panel. Which number goes up, and which stays still? What is physically sitting
+in his browser at that moment?</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Write your answer down first, then check.</p>
+<p><strong>3.1</strong> The document is <code>HAT</code>. Alice deletes the H (position 0). At the same
+moment Bob inserts <code>!</code> at position 1. What is the final text on both screens?
+Check it in the visualization by hand.</p>
+<p><strong>3.2</strong> Alice is at revision 5, has one edit outstanding and three in her buffer.
+A remote edit arrives. How many calls to <code>transform</code> happen inside her editor
+before it reaches her screen? Now give the general formula.</p>
+<p><strong>3.3</strong> Alice and Bob both go offline, both type five characters, and both come
+back at the same moment. Does the document converge? Does anyone see a conflict
+prompt? What is the worst thing that can happen to the <em>meaning</em> of the text?</p>
+<p><strong>3.4</strong> <code>java src/Experiments.java raw-vs-ot</code> runs 500 random schedules under
+each design. Before running it: how many of the 500 naive runs do you expect to
+diverge — roughly 5, 50, or 500?</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Run <code>java src/BrokenOt.java</code>. It removes the tie-break, nothing else.
+Which of the two classic properties is lost — <strong>safety</strong> (something wrong
+happens) or <strong>liveness</strong> (nothing happens)? Justify with the output.</p>
+<p><strong>4.2</strong> In <code>Collab.Client.edit</code>, remove the one-in-flight rule so every keystroke
+is sent immediately. Predict what breaks and where, then do it and run
+<code>java src/Tests.java</code>. Which test fails first, and does the failure message
+point at the real cause?</p>
+<p><strong>4.3</strong> Turn <code>server.dedup = true</code> on in <code>Tests.java</code> and re-run. Nothing
+changes. Why not — and what does that tell you about what tests can and cannot
+prove about idempotency?</p>
+<p><strong>4.4</strong> In <code>Ot.transform</code>, make two deletes of the same character return <code>a</code>
+unchanged instead of a no-op. Which test catches it? Write down the exact text
+you would expect to see instead of <code>CHAS</code>, then check.</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> Open <span class="missing" title="Not in the hub: src/YourTransform.java is in the lab folder on your laptop"><code>src/YourTransform.java</code></span> and fill in the
+four TODO cases. Run <code>java src/YourTransform.java</code>: it plugs your function into
+the same server, clients and network as the real one, and runs four named
+scenarios plus 1,000 random delivery schedules against it.</p>
+<p>It starts at <code>0 passed, 5 failed</code>. Get to <code>5 passed, 0 failed</code> without looking
+at <code>src/Ot.java</code>.</p>
+<p><strong>5.2</strong> Once it passes: which of your four cases was the one you got wrong first,
+and what does that tell you about which case real implementations get wrong?</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> <code>java src/BrokenOt.java</code> diverges in 493 of 500 random runs. Which test
+in <code>Tests.java</code> catches this bug? Which invariant from §12 does it violate — and
+which one does it <em>not</em> violate?</p>
+<p><strong>6.2</strong> The bug's scenario output shows Alice at <code>HAT!S</code> and Bob at <code>HATS!</code>.
+Both look reasonable. Explain to somebody who has not read this lab why &quot;both
+reasonable&quot; is worse than &quot;one crashed&quot;.</p>
+<p><strong>6.3</strong> A gap on purpose: no test in this lab asserts that the server's document
+equals its own log replayed from the starting text. Write that test. Does it
+pass today? Which class of bug would it catch that the existing ten would not?</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>Each of these is a small, real piece of engineering. Code them against the
+existing simulation.</p>
+<p><strong>7.1 Automatic retry.</strong> Today <code>Sim.resend(site)</code> is manual (F1). Give <code>Client</code> a
+timeout: after N deliveries with no confirmation, it re-sends its outstanding
+edit by itself. Prove with a test that (a) it heals a dropped request and (b) it
+does <em>not</em> duplicate a keystroke when the confirmation was the thing that was
+lost. What must be true of the server for (b) to hold?</p>
+<p><strong>7.2 &quot;Your revision is too old&quot;.</strong> Today a client that has been away replays
+everything it missed (F4, 8,200 transformations). Add a server-side limit: keep
+only the last K log entries, and answer a client whose revision is older than
+that with a snapshot <code>{text, revision}</code> instead of a replay. What must the client
+throw away when it accepts that snapshot, and what does the user lose?</p>
+<p><strong>7.3 Backpressure.</strong> Today the server queues broadcasts for a stalled client
+forever (F6, 100 queued messages). Cap the queue at K; when it overflows,
+disconnect that client and require a fresh open. Which of the three promises in
+§5 does this break, for whom, and why is that the right trade?</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p>No single right answer. Write half a page each; the argument is the deliverable.</p>
+<p><strong>8.1 Three datacentres, 80 ms apart.</strong> Users of one document are spread across
+all three. Which parts of the design in §15 survive unchanged, which must move,
+and what do you monitor? Be specific about where the document's owning process
+lives and what happens to the other two regions' users. What breaks if you try
+to run one owner per region?</p>
+<p><strong>8.2 Offline-first, on a phone.</strong> The product requirement is: a week offline,
+then a clean merge. Which of OT and CRDT do you choose, and what is the
+strongest argument <em>against</em> your choice? What does the storage layer look like
+now, and what happens to version history?</p>
+<p><strong>8.3 Two hundred editors in one document</strong> — a lecture hall taking notes
+together. What is the first thing that falls over? Design the mitigation. Which
+of your mitigations would you also apply at <em>twenty</em> editors, and which are pure
+scale hacks?</p>
+<p><strong>8.4 A different shape of document.</strong> Now design the same product for a
+Figma-style canvas: shapes with position, size, colour and z-order, rather than
+a string. Which of the four rules in §10 survive? Which conflicts become easy,
+and which become harder than text? What would you use instead of insert/delete
+operations, and does that change your OT-vs-CRDT answer?</p>
+<p><strong>8.5 The payments crossover.</strong> F2 (lost confirmation → duplicated keystroke) is
+the same failure as a lost payment response → duplicated charge. Write down the
+three mechanisms this lab used to make retries safe, and say what each one is
+called in a payments API.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<p>Try first. Rungs 7 and 8 are worked discussions, not single right answers.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Something like: <em>&quot;When we email the file, each person edits their own
+copy. When two copies come back, somebody has to pick one — and whatever was
+only in the other one disappears. Nobody gets an error; the change is just
+gone. Google Docs avoids that by never having two copies: everyone types into
+the same document, and each keystroke is sent as its own small change, so two
+people's changes can both be kept instead of one replacing the other.&quot;</em></p>
+<p><strong>1.2</strong> Because an edit is written against a <em>particular</em> state of the document,
+and by the time it is applied somewhere else that state has changed. &quot;Insert S
+at position 3&quot; was correct when Bob typed it into <code>HAT</code> and wrong when Alice ran
+it against <code>CHAT</code>. Order alone does not fix it: applying edits in a consistent
+order still applies <em>the wrong edits</em>. What is needed is to rewrite each edit for
+the state it is actually landing on.</p>
+<p><strong>1.3</strong> Because a network round trip is 50–300 ms and you would feel it on every
+single letter — the product would be unusable. Applying locally first means each
+person's screen temporarily contains edits nobody else has seen, which is
+precisely why a client must transform incoming edits against its own
+un-confirmed ones (§10, Rule 2). The whole difficulty of the design is the price
+of that one product decision.</p>
+<p><strong>1.4</strong> <em>Convergence</em>: when everything has been delivered, every copy shows the
+same text. <em>Intention preservation</em>: each edit still does what its author meant.
+A system with the first and not the second: &quot;when two edits conflict, blank the
+document.&quot; Perfectly convergent, useless. A subtler one: last-writer-wins on the
+whole document — every copy agrees, and one person's work is gone.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> The <strong>server panel</strong> holds the official order — the numbered log.
+&quot;Waiting for confirmation: 1&quot; means that client has sent an edit the server has
+not acknowledged, so its own screen contains something the rest of the world has
+not seen yet. <code>Bob: insert 'S' at 4</code> proves the rewriting happened: Bob's finger
+pressed S at position 3, and the log records the position his edit <em>had to
+become</em> once Alice's C was in front of it.</p>
+<p><strong>2.2</strong> Tie-break: <code>return a.site.compareTo(b.site) &lt; 0 ? a : a.withPos(a.pos + 1);</code>
+in <code>Ot.transform</code>. One-in-flight: <code>if (outstanding == null) { ... } buffer.addLast(op);</code>
+in <code>Collab.Client.edit</code>. Retry safety: <code>if (dedup &amp;&amp; seq &lt;= lastSeq.getOrDefault(from, 0))</code>
+in <code>Collab.Server.receive</code>.</p>
+<p><strong>2.3</strong> Any feed line reading <em>&quot;(their own editor rewrote it to …, against their
+un-confirmed edit)&quot;</em>. It needed rewriting twice because two different machines
+knew two different things: the server knew the operations already in the log, and
+the receiving client knew its own edits that the server had not yet seen. Neither
+could do the other's half.</p>
+<p><strong>2.4</strong> &quot;Queued behind it&quot; rises; &quot;revision&quot; does not move at all, because
+revision only advances when the server tells you it has. What is sitting in his
+browser is one edit that has been sent (or is stuck), plus a queue of edits that
+exist nowhere else in the world. Close that tab and they are gone.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> <code>!AT</code> on every screen. Alice's delete removes the H; Bob's <code>!</code> was meant
+to go after the H, and with the H gone it lands at the front. Both delivery
+orders give the same answer — verified: whichever edit reaches the server first,
+<code>server=&quot;!AT&quot; Alice=&quot;!AT&quot; Bob=&quot;!AT&quot;</code>.</p>
+<p>Note what happened to intention: Bob meant &quot;after the H&quot;. There is no &quot;after the
+H&quot; any more. The system picks the nearest surviving meaning rather than asking
+anybody, which is the whole product philosophy in one character.</p>
+<p><strong>3.2</strong> Eight. Each pending operation costs two transforms — one to rewrite the
+incoming edit past it, one to rewrite it past the incoming edit — and she has
+four pending (1 outstanding + 3 buffered). General formula: <code>2 × (pending count)</code> per incoming edit, and on the server side, one transform per log entry
+the sender had not seen. That second one is what makes F4 expensive.</p>
+<p><strong>3.3</strong> It converges, and nobody sees a conflict prompt — ever. That is the
+guarantee. What can happen to the <em>meaning</em> is F9: both sets of edits land
+correctly and the resulting sentence is nonsense that neither person wrote. No
+algorithm fixes that; visible cursors and presence are the product's answer.</p>
+<p><strong>3.4</strong> 500 of 500. This is the most useful number in the lab. The naive design
+is not &quot;risky under load&quot; — it is broken on essentially every run with two
+active writers. Anything that appears to work in testing is a scheduling
+accident.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> <strong>Safety.</strong> Progress never stops — every edit is accepted, every message
+is delivered, the system stays responsive. What breaks is the guarantee that
+nothing wrong appears: the copies permanently disagree (<code>HAT!S</code> vs <code>HATS!</code>) and
+no amount of waiting heals it. A liveness bug makes the system stop; this one
+makes it lie.</p>
+<p><strong>4.2</strong> Verified: the test run dies with
+<code>IllegalStateException: insert at 5 but doc is only 4 long: &quot;HATS&quot;</code> inside
+<code>ot_typing_a_burst_faster_than_the_round_trip</code>. The message points at the
+symptom — a position beyond the end of the document — and says nothing about the
+cause, which is that two edits both claimed to be written against revision 0
+while the second was typed on a screen that already contained the first. That
+gap between symptom and cause is exactly why the rule is worth stating
+explicitly rather than discovering.</p>
+<p><strong>4.3</strong> Nothing changes because no test in the suite ever retries. Duplicate
+suppression only does anything when a duplicate arrives, and the suite never
+produces one — the retry paths live in <code>Experiments.java</code> instead. The lesson
+generalises well beyond this lab: a green suite proves things about the paths it
+exercises and nothing whatever about the paths it does not, and idempotency is
+almost always in the second category.</p>
+<p><strong>4.4</strong> <code>ot_two_people_delete_the_same_character</code> catches it, and the document
+becomes <code>CHA</code> instead of <code>CHAS</code>: the second delete, having no idea its target is
+already gone, removes whatever slid into that position — the innocent S.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p>The four cases:</p>
+<div class="code"><pre><code class="language-java">// 1. insert vs insert
+if (b.pos &lt; a.pos) return a.withPos(a.pos + 1);
+if (b.pos &gt; a.pos) return a;
+return a.site.compareTo(b.site) &lt; 0 ? a : a.withPos(a.pos + 1);
+
+// 2. insert vs delete
+return b.pos &lt; a.pos ? a.withPos(a.pos - 1) : a;
+
+// 3. delete vs insert
+return b.pos &lt;= a.pos ? a.withPos(a.pos + 1) : a;
+
+// 4. delete vs delete
+if (b.pos &lt; a.pos) return a.withPos(a.pos - 1);
+if (b.pos &gt; a.pos) return a;
+return Ot.Op.noop(a.site);
+</code></pre></div>
+<p><strong>5.2</strong> The two most commonly wrong are the boundary in case 3 (<code>&lt;=</code>, not <code>&lt;</code> —
+an insert <em>at</em> the position of the character you are deleting still pushes it
+right) and the no-op in case 4. Both are invisible in a two-person demo and
+appear immediately under random schedules, which is why the harness runs 1,000 of
+them rather than four examples.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> <code>ot_same_position_inserts_land_in_the_same_order_everywhere</code> catches it
+directly, and <code>ot_converges_under_1000_random_schedules</code> catches it in bulk. It
+violates <strong>convergence</strong>. It does <em>not</em> violate local responsiveness, and
+arguably not intention preservation — each person's letter did land where they
+meant it; the two copies simply disagree about which came first. That is what
+makes it such a good bug: every individual operation looks correct.</p>
+<p><strong>6.2</strong> A crash is a bug that announces itself, in one place, with a stack trace.
+This one produces two documents that both look like something a person might
+have typed, on two screens that will never be compared, in a system with no
+mechanism that ever notices. The users find it days later as a sentence nobody
+remembers writing — and there is nothing to debug from, because by then the
+divergence has been built on by hundreds of later edits.</p>
+<p><strong>6.3</strong> Verified: the test passes today (random 40-edit run, log of 40 entries,
+replay equals the server's document). It is worth writing anyway, because it
+asserts something none of the other ten do — that the server's <em>state</em> and the
+server's <em>history</em> still agree. Every existing test compares copies to each
+other, so a bug that corrupted the log and the document in the same way would
+pass all ten. It is also the property that everything downstream depends on:
+version history, &quot;restore to yesterday&quot;, crash recovery from a snapshot, and the
+whole of F5 assume the log is the truth.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<h3 id="solutions-71-automatic-retry">7.1 Automatic retry</h3>
+<p>Give <code>Client</code> a counter of deliveries since it last sent, and re-send
+<code>outstanding</code> — <strong>with the same sequence number</strong> — when it exceeds a threshold.
+Two tests:</p>
+<ul>
+<li><em>heals a dropped request:</em> drop the <code>ToServer</code> message, let the timeout fire,
+assert everything converges.</li>
+<li><em>does not duplicate on a dropped confirmation:</em> deliver the edit, drop the
+<code>ToClient</code> confirmation, let the timeout fire, assert the document contains the
+character <strong>once</strong>.</li>
+</ul>
+<p>The second test only passes if <code>server.dedup</code> is on. That is the real answer to
+&quot;what must be true of the server&quot;: it must be able to tell <em>this again</em> from
+<em>another one</em>, which needs (a) a per-client sequence number that a retry does not
+increment, (b) memory of the last number seen per client, and (c) memory of the
+<em>confirmation it sent</em>, so the retry gets the same revision number back rather
+than a new one. Without (c) the client's revision jumps to a value that does not
+describe its document.</p>
+<p>Timeouts should be jittered. A server hiccup that stalls 5,000 clients for two
+seconds will otherwise produce 5,000 simultaneous retries the instant it clears.</p>
+<h3 id="solutions-72-your-revision-is-too-old">7.2 &quot;Your revision is too old&quot;</h3>
+<p>Keep the last K log entries; on a request based on an older revision, reply with
+<code>{snapshot text, revision}</code> instead of a replay. The client must throw away
+<strong>everything</strong> local: its document, its buffer, and its outstanding edit — which
+means <em>the user's un-sent typing is discarded</em>. That is a genuine data loss, so
+in a real product the client would first try to send its queue while it is still
+within the window, and only reload if that fails.</p>
+<p>What the user loses: unsent edits, cursor position, and undo history. What the
+system gains: an upper bound on the work of joining, which turns F4 from
+unbounded to O(K). Pick K by the reconnect window you want to support — 30
+seconds of typing, not a week's.</p>
+<h3 id="solutions-73-backpressure">7.3 Backpressure</h3>
+<p>Cap the per-client outbound queue; on overflow, disconnect and require a fresh
+open (which then hits 7.2's snapshot path).</p>
+<p>This breaks promise 2 (convergence) <strong>for that one client, temporarily</strong> — they
+are cut off and must reload — in order to protect promises 1 and 2 for everyone
+else, and to protect the server's memory. It is the right trade because the
+alternative is unbounded memory growth caused by the worst connection in the
+room: one person's café Wi-Fi becomes everybody's outage. It is the same call as
+evicting a slow consumer from a broker, or shedding load rather than queueing it
+(<a href="../60-distributed-rate-limiting/notes.html#readme">distributed-rate-limiting</a>).</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<h3 id="solutions-81-three-datacentres-80-ms-apart">8.1 Three datacentres, 80 ms apart</h3>
+<p><strong>Survives unchanged:</strong> the algorithm. Transformation does not care about
+latency; it cares about ordering, and ordering is decided in one place.</p>
+<p><strong>What must move:</strong> the document's owning process lives in exactly one region —
+the one where most of its editors are, decided at open time and re-evaluated
+rarely. Everyone else's edits pay a cross-region round trip <em>for confirmation
+only</em>. Their own keystrokes still appear instantly (promise 1 is local by
+construction); what they feel is other people's letters arriving ~80 ms later,
+which is barely perceptible in a document and would be fatal in a game.</p>
+<p><strong>What must not be attempted:</strong> one owner per region with replication between
+them. That is F8 with a longer cable. Two logs means two meanings for &quot;revision
+4&quot;, and no amount of replication repairs it after the fact. If you genuinely
+need multi-region write ownership, you have chosen the CRDT architecture and
+should say so explicitly rather than arriving there by accident.</p>
+<p><strong>Storage:</strong> the log must be durable before a confirmation, so a cross-region
+synchronous write would put 80 ms on every keystroke's confirmation. Realistic
+answer: durable in-region with fast local replication, asynchronously replicated
+across regions, and accept that a region loss can lose the last few operations
+of documents it owned. State that trade out loud; it is the
+<a href="../24-cap-theorem/notes.html#readme">CAP</a> choice, per document.</p>
+<p><strong>Monitor:</strong> confirmation latency split by <em>client region vs owner region</em> —
+one number hides the whole problem. Also ownership migrations per minute, and
+cross-region replication lag.</p>
+<h3 id="solutions-82-offline-first-on-a-phone">8.2 Offline-first on a phone</h3>
+<p>Choose a <strong>CRDT</strong>. A week of offline edits against a log that has moved a
+million operations is exactly the case where OT's replay cost (F4) and the
+&quot;your revision is too old&quot; fallback (7.2) both fail: you cannot ask the user to
+discard a week of work, and you cannot cheaply transform against a million
+operations.</p>
+<p><strong>The strongest argument against:</strong> memory and storage. Every character carries
+an id and a parent, and every deletion leaves a tombstone
+(<code>java src/Crdt.java</code>: 1,000 cells for 100 visible characters). On a phone,
+for a document edited daily for years, that needs real garbage collection —
+which is only safe once you know every replica has seen the deletion, which
+means tracking every replica, which is its own distributed problem.</p>
+<p><strong>Storage:</strong> the local device holds the full CRDT state, not a text snapshot,
+because operations must be applicable against it. Sync becomes &quot;exchange the
+operations you have that I don't&quot; rather than &quot;replay the log from revision N&quot;.</p>
+<p><strong>Version history:</strong> no longer free. There is no single ordered log to point at,
+so &quot;yesterday 4 pm&quot; has to be materialised deliberately — periodic named
+snapshots, or a separately maintained server-side ordering.</p>
+<h3 id="solutions-83-two-hundred-editors-in-one-document">8.3 Two hundred editors in one document</h3>
+<p><strong>First thing to fall over:</strong> fan-out, in the owning process. Every accepted edit
+is broadcast to 199 others, so 200 people typing at 5 operations/second is
+1,000 in and ~200,000 out per second, from one process, with per-client queues
+(F6) for every one of them.</p>
+<p><strong>Mitigations, in order:</strong></p>
+<ol>
+<li><em>Batch broadcasts</em> — send accumulated operations every 50–100 ms instead of
+one message per operation. Cuts message count by an order of magnitude and
+costs 50 ms of perceived latency, which nobody notices in a document.</li>
+<li><em>Split the roles</em> — most of 200 people are reading. Serve read-only viewers
+from a replicated stream that is allowed to lag; only actual editors hold a
+session on the owner.</li>
+<li><em>Fan-out tier</em> — the owning process broadcasts to a small number of relay
+processes, each of which serves a subset of clients. The sequencer stays
+single; only the shouting is distributed.</li>
+<li><em>A hard cap</em>, honestly communicated in the product.</li>
+</ol>
+<p><strong>Also worth doing at twenty editors:</strong> batching (1) and per-client queue caps —
+they are pure wins. (2) and (3) are scale hacks that add moving parts and should
+wait until measurements demand them.</p>
+<h3 id="solutions-84-a-figma-style-canvas">8.4 A Figma-style canvas</h3>
+<p><strong>Rules that survive:</strong> all four, in spirit. One owner per file, edits stamped
+with a revision, transform on both ends, deterministic tie-break.</p>
+<p><strong>What changes:</strong> the operation set. Objects have identity — <code>object 17</code> — so
+most edits are <code>set(object 17, x, 340)</code> rather than positional. That makes the
+common conflicts <em>easier</em>: two people moving different shapes never interact at
+all, and two people moving the same shape is a last-writer-wins on one field,
+which is a legitimate answer for a position in a way it never is for text.</p>
+<p><strong>What gets harder:</strong> structural relationships. Z-order is an ordered sequence,
+so it has the text problem again. Grouping, parenting and &quot;move this shape into
+that frame&quot; can produce cycles or orphans when two people restructure at once,
+and no positional rule saves you — you need explicit rules like &quot;a delete of a
+group wins over a move into it&quot; or a CRDT tree with conflict rules.</p>
+<p><strong>Does it change the OT/CRDT answer?</strong> Yes. Per-object last-writer-wins
+registers plus a sequence CRDT for z-order is a natural, small CRDT design with
+no positional transformation at all — which is why Figma's multiplayer is built
+that way rather than as text-style OT. The text case is the one where OT's
+efficiency really pays.</p>
+<h3 id="solutions-85-the-payments-crossover">8.5 The payments crossover</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>in this lab</th>
+  <th>in a payments API</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>per-client edit sequence number that a retry does not increment</td>
+  <td><strong>idempotency key</strong> on the request</td>
+</tr>
+<tr>
+  <td>server remembers the last sequence number per client</td>
+  <td>idempotency record, stored with the charge</td>
+</tr>
+<tr>
+  <td>server re-sends the <em>original</em> confirmation rather than processing again</td>
+  <td>returning the original response for a repeated key, including the original id</td>
+</tr>
+</tbody>
+</table></div>
+<p>The fourth mechanism is the one people forget in both worlds: the server must
+write its record of &quot;I have handled this&quot; <strong>in the same durable step</strong> as the
+effect itself. If the effect is committed and the record is not, the retry does
+it twice; that is F5 and the
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> lab's dual-write problem, in a
+third costume.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../70-uber-system-design/notes.html"><small>← Lab 70</small>uber-system-design</a><span></span></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-emailing-the-document-round-lose-somebodys-work">1. Why does emailing the document round lose somebody&#x27;s work?</a><a href="#readme-2-what-should-the-fridge-list-say-when-alice-and-bob-both-change-it">2. What should the fridge list say when Alice and Bob both change it?</a><a href="#readme-3-what-does-a-reasonable-person-try-first-and-what-does-it-cost">3. What does a reasonable person try first, and what does it cost?</a><a href="#readme-4-why-does-sending-just-the-change-break-too">4. Why does sending just the change break too?</a><a href="#readme-5-what-exactly-must-the-system-promise">5. What exactly must the system promise?</a><a href="#readme-6-what-is-the-one-key-idea">6. What is the one key idea?</a><a href="#readme-7-which-words-do-you-now-need-and-what-does-each-name">7. Which words do you now need, and what does each name?</a><a href="#readme-8-which-two-mental-models-should-you-carry-and-where-does-the-story-lie">8. Which two mental models should you carry, and where does the story lie?</a><a href="#readme-9-what-should-you-watch-on-the-page-before-reading-the-mechanism">9. What should you watch on the page before reading the mechanism?</a><a href="#readme-10-how-does-the-mechanism-get-invented-one-broken-design-at-a-time">10. How does the mechanism get invented, one broken design at a time?</a><a href="#readme-11-which-nine-failures-should-you-be-able-to-name">11. Which nine failures should you be able to name?</a><a href="#readme-12-what-is-guaranteed-what-is-not-and-what-did-it-cost">12. What is guaranteed, what is not, and what did it cost?</a><a href="#readme-13-in-what-order-should-you-read-the-code">13. In what order should you read the code?</a><a href="#readme-14-which-experiments-break-it-and-can-you-call-them-first">14. Which experiments break it, and can you call them first?</a><a href="#readme-15-what-does-the-real-google-docs-add-on-top-of-this">15. What does the real Google Docs add on top of this?</a><a href="#readme-16-which-exercises-should-you-attempt-now">16. Which exercises should you attempt now?</a><a href="#readme-17-where-does-this-sit-and-what-should-you-learn-next">17. Where does this sit, and what should you learn next?</a><a href="#readme-18-glossary--what-does-each-word-mean-precisely">18. Glossary — what does each word mean, precisely?</a><a href="#readme-19-about-this-lab--what-is-in-it-and-where-do-the-numbers-come-from">19. About this lab — what is in it, and where do the numbers come from?</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

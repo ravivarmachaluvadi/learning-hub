@@ -1,0 +1,2849 @@
+<!doctype html>
+<html lang="en" data-hub-lab="03-io-multiplexing">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>3. io-multiplexing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 3 of 71 · Stage 1</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 3 · The Ground Floor</p><article id="readme"><h1 id="readme-io-multiplexing--from-one-thread-per-user-to-one-thread-for-everyone">I/O Multiplexing — from &quot;one thread per user&quot; to &quot;one thread for everyone&quot;</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Meera works the front desk of a hotel with 10,000 rooms.
+Nearly every room is silent nearly all the time, yet any guest may speak at
+any moment, and someone must answer fast. Hire one person per room and the
+wage bill sinks the hotel. Hire one person to sprint down the row of phones
+asking &quot;anything?&quot; and she is exhausted, and still slow. The fix is to stop
+asking: put a light on every line, and let one person doze in a chair until a
+light comes on. Your server is Meera, the rooms are network connections, and
+this lab is how one thread comes to hold ten thousand of them for almost
+nothing.</p>
+</blockquote>
+<p>The trainer for this lab is <a href="visualization.html"><code>visualization.html</code></a>, which
+races all three designs on the same traffic. The runnable servers and
+experiments live in <code>src/</code>. How the numbers were made, and where this lab sits
+among your others, is in <a href="#readme-20-about-this-lab">section 20</a> at the end.</p>
+<hr />
+<h1 id="readme-beginner-model">BEGINNER MODEL</h1>
+<h2 id="readme-1-why-is-waiting-the-only-thing-your-server-really-does">1. Why is waiting the only thing your server really does?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten thousand people have your chat app open, and five of
+them are typing. Your server spends its whole life waiting on the other
+9,995. So the one question that decides your cloud bill is what waiting
+costs.</p>
+</blockquote>
+<p>Asha, Arjun and Priya have your chat app open. So do 9,997 other people.</p>
+<p>At this instant, five people in that crowd are typing. Everyone else is
+reading, scrolling, or has the phone face-down on a table.</p>
+<p>You cannot hang up on the quiet ones. The moment Priya types &quot;on my way&quot;, it
+has to appear on Asha's screen straight away. A connection you closed can
+deliver nothing.</p>
+<p>So look at what your server is actually doing. It is not computing. It is not
+serving. It is <strong>waiting</strong>, on 9,995 conversations that are saying nothing.</p>
+<p>Which gives us the uncomfortable question. The whole lab is the answer to it.</p>
+<blockquote>
+<p><strong>What does it cost you to wait?</strong></p>
+</blockquote>
+<p>Two futures follow from that answer, and they are very far apart.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>If waiting costs…</th>
+  <th>Then one machine holds…</th>
+  <th>And your chat app is…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a thread and a megabyte per person</td>
+  <td>a few thousand people</td>
+  <td>an infrastructure project</td>
+</tr>
+<tr>
+  <td>a few bytes in a kernel table</td>
+  <td>all ten thousand, comfortably</td>
+  <td>a weekend feature</td>
+</tr>
+</tbody>
+</table></div>
+<p>Your cloud bill would scale with the number of <em>idle</em> people. That is the
+absurdity we are trying to remove. Everything in this lab is about making the
+second row true.</p>
+<h2 id="readme-2-what-does-a-10000-room-hotel-have-to-do-with-it">2. What does a 10,000-room hotel have to do with it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Forget servers for a moment. Picture a hotel where the
+only way to learn whether a guest is speaking is to pick up their phone line
+and listen.</p>
+</blockquote>
+<p>Meera runs the front desk of a hotel with 10,000 rooms. Every room has a phone
+line running down to her desk.</p>
+<p>Guests call down rarely. Asha in room 7 wants a towel. Arjun in room 9 wants to
+place a dinner order. Priya in room 12 has not called all week. But when one of
+them does speak, somebody must answer quickly, or the bad review goes up that
+same evening.</p>
+<p>Now the cruel part of the setup. <strong>There is no ringer.</strong> No light, no buzzer,
+no notification of any kind. The only way to find out whether a guest is
+speaking is to pick up that line's receiver and listen.</p>
+<p>Meera's job is to staff that desk. That is your server's job too, one word at a
+time.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In the hotel</th>
+  <th>On your server</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a room with a phone line</td>
+  <td>one open network connection</td>
+</tr>
+<tr>
+  <td>Asha, Arjun and Priya in their rooms</td>
+  <td>three of your ten thousand users</td>
+</tr>
+<tr>
+  <td>picking up a receiver to listen</td>
+  <td>your code asking a connection &quot;anything for me?&quot;</td>
+</tr>
+<tr>
+  <td>the front desk</td>
+  <td>your program</td>
+</tr>
+<tr>
+  <td>Meera herself</td>
+  <td>one thread of execution</td>
+</tr>
+</tbody>
+</table></div>
+<p>Here is how far the lab goes, and what you can do at the end of each layer.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner</strong></td>
+  <td>1–11</td>
+  <td>say why one-person-each and ask-everyone both fail, and what replaces them</td>
+</tr>
+<tr>
+  <td><strong>Intermediate</strong></td>
+  <td>12</td>
+  <td>walk the wait call through three generations, and say what each one fixed</td>
+</tr>
+<tr>
+  <td><strong>Engineering</strong></td>
+  <td>13–15</td>
+  <td>name eight failures from their symptoms, and run three of them yourself</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>16–20</td>
+  <td>say what Netty adds, what to watch, and whether virtual threads retire it</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-why-not-simply-hire-one-person-per-line">3. Why not simply hire one person per line?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Give every line its own employee, holding the receiver to
+their ear all day. It is simple, it is correct, and it is how almost every
+tutorial server is written.</p>
+</blockquote>
+<p>The obvious answer: hire 10,000 employees.</p>
+<p>Meera becomes employee #9. She holds room 9's receiver against her ear all day,
+waiting for Arjun to say something. Employee #4,127 does the same on line
+4,127. Nobody is ever missed, because no line is ever shared.</p>
+<p>When Arjun finally speaks, Meera hears him instantly and handles it. Fast,
+simple, obviously correct.</p>
+<p>In code this is <strong>thread-per-connection</strong>. Every connection gets its own
+thread. That thread sits inside a <code>read()</code> call which does not return until
+bytes arrive. Holding the receiver to your ear <em>is</em> <code>read()</code>, and Meera's whole
+day <em>is</em> one thread. The file is <code>src/BlockingEchoServer.java</code>, and here is its
+heart:</p>
+<div class="code"><pre><code class="language-java">Socket client = serverSocket.accept();
+new Thread(() -&gt; handle(client)).start();   // one thread, one connection, forever
+...
+int n = in.read(buf);   // this thread now sleeps here until bytes arrive
+</code></pre></div>
+<p>This is how virtually every tutorial socket server is written, and it works.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> 10,000 connections, all silent, one thread each. Roughly how
+much <strong>CPU</strong> is this server using?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Almost none.</strong> This is the part people get wrong. A thread waiting inside
+<code>read()</code> is not spinning. The operating system has taken it off the CPU
+entirely, and will not schedule it again until data arrives. Zero CPU.</p>
+<p>If you guessed &quot;10,000 threads must be burning the machine down&quot;, you were
+picturing 10,000 people <em>checking</em>. They are not checking. Each one is
+asleep, and sleeping is free.</p>
+<p>So if CPU is free, what actually breaks? That is the whole point of the next
+section, and the answer is a different resource.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-4-if-the-cpu-is-idle-what-actually-runs-out">4. If the CPU is idle, what actually runs out?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Employees are not free even when they do nothing. Each
+thread claims memory and a slot in the operating system's bookkeeping, and
+those run out long before the network does.</p>
+</blockquote>
+<p>Run it and count:</p>
+<div class="code"><pre><code>$ java src/Experiments.java threads 2000
+
+  thread-per-connection : 2000 connections -&gt; 2000 handler threads
+  io-multiplexing       : 2000 connections -&gt; 1 event-loop thread
+</code></pre></div>
+<p>Ignore that second line for now. It is the answer we have not invented yet,
+printed so you can see where this is heading. Only the first line is today's
+design.</p>
+<p>Two thousand connections, two thousand threads. The scaling is exactly 1:1.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Meera's hotel now employs 10,000 people who each do nothing
+all day. Which resource gives out first — the CPU, the memory, or the
+network card?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Memory, and then the scheduler.</strong> The network card is barely involved;
+10,000 idle TCP connections carry almost no traffic. The CPU is idle too, as
+the previous prediction showed.</p>
+<p>If you said &quot;the network card&quot;, you were sizing the <em>traffic</em>. The traffic is
+tiny. What is enormous is the <em>staff list</em>, and the staff list is held in
+memory and walked by the scheduler.</p>
+</details>
+
+</blockquote>
+<p>Three separate bills arrive with a thread each, and every one of them is about
+staff, not about guests.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What it costs</th>
+  <th>The number</th>
+  <th>What that number means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Stack reserved per thread</td>
+  <td>about 1 MB</td>
+  <td>address space each thread claims on a 64-bit JVM</td>
+</tr>
+<tr>
+  <td>Stack actually touched</td>
+  <td>tens of KB</td>
+  <td>the part that turns into real, resident pages</td>
+</tr>
+<tr>
+  <td>Ten thousand threads</td>
+  <td>roughly 10 GB</td>
+  <td>address space reserved before a single message is sent</td>
+</tr>
+<tr>
+  <td>Scheduler records</td>
+  <td>one per thread</td>
+  <td>the OS must consider every one when picking what to run</td>
+</tr>
+<tr>
+  <td>Thread ceiling</td>
+  <td>an OS-imposed limit</td>
+  <td>you stop at some connection count, however idle they are</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read the first three rows together. <strong>You run out of memory long before you run
+out of network capacity.</strong></p>
+<p>The fourth row costs you differently. Switching between threads means saving
+one set of CPU state, restoring another, and dirtying the CPU's caches on the
+way. With five active users and 10,000 threads, the machine spends its time
+managing employees instead of serving guests.</p>
+<p>This was famous enough to earn a name in 1999: the <strong>C10K problem</strong>. How do you
+serve ten thousand concurrent connections on one machine? Thread-per-connection
+could not.</p>
+<p>Now look harder at what is actually being wasted. Those 9,995 employees are not
+doing work. They are doing <em>waiting</em>. Waiting is not a task; it is the absence
+of a task. The hotel is paying 10,000 salaries so that 10,000 people can each
+be individually informed of something.</p>
+<p><strong>Why does waiting need a person at all?</strong></p>
+<h2 id="readme-5-what-if-one-person-just-runs-down-the-row">5. What if one person just runs down the row?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Keep one employee and make her sprint. She never holds a
+receiver; she picks each one up, hears nothing, drops it, and moves on
+forever.</p>
+</blockquote>
+<p>Fire everyone. Keep Meera.</p>
+<p>Give her a new rule: never hold a receiver to your ear. Instead, sprint down
+the row of 10,000 phones. Pick up line 1 — &quot;anything? no&quot; — drop it. Pick up
+line 2 — &quot;anything? no&quot; — drop it. On reaching line 10,000, run back to line 1
+and start the lap again.</p>
+<p>For this to work, Meera needs a phone that answers &quot;nothing here&quot; instantly
+instead of making her wait. Otherwise the first silent line traps her for the
+rest of the day.</p>
+<p>In code that phone is a <strong>non-blocking socket</strong>: a connection configured so
+that a read with no data returns immediately, saying &quot;no data right now&quot;,
+instead of parking your thread. In Java you switch a connection into that mode
+with one call, and then a read of an empty connection returns <code>0</code> rather than
+sleeping:</p>
+<div class="code"><pre><code class="language-java">channel.configureBlocking(false);   // read() now returns 0 instead of waiting
+...
+int n = ch.read(buf);               // 0 = nothing right now, keep running
+</code></pre></div>
+<p>That is <code>src/SpinEchoServer.java</code>. One thread, all 10,000 connections, no
+thread explosion. Problem solved?</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> 2,000 silent connections, three seconds of this. How much CPU
+does the single thread burn, and how many times does it hear &quot;nothing&quot;?</p>
+<details><summary>Reveal</summary>
+
+<p>A full CPU core, pinned at 100%, and roughly four million &quot;nothing&quot; answers.
+The exact numbers are in the next section.</p>
+<p>If you guessed &quot;not much, it is only one thread&quot;, you were counting threads
+rather than questions. One thread can ask millions of questions per second,
+and every question costs.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-6-why-is-asking-ten-thousand-times-worse-than-waiting">6. Why is asking ten thousand times worse than waiting?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Meera's sprint burns a whole CPU core while absolutely
+nothing happens, and each new guest makes every lap slower.</p>
+</blockquote>
+<p>Here is what the sprint costs, for 2,000 connections over three seconds:</p>
+<div class="code"><pre><code>$ java src/Experiments.java spin 2000
+
+  hot-loop polling : 2,998 ms CPU burned | 2,111 loop passes | 4,225,570 readiness questions asked
+  io-multiplexing  :     0 ms CPU burned |     0 wakeups     |         0 readiness questions asked
+</code></pre></div>
+<p>&quot;Readiness question&quot; is the program's phrase for one &quot;anything for me?&quot;. The
+proper name for it arrives in §9. Again, only the first line is today's design.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What was counted</th>
+  <th>Hot-loop polling</th>
+  <th>What the number means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>CPU burned in 3,000 ms of wall clock</td>
+  <td>2,998 ms</td>
+  <td>one core pinned at 100%, permanently</td>
+</tr>
+<tr>
+  <td>Laps down the row of phones</td>
+  <td>2,111</td>
+  <td>complete passes over all 2,000 connections</td>
+</tr>
+<tr>
+  <td>&quot;Anything for me?&quot; questions asked</td>
+  <td>4,225,570</td>
+  <td>every one of them answered &quot;no&quot;</td>
+</tr>
+</tbody>
+</table></div>
+<p>Say that last row out loud. Meera asked &quot;anything for me?&quot; 4.2 million times,
+and heard &quot;no&quot; 4.2 million times.</p>
+<p>Each of those questions is a <strong>system call</strong> — a request from your program into
+the operating system's core. That core is the <strong>kernel</strong>: the privileged code
+that owns the network card and every connection on the machine. System calls
+are cheap one at a time and ruinous by the million. They are the expensive part
+of this design.</p>
+<p>And it degrades as you grow. Every lap costs one question <em>per connection</em>, so
+doubling the connections doubles the cost of a lap. The busier your server
+looks on paper, the slower each lap becomes, and the longer a guest waits
+before Meera reaches their phone.</p>
+<p>We have now failed twice, in opposite directions.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Design</th>
+  <th>Threads</th>
+  <th>CPU while idle</th>
+  <th>Why it fails</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>One thread per connection</td>
+  <td>10,000</td>
+  <td>~0</td>
+  <td>memory + scheduler collapse</td>
+</tr>
+<tr>
+  <td>One thread, keep asking</td>
+  <td>1</td>
+  <td>100% of a core</td>
+  <td>pointless syscalls, one per connection per lap</td>
+</tr>
+</tbody>
+</table></div>
+<p>Both failures share a cause, and it is not obvious.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Meera is standing in a room full of phones, asking each one
+&quot;anything?&quot; and hearing &quot;no&quot;. Somebody in that building already knows exactly
+who is speaking, and has known since the instant they started. Who?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>The phone system itself.</strong> In code, the kernel.</p>
+<p>The kernel receives every network packet. At the instant a packet lands it
+already knows which connection that packet belongs to — it had to, to file
+the bytes in the right place.</p>
+<p>If you guessed &quot;the guests know&quot;, you are right but stuck. Asha cannot reach
+the desk except through the phone system, and the phone system is the thing
+we are refusing to ask properly.</p>
+<p>In both failed designs <em>we</em> are the one asking the question, and we are the
+worst possible party to ask it. We are standing next to the one entity that
+has the answer, asking everyone <em>else</em>, over and over.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-7-what-exactly-do-we-need-instead">7. What exactly do we need instead?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One thread must be able to wait on many connections at
+once, and be told which of them woke it. No ordinary read can do that.</p>
+</blockquote>
+<p>State it plainly, because the rest of the lab is the pursuit of this one
+sentence:</p>
+<blockquote>
+<p><strong>One thread must be able to wait on many connections at once, and be told
+which ones need attention — without asking each one individually, and without
+using CPU while nothing is happening.</strong></p>
+</blockquote>
+<p>Read the first clause again: <em>wait on many connections at once</em>. That is the
+thing an ordinary <code>read()</code> cannot do. A blocking read waits on <strong>exactly one</strong>
+connection. There is no way to say &quot;wait until any of these 10,000 has
+something.&quot;</p>
+<p>So we do not need a faster loop. We need a <strong>new kind of wait</strong>, one that
+covers a whole set.</p>
+<h2 id="readme-8-what-if-the-phone-system-switched-on-a-light">8. What if the phone system switched on a light?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Hand your entire list of connections to the kernel and go
+to sleep. The kernel wakes you when at least one of them has something, and
+hands you the list of which ones.</p>
+</blockquote>
+<p>Install a light board.</p>
+<p>Every phone at Meera's desk gets a light. When Arjun starts speaking, <em>the
+phone system</em> switches line 9's light on. Meera does not run and does not
+listen. She sleeps in a chair. The phone system wakes her the instant any light
+comes on, and then tells her exactly which lines are lit.</p>
+<p>One system call does all of that:</p>
+<blockquote>
+<p><strong>Hand the kernel your entire list of connections and go to sleep. The kernel
+wakes you when at least one of them has something, and hands you the list of
+which ones.</strong></p>
+</blockquote>
+<p>That call is the whole concept. An idle connection costs the kernel a small
+bookkeeping entry, and costs your thread <em>nothing</em>. No thread, no question, no
+CPU.</p>
+<p>Ten thousand silent connections therefore produce exactly zero wakeups. That is
+not a hope. It is the second line of the experiment you already read in §6:
+<code>0 ms CPU burned | 0 wakeups</code>. Those are the same 2,000 connections that cost
+the sprinting design a whole core.</p>
+<h2 id="readme-9-what-are-the-real-words-for-what-meera-just-did">9. What are the real words for what Meera just did?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You have already felt every one of these problems. Here
+are their professional names, each attached to the moment in the story where
+you met it.</p>
+</blockquote>
+<p>The words arrive in the order you earned them.</p>
+<h3 id="readme-why-is-it-called-multiplexing-rather-than-sharing">Why is it called &quot;multiplexing&quot; rather than &quot;sharing&quot;?</h3>
+<p>Meera watching a whole wall of lights, alone, is <strong>I/O multiplexing</strong>. Said
+precisely: a kernel facility that lets a single thread block on the readiness
+of a <em>set</em> of file descriptors, returning the subset that is ready.</p>
+<p>The word comes from telecoms, where multiplexing means sending many signals
+over one shared channel. Here the shared channel is one thread of execution,
+and the many signals are the connections. The name exists to distinguish this
+from having one channel per signal, which is exactly §3's design. One thread
+holding 10,000 chat connections is the direct answer to §4's C10K problem.</p>
+<h3 id="readme-what-number-does-the-kernel-know-a-guest-by">What number does the kernel know a guest by?</h3>
+<p>Meera does not think &quot;Arjun&quot;. She thinks &quot;line 9&quot;. The kernel is the same. It
+hands your program a small integer as a handle to an open thing: a file, a
+pipe, or a network connection. That integer is a <strong>file descriptor</strong>, almost
+always shortened to <strong>fd</strong>. Technically it is a per-process index into the
+kernel's table of open file descriptions.</p>
+<p>Unix deliberately made network connections look like files, so that the same
+calls (<code>read</code>, <code>write</code>, <code>close</code>) work on both. That is why &quot;everything is a
+file&quot; is a Unix slogan. Asha's connection is fd 7, Arjun's is fd 9, Priya's is
+fd 12. Those are the numbers you hand the kernel.</p>
+<p>In Java you rarely see the integer, because a <code>SocketChannel</code> wraps one. You
+still meet the count: the open-file limit, <code>ulimit -n</code>, counts file
+descriptors, and it is the wall you hit at high connection counts.</p>
+<h3 id="readme-who-waits--your-thread-or-nobody">Who waits — your thread, or nobody?</h3>
+<p>In §3 Meera held the receiver and waited. In §5 the phone answered &quot;nothing
+here&quot; and she moved on. That is the difference between <strong>blocking</strong> and
+<strong>non-blocking</strong>, and it is a setting on each individual descriptor.</p>
+<p>Blocking means the call does not return until it can make progress.
+Non-blocking means the call returns immediately with a &quot;would have blocked&quot;
+indication — <code>0</code> in Java NIO, <code>EAGAIN</code> in C. The pair of words exists to name
+one choice: <em>who waits</em>, the thread or nobody.</p>
+<p>You set it with <code>channel.configureBlocking(false)</code>, as <code>SpinEchoServer</code> does.
+Java's <code>Selector</code> <strong>requires</strong> non-blocking channels; registering a blocking
+one throws <code>IllegalBlockingModeException</code>. Note what that implies. Neither mode
+was enough on its own, and the real fix combines non-blocking sockets with a
+<em>blocking</em> wait on the whole set.</p>
+<h3 id="readme-what-does-a-lit-light-actually-promise">What does a lit light actually promise?</h3>
+<p>The light on line 9 means one thing. If you pick up that receiver right now,
+you will hear something instead of waiting. Engineers call that <strong>readiness</strong>.</p>
+<p>The kernel reports it in four flavours. Readable means bytes are buffered, or
+the stream has ended. Writable means the send buffer has room. Acceptable means
+a connection is pending. Connectable means an outbound connect has finished.</p>
+<p>The term exists to separate <em>&quot;you may now act&quot;</em> from <em>&quot;your action has been
+done for you&quot;</em>. That single distinction defines two whole families of I/O API,
+and the second family arrives in §16. Here, readiness is the light: the kernel
+says fd 9 is readable, and then <strong>you</strong> call <code>read(9)</code> yourself, which returns
+immediately.</p>
+<p>Read the promise again carefully, because §13 is built on what it leaves out.
+The light says <em>someone is speaking</em>. It does not say what they said, how much
+of it arrived, or whether they finished their sentence.</p>
+<h3 id="readme-which-two-sets-do-beginners-fuse-into-one">Which two sets do beginners fuse into one?</h3>
+<p>Meera's board holds two different pieces of information, and they are easy to
+confuse.</p>
+<p>The <strong>interest set</strong> is &quot;what to wake me for&quot;. It is the registration held
+inside the kernel: a descriptor, plus the event types you care about. It is
+long-lived, and you are the one who sets it. Wiring a phone into the board with
+<code>channel.register(selector, OP_READ)</code> puts fd 9 into that set and leaves it
+there.</p>
+<p>The <strong>ready set</strong> is &quot;what actually happened&quot;. It is the subset the kernel
+hands back from one wait call, and it is fresh every time. One wait can return
+a ready set of <code>{fd 9}</code> while fds 7 and 12 stay registered, idle and untouched.</p>
+<p>In Java a <code>SelectionKey</code> is one entry in the interest set, and
+<code>selector.selectedKeys()</code> is the ready set.</p>
+<h3 id="readme-what-is-the-shape-of-meeras-whole-day">What is the shape of Meera's whole day?</h3>
+<p>Sleep, get woken, handle whatever is lit, go back to sleep. That routine is an
+<strong>event loop</strong>. In code it is one thread running
+<code>while (running) { wait for readiness; dispatch each ready event to its handler; }</code>,
+which is the <code>eventLoop()</code> method in <code>SelectorEchoServer</code>.</p>
+<p>The term names an inversion of control. You no longer write &quot;read, then
+process&quot;. You write handlers, and the loop calls them when the kernel says so.
+This is the same shape as a UI framework's main loop, and the same shape as
+Node.js and nginx. Once you have seen it here, you recognise it everywhere.</p>
+<h3 id="readme-why-is-asynchronous-the-word-that-trips-everyone">Why is &quot;asynchronous&quot; the word that trips everyone?</h3>
+<p>This is a <strong>different axis</strong> from blocking and non-blocking, and mixing the two
+up causes most of the confusion around this whole topic.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The question being asked</th>
+  <th>The two answers</th>
+  <th>What it decides</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Does the call park my thread?</td>
+  <td>blocking / non-blocking</td>
+  <td>who waits: the thread, or nobody</td>
+</tr>
+<tr>
+  <td>Do <em>I</em> perform the I/O, or does someone else?</td>
+  <td>synchronous / asynchronous</td>
+  <td>who copies the bytes, and when you are told</td>
+</tr>
+</tbody>
+</table></div>
+<p>I/O multiplexing is <strong>synchronous, non-blocking I/O with a blocking wait</strong>. The
+kernel tells you a connection is ready. <strong>You</strong> still call <code>read()</code> yourself,
+and the bytes are copied while your thread waits for that copy. Nobody did the
+read for you.</p>
+<p>It <em>looks</em> asynchronous because your code is callback-shaped. The data movement
+is still yours. True asynchronous I/O is the other thing: you hand over a
+buffer and are told &quot;it is filled&quot; later. That family is <code>io_uring</code>, Windows
+IOCP, and Java's <code>AsynchronousSocketChannel</code>.</p>
+<h3 id="readme-the-seven-words-and-where-you-met-each">The seven words, and where you met each</h3>
+<p>Which of them names a <em>thing</em>, and which names a <em>choice</em>? Split them that way
+and they stop blurring together.</p>
+<p>Four words for the parts of the machine:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>In the hotel</th>
+  <th>Met it in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>I/O multiplexing</strong></td>
+  <td>Meera alone, watching a wall of lights</td>
+  <td>§8, as the fix for §4 and §6</td>
+</tr>
+<tr>
+  <td><strong>File descriptor (fd)</strong></td>
+  <td>the line number, not the guest's name</td>
+  <td>§3, every time a receiver was picked up</td>
+</tr>
+<tr>
+  <td><strong>Interest set</strong></td>
+  <td>which phones are wired into the board</td>
+  <td>§8, when the board was installed</td>
+</tr>
+<tr>
+  <td><strong>Ready set</strong></td>
+  <td>which lights are lit right now</td>
+  <td>§8, the list handed to Meera on waking</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three words for the choices you make:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>The question it answers</th>
+  <th>Met it in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Blocking vs non-blocking</strong></td>
+  <td>does an empty read park the thread?</td>
+  <td>§3 held the receiver; §5 dropped it</td>
+</tr>
+<tr>
+  <td><strong>Readiness</strong></td>
+  <td>may I act now without waiting?</td>
+  <td>§8, the meaning of one lit light</td>
+</tr>
+<tr>
+  <td><strong>Synchronous vs asynchronous</strong></td>
+  <td>do I copy the bytes, or does someone else?</td>
+  <td>this section, and again in §16</td>
+</tr>
+</tbody>
+</table></div>
+<p>And one word ties them together: the <strong>event loop</strong>, which is Meera's entire
+working day from §8 onwards.</p>
+<h2 id="readme-10-which-two-pictures-should-you-carry-in-your-head">10. Which two pictures should you carry in your head?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Keep the hotel switchboard for thinking and the kernel
+diagram for debugging. Then learn the three places the hotel quietly lies to
+you, because each lie is a real bug in §13.</p>
+</blockquote>
+<h3 id="readme-the-simple-picture--what-does-meera-see">The simple picture — what does Meera see?</h3>
+<p>A hotel switchboard. One operator, a wall of lights, one light per room. The
+operator sleeps. A light comes on. She wakes, sees exactly which lights are
+lit, handles those lines, and sits back down.</p>
+<p>That picture is enough to reason about cost, and it is the one to carry into a
+design discussion.</p>
+<h3 id="readme-the-engineering-picture--what-does-the-kernel-hold">The engineering picture — what does the kernel hold?</h3>
+<p>One thread. A kernel object holding a set of registered descriptors, and the
+events wanted for each. A blocking call that returns the ready subset. A loop
+that dispatches each ready descriptor to a handler, then calls the wait again.</p>
+<p>All per-connection state lives in objects on the heap, because there is no
+per-connection stack to hold it.</p>
+<p>Read the diagram in two halves. The top box is the kernel, which owns the
+network card. The bottom box is your process, which owns exactly one thread.
+The numbered arrows are one full turn of the loop.</p>
+<pre class="mermaid">flowchart TD
+    subgraph K[&quot;KERNEL (owns the network card)&quot;]
+        NIC[&quot;packet arrives&quot;] --&gt; RL[&quot;ready list&quot;]
+        IS[(&quot;interest set&lt;br/&gt;fd 7: read&lt;br/&gt;fd 9: read&lt;br/&gt;fd 12: read&quot;)] -.registered once.-&gt; RL
+    end
+    subgraph U[&quot;YOUR PROCESS — one thread&quot;]
+        EL{{&quot;event loop&quot;}}
+    end
+    EL -- &quot;1. select(): sleep&lt;br/&gt;until any is ready&quot; --&gt; RL
+    RL -- &quot;2. wakes with&lt;br/&gt;ready set {fd 9}&quot; --&gt; EL
+    EL -- &quot;3. read(fd 9) —&lt;br/&gt;returns at once&quot; --&gt; H[&quot;handler for Arjun&quot;]
+    H -- &quot;4. back to sleep&quot; --&gt; EL
+</pre>
+<h3 id="readme-how-does-the-hotel-line-up-with-the-code">How does the hotel line up with the code?</h3>
+<p>The things on the desk:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In the hotel</th>
+  <th>In engineering</th>
+  <th>In Java</th>
+  <th>First met in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Phone line to a room</td>
+  <td>Network connection</td>
+  <td><code>SocketChannel</code></td>
+  <td>§2</td>
+</tr>
+<tr>
+  <td>The line's number</td>
+  <td>File descriptor</td>
+  <td>(wrapped inside the channel)</td>
+  <td>§9</td>
+</tr>
+<tr>
+  <td>The light board</td>
+  <td>Kernel multiplexing object</td>
+  <td><code>Selector</code></td>
+  <td>§8</td>
+</tr>
+<tr>
+  <td>The full set of wired lines</td>
+  <td>Interest set</td>
+  <td>all <code>selector.keys()</code></td>
+  <td>§9</td>
+</tr>
+<tr>
+  <td>Which lights are lit right now</td>
+  <td>Ready set</td>
+  <td><code>selector.selectedKeys()</code></td>
+  <td>§9</td>
+</tr>
+</tbody>
+</table></div>
+<p>What Meera does with them:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In the hotel</th>
+  <th>In engineering</th>
+  <th>In Java</th>
+  <th>First met in</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Wiring a phone into the board</td>
+  <td>Registering interest</td>
+  <td><code>channel.register(selector, OP_READ)</code></td>
+  <td>§9</td>
+</tr>
+<tr>
+  <td>Operator asleep in the chair</td>
+  <td>The blocking wait</td>
+  <td><code>selector.select()</code></td>
+  <td>§8</td>
+</tr>
+<tr>
+  <td>The operator's routine</td>
+  <td>Event loop</td>
+  <td>the <code>while</code> loop</td>
+  <td>§9</td>
+</tr>
+<tr>
+  <td>The notepad for each room's half-finished order</td>
+  <td>Per-connection state</td>
+  <td><code>SelectionKey</code> attachment</td>
+  <td>§13.3</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-the-story-lie-to-you">Where does the story lie to you?</h3>
+<p>Three places. Each lie is a real failure mode, and each one has a number in
+§13.</p>
+<p><strong>Lie 1: a lit light does not mean a complete sentence.</strong> The operator story
+suggests you pick up and hear the whole request. In reality &quot;readable&quot; means
+only &quot;some bytes are here&quot;. Half a message is normal. A message split across 76
+separate wakeups is normal, and §13.3 measures exactly that. The light also
+comes on when the guest <strong>hangs up</strong>, because &quot;readable&quot; includes end-of-stream.
+Forgetting that causes the bug in §13.2.</p>
+<p><strong>Lie 2: the operator can never leave the chair.</strong> A real operator can put a
+call on hold and walk to the kitchen. The event-loop thread cannot. One slow
+database query, one <code>Thread.sleep</code>, one synchronous HTTP call, and <strong>every</strong>
+light goes unanswered until it returns. The whole board freezes.
+§13.1 puts a number on it: 905 ms of collateral damage from one slow request.</p>
+<p><strong>Lie 3: the lights can lie.</strong> The kernel is permitted to report readiness
+spuriously. You wake up, read, and get nothing. Correct event-loop code treats
+a wakeup as a <em>hint</em>, never a promise, and must survive a read that returns
+zero bytes.</p>
+<h2 id="readme-11-can-you-watch-all-three-designs-race">11. Can you watch all three designs race?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The trainer runs one thread per connection, hot-loop
+polling, and multiplexing side by side on identical traffic, so you can watch
+the thread count, the CPU and the syscall count move together.</p>
+</blockquote>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a>, or the published link in the
+chat message. It runs the three designs on the same simulated traffic, with a
+live thread count, a CPU meter, and a syscall counter for each.</p>
+<p>Watch the middle panel first. That is Meera sprinting, and the CPU meter tells
+you what the sprint costs while Asha, Arjun and Priya say nothing at all.</p>
+<p>Use it to answer the three questions a static diagram cannot: what changed, why
+it changed, and what happens if you change it. In particular, try the buttons
+that inject the failures from §13, and watch which design survives each one.</p>
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-beginner-model">✅ CHECKPOINT — end of the BEGINNER MODEL</h3>
+<p>You can now explain <em>why</em> I/O multiplexing exists. Waiting on many
+connections is the server's main job. One-thread-each is too expensive, and
+asking-each-one is too wasteful, so we hand the whole set to the kernel and
+sleep. You can define readiness, interest set, ready set and event loop, and
+you know that synchronous versus asynchronous is a different axis from
+blocking versus non-blocking.</p>
+<p><strong>Say it back.</strong> Without using the words <em>readiness</em>, <em>kernel</em> or <em>event
+loop</em>, explain to a friend why the hotel's wage bill collapses once a light
+board is installed.</p>
+<details><summary>A good answer sounds like</summary>
+"Before, somebody had to be assigned to every room, either standing at one
+phone forever or running past all of them. Both cost you a person's whole day
+for rooms where nothing happens. The lights mean nobody has to check. One
+person sleeps, and the building itself pokes her the moment somebody actually
+speaks."
+</details>
+
+<p><strong>Next (§12):</strong> how the wait call actually works, why the first version of it
+was too slow, and what the second version changed.</p>
+</blockquote>
+<hr />
+<h1 id="readme-intermediate-model">INTERMEDIATE MODEL</h1>
+<h2 id="readme-12-how-does-the-wait-call-work-and-why-was-the-first-one-too-slow">12. How does the wait call work, and why was the first one too slow?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The first version handed the whole guest list to the
+kernel on every single call. The second version left the list with the
+kernel, and asked only &quot;who is lit?&quot;. That change is the difference between
+C10K being impossible and being routine.</p>
+</blockquote>
+<p>We build it in the order history did. The obvious version first, then the
+failure that forced the version you actually use.</p>
+<p>Keep one concrete scene in view throughout. <strong>A chat server with three
+connections: Asha on fd 7, Arjun on fd 9, Priya on fd 12. Only Arjun types.</strong></p>
+<h3 id="readme-mechanism-v1--what-did-select-promise-in-1983">Mechanism v1 — what did <code>select()</code> promise in 1983?</h3>
+<p>The first system call to do this. In the hotel it is a light board that Meera
+has to re-wire completely before every nap.</p>
+<p>Its contract, step by step:</p>
+<ol>
+<li>You build a set of descriptors: <code>{7, 9, 12}</code>.</li>
+<li>You call <code>select()</code>, passing the whole set in. Your thread sleeps.</li>
+<li>Arjun types. A packet lands. The kernel returns from <code>select()</code>.</li>
+<li>It hands back the set, with everything not ready removed: <code>{9}</code>.</li>
+<li>You call <code>read(9)</code> and get Arjun's message.</li>
+<li>You rebuild the set and call <code>select()</code> again.</li>
+</ol>
+<p>Follow the arrows downwards. Step 3 is the nap, and the last line is the part
+that will hurt later.</p>
+<pre class="mermaid">sequenceDiagram
+    participant App as Your thread
+    participant K as Kernel
+    participant Arjun as Arjun (fd 9)
+    App-&gt;&gt;K: select({7, 9, 12})
+    Note over App: thread sleeps — 0% CPU
+    Arjun-&gt;&gt;K: packet arrives
+    K-&gt;&gt;K: scan all 3 fds, mark 9 ready
+    K--&gt;&gt;App: returns {9}
+    App-&gt;&gt;K: read(9)
+    K--&gt;&gt;App: &quot;hi everyone&quot;
+    App-&gt;&gt;K: select({7, 9, 12}) — pass the whole set again
+</pre>
+<p>This satisfies §7's requirement exactly. For three connections it is perfect.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Now scale the scene up. <strong>10,000 connections, one of which is
+active.</strong> How much work does the kernel do inside a single <code>select()</code> call?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>It examines all 10,000 — on every single call.</strong> Two costs, both
+proportional to the total number of connections rather than the active ones:</p>
+<ol>
+<li><strong>Copy in.</strong> The whole 10,000-descriptor set is copied from your process
+into the kernel on every call, and the result is copied back out.</li>
+<li><strong>Scan.</strong> The kernel walks all 10,000, checking each one for readiness.</li>
+</ol>
+<p>If you guessed &quot;one, because only one is active&quot;, you were describing the
+design that comes next. It did not exist yet in 1983.</p>
+<p>We fired the sprinting employee in §6 for doing exactly this work — asking
+every line on every lap. <code>select()</code> did not delete that work. It <strong>moved it
+into the kernel</strong>, where it is much cheaper per item, because there is no
+system call per connection. It is still proportional to the total.</p>
+<p><code>select()</code> also carries a hard cap. The descriptor set is a fixed-size
+bitmask called <code>FD_SETSIZE</code>, conventionally <strong>1024</strong> entries. <code>poll()</code>, from
+1986, removed the cap by using an array instead of a bitmask. It kept the
+copy and the scan.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-the-refinement--what-did-epoll-and-kqueue-change-in-20002002">The refinement — what did <code>epoll</code> and <code>kqueue</code> change in 2000–2002?</h3>
+<p>The scar from that failure produced the design you actually use. It comes from
+one observation:</p>
+<blockquote>
+<p>The set of connections barely changes between calls. Why re-send and re-scan
+it every single time?</p>
+</blockquote>
+<p>So split the one call into two, and let the kernel keep the list. Meera's board
+gets wired once, and stays wired.</p>
+<ol>
+<li><strong>Register once.</strong> In the hotel, plug Arjun's line into the board and leave
+it there. In words: tell the kernel to remember that you care about fd 9. As
+a call, <code>epoll_ctl(ADD, fd 9)</code>. It stays across calls, with no re-copying.</li>
+<li><strong>The network stack maintains a ready list.</strong> This is the key move. When
+Arjun's packet arrives, the code handling the network interrupt <em>already
+touches fd 9's structures</em>, so it appends fd 9 to a ready list right there.
+No scan is needed, because readiness is recorded at the moment it is caused.</li>
+<li><strong>The wait returns that ready list.</strong> <code>epoll_wait()</code> returns <code>{9}</code>, copying
+one entry rather than 10,000.</li>
+</ol>
+<p>The cost changes from <strong>O(total connections)</strong> to <strong>O(ready connections)</strong>. Ten
+thousand idle connections now cost nothing per call. They are entries in a
+kernel table and nothing more.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th><code>select</code> (1983)</th>
+  <th><code>poll</code> (1986)</th>
+  <th><code>epoll</code>/<code>kqueue</code> (2000–02)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Interest set lives</td>
+  <td>in your process</td>
+  <td>in your process</td>
+  <td><strong>in the kernel</strong></td>
+</tr>
+<tr>
+  <td>Cost per wait call</td>
+  <td>O(total) copy + scan</td>
+  <td>O(total) copy + scan</td>
+  <td><strong>O(ready)</strong></td>
+</tr>
+<tr>
+  <td>Max descriptors</td>
+  <td>1024 (<code>FD_SETSIZE</code>)</td>
+  <td>unlimited</td>
+  <td>unlimited</td>
+</tr>
+<tr>
+  <td>Portable</td>
+  <td>everywhere</td>
+  <td>POSIX</td>
+  <td>Linux / BSD-macOS respectively</td>
+</tr>
+</tbody>
+</table></div>
+<p>Same idea, three generations. <strong><code>epoll</code> is Linux; <code>kqueue</code> is BSD and macOS.</strong>
+Java hides the difference behind one portable façade, <code>Selector</code>. You can ask
+your own machine which one it picked:</p>
+<p>Save these four lines as <code>Probe.java</code> and run <code>java Probe.java</code>:</p>
+<div class="code"><pre><code class="language-java">import java.nio.channels.Selector;
+public class Probe {
+  public static void main(String[] a) throws Exception {
+    System.out.println(&quot;Selector impl on this OS : &quot;
+        + Selector.open().getClass().getName());
+  }
+}
+</code></pre></div>
+<div class="code"><pre><code>Selector impl on this OS : sun.nio.ch.KQueueSelectorImpl
+</code></pre></div>
+<p>That output is from a Mac. On Linux the same code prints
+<code>sun.nio.ch.EPollSelectorImpl</code>.</p>
+<h3 id="readme-the-refinements-own-refinement--why-can-edge-triggering-hang-a-connection">The refinement's own refinement — why can edge-triggering hang a connection?</h3>
+<p>One more knob, and one more failure that explains why the knob exists.</p>
+<p>Picture the light again. <strong>Level-triggered</strong> means the light stays on while
+there are unread bytes, so you get woken again on the next wait if you did not
+consume everything. <strong>Edge-triggered</strong> means the light flashes once, on the
+transition from not-ready to ready, and then goes dark regardless of how much
+you read.</p>
+<p>Edge-triggered means fewer wakeups. It also sets a trap. <strong>If you do not drain
+the socket completely, you will never be told again.</strong> That connection then
+hangs forever while everything else works, which is one of the nastiest bugs in
+this area, because it presents as a network problem.</p>
+<p><strong>Java's <code>Selector</code> is level-triggered.</strong> That is the forgiving default, and it
+is why <code>SelectorEchoServer</code> can read one bufferful and safely return. Netty's
+native Linux transport offers edge-triggering for throughput, and its
+documentation is emphatic: you must loop reading until the socket says <code>EAGAIN</code>.</p>
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-intermediate-model">✅ CHECKPOINT — end of the INTERMEDIATE MODEL</h3>
+<p>You can now explain the mechanism message by message, and say <em>why</em> modern
+systems use <code>epoll</code> or <code>kqueue</code> rather than <code>select</code>. The interest set moved
+into the kernel, and readiness became proportional to the ready connections
+instead of the total. You know Java's <code>Selector</code> is the portable façade, and
+that it is level-triggered.</p>
+<p><strong>Say it back.</strong> Without using the words <em>descriptor</em>, <em>syscall</em> or <em>O(n)</em>,
+explain to a friend what changed between 1983's design and 2002's.</p>
+<details><summary>A good answer sounds like</summary>
+"In the old one you handed over the entire guest list every time you went to
+sleep, and someone checked every name on it. In the new one you hand the list
+over once and it stays there. After that you only ever ask 'who spoke?', and
+the answer is as short as the number of people who actually spoke."
+</details>
+
+<p><strong>Next (§13):</strong> what breaks. Three of the failures below run on your machine,
+and every one of them is a real production incident somewhere.</p>
+</blockquote>
+<hr />
+<h1 id="readme-engineering-model">ENGINEERING MODEL</h1>
+<h2 id="readme-13-what-breaks-and-how-would-you-recognise-each-one-at-3-am">13. What breaks, and how would you recognise each one at 3 a.m.?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Everything that goes wrong here comes from two facts. One
+thread means one slow handler freezes everyone, and a lit light promises
+bytes rather than meaning.</p>
+</blockquote>
+<p>Eight failures follow. Three of them you can create on your machine right now.
+The rest you will meet in somebody else's production system. A table at the end
+puts all eight side by side.</p>
+<h3 id="readme-131-why-did-arjuns-ping-take-905-ms-when-asha-placed-a-slow-order">13.1 Why did Arjun's ping take 905 ms when Asha placed a slow order?</h3>
+<p>Asha (client A) sends a request whose handler takes a full second — a database
+lookup, say. One hundred milliseconds later Arjun (client B) sends a one-word
+&quot;ping&quot;. Create it with <code>java src/Experiments.java blockedloop</code>:</p>
+<div class="code"><pre><code>  io-multiplexing (1 shared loop) : B&#x27;s ping took 905 ms
+  thread-per-connection          : B&#x27;s ping took   0 ms
+</code></pre></div>
+<p>The event loop is one thread. While Meera is standing in the kitchen sorting
+out Asha's order, nobody is watching the board. Arjun's bytes physically
+arrived at the network card within a millisecond, and then sat unread in a
+kernel buffer until she came back.</p>
+<p>Read Arjun's 905 ms carefully. It is not caused by Arjun, and it has nothing to
+do with Arjun's request. Correctness survives — his echo is right when it
+finally comes. Latency isolation does not. <strong>A shared loop means shared fate</strong>,
+and one slow handler is a partial outage for every connection on that loop.</p>
+<p>This is the number one event-loop bug in the world. The rule that follows is
+absolute. On the loop thread: no JDBC call, no synchronous HTTP client, no
+<code>Thread.sleep</code>, no unbounded loop, no <code>synchronized</code> block that might contend,
+and no large JSON parse. Slow work goes to a separate worker pool, and the
+result is posted back to the loop. Netty ships <code>EventExecutorGroup</code> for exactly
+this. Netty and Vert.x both log a warning when a loop thread stalls, and
+Vert.x's <code>BlockedThreadChecker</code> produces a &quot;blocked event loop&quot; line you will
+meet in real logs.</p>
+<h3 id="readme-132-why-does-a-guest-who-hung-up-keep-her-light-on-forever">13.2 Why does a guest who hung up keep her light on forever?</h3>
+<p>Priya closes the app. Her connection ends. What does her light do?</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Priya's line goes dead, and the handler treats &quot;nothing to
+read&quot; as &quot;try again later&quot;. In half a second of otherwise total silence, how
+many times does the loop wake up?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>351,609 times.</strong> A correct server wakes zero times in the same window.</p>
+<p>If you guessed &quot;once, then it settles down&quot;, you are assuming the light turns
+off. It does not. A closed connection is <strong>permanently readable</strong>, and
+level-triggering means &quot;keep telling me while the condition holds&quot;.</p>
+</details>
+
+</blockquote>
+<p>Create it with <code>java src/EchoTest.java broken</code>, which runs the same test suite
+against <code>src/BrokenSelectorServer.java</code>:</p>
+<div class="code"><pre><code>  correct : closed_connection_is_deregistered_and_loop_sleeps  → 0 wakeups in 500 idle ms
+  broken  : FAIL — 351,609 wakeups in 500 idle ms
+</code></pre></div>
+<p>When the peer closes, reads return <code>-1</code> forever. That value is
+<strong>end-of-stream</strong>: the connection is finished, not empty. The broken handler
+reads it as &quot;no data, try later&quot; and returns without cancelling the
+registration. So the wait call returns instantly, forever. That is 351,609 laps
+in half a second, one core at 100%, caused by a guest who <em>left</em>.</p>
+<p>The correct code closes the loop on the condition instead of ignoring it:</p>
+<div class="code"><pre><code class="language-java">if (n == -1) { key.cancel(); ch.close(); return; }   // deregister, or spin forever
+</code></pre></div>
+<p>Every other connection keeps working perfectly, which is exactly what makes
+this so hard to spot. What you lose is the CPU budget, and eventually latency
+for everyone. On a dashboard the symptom is <em>100% CPU on one core with no
+traffic</em>, which looks insane until you know this. A flame graph or <code>perf top</code>
+shows the wait call returning immediately in a tight loop, and <code>strace -c</code>
+shows millions of <code>epoll_wait</code> calls returning instantly.</p>
+<h3 id="readme-133-how-can-one-message-arrive-seventy-six-times">13.3 How can one message arrive seventy-six times?</h3>
+<p>Asha sends a single 512 KB photo caption in one call. Her code sent one
+message. How many times does Meera's light come on?</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> One application message, 512 KB, one <code>write</code> on the client.
+How many separate readiness events does the server see?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>76.</strong> And 108 separate <code>read()</code> calls to drain them.</p>
+<p>If you guessed &quot;one, because it was one message&quot;, you are trusting the
+analogy from §10. TCP is a byte stream, not a message queue. It promises your
+bytes arrive in order and complete, and promises nothing whatsoever about how
+they are grouped.</p>
+</details>
+
+</blockquote>
+<p>Create it with <code>java src/Experiments.java readiness</code>:</p>
+<div class="code"><pre><code>  bytes sent: 524,288 | bytes received: 524,288
+  readiness events: 76 | read() calls: 108 | smallest chunk: 4,096 bytes | largest: 16,384 bytes
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>What was counted</th>
+  <th>Value</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Bytes sent, bytes received</td>
+  <td>524,288 each</td>
+  <td>nothing was lost or reordered</td>
+</tr>
+<tr>
+  <td>Readiness events</td>
+  <td>76</td>
+  <td>the light came on 76 times for one message</td>
+</tr>
+<tr>
+  <td><code>read()</code> calls</td>
+  <td>108</td>
+  <td>some of those wakeups needed more than one read</td>
+</tr>
+<tr>
+  <td>Smallest chunk</td>
+  <td>4,096 bytes</td>
+  <td>the kernel's receive buffer hands over what it has</td>
+</tr>
+<tr>
+  <td>Largest chunk</td>
+  <td>16,384 bytes</td>
+  <td>and never the whole 512 KB at once</td>
+</tr>
+</tbody>
+</table></div>
+<p>The kernel's receive buffer is finite, so it hands you 4–16 KB at a time. That
+range is the last two rows of the table, in the units people usually say them
+in.</p>
+<p>Ordering and completeness within the connection survive. Any illusion of
+message boundaries does not.</p>
+<p>The consequence is structural. Every protocol on an event loop must do
+<strong>framing</strong>: recovering message boundaries from a byte stream. The three usual
+ways are a length prefix (Netty's <code>LengthFieldBasedFrameDecoder</code>), a delimiter
+(HTTP's blank line, or <code>\r\n</code> in Redis), or a self-describing format.</p>
+<p>And between wakeups the half-arrived message has to live <em>somewhere</em>. With no
+per-connection thread there is no per-connection stack, so it lives on the
+heap, per connection. That is what the <code>ByteBuffer</code> attached to each
+<code>SelectionKey</code> in <code>SelectorEchoServer</code> is for.</p>
+<p>This is the real price of the whole approach. With a thread per connection,
+&quot;read until I have a whole message&quot; is a local variable and a loop. With one
+shared thread it becomes an explicit per-connection state machine, and that is
+the reason non-blocking code is harder to write.</p>
+<h3 id="readme-134-what-happens-when-meera-is-the-one-who-cannot-get-a-word-in">13.4 What happens when Meera is the one who cannot get a word in?</h3>
+<p>Not runnable here, because this lab's echoes are small. Treat it as flagged
+theory rather than a number from a run.</p>
+<p>Writes can be partial too, exactly like reads. A call to <code>write()</code> returns &quot;I
+accepted 3 KB of your 100 KB&quot; when the kernel's send buffer fills, because the
+peer is reading slowly. You must buffer the remaining 97 KB, and register interest in
+<strong>writability</strong> so the kernel tells you when there is room. In Java that
+interest flag is <code>OP_WRITE</code>.</p>
+<p>Here is the trap, and it is the mirror image of §13.2. <strong>A socket is writable
+almost all the time.</strong> Leave <code>OP_WRITE</code> registered permanently and the wait
+call returns immediately, forever — the same busy loop, arriving from the other
+direction. The rule is narrow: register writability only while you have
+leftover bytes, and deregister the moment they drain.</p>
+<p>The second trap is <strong>backpressure</strong>. If a client reads slowly and you keep
+queueing outbound data on the heap, you have built an unbounded queue and you
+will run out of memory. Netty's answer is a pair of watermarks,
+<code>WriteBufferWaterMark</code> and <code>Channel.isWritable()</code>: past a high-water mark you
+stop producing.</p>
+<h3 id="readme-135-why-do-ten-sleeping-operators-all-wake-for-one-guest">13.5 Why do ten sleeping operators all wake for one guest?</h3>
+<p>Run several event loops, one per core, all registered for new connections on
+the same listening socket. In Java that interest flag is <code>OP_ACCEPT</code>.</p>
+<p>One connection arrives. <strong>All</strong> the loops wake. One wins the <code>accept()</code>. The
+rest find nothing to do and go back to sleep, having burned a wakeup each.
+Engineers call that a <strong>thundering herd</strong>.</p>
+<p>There are two standard fixes. Use a dedicated acceptor loop that hands new
+connections to workers, which is Netty's &quot;boss&quot; and &quot;worker&quot; group split. Or
+use <code>SO_REUSEPORT</code>, where each loop opens its own socket on the same port and
+the kernel load-balances arrivals between them.</p>
+<p>Note the correctness point riding along with it, because it is §10's third lie
+in concrete form. Readiness is a hint. An <code>accept()</code> on a supposedly acceptable
+socket may legitimately return <code>null</code>, because another thread took the
+connection first. Code that assumes a non-null result crashes here.</p>
+<h3 id="readme-136-who-decides-which-lit-line-meera-answers-first">13.6 Who decides which lit line Meera answers first?</h3>
+<p>Nobody. The loop handles ready connections in whatever order the ready set
+gives them.</p>
+<p>Now imagine one very chatty guest. Handled with &quot;read until the socket says
+<code>EAGAIN</code>&quot;, that one connection can hold the loop for a long time while every
+other lit line waits. Netty caps the damage with <code>maxMessagesPerRead</code>.</p>
+<p>This is <strong>head-of-line blocking</strong> at the event-loop level. It is the same
+phenomenon you met in the <a href="../02-communication-protocols/notes.html#readme">communication-protocols</a>
+lab at the connection level, one layer up.</p>
+<h3 id="readme-137-if-nobody-is-waiting-who-notices-a-guest-who-went-silent">13.7 If nobody is waiting, who notices a guest who went silent?</h3>
+<p>Subtle, and easy to miss entirely.</p>
+<p>With thread-per-connection, a per-connection timeout is trivial. The call
+<code>socket.setSoTimeout(30_000)</code> works because that thread is already waiting on
+that one connection, so it can simply give up.</p>
+<p>With an event loop, <strong>no thread is waiting on any particular connection</strong>. So
+there is nothing to time out. Priya's connection goes silent forever, never
+appears in a ready set again, and holds its memory and its file descriptor
+indefinitely. Nobody is watching her line, because nobody is watching any line.</p>
+<p>Idle detection therefore has to become an explicit, separate mechanism: a timer
+that sweeps connections by last-activity timestamp. Netty's <code>IdleStateHandler</code>
+and its <code>HashedWheelTimer</code> exist for precisely this.</p>
+<h3 id="readme-138-what-if-the-light-board-itself-is-faulty">13.8 What if the light board itself is faulty?</h3>
+<p>Historically, on Linux, <code>Selector.select()</code> could return <strong>0 with no keys
+ready, repeatedly and instantly</strong>. This is the epoll spin bug, JDK-6670302 and
+JDK-6693490, caused by epoll reporting an event that Java's selector did not
+map to any interest. The result was §13.2's busy loop with no bug in your code
+at all.</p>
+<p>Netty's workaround still ships today. It counts consecutive premature returns
+and, past a threshold set by <code>io.netty.selectorAutoRebuildThreshold</code> with a
+default of 512, it <strong>builds a new <code>Selector</code> and migrates every registration to
+it.</strong></p>
+<p>The bug has been reported fixed in several JDK versions. The guard remains
+because the failure was so severe. It is worth knowing not because you will hit
+it, but because it explains why production event-loop code contains defences
+that look paranoid.</p>
+<h3 id="readme-the-eight-failures-side-by-side">The eight failures side by side</h3>
+<p>Which of these would you actually be able to name from a dashboard alone? Read
+the last two columns together: they are what survives and what does not.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>What goes wrong</th>
+  <th>Why it happens</th>
+  <th>What still works</th>
+  <th>What you lose</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>13.1</td>
+  <td>one slow handler stalls everyone</td>
+  <td>one thread, and it left the chair</td>
+  <td>correctness — the echo is right</td>
+  <td>latency isolation; shared loop, shared fate</td>
+</tr>
+<tr>
+  <td>13.2</td>
+  <td>100% CPU with no traffic</td>
+  <td>closed peer is permanently readable, never deregistered</td>
+  <td>every other connection</td>
+  <td>the CPU budget, then everyone's latency</td>
+</tr>
+<tr>
+  <td>13.3</td>
+  <td>one message, 76 wakeups</td>
+  <td>TCP is a byte stream, not a message queue</td>
+  <td>ordering and completeness</td>
+  <td>message boundaries; you now write framing</td>
+</tr>
+<tr>
+  <td>13.4</td>
+  <td>one connection eats the heap</td>
+  <td>writes are partial, and writability is near-permanent</td>
+  <td>reads, and other connections</td>
+  <td>memory, unless you add backpressure</td>
+</tr>
+<tr>
+  <td>13.5</td>
+  <td>every loop wakes, one wins</td>
+  <td>all loops registered on one listening socket</td>
+  <td>the connection is still accepted</td>
+  <td>wasted wakeups, and <code>accept()</code> may return <code>null</code></td>
+</tr>
+<tr>
+  <td>13.6</td>
+  <td>one chatty guest starves the rest</td>
+  <td>the ready set has no fairness rule</td>
+  <td>throughput for the chatty one</td>
+  <td>fair latency; head-of-line blocking returns</td>
+</tr>
+<tr>
+  <td>13.7</td>
+  <td>a silent connection is held forever</td>
+  <td>no thread waits on any one connection</td>
+  <td>everything visibly working</td>
+  <td>file descriptors and memory, silently</td>
+</tr>
+<tr>
+  <td>13.8</td>
+  <td>busy loop with no bug in your code</td>
+  <td>a JDK-level epoll mapping fault</td>
+  <td>your logic, which is innocent</td>
+  <td>the CPU, and your confidence</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-14-what-does-the-kernel-actually-promise-and-what-does-it-refuse-to">14. What does the kernel actually promise, and what does it refuse to?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The kernel promises Meera will not be stuck when it says
+&quot;ready&quot;. It promises nothing about meaning, fairness, or how much arrived.</p>
+</blockquote>
+<p>Everything below is a promise made to Meera (the event-loop thread) about Asha,
+Arjun and Priya (the registered connections).</p>
+<h3 id="readme-what-can-you-rely-on">What can you rely on?</h3>
+<ul>
+<li>If the kernel reports readable, a read will not block. It may still return 0.</li>
+<li>Bytes within a connection arrive in order and without gaps. That is TCP's
+guarantee, inherited whole.</li>
+<li>Level-triggered notification is <em>repeated</em> while the condition holds, so
+handling data incrementally is safe.</li>
+<li>Interest registration is durable. Registered once, it stays until cancelled.</li>
+</ul>
+<h3 id="readme-what-is-explicitly-not-promised">What is explicitly not promised?</h3>
+<ul>
+<li>That &quot;readable&quot; means a complete application message arrived (§13.3).</li>
+<li>That readiness will not be reported spuriously. A wakeup is a hint.</li>
+<li>That a &quot;ready&quot; operation will succeed; <code>accept()</code> may return <code>null</code> (§13.5).</li>
+<li>That connections are served fairly (§13.6).</li>
+<li>That a write accepts all your bytes (§13.4).</li>
+<li>Any liveness property at all if a handler blocks. The loop is a single point
+of stalling (§13.1).</li>
+</ul>
+<h3 id="readme-what-did-you-trade-away-on-purpose">What did you trade away on purpose?</h3>
+<p>Each row is one bargain, and you signed all four when you installed the light
+board.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>You gain</th>
+  <th>You give up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>~1 thread instead of N</td>
+  <td>latency isolation between connections</td>
+</tr>
+<tr>
+  <td>~zero cost per idle connection</td>
+  <td>the simple &quot;read a message&quot; programming model</td>
+</tr>
+<tr>
+  <td>cost proportional to ready, not total</td>
+  <td>per-connection timeouts as a free feature</td>
+</tr>
+<tr>
+  <td>no thread-count ceiling</td>
+  <td>stack-held state; you now write state machines</td>
+</tr>
+</tbody>
+</table></div>
+<p>That last row is the honest summary of the whole technique. <strong>It converts a
+memory-and-scheduler problem into a programming-model problem.</strong> You get
+density. You pay in complexity and in shared fate. Which is precisely why
+§16's ending matters so much for a Java engineer today.</p>
+<hr />
+<h2 id="readme-15-where-is-the-code-and-what-does-each-file-prove">15. Where is the code, and what does each file prove?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Four servers, deliberately written in parallel so you can
+diff them, plus a test suite and the four experiments quoted above.</p>
+</blockquote>
+<p>These are Meera's three careers, in order: receiver-holder, sprinter, and
+light-board operator. The fourth file is the version of her that never notices
+Priya hung up.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>The section it is</th>
+  <th>What it proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>src/BlockingEchoServer.java</code></td>
+  <td>§3</td>
+  <td>thread per connection: correct, and 1:1 with connections</td>
+</tr>
+<tr>
+  <td><code>src/SpinEchoServer.java</code></td>
+  <td>§5</td>
+  <td>one thread, hot-loop polling: correct, and a core on fire</td>
+</tr>
+<tr>
+  <td><code>src/SelectorEchoServer.java</code></td>
+  <td>§8</td>
+  <td>the real thing: one thread plus a <code>Selector</code></td>
+</tr>
+<tr>
+  <td><code>src/BrokenSelectorServer.java</code></td>
+  <td>§13.2</td>
+  <td>the planted bug, used by exercise 6</td>
+</tr>
+<tr>
+  <td><code>src/EchoTest.java</code></td>
+  <td>—</td>
+  <td>five scenario tests; the <code>broken</code> argument runs them against the bug</td>
+</tr>
+<tr>
+  <td><code>src/Experiments.java</code></td>
+  <td>—</td>
+  <td>the four measurements quoted in this document</td>
+</tr>
+</tbody>
+</table></div>
+<p>Run everything:</p>
+<div class="code"><pre><code class="language-bash">cd ~/Documents/Learning/03-io-multiplexing
+java src/EchoTest.java              # 5 passed, 0 failed
+java src/EchoTest.java broken       # 4 passed, 1 failed  ← finds the planted bug
+java src/Experiments.java all 2000  # the four experiments
+</code></pre></div>
+<p>The entire concept is three lines of <code>SelectorEchoServer</code>, marked <code>THE-IDEA</code> in
+the source. In words: wire the front door into the board, sleep until something
+is lit, then walk the list of what is lit.</p>
+<div class="code"><pre><code class="language-java">serverChannel.register(selector, SelectionKey.OP_ACCEPT);  // 1. interest set
+selector.select();                                         // 2. sleep until ready
+Iterator&lt;SelectionKey&gt; it = selector.selectedKeys().iterator();  // 3. ready set
+</code></pre></div>
+<p>Two more lines carry far more weight than they look:</p>
+<div class="code"><pre><code class="language-java">it.remove();   // the selector ADDS to selectedKeys but never clears it.
+               // Forget this and you re-handle every event forever.
+
+client.register(selector, SelectionKey.OP_READ, ByteBuffer.allocate(4096));
+               // the attachment IS the per-connection state (§13.3).
+               // With no per-connection thread, there is no stack to hold it.
+</code></pre></div>
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-engineering-model">✅ CHECKPOINT — end of the ENGINEERING MODEL</h3>
+<p>You can now name eight ways this breaks, tell them apart from their symptoms
+alone, and re-create three of them on your own machine. You can say what the
+kernel guarantees, what it refuses to guarantee, and which four bargains you
+signed when you chose density over isolation.</p>
+<p><strong>Say it back.</strong> An operator shows you a graph: one core at 100%, request
+throughput completely normal, latency fine, no errors. Without using the
+words <em>epoll</em> or <em>deregister</em>, say what you think is happening and what you
+would look at next.</p>
+<details><summary>A good answer sounds like</summary>
+"Something is waking the loop instantly and endlessly while nothing is
+actually there to handle. The usual cause is a connection whose far end went
+away, which the code keeps treating as 'nothing to read yet' instead of
+'this one is finished'. I would look at whether the spike lines up with
+clients disconnecting, and I would sample where that thread is spending its
+time."
+</details>
+
+<p><strong>Next (§16):</strong> what a real framework adds, what an operator watches, and
+whether virtual threads have quietly retired all of it.</p>
+</blockquote>
+<hr />
+<h1 id="readme-production-model">PRODUCTION MODEL</h1>
+<h2 id="readme-16-what-does-a-real-system-add-on-top-of-this-toy">16. What does a real system add on top of this toy?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Netty is this lab's hundred lines with every unsolved
+problem in §13 solved. Then Java gave you virtual threads, and the whole
+mechanism moved under the floor without going away.</p>
+</blockquote>
+<p>The chain runs like this. <strong>Toy</strong> (<code>SelectorEchoServer</code>, about 100 lines) →
+<strong>real framework</strong> (Netty, roughly 1,000× that) → <strong>production architecture</strong> →
+<strong>operations</strong>.</p>
+<p>Meera's hotel is now a chain of hotels, and Asha, Arjun and Priya are two
+million people. Everything below is what you have to add before that sentence
+is safe.</p>
+<h3 id="readme-which-of-13s-failures-does-netty-close-for-you">Which of §13's failures does Netty close for you?</h3>
+<p>Each row is a section above that this lab deliberately left unsolved.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Netty feature</th>
+  <th>The failure it closes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>boss group / worker group</td>
+  <td>thundering herd on accept (§13.5)</td>
+</tr>
+<tr>
+  <td><code>ChannelPipeline</code> of handlers</td>
+  <td>the state-machine complexity of §13.3</td>
+</tr>
+<tr>
+  <td><code>LengthFieldBasedFrameDecoder</code> and friends</td>
+  <td>framing (§13.3)</td>
+</tr>
+<tr>
+  <td><code>WriteBufferWaterMark</code>, <code>isWritable()</code></td>
+  <td>backpressure (§13.4)</td>
+</tr>
+<tr>
+  <td><code>IdleStateHandler</code> + <code>HashedWheelTimer</code></td>
+  <td>no free timeouts (§13.7)</td>
+</tr>
+<tr>
+  <td><code>EventExecutorGroup</code> for blocking work</td>
+  <td>the cardinal sin (§13.1)</td>
+</tr>
+<tr>
+  <td>selector auto-rebuild</td>
+  <td>the JDK epoll spin bug (§13.8)</td>
+</tr>
+</tbody>
+</table></div>
+<p>And three more that lift limits rather than fixing bugs:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Netty feature</th>
+  <th>The limit it lifts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>EventLoopGroup</code>, N loops ≈ N cores, each owning a fixed set of connections</td>
+  <td>the single-loop CPU ceiling</td>
+</tr>
+<tr>
+  <td>pooled, reference-counted <code>ByteBuf</code></td>
+  <td>GC pressure from per-message buffers</td>
+</tr>
+<tr>
+  <td>native epoll/kqueue transports, edge-triggered option</td>
+  <td>the portability ceiling of <code>Selector</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-who-actually-runs-on-this-exact-mechanism">Who actually runs on this exact mechanism?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>System</th>
+  <th>What it runs on</th>
+  <th>Worth knowing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>nginx, HAProxy, Envoy</td>
+  <td>C/C++ epoll event loops</td>
+  <td>the proxies in front of your service are all this</td>
+</tr>
+<tr>
+  <td>Redis</td>
+  <td>famously a <em>single</em> event-loop thread</td>
+  <td>one slow <code>KEYS *</code> stalls the entire server: §13.1 at production scale</td>
+</tr>
+<tr>
+  <td>Node.js</td>
+  <td>libuv</td>
+  <td>the whole runtime is one event loop</td>
+</tr>
+<tr>
+  <td>Kafka's broker network layer</td>
+  <td>Java NIO <code>Selector</code></td>
+  <td>the same class as this lab, in a system you already run</td>
+</tr>
+<tr>
+  <td>Netty</td>
+  <td>Java NIO <code>Selector</code></td>
+  <td>and therefore Vert.x, Spring WebFlux, gRPC-Java, Elasticsearch and Cassandra</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-comes-after-readiness">What comes after readiness?</h3>
+<p>Readiness-based multiplexing still requires <em>you</em> to call <code>read()</code>, as §9
+insisted. The fourth generation hands that over too.</p>
+<p>Windows IOCP arrived in the 1990s and Linux <code>io_uring</code> in 2019. With both, you
+submit &quot;read 100 bytes into this buffer&quot; and are notified when it is <strong>done</strong>.
+That means fewer system calls, because <code>io_uring</code> uses shared-memory ring
+buffers, and no readiness-then-read round trip at all.</p>
+<p>In Java the completion-based API is <code>AsynchronousSocketChannel</code>, from NIO.2. It
+has seen far less adoption than <code>Selector</code> and Netty. Part of the reason is
+that on Linux it was historically implemented over epoll plus a thread pool
+anyway, giving you the complexity of callbacks without the syscall win.</p>
+<h3 id="readme-what-do-you-actually-watch-in-operations">What do you actually watch in operations?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>What you watch</th>
+  <th>Where to get it</th>
+  <th>What a bad value means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Event loop lag</td>
+  <td>time between successive loop iterations</td>
+  <td>the single most important metric here; a rising p99 means §13.1</td>
+</tr>
+<tr>
+  <td>100% CPU on one core with no traffic</td>
+  <td><code>strace -c -p &lt;pid&gt;</code>, or a flame graph for hot <code>epoll_wait</code></td>
+  <td>a busy loop: §13.2 or §13.8</td>
+</tr>
+<tr>
+  <td>Open fd count against <code>ulimit -n</code></td>
+  <td><code>lsof -p</code>, or <code>/proc/&lt;pid&gt;/fd</code></td>
+  <td>your real connection ceiling is approaching</td>
+</tr>
+<tr>
+  <td>Connections per loop</td>
+  <td>the framework's own metrics</td>
+  <td>imbalance: some loops idle while one saturates</td>
+</tr>
+<tr>
+  <td>Outbound buffer size per connection</td>
+  <td>the framework's own metrics</td>
+  <td>rising means slow consumers, and §13.4 approaching</td>
+</tr>
+</tbody>
+</table></div>
+<p>The file-descriptor row deserves a number. The machine this lab was written on
+allows 1,048,576 open files. The default on many Linux images is 1024, which is
+a production incident waiting to happen.</p>
+<p>Five tuning knobs are worth knowing by name:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Knob</th>
+  <th>What it sets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>number of event loops</td>
+  <td>usually about one per core</td>
+</tr>
+<tr>
+  <td><code>SO_BACKLOG</code></td>
+  <td>the pending-connection queue depth</td>
+</tr>
+<tr>
+  <td><code>TCP_NODELAY</code></td>
+  <td>disables Nagle's algorithm, trading bandwidth for latency</td>
+</tr>
+<tr>
+  <td>socket buffer sizes</td>
+  <td>how much the kernel will hold per connection</td>
+</tr>
+<tr>
+  <td><code>SO_REUSEPORT</code></td>
+  <td>multi-loop accept without a thundering herd (§13.5)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-is-this-still-your-problem-now-that-java-has-virtual-threads">Is this still your problem, now that Java has virtual threads?</h3>
+<p>Here is the conclusion that matters most for you, and it connects directly to
+the <a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a> lab.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> A virtual thread blocking on a socket read is nearly free,
+because the JVM unmounts it from its carrier thread. So <em>how does the JVM know
+when to mount it back</em>?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>It does exactly what this lab does.</strong> The JDK has to wait on many
+connections at once without burning a thread each, which is precisely this
+lab's problem, so it runs internal <strong>poller</strong> threads built on epoll or
+kqueue.</p>
+<p>When a virtual thread blocks on a socket read, the JDK registers that file
+descriptor with a poller and parks the virtual thread. When the poller reports
+readiness, it unparks it.</p>
+<p>If you guessed &quot;the OS wakes the virtual thread directly&quot;, the OS has never
+heard of your virtual thread. It only knows file descriptors and real threads.</p>
+<p>The probe below shows that machinery present in your own JDK.</p>
+</details>
+
+</blockquote>
+<p>You do not have to take that on trust. Ask your own JVM whether the poller
+classes are there:</p>
+<p>Extend the same <code>Probe.java</code> with a loop that asks for each class by name:</p>
+<div class="code"><pre><code class="language-java">for (String n : new String[]{&quot;sun.nio.ch.Poller&quot;, &quot;sun.nio.ch.KQueuePoller&quot;}) {
+  try { Class.forName(n); System.out.println(&quot;present : &quot; + n); }
+  catch (ClassNotFoundException e) { System.out.println(&quot;absent  : &quot; + n); }
+}
+</code></pre></div>
+<div class="code"><pre><code>present : sun.nio.ch.Poller
+present : sun.nio.ch.KQueuePoller     ← macOS; on Linux this is EPollPoller
+</code></pre></div>
+<p><strong>I/O multiplexing did not go away. It moved under the floor.</strong> Which changes
+the engineering advice in four specific ways.</p>
+<p><strong>Write thread-per-connection code again.</strong> A blocking <code>read()</code> on a virtual
+thread gives you §3's simple programming model with §8's efficiency. No framing
+state machines, no callbacks, and <code>try/finally</code> and stack traces work properly.</p>
+<p><strong>§13.1 stops applying to your code.</strong> Blocking a virtual thread blocks only
+that request, because the carrier is released. The cardinal sin is a sin only
+on a real event loop.</p>
+<p><strong>But keep everything else.</strong> Framing (§13.3), backpressure (§13.4), idle
+timeouts (§13.7) and file-descriptor limits are all still yours. The JDK solved
+the <em>thread cost</em> of waiting, not the <em>semantics</em> of stream I/O.</p>
+<p><strong>And you still need this knowledge.</strong> You need it to read Netty, Kafka, Redis
+and nginx behaviour, to diagnose a pinned core, and to reason about any
+existing reactive codebase. Note the honest exception too. <strong>Pinning</strong> is a
+virtual thread stuck to its carrier, caused by a native frame or by a
+<code>synchronized</code> block before JDK 24, and it puts the old thread ceiling straight
+back.</p>
+<h3 id="readme-what-does-this-lab-deliberately-leave-out">What does this lab deliberately leave out?</h3>
+<p>Framing, writability and backpressure, multiple loops, idle timeouts, TLS,
+buffer pooling, graceful shutdown, connection limits, and the selector-rebuild
+guard. Each one is named above, with the real-world component that provides it.</p>
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-production-model">✅ CHECKPOINT — end of the PRODUCTION MODEL</h3>
+<p>You can now say what Netty adds and which §13 failure each feature answers,
+name the five things an operator watches on an event-loop server, and explain
+where completion-based I/O sits relative to readiness. You can also say what
+virtual threads changed for you. More importantly, you can say what they did
+not change.</p>
+<p><strong>Say it back.</strong> Your tech lead asks whether the team can stop caring about
+any of this now that you are on modern Java. Answer in two sentences: one for
+what you can stop doing, one for what you cannot.</p>
+<details><summary>A good answer sounds like</summary>
+"We can go back to writing plain blocking code per connection, and one slow
+call no longer punishes unrelated users. We still own message boundaries,
+slow consumers, idle connections and the open-file limit, because the
+platform made waiting cheap without making a byte stream into a message
+queue."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-17-where-are-the-exercises">17. Where are the exercises?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, from &quot;explain it back&quot; to a production design
+prompt, with a planted bug and one method for you to implement.</p>
+</blockquote>
+<p>See <code>EXERCISES.md</code>. Answers are in <code>SOLUTIONS.md</code>; attempt first. Rungs 7 and 8
+are design discussions rather than single right answers.</p>
+<p>Rung 1 asks you to retell §3 and §5 without jargon, which is Meera's two failed
+careers in your own words. Rung 6 hands you the server that never notices Priya
+hung up, and asks you to find the bug from its symptom alone.</p>
+<h2 id="readme-18-what-does-this-connect-to-and-what-should-you-learn-next">18. What does this connect to, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab sits directly under virtual threads and under
+every persistent-connection protocol, and it is confused with two things it
+is not.</p>
+</blockquote>
+<p>Read the diagram top to bottom. What feeds in is above, what it feeds is below,
+and the dotted arrows are the two ideas people mistake it for. Every box below
+<code>io-multiplexing</code> is a place where Meera's light board is already running,
+whether or not the code you read there ever mentions it.</p>
+<pre class="mermaid">flowchart TD
+    OS[&quot;OS threads &amp; scheduling&quot;] --&gt; IOM
+    TCP[&quot;TCP as a byte stream&quot;] --&gt; IOM
+    IOM[&quot;**io-multiplexing**&lt;br/&gt;one thread, many connections&quot;]
+    IOM --&gt; VT[&quot;java-virtual-threads ✔&lt;br/&gt;(uses a poller underneath)&quot;]
+    IOM --&gt; CP[&quot;communication-protocols ✔&lt;br/&gt;(WebSocket/SSE need many idle conns)&quot;]
+    IOM --&gt; NETTY[&quot;netty / reactive stacks ?&quot;]
+    IOM --&gt; IOURING[&quot;io_uring &amp; completion I/O ?&quot;]
+    IOM --&gt; BP[&quot;backpressure &amp; flow control ?&quot;]
+    IOM -.easily confused with.-&gt; ASYNC[&quot;async I/O (completion-based):&lt;br/&gt;*it* does the read, not you&quot;]
+    IOM -.easily confused with.-&gt; CONC[&quot;concurrency:&lt;br/&gt;multiplexing is about WAITING,&lt;br/&gt;not about parallel CPU work&quot;]
+    style IOM fill:#1f6feb,color:#fff
+</pre>
+<p><strong>Built on your earlier labs.</strong>
+<a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a> is where the
+mount and unmount cycle was taught, and this lab is the machinery underneath
+it. <a href="../02-communication-protocols/notes.html#readme">communication-protocols</a> is
+where persistent connections were chosen, and persistent connections are
+exactly what make idle-connection cost the dominant concern.
+<code>database-landscape</code> and <code>cap-theorem</code> connect only distantly.</p>
+<p><strong>Commonly confused with — one sentence separates each.</strong></p>
+<ul>
+<li><em>Asynchronous I/O</em>: multiplexing tells you <strong>you may read now</strong>; async I/O
+<strong>does the read</strong> and tells you it finished.</li>
+<li><em>Concurrency and parallelism</em>: multiplexing makes <strong>waiting</strong> cheap. It adds
+no CPU parallelism whatsoever, since one loop is one core.</li>
+<li><em>Non-blocking I/O</em>: that is only the socket mode. Without a readiness
+notification it degenerates into §5's hot loop.</li>
+</ul>
+<p><strong>Suggested next.</strong></p>
+<div class="code"><pre><code>/learn netty            — the production framework built on everything in §16
+/learn io-uring         — the completion-based fourth generation
+/learn backpressure     — §13.4 as a first-class topic, across protocols
+/learn tcp-flow-control — why partial reads and writes happen at all
+/learn reactor-pattern  — the design-pattern formalisation of the event loop
+</code></pre></div>
+<hr />
+<h2 id="readme-19-glossary--every-word-grouped-by-where-it-lives">19. Glossary — every word, grouped by where it lives</h2>
+<p>Which word were you looking for? Seven small tables instead of one long one, so
+you can find it by asking where in Meera's hotel the thing belongs.</p>
+<p>The problem, and the two designs that failed at it:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>C10K problem</strong></td>
+  <td>The 1999 challenge of serving 10,000 concurrent connections on one machine.</td>
+</tr>
+<tr>
+  <td><strong>Thread-per-connection</strong></td>
+  <td>One dedicated thread per connection, blocked in <code>read()</code> while idle.</td>
+</tr>
+<tr>
+  <td><strong>Non-blocking socket</strong></td>
+  <td>A connection whose <code>read()</code> returns &quot;nothing right now&quot; instead of waiting.</td>
+</tr>
+<tr>
+  <td><strong>Polling / hot loop</strong></td>
+  <td>Repeatedly asking every connection whether it has data — correct, and CPU-ruinous.</td>
+</tr>
+<tr>
+  <td><strong>System call (syscall)</strong></td>
+  <td>A request from your program into the kernel; cheap individually, ruinous in millions.</td>
+</tr>
+</tbody>
+</table></div>
+<p>What lives on the kernel's side of the line:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Kernel</strong></td>
+  <td>The privileged core of the OS that owns the network card and the connections.</td>
+</tr>
+<tr>
+  <td><strong>I/O multiplexing</strong></td>
+  <td>One thread blocking on the readiness of a whole <em>set</em> of connections.</td>
+</tr>
+<tr>
+  <td><strong>File descriptor (fd)</strong></td>
+  <td>The small integer handle the kernel gives you for an open connection or file.</td>
+</tr>
+<tr>
+  <td><strong>Interest set</strong></td>
+  <td>The registered set of descriptors + event types you want to be woken for.</td>
+</tr>
+<tr>
+  <td><strong>Ready set</strong></td>
+  <td>The subset the kernel returns from one wait call.</td>
+</tr>
+</tbody>
+</table></div>
+<p>The two axes, and the routine built on them:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Blocking vs non-blocking</strong></td>
+  <td>Whether a call parks your thread when it cannot proceed.</td>
+</tr>
+<tr>
+  <td><strong>Synchronous vs asynchronous</strong></td>
+  <td>Whether <em>you</em> perform the I/O, or someone does it and notifies you.</td>
+</tr>
+<tr>
+  <td><strong>Readiness</strong></td>
+  <td>&quot;Act now and you will not block&quot; — not &quot;your data is complete&quot;.</td>
+</tr>
+<tr>
+  <td><strong>Event loop</strong></td>
+  <td><code>wait for readiness → dispatch handlers → repeat</code>, on one thread.</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three generations of the wait call:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>select</code></strong></td>
+  <td>The 1983 multiplexing syscall: whole set in, O(total) scan, 1024-descriptor cap.</td>
+</tr>
+<tr>
+  <td><strong><code>poll</code></strong></td>
+  <td>1986; same cost model as <code>select</code>, no fixed cap.</td>
+</tr>
+<tr>
+  <td><strong><code>epoll</code></strong></td>
+  <td>Linux (2002): kernel-resident interest set, O(ready) wait.</td>
+</tr>
+<tr>
+  <td><strong><code>kqueue</code></strong></td>
+  <td>BSD/macOS (2000) equivalent of epoll.</td>
+</tr>
+</tbody>
+</table></div>
+<p>What Java hands you, and how it notifies:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>Selector</code></strong></td>
+  <td>Java's portable façade over epoll/kqueue; requires non-blocking channels.</td>
+</tr>
+<tr>
+  <td><strong><code>SelectionKey</code></strong></td>
+  <td>One registration; carries the interest bits, the ready bits, and an attachment.</td>
+</tr>
+<tr>
+  <td><strong>Attachment</strong></td>
+  <td>Arbitrary per-connection state hung on a key — the heap replacement for a thread stack.</td>
+</tr>
+<tr>
+  <td><strong>Level-triggered</strong></td>
+  <td>Notify repeatedly while the condition holds. Java's <code>Selector</code> default.</td>
+</tr>
+<tr>
+  <td><strong>Edge-triggered</strong></td>
+  <td>Notify only on the transition to ready; you must drain fully or hang.</td>
+</tr>
+</tbody>
+</table></div>
+<p>What goes wrong, and what it is called:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>End-of-stream (<code>-1</code>)</strong></td>
+  <td>The peer closed. Makes the connection permanently readable — deregister it.</td>
+</tr>
+<tr>
+  <td><strong>Busy loop</strong></td>
+  <td>A loop woken instantly and endlessly, usually from a never-cleared ready condition.</td>
+</tr>
+<tr>
+  <td><strong>Framing</strong></td>
+  <td>Recovering message boundaries from a byte stream: length prefix or delimiter.</td>
+</tr>
+<tr>
+  <td><strong>Backpressure</strong></td>
+  <td>Slowing production when a slow consumer makes outbound buffers grow.</td>
+</tr>
+<tr>
+  <td><strong>Thundering herd</strong></td>
+  <td>Many waiters woken for one event; all but one find nothing to do.</td>
+</tr>
+<tr>
+  <td><strong>Head-of-line blocking</strong></td>
+  <td>One item at the front of a queue delaying everything behind it.</td>
+</tr>
+</tbody>
+</table></div>
+<p>What you meet in production:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>SO_REUSEPORT</code></strong></td>
+  <td>Multiple sockets on one port, with the kernel load-balancing new connections.</td>
+</tr>
+<tr>
+  <td><strong>Event loop lag</strong></td>
+  <td>Time between loop iterations; the key health metric for an event-loop server.</td>
+</tr>
+<tr>
+  <td><strong>Completion-based I/O</strong></td>
+  <td>IOCP / <code>io_uring</code> / NIO.2: hand over a buffer, be told when the transfer is done.</td>
+</tr>
+<tr>
+  <td><strong>Poller (JDK)</strong></td>
+  <td><code>sun.nio.ch.Poller</code> — the internal epoll/kqueue threads that park and unpark virtual threads.</td>
+</tr>
+<tr>
+  <td><strong>Pinning</strong></td>
+  <td>A virtual thread stuck to its carrier (native frame; <code>synchronized</code> before JDK 24), restoring the old ceiling.</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-20-about-this-lab">20. About this lab</h2>
+<p>What is in the folder, and how far should you trust the numbers? Everything in
+this section is about the lab itself rather than the subject. It is here so
+that Meera, Asha, Arjun and Priya never have to stop mid-story while the
+document explains itself.</p>
+<h3 id="readme-what-is-in-the-folder">What is in the folder?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document: 19 sections of subject, plus this appendix</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>the trainer that races all three designs on one traffic pattern</td>
+</tr>
+<tr>
+  <td><code>src/BlockingEchoServer.java</code>, <code>src/SpinEchoServer.java</code>, <code>src/SelectorEchoServer.java</code></td>
+  <td>the three designs from §3, §5 and §8</td>
+</tr>
+<tr>
+  <td><code>src/BrokenSelectorServer.java</code>, <code>src/EchoTest.java</code>, <code>src/Experiments.java</code></td>
+  <td>the planted bug, the five tests, and the four experiments</td>
+</tr>
+<tr>
+  <td><code>src/FramingServer.java</code>, <code>src/FramingTest.java</code></td>
+  <td>the starting point for exercise rung 5</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code>, <code>SOLUTIONS.md</code></td>
+  <td>eight rungs and their answers</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-did-you-need-before-starting">What did you need before starting?</h3>
+<p>Nothing for the concept itself. You should be comfortable with threads in
+general: what one is, and what it means for one to be blocked.</p>
+<p>The four depth layers are Beginner (§1–11), Intermediate (§12), Engineering
+(§13–15) and Production (§16–20). Each transition carries a checkpoint that
+tells you what you can do at that point, and a prompt to say it back in your
+own words.</p>
+<h3 id="readme-how-were-the-numbers-made">How were the numbers made?</h3>
+<p><strong>Every number quoted in this document was produced by the code in <code>src/</code> on
+this machine, while the document was being written.</strong> Nothing above is
+illustrative.</p>
+<p>Re-running will shift the magnitudes a little. You might see 899 ms rather than
+905, or 71 readiness events rather than 76. The shape is what matters, and the
+shape is stable.</p>
+<p>Three things are described rather than captured, and it is worth knowing which:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Figure</th>
+  <th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>§13.4, the write side and backpressure</td>
+  <td>flagged theory; this lab's echoes are too small to fill a send buffer</td>
+</tr>
+<tr>
+  <td>§13.5 to §13.8</td>
+  <td>described from real systems, not reproduced by the code here</td>
+</tr>
+<tr>
+  <td>The numbers inside the trainer (<code>visualization.html</code>)</td>
+  <td>modelled for teaching, not captured from a run</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two probe outputs in the text came from a Mac, which is why <code>Selector</code>
+resolves to <code>sun.nio.ch.KQueueSelectorImpl</code> and the JDK poller to
+<code>sun.nio.ch.KQueuePoller</code>. On Linux the same probes print
+<code>sun.nio.ch.EPollSelectorImpl</code> and <code>EPollPoller</code>. The open-file limit quoted in
+§16, 1,048,576, is this machine's <code>ulimit -n</code>, and it is far higher than the
+1024 that many Linux images still ship with.</p>
+<h3 id="readme-where-does-this-sit-among-your-other-labs">Where does this sit among your other labs?</h3>
+<p>It sits underneath two you have already done.
+<a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a> taught you that
+blocking a virtual thread is nearly free; this lab is the machinery that makes
+that true, and §16 closes the loop on it.
+<a href="../02-communication-protocols/notes.html#readme">communication-protocols</a> taught you
+to choose persistent connections; persistent connections are precisely what
+make the cost of an idle connection the number that decides your architecture.</p>
+<p>It also sits alongside
+<a href="../01-networking-for-developers/notes.html#readme">networking-for-developers</a>, which
+is the floor under both. That lab asks &quot;it is broken, and where?&quot;. This one
+asks &quot;it is idle, and what does that cost?&quot;.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--io-multiplexing">Exercises — I/O Multiplexing</h1>
+<p>Eight rungs, easiest to hardest. Attempt before opening <code>SOLUTIONS.md</code>.
+Rungs 7–8 have no single right answer — they are design discussions.</p>
+<p>Run everything from the lab directory:</p>
+<div class="code"><pre><code class="language-bash">cd ~/Documents/Learning/03-io-multiplexing
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p>No notation, no jargon. Say these out loud or write them down.</p>
+<ol>
+<li><p>Your chat server has 10,000 connected users and 5 of them are typing.
+Explain to a competent engineer who has never heard of any of this <strong>why
+giving each user their own thread is a bad idea</strong> — and be precise about
+which resource actually runs out. (Hint: it is not CPU. Say why not.)</p>
+</li>
+<li><p>Explain <strong>why the obvious fix — one thread that checks every connection in a
+loop — is also wrong</strong>, and name the thing it wastes.</p>
+</li>
+<li><p>In two sentences, what does the kernel do for you that neither design could
+do for itself?</p>
+</li>
+<li><p>A colleague says &quot;I/O multiplexing means the reads happen asynchronously in
+the background.&quot; They are wrong. Correct them in one sentence.</p>
+</li>
+</ol>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Point at the actual pieces.</p>
+<ol>
+<li><p>Open <code>src/SelectorEchoServer.java</code>. Find and quote the line that puts a
+connection into the <strong>interest set</strong>, and the line that reads the <strong>ready
+set</strong>. Which one runs once per connection, and which runs on every loop pass?</p>
+</li>
+<li><p>In the same file, what is the <code>ByteBuffer</code> passed as the third argument to
+<code>register(...)</code> for? Which README section explains why it has to exist at all?</p>
+</li>
+<li><p>Open <code>visualization.html</code>. Run the &quot;Idle crowd&quot; scenario. Which panel's
+thread counter climbs, and which stays at 1? What does the CPU meter show for
+each of the three designs?</p>
+</li>
+<li><p>In <code>src/Experiments.java</code>, find the field that counts how many times the
+event loop woke up. In experiment 2 it reported <code>0</code> for 3 seconds and 2,000
+connections. Explain what a <code>0</code> there actually proves.</p>
+</li>
+</ol>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Commit to an answer, <strong>then</strong> run the command.</p>
+<ol>
+<li><p><code>java src/Experiments.java threads 5000</code> — predict the two thread counts
+before running.</p>
+</li>
+<li><p>In experiment 2, suppose we raise the connection count from 2,000 to 20,000.
+Predict what happens to each of the three polling numbers (CPU ms, loop
+passes, readiness questions), and <em>which direction</em> loop passes moves. Then
+run <code>java src/Experiments.java spin 20000</code> and explain any surprise.
+<em>(If your <code>ulimit -n</code> is low, the run will stop early and say so.)</em></p>
+</li>
+<li><p><code>java src/Experiments.java readiness</code> sent one 512 KB message and needed 76
+readiness events. Predict what happens to that number if the message is 5 KB
+instead. What is the smallest message size that reliably needs only one?</p>
+</li>
+<li><p>Experiment 3 measured B's ping at 905 ms behind a 1-second handler. Predict
+B's latency if <strong>three</strong> clients each send a 1-second request just before B's
+ping, on the event-loop server. Then predict it for the thread-per-connection
+server. What general rule do the two answers give you?</p>
+</li>
+<li><p>You register a channel for <code>OP_WRITE</code> and never deregister it. Predict what
+your CPU graph looks like, and say which failure in README §13 it matches.</p>
+</li>
+</ol>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>Change the code, observe, explain.</p>
+<ol>
+<li><p>In <code>src/SelectorEchoServer.java</code>, change <code>selector.select()</code> to
+<code>selector.selectNow()</code>. Run <code>java src/EchoTest.java</code>. Do the tests still
+pass? Now run the server and watch CPU (<code>top -pid &lt;pid&gt;</code>). What have you
+turned this server into, and which section of the README describes it?</p>
+</li>
+<li><p>Start <code>SelectorEchoServer</code> with a slow handler
+(<code>new SelectorEchoServer(3000)</code>) and connect two terminals with
+<code>nc localhost &lt;port&gt;</code>. Send <code>SLOW</code> in one, then immediately type in the
+other. Describe exactly what the second terminal experiences and why.
+Which guarantee is lost — safety or liveness?</p>
+</li>
+<li><p>Delete the <code>it.remove()</code> line from the event loop in <code>SelectorEchoServer</code>.
+Predict first, then run <code>java src/EchoTest.java</code>. Explain the behaviour in
+terms of the interest set versus the ready set.</p>
+</li>
+<li><p>In <code>src/SpinEchoServer.java</code>, add <code>Thread.sleep(1)</code> at the end of each loop
+pass. Re-run <code>java src/Experiments.java spin 2000</code>. CPU drops enormously —
+so why is this <em>not</em> an acceptable fix? Name the two things it costs.</p>
+</li>
+</ol>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>The task:</strong> implement message framing.</p>
+<p><code>src/FramingServer.java</code> has one unimplemented method, <code>nextCompleteMessage()</code>.
+Everything else — event loop, per-connection buffer, reply encoding — is
+written for you. The wire format and the contract are documented at the top of
+that file.</p>
+<div class="code"><pre><code class="language-bash">java src/FramingTest.java     # 0 passed, 5 failed  ← your starting point
+</code></pre></div>
+<p>Make all five pass. The three tests attack framing from different directions:
+one message per write, two messages glued into one write, and a 200 KB message
+dribbled out in chunks (with the 4-byte length prefix itself split in half).</p>
+<p>You are done when:</p>
+<div class="code"><pre><code>5 passed, 0 failed
+</code></pre></div>
+<p>Then answer: <strong>why can a plain byte-for-byte echo never pass these tests?</strong></p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><code>src/BrokenSelectorServer.java</code> contains exactly one realistic bug. Do not diff
+it against <code>SelectorEchoServer</code> until you have answered these.</p>
+<div class="code"><pre><code class="language-bash">java src/EchoTest.java broken
+</code></pre></div>
+<ol>
+<li>Which test fails, and what is the actual number it reports?</li>
+<li>What is the <strong>symptom</strong> an operator would see on a production dashboard —
+with no test suite, no stack trace, and no error in the logs?</li>
+<li>What is the <strong>mechanism</strong>? Walk it: what does the client do, what does the
+kernel then report about that connection, and why does the handler's response
+to that report cause the observed number?</li>
+<li>Which single line of <code>SelectorEchoServer</code> prevents it?</li>
+<li>Why do the other four tests still pass — and what does that tell you about
+how this class of bug survives code review and reaches production?</li>
+</ol>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>Extend the system to survive something it currently does not.</p>
+<ol>
+<li><p><strong>Idle timeouts.</strong> <code>SelectorEchoServer</code> holds a silent connection forever
+(README §13.7). Add a mechanism that closes any connection idle for more than
+10 seconds.</p>
+<ul>
+<li>Where does the &quot;last activity&quot; timestamp live, given there is no
+per-connection thread?</li>
+<li><code>selector.select()</code> sleeps indefinitely. If every connection is idle,
+nothing wakes the loop — so how does your sweep ever run? (There are at
+least two workable answers; find both and compare them.)</li>
+<li>Write a test that proves an idle connection is closed and an active one is
+not.</li>
+</ul>
+</li>
+<li><p><strong>The write side.</strong> Our echo assumes every write completes
+(<code>while (buf.hasRemaining()) ch.write(buf);</code>). Against a client that never
+reads, that loop spins forever on a full send buffer.</p>
+<ul>
+<li>Rewrite it to buffer the remainder and register <code>OP_WRITE</code>.</li>
+<li>State precisely when you must <em>deregister</em> <code>OP_WRITE</code>, and what happens if
+you forget.</li>
+<li>Now add backpressure: what do you do when a single connection's pending
+output reaches 100 MB? Name the trade-off in your answer.</li>
+</ul>
+</li>
+</ol>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p>No code. Write the design; a page each is plenty.</p>
+<ol>
+<li><p><strong>The push notification gateway.</strong> Design a service holding <strong>2 million</strong>
+concurrent WebSocket connections from mobile devices. Each device sends a
+heartbeat every 30 seconds and receives a handful of small messages per day.
+Fan-out publishes arrive from an internal service.</p>
+<p>Cover: how many machines and why (do the arithmetic — what is your real
+binding constraint?); event loops per machine; where connection state lives;
+how a publish for device X finds the machine holding X; what happens to
+in-flight messages when a machine dies; the OS limits you must raise; and the
+five metrics on your dashboard. For each metric, say which README §13 failure
+it detects.</p>
+</li>
+<li><p><strong>The migration decision.</strong> You own a 200k-line Java service built on Netty,
+written in 2018: callbacks, framing decoders, a worker pool for JDBC. It
+works. Your team now runs on Java 25, and README §16 says virtual threads
+give you the blocking model back with the same efficiency.</p>
+<p>Write the recommendation you would actually give your tech lead. Cover: what
+genuinely gets simpler and what does not; which of §13's failures disappear
+and which survive verbatim; how you would de-risk it; what would make you
+recommend <em>not</em> migrating at all; and what you would measure before and after
+to know whether you were right.</p>
+</li>
+<li><p><strong>The 100% CPU page.</strong> 3 a.m. One instance of your event-loop service is at
+100% CPU on a single core. Request throughput is <em>normal</em>. Latency is fine.
+No errors in the logs.</p>
+<p>Write the triage runbook: your first three commands, what each one would show
+for each of the candidate causes in README §13, and how you tell them apart.
+What is your mitigation before root cause, and why is &quot;restart it&quot; both the
+right first move and an insufficient answer?</p>
+</li>
+</ol>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--io-multiplexing">Solutions — I/O Multiplexing</h1>
+<p>Attempt <code>EXERCISES.md</code> first. Every number quoted here was produced by running
+the code in this lab on the author's machine; yours will differ in magnitude but
+not in shape. Rungs 7–8 are discussions, not single right answers.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1. Why thread-per-connection fails at 10,000 users.</strong></p>
+<p>The resource that runs out is <strong>memory and scheduler capacity, not CPU</strong>.</p>
+<p>A thread waiting inside <code>read()</code> uses no CPU at all — the OS has descheduled it
+entirely and will not touch it until bytes arrive. That is exactly why the
+answer surprises people. What it <em>does</em> consume is a call stack (about 1 MB of
+reserved address space per thread on a 64-bit JVM), a kernel thread structure,
+and a slot the scheduler must consider. Ten thousand connections means ten
+thousand of each, so you exhaust memory and drown the scheduler in bookkeeping
+while the CPU sits idle. There is also a hard OS limit on thread count that
+arrives regardless of how much RAM you buy.</p>
+<p>The one-line version: <strong>we are paying 10,000 salaries for 10,000 people to each
+be individually informed of something.</strong></p>
+<p><strong>2. Why the polling loop is also wrong.</strong></p>
+<p>It wastes <strong>CPU and system calls</strong>. To avoid parking, each connection must be
+non-blocking, so the loop asks every connection &quot;anything for me?&quot; and gets &quot;no&quot;
+almost every time. Measured: 4.2 million questions and a full core pinned at
+100% across three seconds in which <em>nothing happened</em>. Each question is a real
+syscall — cheap individually, ruinous in millions. It also degrades as you grow:
+a full lap costs one question per connection, so latency for any given user gets
+worse as the server gets more popular.</p>
+<p><strong>3. What the kernel does that neither design could.</strong></p>
+<p>The kernel receives the packets, so at the instant data lands it already knows
+which connection it belongs to — no asking required. So it can hold your entire
+list of connections, let your thread sleep, and wake it only when something
+actually happens, handing back exactly which connections are ready.</p>
+<p><strong>4. Correcting the colleague.</strong></p>
+<p>&quot;No — multiplexing tells you <em>you may read now</em>; <strong>you</strong> still call <code>read()</code>
+yourself and your thread waits for that copy. It is synchronous, non-blocking
+I/O with a blocking wait. The thing you are describing, where the kernel
+performs the read and notifies you on completion, is asynchronous I/O —
+<code>io_uring</code>, Windows IOCP, or Java's <code>AsynchronousSocketChannel</code>.&quot;</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>1.</strong> Interest set:
+<code>client.register(selector, SelectionKey.OP_READ, ByteBuffer.allocate(4096));</code>
+(also <code>serverChannel.register(selector, SelectionKey.OP_ACCEPT)</code> at startup).
+Ready set: <code>Iterator&lt;SelectionKey&gt; it = selector.selectedKeys().iterator();</code></p>
+<p>Registration runs <strong>once per connection</strong>; reading the ready set runs <strong>on every
+loop pass</strong>. That asymmetry is the whole efficiency argument for <code>epoll</code>/<code>kqueue</code>
+over <code>select</code> (README §12): the expensive list is stated once and lives in the
+kernel, rather than being re-sent on every call.</p>
+<p><strong>2.</strong> It is the <strong>attachment</strong> — that connection's private state, and here
+specifically its read buffer. It must exist because with one thread serving
+every connection there is <strong>no per-connection stack</strong> to hold a half-arrived
+message. README §13.3 is the section: a 512 KB message arrived across 76
+readiness events, so the fragment has to live on the heap between them. This is
+the structural cost of the technique — stack-held state becomes an explicit
+state machine.</p>
+<p><strong>3.</strong> The thread-per-connection panel's counter climbs to match the connection
+count; the multiplexing panel stays at <strong>1</strong>. The CPU meter reads roughly zero
+for thread-per-connection (blocked threads are free in CPU terms), pinned for
+the polling panel, and roughly zero for multiplexing. The lesson is that the two
+&quot;cheap&quot; designs are cheap on <em>different</em> axes, and only multiplexing is cheap on
+both.</p>
+<p><strong>4.</strong> The field is <code>loopIterations</code>. A <code>0</code> proves the thread was <strong>never woken</strong>
+across those 3 seconds — it was asleep inside <code>select()</code>, not looping quickly.
+This is the distinction between &quot;efficient polling&quot; and &quot;not polling at all&quot;,
+and it is why idle connections are genuinely free rather than merely cheap.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>1.</strong> 5,000 handler threads versus 1 event-loop thread — exactly linear versus
+exactly constant.</p>
+<p><strong>2.</strong> Verified by running <code>java src/Experiments.java spin 20000</code> against the
+2,000-connection baseline. The measured numbers:</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>2,000 conns</th>
+  <th>16,334 conns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>CPU burned in 3 s</td>
+  <td>2,998 ms</td>
+  <td>3,001 ms — still exactly one core, pinned</td>
+</tr>
+<tr>
+  <td>Loop passes</td>
+  <td>2,111</td>
+  <td><strong>217</strong></td>
+</tr>
+<tr>
+  <td>Readiness questions</td>
+  <td>4,225,570</td>
+  <td>3,547,626</td>
+</tr>
+</tbody>
+</table></div>
+<p>The surprise is that <strong>loop passes go DOWN by 10×, not up</strong>. CPU was already
+saturated at 2,000 connections, so 8× the connections buys no extra CPU — it
+just makes each lap 8× longer. The syscall count stays the same order of
+magnitude for the same reason: it is capped by how many syscalls a core can
+issue per second, not by how many connections you have.</p>
+<p><strong>Why 16,334 and not 20,000 — an unplanned bonus lesson.</strong> The run stopped
+early with <code>Can't assign requested address</code>. That is <strong>not</strong> the file-descriptor
+limit (<code>ulimit -n</code> is over a million on this machine). It is <strong>ephemeral port
+exhaustion</strong>: every client connection consumes a source port from a range of
+roughly 16k–28k ports, and closed sockets hold their port in <code>TIME_WAIT</code> for
+minutes afterwards. So the <em>client</em> side hit a ceiling long before the server
+did — which is why the second half of that run reported 0 connections and its
+comparison should be ignored.</p>
+<p>Worth internalising, because it is a real and frequently misdiagnosed
+production ceiling (README §16 lists it among the operational limits): when
+load-testing a server from one machine, <strong>you usually measure your load
+generator's port limit, not your server's capacity.</strong> Real gateways see 2M
+connections because those arrive from millions of distinct client IPs, each
+with its own port range.</p>
+<p>That is the real lesson, and it is worse than &quot;it uses more CPU&quot;: <strong>your
+per-connection latency degrades linearly with popularity.</strong> A user's message
+waits for the loop to walk every other connection first. The design does not
+fall over — it gets quietly, uniformly slower for everyone.</p>
+<p><strong>3.</strong> A 5 KB message will almost always need <strong>one</strong> readiness event: it fits
+comfortably inside the kernel's receive buffer and inside a single <code>read()</code>.
+Roughly, anything below the socket receive buffer size (tens of KB by default,
+tunable via <code>SO_RCVBUF</code>) that is also sent as one write will usually arrive as
+one event.</p>
+<p>But &quot;usually&quot; is the trap. A single TCP segment is typically ~1.4 KB on
+Ethernet, so even a 5 KB message physically crosses the network in several
+packets — you got one event only because they arrived faster than your loop
+came round. Under a different network, a slower sender, or a busier loop, the
+same 5 KB message splits. <strong>There is no message size that guarantees one
+event</strong>, which is why framing is mandatory rather than an optimisation.</p>
+<p><strong>4.</strong> Event-loop server: roughly <strong>3 seconds</strong> — the three slow handlers run
+back to back on the one thread, and B waits behind all of them. It is additive.
+Thread-per-connection: still roughly <strong>0 ms</strong> — B has its own thread and is
+unaffected no matter how many slow requests are in flight.</p>
+<p>The general rule: <strong>on a shared event loop, latency for any connection is a
+function of the total work queued on that loop, not of that connection's own
+work.</strong> Slow handlers do not just hurt themselves; they serialise everyone.</p>
+<p><strong>5.</strong> A core pinned at 100% while the connection is idle. It matches <strong>README
+§13.2</strong> (the busy loop) — a socket's send buffer is empty almost all the time,
+so it is writable almost always, so a permanently-registered <code>OP_WRITE</code> makes
+<code>select()</code> return instantly forever. Same failure as the unclosed dead
+connection, from the write side. The rule: register <code>OP_WRITE</code> only while you
+have leftover bytes, and deregister the instant they drain.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>1. <code>selectNow()</code>.</strong> Verified — the tests come back:</p>
+<div class="code"><pre><code>4 passed, 1 failed
+FAIL closed_connection_is_deregistered_and_loop_sleeps (wakeups in 500 idle ms = 28853)
+</code></pre></div>
+<p>Four still pass because <code>selectNow()</code> is functionally correct: it returns the
+same ready set, just without waiting. But it never sleeps, so the loop spins —
+28,853 wakeups in 500 idle milliseconds, and <code>top</code> shows a core pinned.</p>
+<p><strong>You have turned <code>SelectorEchoServer</code> back into <code>SpinEchoServer</code></strong> (README §5),
+with one improvement: the kernel still does the readiness scan, so it is a
+cheaper spin than asking each connection individually. It is still a spin.</p>
+<p>The detail worth keeping: <strong>the same test caught this as caught the planted bug
+in rung 6.</strong> A &quot;did the loop actually go to sleep?&quot; assertion is a single test
+that catches an entire family of event-loop bugs. Worth stealing for real code.</p>
+<p><strong>2. Two terminals.</strong> The second terminal sees its echo delayed by the remainder
+of the 3-second sleep — it types instantly, and nothing comes back until the
+first client's handler finishes. Its bytes reached the machine within a
+millisecond and sat unread in a kernel buffer because the only thread that could
+read them was asleep in someone else's handler.</p>
+<p><strong>Liveness is lost, safety is kept.</strong> Nothing incorrect happens — no bytes are
+lost, corrupted, or mixed between connections; the echo is perfectly correct when
+it eventually arrives. What fails is <em>progress within a useful time</em>. That
+mapping matters: event-loop blocking is a liveness bug, which is why it produces
+latency alarms and timeouts rather than data corruption, and why it can hide in
+production for a long time.</p>
+<p><strong>3. Deleting <code>it.remove()</code>.</strong> Verified — the server <strong>dies</strong>, and the test suite
+hangs rather than failing:</p>
+<div class="code"><pre><code>Exception in thread &quot;selector-loop&quot; java.lang.NullPointerException:
+    Cannot invoke &quot;SocketChannel.configureBlocking(boolean)&quot; because &quot;&lt;local1&gt;&quot; is null
+	at SelectorEchoServer.handleNewConnection(SelectorEchoServer.java:89)
+loop wakeups after 1 msg: 2
+loop wakeups after 2 msgs: 2      ← frozen
+event-loop thread still alive: false
+</code></pre></div>
+<p>The mechanism, in interest-set/ready-set terms: <strong>the selector adds to
+<code>selectedKeys()</code> but never removes from it.</strong> Clearing handled entries is the
+application's job. So the accept key, handled once when the client connected,
+stays in the ready set forever and is re-dispatched on every subsequent pass.
+The second time <code>handleNewConnection()</code> runs there is no pending connection, so
+<code>accept()</code> correctly returns <code>null</code>, and the code dereferences it.</p>
+<p>Three lessons: the ready set is a mutable buffer you own, not a fresh snapshot;
+readiness is a <strong>hint</strong> — a &quot;ready&quot; <code>accept()</code> may legitimately yield nothing
+(the same reason thundering herd is survivable, README §13.5); and the event
+loop catches only <code>IOException</code>, so a <code>RuntimeException</code> kills the thread and
+silently takes every connection with it. Real event loops wrap dispatch in
+<code>catch (Throwable)</code> for exactly this reason.</p>
+<p><strong>4. <code>Thread.sleep(1)</code> in the spin loop.</strong> CPU collapses because the loop now
+runs ~1,000 times a second instead of millions. It is not acceptable because it
+costs two things:</p>
+<ul>
+<li><strong>Latency.</strong> Every message now waits up to 1 ms (plus a full lap) before
+anyone looks at it. You have traded a CPU problem for a latency floor that no
+amount of hardware removes.</li>
+<li><strong>The scaling problem is untouched.</strong> Each lap still costs one syscall per
+connection. At 20,000 connections a lap cannot finish inside 1 ms anyway, so
+the sleep becomes irrelevant and you are back to §6.</li>
+</ul>
+<p>This is the honest reason polling-with-a-sleep is not &quot;good enough&quot;: it is a
+tunable trade between wasted CPU and added latency, and multiplexing refuses the
+trade entirely — zero CPU <em>and</em> immediate wakeup.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p>Verified: this implementation takes <code>FramingTest</code> from <code>0 passed, 5 failed</code> to
+<code>5 passed, 0 failed</code>.</p>
+<div class="code"><pre><code class="language-java">static byte[] nextCompleteMessage(Conn c) {
+    if (c.len &lt; 4) return null;                       // can&#x27;t even read the length yet
+    int n = ByteBuffer.wrap(c.buf).getInt(0);         // big-endian length prefix
+    if (c.len &lt; 4 + n) return null;                   // prefix known, payload incomplete
+    byte[] payload = new byte[n];
+    System.arraycopy(c.buf, 4, payload, 0, n);
+    c.consume(4 + n);                                 // drop prefix AND payload
+    return payload;
+}
+</code></pre></div>
+<p>Four details carry the whole exercise:</p>
+<ul>
+<li><strong>Two separate incompleteness checks.</strong> <code>c.len &lt; 4</code> (cannot know the length
+yet) and <code>c.len &lt; 4 + n</code> (know the length, lack the body) are different states
+and both must return <code>null</code>. The dribble test deliberately splits the 4-byte
+prefix across two writes to force the first case.</li>
+<li><strong>Returning <code>null</code> is the normal case, not an error.</strong> Being handed half a
+message is the ordinary condition of a byte stream.</li>
+<li><strong><code>consume(4 + n)</code></strong> must drop the prefix as well as the payload. Dropping
+only the payload leaves 4 stray bytes that corrupt every subsequent frame — a
+bug that presents as &quot;the protocol desynchronises after the first message&quot;.</li>
+<li><strong>The caller loops</strong> (<code>while ((payload = nextCompleteMessage(conn)) != null)</code>).
+Handling one message per wakeup is the bug the second test is built to catch:
+two glued messages leaves the second stranded in the buffer until unrelated
+traffic arrives, which in production looks like random, unreproducible hangs.</li>
+</ul>
+<p><strong>Why a byte-for-byte echo can never pass:</strong> the contract requires replying
+<code>&quot;&lt;n&gt;:&lt;payload&gt;&quot;</code> where <code>n</code> counts <em>complete messages</em>. Producing that number
+requires knowing where messages end. An echo copies bytes without ever forming
+the concept of a message, so it has no <code>n</code> to report. That is the entire point:
+readiness gives you bytes, and <strong>only framing gives you messages.</strong></p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>1.</strong> <code>closed_connection_is_deregistered_and_loop_sleeps</code> fails with <strong>351,609
+wakeups in 500 idle milliseconds</strong> (correct server: 0).</p>
+<p><strong>2. The production symptom:</strong> one CPU core pinned at 100%, with <strong>normal
+throughput, normal latency, and nothing in the logs</strong>. Possibly triggered hours
+after the client that caused it disconnected. Nothing looks broken — which is
+precisely what makes it hard. Eventually you accumulate enough of these zombie
+registrations that real work starts to suffer.</p>
+<p><strong>3. The mechanism</strong>, step by step:</p>
+<ul>
+<li>The client closes its socket. TCP delivers the close to the server.</li>
+<li>The kernel now reports that connection as <strong>permanently readable</strong> — because
+end-of-stream <em>is</em> a readable condition. A read on it returns <code>-1</code> immediately,
+forever. Java's <code>Selector</code> is <strong>level-triggered</strong>, so it re-reports the
+condition on every call for as long as it holds.</li>
+<li><code>BrokenSelectorServer</code> does <code>if (n &lt;= 0) return;</code> — folding <code>-1</code>
+(end-of-stream, permanent) together with <code>0</code> (nothing right now, transient)
+and treating both as &quot;try again later&quot;.</li>
+<li>But the registration is never cancelled, so the condition never clears.
+<code>select()</code> returns instantly, the handler returns instantly, <code>select()</code> returns
+instantly — 351,609 times in half a second.</li>
+</ul>
+<p>The bug is fundamentally a <strong>conflation of two different meanings of &quot;no data&quot;</strong>.</p>
+<p><strong>4. The line that prevents it:</strong></p>
+<div class="code"><pre><code class="language-java">if (n == -1) { key.cancel(); ch.close(); return; }
+</code></pre></div>
+<p><code>cancel()</code> removes it from the interest set; <code>close()</code> releases the descriptor.
+Either alone is insufficient — leaking descriptors will eventually hit
+<code>ulimit -n</code>.</p>
+<p><strong>5. Why the other four still pass, and why that matters.</strong></p>
+<p>Every other test exercises <strong>live</strong> connections doing normal work, and the bug
+only manifests on a <strong>dead</strong> one. Echo works, concurrency works, per-connection
+buffers work. The happy path is completely intact.</p>
+<p>This is the general shape of event-loop bugs and why they reach production:
+they are not correctness failures but <strong>resource-consumption failures on the
+cleanup path</strong>. Code review sees a plausible null-ish guard; functional tests
+pass; staging with a handful of well-behaved clients shows nothing. It surfaces
+only under real traffic where clients disconnect abruptly.</p>
+<p>The defence is the test itself: assert that <strong>the loop actually goes back to
+sleep</strong>. It is cheap, and it catches this bug, the <code>selectNow()</code> mistake in rung
+4.1, the permanent-<code>OP_WRITE</code> mistake in rung 3.5, and the JDK epoll spin bug of
+§13.8 — four unrelated causes, one assertion.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<h3 id="solutions-71-idle-timeouts">7.1 Idle timeouts</h3>
+<p><strong>Where the timestamp lives:</strong> on the per-connection state object — the
+<code>SelectionKey</code> attachment. Extend the attachment from a bare <code>ByteBuffer</code> to a
+small <code>Conn { ByteBuffer buf; long lastActivityNanos; }</code> and stamp it on every
+successful read. This is the same &quot;no stack, so state goes on the heap&quot; move as
+framing.</p>
+<p><strong>How the sweep ever runs</strong> — the real subtlety. <code>selector.select()</code> with no
+argument sleeps indefinitely, so if every connection is idle, nothing wakes you
+and your timeout never fires. Two workable answers:</p>
+<ol>
+<li><strong><code>select(timeout)</code>.</strong> Use <code>selector.select(1000)</code>, and after each return —
+whether it woke for events or timed out — sweep <code>selector.keys()</code> for
+connections past the deadline. Simple, self-contained, and costs one wakeup
+per second per loop even when totally idle.</li>
+<li><strong>A separate timer thread plus <code>selector.wakeup()</code>.</strong> A scheduler computes
+the next deadline and calls <code>wakeup()</code> to break the loop out of <code>select()</code>.
+More precise and no idle wakeups, at the cost of a second thread and
+cross-thread care (mutating a <code>Selector</code>'s registrations from another thread
+needs the wakeup, or you can deadlock against a concurrent <code>select()</code>).</li>
+</ol>
+<p><strong>Comparison:</strong> (1) is right for almost everyone — its cost is one wakeup per
+second, which is nothing next to the 351,609 in rung 6. (2) is what high-end
+frameworks do; Netty's <code>HashedWheelTimer</code> amortises thousands of timers into
+coarse buckets so a million connections do not mean a million timer objects.
+Sweeping <em>all</em> keys every second is O(total connections) — the very cost model
+<code>epoll</code> was invented to escape (§12) — so at very large scale you need the wheel
+or a deadline-ordered structure rather than a linear scan.</p>
+<p><strong>The test:</strong> open two connections; keep one active with traffic every second;
+leave the other silent. Assert that after the timeout the silent one is closed
+(its client read returns <code>-1</code>) and the active one still echoes.</p>
+<h3 id="solutions-72-the-write-side">7.2 The write side</h3>
+<div class="code"><pre><code class="language-java">// on write-readiness, or when new data is produced:
+int written = ch.write(pending);
+if (pending.hasRemaining()) {
+    key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);   // more to send
+} else {
+    key.interestOps(key.interestOps() &amp; ~SelectionKey.OP_WRITE);  // drained — MUST clear
+}
+</code></pre></div>
+<p><strong>When to deregister:</strong> the instant <code>pending</code> is fully drained, in the same
+handler pass. <strong>If you forget:</strong> a socket with an empty send buffer is writable
+essentially always, so <code>select()</code> returns immediately forever — rung 3.5, and
+§13.2's busy loop from the write side.</p>
+<p><strong>Backpressure at 100 MB pending.</strong> You are queueing faster than one client can
+consume, and the queue is on your heap. Options, with the trade-off named:</p>
+<ul>
+<li><strong>Drop the connection.</strong> Safest for the server, worst for that user. Correct
+for a fan-out feed where a client that far behind is useless anyway.</li>
+<li><strong>Stop reading from the source</strong> (deregister <code>OP_READ</code> on the upstream, or
+stop pulling from the producer). Correct for a proxy: propagates the pressure
+to whoever is producing, which is the only place it can genuinely be resolved.</li>
+<li><strong>Drop messages, keep the connection</strong> — newest-wins or sample. Correct for
+telemetry or price ticks, where stale data has no value.</li>
+<li><strong>Grow the buffer.</strong> Not an option; it converts a slow client into an
+out-of-memory kill that takes down every other connection on the machine.</li>
+</ul>
+<p>The general principle: <strong>an unbounded queue is a deferred crash.</strong> You must
+choose in advance who suffers — the slow client, the producer, or the data —
+because the one unacceptable answer is &quot;the whole process&quot;. Netty encodes this
+as <code>WriteBufferWaterMark</code> plus <code>Channel.isWritable()</code>, which is a mechanism for
+asking the question, not an answer to it.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p>Discussion answers. Yours will differ; the reasoning is what counts.</p>
+<h3 id="solutions-81-push-notification-gateway-2m-connections">8.1 Push notification gateway, 2M connections</h3>
+<p><strong>The binding constraint — do the arithmetic first.</strong> Traffic is trivial: 2M
+devices heartbeating every 30 s is ~67k heartbeats/second across the fleet, and
+a handful of messages per device per day is negligible. So the constraint is
+<strong>not</strong> CPU or bandwidth. It is <strong>memory per connection</strong>, plus file descriptors.</p>
+<p>Budget per connection: kernel socket buffers (the dominant term — tune
+<code>SO_RCVBUF</code>/<code>SO_SNDBUF</code> down hard, since these are tiny messages), plus your own
+per-connection object (identity, subscriptions, last-seen, partial-frame
+buffer). Get that to a few KB and 500k connections per machine is ~2–4 GB of
+connection state, which is comfortable. So: <strong>4–6 machines for capacity, more
+for redundancy and headroom</strong> — say 10, so losing one costs 10% and the
+reconnect storm is survivable.</p>
+<ul>
+<li><strong>Event loops per machine:</strong> one per core (8–16), each owning a disjoint set of
+connections so no locking is needed on connection state. Accept via
+<code>SO_REUSEPORT</code> so the kernel balances new connections (§13.5).</li>
+<li><strong>Where state lives:</strong> the connection object on the owning loop. Nothing
+shared, nothing locked.</li>
+<li><strong>Finding device X:</strong> a routing registry — <code>device_id → gateway_instance</code>, in
+Redis with a TTL refreshed by heartbeat. Publishers look up X and forward to
+that gateway. Alternative: consistent hashing on device id, which removes the
+registry but makes rebalancing on scale-up painful, since every connection is
+long-lived and must be dropped to move. Given devices reconnect anyway, the
+registry is the safer choice.</li>
+<li><strong>In-flight messages on machine death:</strong> connections are lost, so delivery
+must not depend on them. Persist per-device pending messages with an ack from
+the device; on reconnect, drain the pending queue. Accept at-least-once and
+make the client deduplicate — the same conclusion as the
+<code>transactional-outbox</code> lab. Never treat &quot;written to socket&quot; as delivered.</li>
+<li><strong>OS limits:</strong> <code>ulimit -n</code> well above 500k; <code>net.ipv4.ip_local_port_range</code>;
+<code>net.core.somaxconn</code> for the accept backlog; conntrack table size if a
+stateful firewall is in the path (a classic silent ceiling); ephemeral port
+exhaustion on any intermediate proxy.</li>
+</ul>
+<p><strong>Dashboard — five metrics, each tied to a §13 failure:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Metric</th>
+  <th>Detects</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Event loop lag p99</td>
+  <td>§13.1 — someone blocked the loop</td>
+</tr>
+<tr>
+  <td>CPU per loop thread with flat traffic</td>
+  <td>§13.2 / §13.8 — busy loop</td>
+</tr>
+<tr>
+  <td>Pending write bytes per connection, p99</td>
+  <td>§13.4 — slow consumers, pre-OOM</td>
+</tr>
+<tr>
+  <td>Open fds vs limit, and connections per loop</td>
+  <td>capacity ceiling and imbalance</td>
+</tr>
+<tr>
+  <td>Connection age histogram / reconnect rate</td>
+  <td>mass disconnects, thundering-herd reconnect storms</td>
+</tr>
+</tbody>
+</table></div>
+<p>The reconnect storm deserves emphasis: if one gateway dies, 500k devices
+reconnect at once. Mandatory client-side <strong>exponential backoff with jitter</strong>, or
+the failure of one machine cascades into the failure of the rest.</p>
+<h3 id="solutions-82-the-netty--virtual-threads-migration">8.2 The Netty → virtual threads migration</h3>
+<p><strong>Recommendation: do not migrate the existing service. Adopt virtual threads for
+new services and for any rewrite you were already going to do.</strong></p>
+<p>The honest reasoning:</p>
+<p><strong>What genuinely gets simpler:</strong> business logic that currently spans callbacks
+becomes straight-line code. Stack traces become readable. <code>try/finally</code> and
+try-with-resources start working. The worker-pool hop for JDBC disappears —
+you can block directly. Debugging and profiling get dramatically better.</p>
+<p><strong>What does not get simpler:</strong> framing decoders (§13.3) are still needed —
+<code>LengthFieldBasedFrameDecoder</code> does not vanish, you just write the loop by hand.
+Backpressure (§13.4) is still yours and is arguably <em>harder</em>, because a blocking
+write hides the queue rather than exposing a watermark. TLS, protocol codecs,
+idle timeouts, and connection limits are all unchanged. You would be rewriting a
+large amount of well-tested protocol code to get an ergonomic improvement in the
+business layer.</p>
+<p><strong>Which §13 failures disappear:</strong> §13.1 only — blocking no longer poisons
+neighbours, which is the big win. <strong>Which survive verbatim:</strong> §13.3 framing,
+§13.4 backpressure, §13.7 timeouts, fd limits. Note §13.2 transforms rather than
+vanishes: you will not busy-loop on a dead connection, but you can leak virtual
+threads blocked forever on connections nobody closes — the same resource leak
+wearing different clothes.</p>
+<p><strong>What would make me recommend against it outright:</strong> heavy use of
+<code>synchronized</code> around I/O on a JDK before 24 (pinning, from the
+<code>java-virtual-threads</code> lab, puts the old ceiling straight back); native
+libraries in the I/O path; or a genuinely latency-critical path where Netty's
+pooled, reference-counted <code>ByteBuf</code> is doing real work that plain blocking code
+would replace with garbage.</p>
+<p><strong>De-risking:</strong> pick one new low-traffic endpoint, build it thread-per-request
+on virtual threads, run both in production, and compare. Do not convert the
+protocol layer at all in the first step.</p>
+<p><strong>Measure before and after:</strong> p99 and p99.9 latency (not the mean — the whole
+argument is about tail behaviour), allocation rate and GC pause time, peak
+memory at target connection count, thread/carrier counts and pinning events
+(JFR <code>jdk.VirtualThreadPinned</code>), and — the one everyone forgets — <strong>developer
+time to ship a feature</strong>, since that is the actual benefit being purchased.</p>
+<h3 id="solutions-83-the-100-cpu-page">8.3 The 100% CPU page</h3>
+<p><strong>First three commands:</strong></p>
+<ol>
+<li><code>top -H -p &lt;pid&gt;</code> (or <code>jcmd &lt;pid&gt; Thread.print</code>) — <strong>which thread?</strong> If it is
+one named <code>nioEventLoopGroup-*</code> / <code>selector-loop</code>, you are in §13.2/§13.8. If
+it is a GC thread, this is not an event-loop problem at all and the rest of
+the runbook does not apply.</li>
+<li><code>jcmd &lt;pid&gt; Thread.print</code> a few times in a row — <strong>what is that thread
+doing?</strong> Repeatedly parked in <code>epoll_wait</code> returning instantly means a spin.
+Sitting in application code means §13.1 (a blocked loop), though note §13.1
+usually raises latency, and this page says latency is <em>fine</em>.</li>
+<li><code>strace -c -f -p &lt;pid&gt;</code> for a few seconds (or <code>perf top</code>, or an async-profiler
+flame graph) — <strong>count the syscalls.</strong> Millions of instant <code>epoll_wait</code>
+returns is the signature of a busy loop and distinguishes it from real work.</li>
+</ol>
+<p><strong>Telling the candidates apart:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Cause</th>
+  <th>Distinguishing evidence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>§13.2 dead connection not deregistered</td>
+  <td><code>epoll_wait</code> returns instantly with a ready fd; the fd maps to a closed peer; CPU stepped up at a time matching a client disconnect</td>
+</tr>
+<tr>
+  <td>§13.4 permanent <code>OP_WRITE</code></td>
+  <td><code>epoll_wait</code> returns instantly reporting <em>writable</em>; correlates with a large-response endpoint</td>
+</tr>
+<tr>
+  <td>§13.8 JDK epoll spin</td>
+  <td><code>epoll_wait</code> returns <strong>0 keys</strong> repeatedly — nothing is ready at all, which is the giveaway that your code is not at fault</td>
+</tr>
+<tr>
+  <td>§13.1 blocked loop</td>
+  <td>thread is in application frames, not <code>epoll_wait</code>; latency would be elevated, so this is inconsistent with the page</td>
+</tr>
+</tbody>
+</table></div>
+<p>The fact that <strong>throughput and latency are normal</strong> is the strongest clue: the
+loop is doing something pointless <em>quickly</em>, rather than doing something slow.
+That points at §13.2 or §13.8 and largely rules out §13.1.</p>
+<p><strong>Mitigation before root cause:</strong> take the instance out of the load balancer and
+restart it. That is the right first move because the CPU is being burned by
+accumulated bad state (a zombie registration, a wedged selector) that a restart
+clears, and you have N other instances serving traffic — availability first.</p>
+<p><strong>Why it is insufficient:</strong> the bad state accumulates again. You have bought
+hours, not a fix, and you have destroyed the evidence. So before restarting,
+capture: a thread dump, a flame graph, and the fd list
+(<code>lsof -p &lt;pid&gt;</code> / <code>ls /proc/&lt;pid&gt;/fd</code>). Then restart. If you skip the capture,
+you will be paged again at 3 a.m. with exactly the same information you have
+now.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../02-communication-protocols/notes.html"><small>← Lab 2</small>communication-protocols</a><a href="../04-database-landscape/notes.html" style="text-align:right"><small>Lab 4 →</small>database-landscape</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-is-waiting-the-only-thing-your-server-really-does">1. Why is waiting the only thing your server really does?</a><a href="#readme-2-what-does-a-10000-room-hotel-have-to-do-with-it">2. What does a 10,000-room hotel have to do with it?</a><a href="#readme-3-why-not-simply-hire-one-person-per-line">3. Why not simply hire one person per line?</a><a href="#readme-4-if-the-cpu-is-idle-what-actually-runs-out">4. If the CPU is idle, what actually runs out?</a><a href="#readme-5-what-if-one-person-just-runs-down-the-row">5. What if one person just runs down the row?</a><a href="#readme-6-why-is-asking-ten-thousand-times-worse-than-waiting">6. Why is asking ten thousand times worse than waiting?</a><a href="#readme-7-what-exactly-do-we-need-instead">7. What exactly do we need instead?</a><a href="#readme-8-what-if-the-phone-system-switched-on-a-light">8. What if the phone system switched on a light?</a><a href="#readme-9-what-are-the-real-words-for-what-meera-just-did">9. What are the real words for what Meera just did?</a><a href="#readme-10-which-two-pictures-should-you-carry-in-your-head">10. Which two pictures should you carry in your head?</a><a href="#readme-11-can-you-watch-all-three-designs-race">11. Can you watch all three designs race?</a><a href="#readme-12-how-does-the-wait-call-work-and-why-was-the-first-one-too-slow">12. How does the wait call work, and why was the first one too slow?</a><a href="#readme-13-what-breaks-and-how-would-you-recognise-each-one-at-3-am">13. What breaks, and how would you recognise each one at 3 a.m.?</a><a href="#readme-14-what-does-the-kernel-actually-promise-and-what-does-it-refuse-to">14. What does the kernel actually promise, and what does it refuse to?</a><a href="#readme-15-where-is-the-code-and-what-does-each-file-prove">15. Where is the code, and what does each file prove?</a><a href="#readme-16-what-does-a-real-system-add-on-top-of-this-toy">16. What does a real system add on top of this toy?</a><a href="#readme-17-where-are-the-exercises">17. Where are the exercises?</a><a href="#readme-18-what-does-this-connect-to-and-what-should-you-learn-next">18. What does this connect to, and what should you learn next?</a><a href="#readme-19-glossary--every-word-grouped-by-where-it-lives">19. Glossary — every word, grouped by where it lives</a><a href="#readme-20-about-this-lab">20. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

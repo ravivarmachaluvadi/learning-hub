@@ -1,0 +1,359 @@
+<!doctype html>
+<html lang="en" data-hub-lab="21-java-version-features">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Java 24 — the release that fixed virtual threads&#x27; worst caveat</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 21 · java-24.md</span><nav class="tabs" aria-label="This lab"><a href="notes.html">Lab notes</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 21 · java-version-features</p><h1 id="doc-java-24--the-release-that-fixed-virtual-threads-worst-caveat">Java 24 — the release that fixed virtual threads' worst caveat</h1>
+<p><strong>GA:</strong> March 2025 · <strong>LTS:</strong> no · <strong>Class file major version:</strong> 68 ·
+<strong>Oracle support:</strong> ended September 2025 <strong>[documented — Oracle roadmap]</strong></p>
+<p><strong>Previous:</strong> <a href="java-23.html">Java 23</a> · <strong>Next:</strong> <a href="java-25.html">Java 25</a> ·
+<strong>Back to:</strong> <a href="notes.html#readme">the story</a></p>
+<hr />
+<h2 id="doc-the-one-thing-to-remember">The one thing to remember</h2>
+<p><strong>JEP 491 removes <code>synchronized</code> pinning.</strong> On JDK 21, a virtual thread that
+blocks inside a <code>synchronized</code> block stays stuck to its carrier OS thread,
+which can starve the scheduler and silently cap your concurrency — and since
+almost all existing Java library code uses <code>synchronized</code>, this was the single
+biggest obstacle to adopting virtual threads on a real codebase.</p>
+<p>From Java 24 it is gone. <code>synchronized</code> no longer pins.</p>
+<p>This is a <strong>direct correction to the <a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a>
+lab</strong>, which documents the JDK 21 behaviour and advises replacing
+<code>synchronized</code> with <code>ReentrantLock</code>. That advice was right for 21 and is
+unnecessary from 24.</p>
+<p>Java 24 is also the largest JEP count in this lab — 24 of them — and it is
+where several long ladders reach the end.</p>
+<h2 id="doc-what-you-actually-get">What you actually get</h2>
+<h3 id="doc-synchronized-no-longer-pins-virtual-threads--jep-491"><code>synchronized</code> no longer pins virtual threads — JEP 491</h3>
+<p>The mechanism, briefly: a virtual thread blocking on a monitor now releases its
+carrier, and the JVM tracks the monitor ownership across the unmount. Before,
+the monitor's implementation held state on the OS thread stack, which made
+unmounting impossible.</p>
+<p><strong>Why this mattered so much in practice:</strong> you can audit <em>your</em> code for
+<code>synchronized</code>. You cannot audit every dependency, and JDBC drivers, connection
+pools, logging frameworks and caches are full of it. On 21, adopting virtual
+threads meant a real risk that some library deep in the stack would pin a
+carrier under load — and the symptom is a throughput ceiling with no obvious
+cause. JEP 491 removes that whole class of risk.</p>
+<p><strong>What still pins:</strong> native frames (JNI) and a few internal cases. Far narrower.</p>
+<h3 id="doc-stream-gatherers--final--jep-485">Stream gatherers — <strong>FINAL</strong> — JEP 485</h3>
+<p>Two previews (<a href="java-22.html">22</a>, <a href="java-23.html">23</a>), done.</p>
+<div class="code"><pre><code class="language-java">Stream.of(1,2,3,4,5).gather(Gatherers.windowFixed(2)).toList()   // [[1,2],[3,4],[5]]
+</code></pre></div>
+<p><strong>[measured, JDK 25.0.4]</strong></p>
+<p><code>Gatherers.mapConcurrent(limit, fn)</code> is the one to know: bounded-concurrency
+mapping over virtual threads, inside a stream.</p>
+<h3 id="doc-class-file-api--final--jep-484">Class-File API — <strong>FINAL</strong> — JEP 484</h3>
+<p>Two previews, done. <code>java.lang.classfile</code> — parse, generate and transform class
+files with a JDK-supplied API that is always in sync with the format.</p>
+<p>The practical significance is indirect but large: it is the supported
+replacement for ASM, and once bytecode libraries move to it, &quot;the new JDK broke
+Mockito/JaCoCo/my agent&quot; becomes a much smaller problem. That failure mode is
+a direct cost of the six-month cadence, and this is the platform paying it back.</p>
+<h3 id="doc-ahead-of-time-class-loading-and-linking--jep-483">Ahead-of-Time class loading and linking — JEP 483</h3>
+<p>Project Leyden's first delivery. A <em>training run</em> records which classes your
+application loads and how they link; subsequent runs read that cache instead of
+redoing the work.</p>
+<div class="code"><pre><code>$ java -XX:AOTCacheOutput=app.aot -cp . MyApp     # training run
+$ java -XX:AOTCache=app.aot     -cp . MyApp       # fast start
+</code></pre></div>
+<p><strong>[measured, JDK 25.0.4, macOS, 8 runs each]</strong> on a small program: <strong>0.1050 s →
+0.0862 s</strong>, an 18% startup improvement, with a 12.6 MB cache. Small in absolute
+terms because the baseline already benefits from the default CDS archive
+(<a href="java-12.html">Java 12</a>) — of 1003 classes loaded, 956 already came from a
+shared archive before AOT was involved. Larger applications have much more to
+gain; that is a documented claim, not one this lab measured.</p>
+<p><a href="java-25.html">Java 25</a> adds command-line ergonomics (JEP 514) and method
+profiling (JEP 515) on top.</p>
+<h3 id="doc-post-quantum-cryptography--jep-496-497">Post-quantum cryptography — JEP 496, 497</h3>
+<p><strong>ML-KEM</strong> (key encapsulation, JEP 496) and <strong>ML-DSA</strong> (digital signatures,
+JEP 497) — the NIST-standardised lattice-based algorithms, in the standard
+providers.</p>
+<p>Why now: &quot;harvest now, decrypt later.&quot; Traffic captured today can be decrypted
+by a future quantum computer, so long-lived confidential data needs
+quantum-resistant key exchange <em>before</em> such a machine exists, not after. Built
+on the KEM API from <a href="java-21.html">Java 21</a> (JEP 452).</p>
+<h3 id="doc-compact-object-headers-experimental--jep-450">Compact object headers (experimental) — JEP 450</h3>
+<p>Shrinks the Java object header from 96/128 bits to 64 bits, reducing heap usage
+and improving cache locality — typically a few percent of heap on
+object-heavy workloads. Experimental here (<code>-XX:+UnlockExperimentalVMOptions -XX:+UseCompactObjectHeaders</code>); a product feature in <a href="java-25.html">25</a>.</p>
+<p><strong>[measured, JDK 25.0.4]</strong> — still <code>false</code> by default in 25:
+<code>bool UseCompactObjectHeaders = false {product lp64_product} {default}</code>. It is
+supported, but you must opt in.</p>
+<p>This is downstream of biased locking's removal in
+<a href="java-15.html">Java 15</a> — biased locking's state lived in the object header, and
+its complexity was what blocked this work.</p>
+<h3 id="doc-generational-shenandoah-experimental--jep-404">Generational Shenandoah (experimental) — JEP 404</h3>
+<p>Shenandoah's counterpart to generational ZGC. Final in <a href="java-25.html">25</a>.</p>
+<h3 id="doc-linking-runtime-images-without-jmods--jep-493">Linking runtime images without JMODs — JEP 493</h3>
+<p><code>jlink</code> can now build a custom runtime image from an installed JDK without
+needing the JMOD files, cutting the JDK's own on-disk size by roughly 25%.
+Relevant if you build slim container images with <code>jlink</code>.</p>
+<h2 id="doc-pipeline-movement-this-release">Pipeline movement this release</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Feature</th>
+  <th>State here</th>
+  <th>Ends up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>synchronized</code> unpinning (JEP 491)</strong></td>
+  <td><strong>FINAL</strong></td>
+  <td>done</td>
+</tr>
+<tr>
+  <td><strong>Stream gatherers (JEP 485)</strong></td>
+  <td><strong>FINAL</strong></td>
+  <td>done</td>
+</tr>
+<tr>
+  <td><strong>Class-File API (JEP 484)</strong></td>
+  <td><strong>FINAL</strong></td>
+  <td>done</td>
+</tr>
+<tr>
+  <td>AOT class loading (JEP 483)</td>
+  <td><strong>FINAL</strong></td>
+  <td>Extended in <a href="java-25.html">25</a></td>
+</tr>
+<tr>
+  <td>ML-KEM / ML-DSA (JEP 496, 497)</td>
+  <td><strong>FINAL</strong></td>
+  <td>done</td>
+</tr>
+<tr>
+  <td>Compact object headers (JEP 450)</td>
+  <td>Experimental</td>
+  <td>Product feature in <a href="java-25.html">25</a></td>
+</tr>
+<tr>
+  <td>Generational Shenandoah (JEP 404)</td>
+  <td>Experimental</td>
+  <td>Final in <a href="java-25.html">25</a></td>
+</tr>
+<tr>
+  <td>Scoped values (JEP 487)</td>
+  <td>4th preview</td>
+  <td>Final in <a href="java-25.html">25</a></td>
+</tr>
+<tr>
+  <td>Structured concurrency (JEP 499)</td>
+  <td>4th preview</td>
+  <td>Still preview in 26</td>
+</tr>
+<tr>
+  <td>Module imports (JEP 494)</td>
+  <td>2nd preview</td>
+  <td>Final in <a href="java-25.html">25</a></td>
+</tr>
+<tr>
+  <td>Flexible constructor bodies (JEP 492)</td>
+  <td>3rd preview</td>
+  <td>Final in <a href="java-25.html">25</a></td>
+</tr>
+<tr>
+  <td>Primitive patterns (JEP 488)</td>
+  <td>2nd preview</td>
+  <td>4th preview in 26</td>
+</tr>
+<tr>
+  <td>Simple source files (JEP 495)</td>
+  <td>4th preview</td>
+  <td>Final in <a href="java-25.html">25</a></td>
+</tr>
+<tr>
+  <td>Vector API (JEP 489)</td>
+  <td>9th incubator</td>
+  <td>10th in <a href="java-25.html">25</a></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="doc-what-broke">What broke</h2>
+<p>Java 24 has the heaviest removal list in this lab.</p>
+<ul>
+<li><p><strong>Security Manager permanently disabled — JEP 486.</strong> Deprecated for removal
+in <a href="java-17.html">17</a>, disabled here. <code>System.setSecurityManager</code> throws.
+<a href="notes.html#readme-f9--the-security-manager-is-permanently-disabled-jdk-24-jep-486">F9</a>.
+The replacement is process-level isolation, not another in-JVM sandbox.</p>
+</li>
+<li><p><strong><code>sun.misc.Unsafe</code> memory-access methods now warn at runtime — JEP 498.</strong>
+<strong>[measured, JDK 25.0.4]</strong>:</p>
+<div class="code"><pre><code>WARNING: A terminally deprecated method in sun.misc.Unsafe has been called
+WARNING: sun.misc.Unsafe::objectFieldOffset has been called by W (file:...)
+WARNING: Please consider reporting this to the maintainers of class W
+WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release
+</code></pre></div>
+<p>The code still runs. The warning names the calling class — read it; it is
+usually a dependency. <a href="notes.html#readme-f4--sunmiscunsafe-is-on-its-way-out-jdk-23-24-and-beyond">F4</a>.</p>
+</li>
+<li><p><strong>Non-generational ZGC removed — JEP 490.</strong> <code>-XX:-ZGenerational</code> no longer
+works. <a href="notes.html#readme-f12--non-generational-zgc-removed-jdk-24-jep-490">F12</a>.</p>
+</li>
+<li><p><strong>Prepare to restrict JNI — JEP 472.</strong> JNI use now warns unless you pass
+<code>--enable-native-access</code>. Same shape as JEP 451's agent warning in
+<a href="java-21.html">21</a>: a JEP whose entire content is a warning, filed to start a
+ladder.</p>
+</li>
+<li><p><strong>Windows 32-bit x86 port removed — JEP 479.</strong> 32-bit x86 deprecated for
+removal generally (JEP 501); removed in <a href="java-25.html">25</a> (JEP 503).</p>
+</li>
+</ul>
+<h2 id="doc-verdict-for-your-day-job">Verdict for your day job</h2>
+<p><strong>Don't target it</strong> — six months, ended September 2025.</p>
+<p>But <strong>read the JEP 491 section</strong>, because it changes the advice in the
+virtual-threads lab and it changes the risk calculation for adopting virtual
+threads on a large existing codebase. Everything else here you get in
+<a href="java-25.html">Java 25</a>, which is where you should actually go.</p>
+</main><aside aria-label="On this page"><h2>On this page</h2><a href="#doc-the-one-thing-to-remember">The one thing to remember</a><a href="#doc-what-you-actually-get">What you actually get</a><a href="#doc-pipeline-movement-this-release">Pipeline movement this release</a><a href="#doc-what-broke">What broke</a><a href="#doc-verdict-for-your-day-job">Verdict for your day job</a><h2>More in this lab</h2><a href="java-09.html">java-09</a><a href="java-10.html">java-10</a><a href="java-11.html">java-11</a><a href="java-12.html">java-12</a><a href="java-13.html">java-13</a><a href="java-14.html">java-14</a><a href="java-15.html">java-15</a><a href="java-16.html">java-16</a><a href="java-17.html">java-17</a><a href="java-18.html">java-18</a><a href="java-19.html">java-19</a><a href="java-20.html">java-20</a><a href="java-21.html">java-21</a><a href="java-22.html">java-22</a><a href="java-23.html">java-23</a><a href="java-24.html">java-24</a><a href="java-25.html">java-25</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

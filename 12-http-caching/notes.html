@@ -1,0 +1,1308 @@
+<!doctype html>
+<html lang="en" data-hub-lab="12-http-caching">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>12. http-caching</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 12 of 71 · Stage 2</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 12 · One Machine, Done Right</p><article id="readme"><h1 id="readme-http-caching--the-reuse-contract-every-response-carries">HTTP Caching — the reuse contract every response carries</h1>
+<blockquote>
+<p><strong>Lab type:</strong> protocol-mechanism lab. The skill being trained: reading and
+writing the <em>reuse contract</em> — the headers that decide who may keep a copy of
+a response, for how long, and how to cheaply check whether it's still good.</p>
+<p><strong>What's in this lab:</strong></p>
+<ul>
+<li><code>README.md</code> — this document (the story, the mechanism, the failure catalog)</li>
+<li><code>experiments/</code> — a real caching proxy, a 304 byte-diet demo, and a live cache
+stampede + fix (plain Java, JDK only — no build tool, no dependencies)</li>
+<li><code>visualization.html</code> — interactive two-cache simulator (browser + CDN) with
+predict-then-run scenarios</li>
+<li><code>EXERCISES.md</code> / <code>SOLUTIONS.md</code></li>
+</ul>
+<p><strong>Builds on labs you've done:</strong> <a href="../02-communication-protocols/notes.html#readme">communication-protocols</a>
+— you already speak HTTP's wire format (headers, verbs, status codes), know that
+<strong>round trips dominate perceived latency</strong>, that <strong>GET is idempotent</strong>, and that
+&quot;REST's deepest unused superpower is HTTP caching&quot; was left as a promise there.
+This lab is that promise kept. From <a href="../51-cqrs/notes.html#readme">cqrs</a> you know the <strong>consistency
+window</strong> — serving answers slightly behind the truth in exchange for speed.
+HTTP caching is that exact trade, standardized into the protocol.</p>
+</blockquote>
+<hr />
+<h2 id="readme-layer-map">Layer map</h2>
+<blockquote>
+<p><strong>BEGINNER MODEL</strong> (§1–§9) → <strong>INTERMEDIATE MODEL</strong> (§10) →
+<strong>ENGINEERING MODEL</strong> (§11–§12) → <strong>PRODUCTION MODEL</strong> (§13–§15)</p>
+</blockquote>
+<p>Zero caching knowledge assumed. By §15 you'll be able to read RFC 9111 and a
+CDN dashboard without flinching.</p>
+<hr />
+<h2 id="readme-1-why--the-fastest-request-is-the-one-never-sent">1. WHY — the fastest request is the one never sent</h2>
+<p>In the protocols lab you measured it: every request pays a round trip, and
+round trips — not bytes — make apps feel slow. The only move that beats a fast
+request is <em>no request</em>: answer from a copy stored nearby. HTTP has this built
+in — a complete, standardized system for storing and reusing responses — and it
+is the single highest-leverage performance feature most backend engineers never
+touch. The stakes run both directions: teams that ignore it burn money serving
+the same unchanged bytes millions of times and ship apps that feel sluggish on
+every continent but their own; teams that enable it carelessly serve customers
+<strong>yesterday's prices</strong> — or, far worse, <strong>someone else's account page</strong>. Caching
+is not an optimization sprinkle; it's a correctness contract you are already
+party to, whether you've read it or not.</p>
+<hr />
+<h2 id="readme-2-problem--two-million-people-keep-asking-for-the-same-menu">2. PROBLEM — two million people keep asking for the same menu</h2>
+<p>Tiffin again. Biryani House's menu is requested <strong>2 million times a day</strong>. It
+changes about <strong>twice a day</strong> (lunch menu, dinner menu). Alice in Pune taps the
+app; her request crosses to Tiffin's servers in Mumbai, the server queries the
+database, renders JSON, and sends back the same bytes it sent the previous
+999,999 times. Every copy is identical. Everyone waits ~200 ms. The database
+does the same work 2 million times to produce 2 answers.</p>
+<p>Watch the shape of the waste: <strong>the answer barely changes; the asking never
+stops.</strong> Any human clerk would have solved this by lunchtime: write today's
+menu on a chalkboard by the door, and stop walking to the kitchen to ask.</p>
+<hr />
+<h2 id="readme-3-naive-solution--keep-a-copy-reuse-it">3. NAIVE SOLUTION — keep a copy, reuse it</h2>
+<p>So: Alice's phone keeps a copy of the menu after the first fetch and reuses it.
+Even better, Tiffin puts helper servers in every city (you met this idea as a
+<strong>CDN</strong> — a <em>content delivery network</em>, servers near users that can answer on
+Tiffin's behalf), and each keeps a copy too: the first Pune user's fetch
+fills the Pune copy, and the next hundred thousand Pune users get it from
+next door in 10 ms.</p>
+<p>Instant win: traffic to Mumbai collapses, and so does everyone's waiting. Ship it?</p>
+<hr />
+<h2 id="readme-4-failure--the-copy-doesnt-know-when-its-wrong">4. FAILURE — the copy doesn't know when it's wrong</h2>
+<p><strong>Break #1 — stale forever.</strong> At 5 p.m. Biryani House raises the biryani price
+from ₹250 to ₹280. Alice's phone and the Pune helper server have no idea; they
+happily serve ₹250 <em>forever</em>. Customers order at a price that no longer exists.
+The copy has no expiry date and no way to learn the world changed.</p>
+<p><strong>Break #2 — the wrong thing got copied.</strong></p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> The Pune helper server also cached the response to
+<code>GET /account</code> — Alice's account page — because hey, it's a GET like any
+other. Bob, also in Pune, opens <em>his</em> account page. What does Bob see?</p>
+<details><summary>Reveal</summary>
+**Alice's account.** The helper server is shared by every user in Pune; it
+stored "the response to `GET /account`" with no idea that this response was
+*for Alice specifically*. This is not hypothetical — cached-personalized-page
+leaks (names, emails, balances shown to strangers) have hit real companies
+repeatedly. A shared copy of a personal answer is a data breach, not a
+performance win. Some responses must never be shared; some must never be
+stored at all.
+</details>
+
+</blockquote>
+<p><strong>Break #3 — re-downloading what didn't change.</strong> Suppose we patch break #1
+crudely: copies expire after 10 minutes. Now every 10 minutes, 2 million
+clients re-download the <em>identical</em> 50 KB menu — full body, full cost — just to
+discover nothing changed. Expiry without a cheap &quot;did it change?&quot; check turns
+into scheduled waste.</p>
+<p>The deeper discovery: a copy is only safe to reuse if someone answers three
+questions about it — <strong>how long is it trustworthy? who is allowed to reuse it?
+and how can its owner cheaply confirm it's still right?</strong> The phone and the
+helper server can't answer these. Only the origin — the server that made the
+response — knows.</p>
+<hr />
+<h2 id="readme-5-the-real-requirement">5. THE REAL REQUIREMENT</h2>
+<p>We need the <strong>origin to attach the reuse rules to every response it sends</strong>,
+and every copy-keeper to obey them:</p>
+<ol>
+<li><strong>A lifetime</strong> — &quot;reuse this freely for N seconds, no need to ask me.&quot;</li>
+<li><strong>An audience</strong> — &quot;anyone may reuse this&quot; vs &quot;only the one user it was made
+for&quot; vs &quot;never store this at all.&quot;</li>
+<li><strong>A cheap check</strong> — a way to ask &quot;is my copy still good?&quot; and get back a
+tiny <em>yes</em> instead of the whole body.</li>
+<li><strong>An identity rule</strong> — what counts as &quot;the same request,&quot; so a copy is
+never served to a request it doesn't actually answer.</li>
+</ol>
+<p>And one constraint that shapes everything: the origin's rules must travel <em>in
+the response itself</em>, because the copy-keepers (browsers, helper servers, even
+servers Tiffin doesn't own) will never run Tiffin's code.</p>
+<hr />
+<h2 id="readme-6-key-idea">6. KEY IDEA</h2>
+<blockquote>
+<p><strong>Every HTTP response carries its own reuse contract, written in headers; a
+cache is a dumb, obedient contract-follower.</strong> Two mechanisms cover
+everything: <strong>freshness</strong> — &quot;serve your copy without asking me, for this
+long&quot; — and <strong>validation</strong> — &quot;after that, ask me <em>cheaply</em> whether the copy
+still matches, and I'll say either 'yes, keep using it' in ~zero bytes or
+send the new one.&quot;</p>
+</blockquote>
+<p>Everything else in this lab — every header, every CDN behavior, every failure
+— is these two mechanisms plus the audience and identity rules from §5.</p>
+<hr />
+<h2 id="readme-7-terminology--the-words-on-the-contract">7. TERMINOLOGY — the words on the contract</h2>
+<p><strong>Cache</strong> — <em>plain:</em> any keeper of response copies. <em>Technical:</em> a store
+mapping requests to previously received responses, governed by HTTP's reuse
+rules (RFC 9111). <em>Why the term:</em> it names the <em>role</em>, not a product — your
+browser has one, every CDN node is one, your office proxy may be one; the same
+contract binds them all. <em>Example:</em> Alice's phone storing the menu JSON.
+<em>Connects to:</em> the &quot;copy-keeper&quot; of §3–§4.</p>
+<p><strong>Origin</strong> — <em>plain:</em> the server that actually creates the answers. <em>Technical:</em>
+the authoritative server for a resource; every cached copy descends from an
+origin response. <em>Why:</em> once copies exist everywhere, &quot;the server&quot; is ambiguous —
+this term marks the one that owns the truth. <em>Example:</em> Tiffin's Mumbai API
+servers. (You've seen this word in CDN contexts; here it gets its precise
+meaning.)</p>
+<p><strong>Hit / miss</strong> — <em>plain:</em> the copy was there and usable / it wasn't.
+<em>Technical:</em> a request satisfied from cache without contacting the origin (hit)
+vs one that had to go through (miss). <em>Why:</em> the ratio of these two numbers —
+the <strong>hit ratio</strong> — is the single metric the entire practice optimizes.
+<em>Example:</em> 2M requests, 1.99M hits = 99.5% hit ratio; the origin saw only 10k.</p>
+<p><strong>Fresh / stale, freshness lifetime</strong> — <em>plain:</em> young enough to serve without
+asking vs too old to trust blindly. <em>Technical:</em> a stored response is fresh
+while its <strong>age</strong> (seconds since the origin generated it) is below its
+freshness lifetime, declared by <code>Cache-Control: max-age=N</code>; after that it is
+stale — not deleted, not unusable, just <em>no longer reusable without checking</em>.
+<em>Why two words:</em> the naive model had only &quot;have a copy / don't&quot;; the whole fix
+of break #1 lives in this third state — <em>have a copy, must verify</em>. <em>Example:</em>
+<code>max-age=300</code>, stored at 12:00 → fresh until 12:05, stale after — but still on
+disk, awaiting a cheap check. <em>Connects to:</em> the <a href="../51-cqrs/notes.html#readme">cqrs</a> consistency
+window: max-age <em>is</em> the declared window width.</p>
+<p><strong>Private vs shared cache</strong> — <em>plain:</em> a copy-keeper serving one person vs
+many. <em>Technical:</em> a browser cache is private (one user); CDNs and proxies are
+shared (many users). <code>Cache-Control: private</code> permits only private caches to
+store the response; <code>public</code> (or just a lifetime) permits shared ones too.
+<em>Why:</em> break #2 — Bob seeing Alice's account — is exactly what this distinction
+prevents. <em>Example:</em> <code>Cache-Control: private, max-age=60</code> on <code>/account</code>: Alice's
+phone may reuse it for a minute; the Pune CDN node must not keep it at all.</p>
+<p><strong>Validator (<code>ETag</code>, <code>Last-Modified</code>)</strong> — <em>plain:</em> a fingerprint of the copy,
+used to ask &quot;still this one?&quot; <em>Technical:</em> an opaque version token (<code>ETag: &quot;v2-9f3a&quot;</code>) or a timestamp (<code>Last-Modified</code>) the origin sends with the
+response; the cache stores it alongside the body. <em>Why:</em> break #3 — the cheap
+check needs something cheaper than comparing bodies. <em>Example:</em> the menu's
+ETag changes only when the menu does.</p>
+<p><strong>Conditional request / <code>304 Not Modified</code></strong> — <em>plain:</em> &quot;send it only if it
+changed&quot; / &quot;it didn't — use what you have.&quot; <em>Technical:</em> a GET carrying
+<code>If-None-Match: &quot;v2-9f3a&quot;</code> (or <code>If-Modified-Since</code>); the origin compares and
+answers either <code>304</code> with <strong>no body</strong> — renewing the copy's freshness — or
+<code>200</code> with the new body and new validator. <em>Why:</em> this is <strong>validation</strong>, the
+second half of the key idea; a 304 costs one round trip but ~zero bytes.
+<em>Connects to:</em> you'll measure the savings in experiment 02.</p>
+<p><strong>Cache key</strong> — <em>plain:</em> what counts as &quot;the same request.&quot; <em>Technical:</em> the
+lookup key for stored responses — by default the method + URL. <em>Why:</em> §5's
+identity rule; every cache-poisoning and wrong-variant bug is a cache-key bug.
+<em>Example:</em> <code>GET https://api.tiffin.com/menu?restaurant=42</code>.</p>
+<p><strong><code>Vary</code></strong> — <em>plain:</em> &quot;my answer also depends on these request headers, not
+just the URL.&quot; <em>Technical:</em> a response header listing request headers that must
+match for a stored copy to be reused — effectively extending the cache key.
+<em>Example:</em> <code>Vary: Accept-Encoding</code> keeps a gzip-compressed copy from being
+served to a client that can't decompress it (§11.3 shows the garbage that
+happens otherwise).</p>
+<p>Minor terms at first use:
+<strong>TTL</strong> — informal name for the freshness lifetime (&quot;time to live&quot;).
+<strong><code>Age</code> header</strong> — a cache tells you how old the copy it served is, in seconds.
+<strong>Heuristic caching</strong> — what caches do when <em>no</em> lifetime was declared: guess (§10.5).
+<strong>Purge</strong> — explicitly deleting a stored copy from a cache you control.</p>
+<hr />
+<h2 id="readme-8-mental-models">8. MENTAL MODELS</h2>
+<p><strong>The simple model: the chalkboard by the door.</strong> The kitchen (origin) writes
+today's menu on a chalkboard (cache) so nobody walks to the kitchen. In the
+corner it writes the rules: <em>&quot;good until 17:00&quot;</em> (freshness lifetime), <em>&quot;today's
+menu, version: dinner-v2&quot;</em> (validator). At 17:00 the board isn't erased — a
+waiter pokes their head into the kitchen: <em>&quot;still dinner-v2?&quot;</em> — &quot;yes&quot; costs
+two seconds (304) and the board gets a new &quot;good until&quot; time; &quot;no&quot; means
+copying out the new menu (200). A second, personal chalkboard in Alice's own
+notebook may hold her order history (private); the door board (shared) must
+never hold it.</p>
+<p><strong>The engineering model.</strong> Per stored entry:
+<code>{cache key (+Vary'd headers) → body, validator, stored-at, freshness lifetime, audience flags}</code>
+and one decision procedure on every request:</p>
+<pre class="mermaid">flowchart TD
+    R[request arrives at a cache] --&gt; K{entry for this key,&lt;br/&gt;Vary headers matching?}
+    K -- no --&gt; M[MISS: forward to origin,&lt;br/&gt;store if contract allows] 
+    K -- yes --&gt; F{&quot;age &lt; freshness lifetime?&quot;}
+    F -- yes --&gt; H[HIT: serve copy,&lt;br/&gt;origin never contacted]
+    F -- no: stale --&gt; V{validator stored?}
+    V -- no --&gt; M
+    V -- yes --&gt; C[conditional GET to origin]
+    C --&gt; N{origin&#x27;s answer}
+    N -- 304 --&gt; RN[renew freshness,&lt;br/&gt;serve stored body]
+    N -- 200 --&gt; RP[replace entry,&lt;br/&gt;serve new body]
+</pre>
+<p><strong>Mapping:</strong> chalkboard = cache entry · &quot;good until 17:00&quot; = <code>max-age</code> ·
+&quot;version: dinner-v2&quot; = <code>ETag</code> · the waiter's poke = conditional request ·
+&quot;yes, still v2&quot; = <code>304</code> · door board vs Alice's notebook = shared vs private ·
+erasing the board = purge.</p>
+<p><strong>Where the analogy breaks:</strong></p>
+<ul>
+<li><strong>The kitchen can't repaint chalkboards it doesn't own.</strong> A real kitchen
+could send someone to erase the door board early. The origin <strong>cannot reach
+into Alice's phone or a stranger's proxy</strong> — once a copy with <code>max-age=3600</code>
+is out, it is out for an hour, everywhere. HTTP has <em>no revocation
+broadcast</em>. This single missing feature drives half of production practice
+(§10.4, §11.1).</li>
+<li><strong>One board vs thousands.</strong> The chalkboard is one place; real copies live in
+millions of browsers and hundreds of CDN nodes <em>at different ages</em> — so an
+update rolls through the world gradually, one expiry at a time. Users on the
+same second can see different menus. (The cqrs lab's &quot;every reader at its
+own checkpoint,&quot; reborn.)</li>
+<li><strong>The waiter always finds the kitchen open.</strong> If the origin is <em>down</em>, a
+cache holding a stale copy faces a choice the analogy never has: serve
+possibly-wrong or serve nothing — CAP's flavor of trade, at the HTTP layer
+(§10.6's <code>stale-if-error</code>).</li>
+</ul>
+<hr />
+<h2 id="readme-9-visualization--watch-a-copy-age">9. VISUALIZATION — watch a copy age</h2>
+<p>Open <strong><code>visualization.html</code></strong> (offline-capable; artifact link in the wrap-up).
+The layout matches this doc's world: <strong>Alice's browser cache</strong> and <strong>Bob's
+browser cache</strong> (private) on the left, the <strong>CDN node</strong> (shared) in the middle,
+the <strong>origin</strong> on the right. Cache entries appear as boxes with a draining
+freshness bar; every request animates hop by hop and the log explains each
+decision in a sentence (&quot;fresh for 42 more seconds → served from the CDN;
+origin never contacted&quot;).</p>
+<p>Use it in this order:</p>
+<ol>
+<li>Set <code>max-age=60</code>, click <strong>Alice requests</strong> twice, then <strong>advance time +90 s</strong>,
+then request again — watch fresh HIT become stale → conditional → <code>304</code>.</li>
+<li>Click <strong>Deploy v2 at the origin</strong> while copies are still fresh, and watch
+who keeps seeing v1, and until when.</li>
+<li>Run the scripted scenarios (left rail) — each asks for your prediction
+first: the deploy trap, the account-page leak, the missing <code>Vary</code>, the
+stampede.</li>
+</ol>
+<blockquote>
+<p><strong>CHECKPOINT — beginner model done.</strong> You can explain why copies need a
+lifetime, an audience, a cheap check, and an identity rule — and what each
+is called. Next: the actual headers, and the order they were forced into
+existence.</p>
+</blockquote>
+<hr />
+<h2 id="readme-10-actual-mechanism--building-the-contract-break-by-break">10. ACTUAL MECHANISM — building the contract, break by break</h2>
+<p>We rebuild Tiffin's caching the way the world built HTTP's: start with the
+obvious contract, watch it fail, patch with the next header. Each subsection
+is one refinement with real values.</p>
+<h3 id="readme-101-v1--a-lifetime-cache-control-max-age">10.1 v1 — a lifetime: <code>Cache-Control: max-age</code></h3>
+<p>The origin answers the menu request with one added header line (wire format
+exactly as you hand-typed in the protocols lab):</p>
+<div class="code"><pre><code>HTTP/1.1 200 OK
+Content-Type: application/json
+Cache-Control: max-age=300
+ETag: &quot;menu-v7&quot;
+
+{&quot;restaurant&quot;: &quot;Biryani House&quot;, &quot;biryani&quot;: 250, ...}
+</code></pre></div>
+<p>Contract: <em>anyone may reuse this for 300 seconds.</em> The Pune CDN node stores it
+at 12:00:00. Requests until 12:04:59 are <strong>hits</strong> — served in ~10 ms with an
+added <code>Age: 137</code>-style header (&quot;this copy is 137 s old&quot;). Tiffin's 2M
+requests/day become ~300/day at the origin <em>per CDN node</em>. Break #1 (stale
+forever) is fixed: worst-case staleness is now a declared, bounded 300 s.</p>
+<h3 id="readme-102-v2--the-cheap-check-etag--if-none-match--304">10.2 v2 — the cheap check: <code>ETag</code> + <code>If-None-Match</code> → <code>304</code></h3>
+<p>At 12:05 the copy goes stale. Naively the CDN re-downloads all 50 KB — break
+#3. Instead, it sends a <strong>conditional request</strong>:</p>
+<div class="code"><pre><code>GET /menu HTTP/1.1
+If-None-Match: &quot;menu-v7&quot;
+</code></pre></div>
+<p>The origin compares tags — the menu hasn't changed — and answers:</p>
+<div class="code"><pre><code>HTTP/1.1 304 Not Modified
+Cache-Control: max-age=300
+ETag: &quot;menu-v7&quot;
+                                ← no body. That&#x27;s the whole point.
+</code></pre></div>
+<p>The CDN keeps its stored body, resets the age clock, serves hits for another
+300 s. Cost of the check: one round trip, a few hundred header bytes. When the
+menu <em>does</em> change, the same conditional request gets a full <code>200</code> with
+<code>ETag: &quot;menu-v8&quot;</code>. Experiment 02 puts a byte counter on exactly this exchange.</p>
+<p><em>(<code>Last-Modified</code>/<code>If-Modified-Since</code> is the older, timestamp-based validator —
+same dance, 1-second resolution, kept for compatibility. Prefer <code>ETag</code>.)</em></p>
+<h3 id="readme-103-v3--the-audience-private-no-store-s-maxage">10.3 v3 — the audience: <code>private</code>, <code>no-store</code>, <code>s-maxage</code></h3>
+<p>Break #2 (Bob sees Alice's account) is fixed by audience directives:</p>
+<ul>
+<li><code>Cache-Control: private, max-age=60</code> — <em>Alice's own browser</em> may reuse her
+account page for a minute; <strong>shared</strong> caches (CDN, proxies) must not store it.</li>
+<li><code>Cache-Control: no-store</code> — nobody stores this, ever (payment confirmations,
+anything regulated). The strongest directive — and therefore the most abused
+default; sprinkle it everywhere and you've turned caching off for your whole
+product.</li>
+<li><code>Cache-Control: max-age=0, s-maxage=600</code> — split lifetimes: browsers must
+revalidate every time, but <strong>s</strong>hared caches may serve it for 10 minutes.
+Why would you want that? Because Tiffin can <em>purge its own CDN</em> on demand
+(it's Tiffin's infrastructure) but can never purge browsers — so you give
+the cache you can invalidate a long leash and the one you can't a short one.
+Remember the analogy break: no revocation broadcast exists; <code>s-maxage</code> is
+how you engineer around it.</li>
+</ul>
+<h3 id="readme-104-v4--the-update-problem-solved-by-never-updating">10.4 v4 — the update problem, solved by never updating</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Tiffin ships a redesign: <code>app.js</code> served with
+<code>max-age=86400</code> (a day). At 14:00 they deploy new HTML that <em>requires</em> the
+new JS. Alice's browser cached <code>app.js</code> at 13:59. What does Alice see, and
+what can Tiffin's ops team do to fix her?</p>
+<details><summary>Reveal</summary>
+Alice gets the **new HTML with the day-old JS** — a broken page (missing
+functions, mismatched markup) — until 13:59 *tomorrow*. And ops can do
+**nothing**: the copy is in her browser, and HTTP has no way to reach it.
+Purging the CDN helps the *next* user, not her. This is the analogy break
+made flesh: you cannot repaint chalkboards you don't own.
+</details>
+
+</blockquote>
+<p>The production fix is a pattern, not a header: <strong>stop updating resources;
+create new ones.</strong> Build tooling fingerprints the file into its URL —
+<code>app.9f3a2c.js</code> — and the HTML references the exact version. Now:</p>
+<ul>
+<li><code>app.9f3a2c.js</code> → <code>Cache-Control: public, max-age=31536000, immutable</code> — a
+year of freshness, and <code>immutable</code> (&quot;this URL's content will <em>never</em>
+change&quot;) tells browsers not even to revalidate on refresh. Safe, because a
+changed file gets a <em>new URL</em>.</li>
+<li><code>index.html</code> → <code>Cache-Control: no-cache</code> — meaning <em>store, but revalidate
+every time</em>: every load does a conditional GET; a <code>304</code> makes it nearly
+free, and a deploy is visible on the very next load, atomically swapping
+which JS URL the page asks for.</li>
+</ul>
+<p><strong>⚠️ The most-confused pair in all of HTTP, worth engraving:</strong>
+<code>no-cache</code> = <em>store it, but always ask before reusing</em> (validation every use).
+<code>no-store</code> = <em>never write it down at all</em>.
+Half the internet's config files use <code>no-cache</code> intending <code>no-store</code> and vice
+versa.</p>
+<h3 id="readme-105-v0-retroactively--what-happens-with-no-headers-at-all">10.5 v0, retroactively — what happens with NO headers at all</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Priya's teammate ships <code>/api/specials</code> with no
+<code>Cache-Control</code> and no <code>Expires</code> header at all — just <code>Last-Modified: (3 days ago)</code>. Is the response cached? For how long?</p>
+<details><summary>Reveal</summary>
+Quite possibly **yes — for ~7.2 hours**, by a cache Priya doesn't control.
+Absent explicit lifetimes, caches are *allowed* to guess (**heuristic
+caching**); the RFC's suggested guess is 10% of how long the resource has
+gone unmodified — 10% of 3 days ≈ 7.2 h. Browsers and CDNs implement
+variations of this. Silence is not "no caching"; silence is *undefined
+caching*. The rule this forces: **every response your API serves should
+state its contract explicitly**, even if the contract is `no-store`.
+</details>
+
+</blockquote>
+<p><em>(Also part of the default machinery: caching applies to <strong>safe</strong> methods —
+GET/HEAD. POST/PUT/DELETE responses aren't reused%; in fact a successful
+unsafe request on a URL tells caches to invalidate their copy of it — the
+protocol knows a write dirties the read, shades of your cqrs lab.)</em></p>
+<h3 id="readme-106-v5--living-with-staleness-stale-while-revalidate-stale-if-error">10.6 v5 — living with staleness: <code>stale-while-revalidate</code>, <code>stale-if-error</code></h3>
+<p>One residual wart: the client that arrives at 12:05:01 — one second after
+expiry — pays the full revalidation round trip while everyone before and after
+gets 10 ms hits. Fix: let the cache serve the <em>slightly</em> stale copy instantly
+and revalidate <strong>in the background</strong>:</p>
+<div class="code"><pre><code>Cache-Control: max-age=300, stale-while-revalidate=60, stale-if-error=3600
+</code></pre></div>
+<p><em>&quot;Fresh for 5 min; for 1 more min you may serve stale while you refresh behind
+the scenes; and if the origin is erroring/unreachable, serve stale up to an
+hour rather than failing.&quot;</em> — <code>stale-if-error</code> being the explicit,
+bounded choice of availability over consistency (the AP corner, chosen per
+response — your <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> lab as an HTTP header). The
+strict opposite exists too: <code>must-revalidate</code> = &quot;once stale, NEVER serve
+without a successful check&quot; — for correctness-critical data like prices.</p>
+<blockquote>
+<p><strong>CHECKPOINT — intermediate model done.</strong> You can write the contract:
+lifetime (<code>max-age</code>, <code>s-maxage</code>), audience (<code>public/private/no-store</code>),
+check (<code>ETag</code>→<code>304</code>), identity (<code>Vary</code> next §), update strategy
+(fingerprint + <code>immutable</code>, <code>no-cache</code> shell), staleness policy
+(<code>stale-while-revalidate</code>, <code>must-revalidate</code>). Next: how this machinery
+fails in production — the engineering layer.</p>
+</blockquote>
+<hr />
+<h2 id="readme-11-failure-scenarios">11. FAILURE SCENARIOS</h2>
+<p>Each: how to create it → where to watch → what/why → the fix → which
+guarantee bent. The visualization's scenarios run 11.1–11.4 predict-first;
+experiment 03 runs 11.4 live.</p>
+<p><strong>11.1 The un-recallable copy (deploy horror).</strong> Create: long <code>max-age</code> on a
+mutable URL, then change the content (viz scenario &quot;The deploy trap&quot;; §10.4's
+predict). What/why: copies you cannot reach serve the old bytes until each
+one's own clock runs out; rollout is gradual and per-user. Fix: fingerprinted
+immutable URLs + revalidate-always HTML (§10.4); for CDN copies, purge APIs.
+Guarantee bent: none — the system did exactly what you declared. That's the
+lesson: <strong>max-age is a promise about the future; only make promises about
+URLs whose content can't change.</strong></p>
+<p><strong>11.2 The shared-cache privacy leak.</strong> Create: personalized response without
+<code>private</code>/<code>no-store</code> behind a shared cache (viz scenario &quot;Bob sees Alice's
+account&quot;). What/why: shared caches key on URL — nothing in the key says
+<em>whose</em> answer this was; first user's response becomes everyone's. Real-world
+variants: CDN misconfig leaking account pages; caches keyed without the
+<code>Authorization</code> header (the RFC forbids shared caches from storing authorized
+responses unless explicitly allowed — but private proxies and misconfigured
+CDNs exist). Fix: <code>Cache-Control: private</code> (or <code>no-store</code>) on anything
+personalized, and never rely on obscurity of URLs. Guarantee bent:
+confidentiality — the one failure here that's a <em>security incident</em>, not a
+performance bug.</p>
+<p><strong>11.3 The missing <code>Vary</code>.</strong></p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> The origin compresses responses for clients that send
+<code>Accept-Encoding: gzip</code>. The CDN caches the gzipped <code>/menu</code> (no <code>Vary</code>
+header). Next comes a legacy client that doesn't speak gzip. What does it
+receive?</p>
+<details><summary>Reveal</summary>
+The gzipped bytes, served as-is from cache — which it renders as **binary
+garbage**. The cache key was just the URL; nothing recorded that this
+stored answer was only right *for gzip-speaking clients*. Fix:
+`Vary: Accept-Encoding` — the cache now stores per-encoding variants and
+matches on that request header. Same trap with `Accept-Language`,
+API-versioning headers, and worst of all `Vary: Cookie`-shaped
+personalization (which quietly makes the hit ratio ~0% — every user their
+own variant — the opposite failure). `Vary` is the identity rule of §5;
+both under- and over-specifying it are bugs. Watch it in the viz scenario
+"The gzip garbage".
+</details>
+
+</blockquote>
+<p><strong>11.4 The stampede (dogpile).</strong> Create: one popular entry expires while 30
+requests/s are arriving (run <code>experiments/Exp03Stampede.java</code>; viz scenario &quot;The
+expiry stampede&quot;). What/why: at expiry, every concurrent request misses
+<em>simultaneously</em> and all of them descend on the origin with the same
+question — the cache's whole point inverted at the worst moment, periodically.
+The origin sees load spikes shaped like your TTLs (thundering herd, §11.2 of
+the protocols lab, caused by a timer instead of a reconnect). Fixes, in
+increasing order of niceness: (a) <strong>single-flight</strong> — one request refills the
+entry, the rest wait for it; (b) <code>stale-while-revalidate</code> — the rest are
+served stale instantly while one refreshes; (c) jittered TTLs so entries
+don't expire in sync. Guarantee bent: none formally — liveness of the origin
+in practice. The experiment shows the raw spike (30 origin hits, then the
+fix: 1).</p>
+<p><strong>11.5 Caching the error.</strong> Create: origin has a bad minute and answers <code>500</code>
+or an empty list; a cache stores it. What/why: some errors are cacheable by
+default rules (and CDNs often add &quot;negative caching&quot; deliberately); now the
+<em>outage outlives itself</em> — the origin recovered but the error is fresh for
+another N minutes. Fix: explicit short/no lifetime on error responses
+(<code>Cache-Control: no-store</code> on 5xx, or CDN negative-TTL config measured in
+seconds); <code>stale-if-error</code> on the <em>good</em> responses so errors prefer old-good
+over fresh-bad. Guarantee bent: freshness working as declared — on the wrong
+content.</p>
+<p><strong>11.6 The cache you forgot existed.</strong> Create: nothing — this one finds you.
+Symptom: &quot;we deployed the fix but the user still sees the bug&quot;; &quot;it works in
+incognito.&quot; Why: the request path is a <em>chain</em> of caches — browser memory →
+browser disk → service worker → corporate proxy → CDN edge → CDN shield →
+maybe your reverse proxy (nginx/Varnish) — and each obeys the contract
+<em>independently</em>, each with its own age for the same URL. Debugging tools of
+the trade: the <code>Age</code> header (who's serving this and how old), CDN debug
+headers (<code>X-Cache: HIT/MISS</code>, <code>CF-Cache-Status</code>), DevTools' &quot;Disable cache&quot;,
+and <code>curl -H 'Cache-Control: no-cache'</code> to force end-to-end revalidation
+(what a browser refresh actually sends). Rule: never say &quot;the cache&quot; —
+name <em>which</em> one.</p>
+<hr />
+<h2 id="readme-12-correctness--what-the-contract-does-and-doesnt-promise">12. CORRECTNESS — what the contract does and doesn't promise</h2>
+<p><strong>Guaranteed (by conformant caches):</strong> a response is reused only within the
+lifetime you declared, only for the audience you declared, only for requests
+matching the key + <code>Vary</code>; validators are compared exactly; a <code>304</code> never
+invents content — it can only bless bytes the cache already holds.</p>
+<p><strong>Explicitly NOT guaranteed:</strong> global consistency (copies at different ages
+disagree — there is no &quot;the current version&quot; anywhere but the origin);
+revocation (no push-invalidation of copies you don't own); that every box on
+the path <em>is</em> conformant (buggy proxies exist — defensive rule: for anything
+sensitive, <code>no-store</code> beats hoping); freshness under <code>stale-*</code> directives you
+yourself enabled.</p>
+<p><strong>The trade, named precisely:</strong> you exchange a <strong>bounded consistency window</strong>
+(max-age, per copy) for latency and origin offload — the identical trade to
+your cqrs read models, with one twist worth savoring: <em>here the writer
+declares the window and unknown readers obey it</em>, whereas in cqrs the reader
+measured its own lag. Corollaries: cache-invalidation-is-hard is not a joke
+but a structural fact (no revocation) — which is why the winning pattern
+(§10.4) is to make invalidation <em>unnecessary</em> (immutable URLs); and idempotent
+GET (protocols lab) is what makes all of this legal — caching is the reward
+HTTP pays you for keeping reads side-effect-free.</p>
+<blockquote>
+<p><strong>CHECKPOINT — engineering model done.</strong> You can predict every failure in
+§11 from the model. Next: proof by running code, then production practice.</p>
+</blockquote>
+<hr />
+<h2 id="readme-13-code--what-each-experiment-proves">13. CODE — what each experiment proves</h2>
+<p>Stdlib-only, <code>java experiments/Exp0N….java</code> (JDK 21+, no build tool):</p>
+<ul>
+<li><strong><code>Exp01ARealCache.java</code></strong> — an origin (200 ms away, counts its own hits) and
+a genuinely rule-following caching proxy in ~60 lines. Load-bearing lines:
+the freshness check (<code>age &lt; max-age</code> — §10.1's contract, executed) and the
+<code>Age</code>/<code>X-Cache</code> headers it stamps. Phase 3 raises the price at the origin
+and shows the proxy <em>correctly</em> serving ₹250 — staleness as contract
+compliance, not bug.</li>
+<li><strong><code>Exp02The304Diet.java</code></strong> — the §10.2 exchange with a byte scale: full <code>200</code>
+vs conditional <code>304</code>, unchanged vs changed content, actual byte counts and
+the residual round-trip cost (tying back to the protocols lab: validation
+still pays latency; only freshness pays nothing).</li>
+<li><strong><code>Exp03Stampede.java</code></strong> — §11.4 live: 30 virtual threads hit one expired
+entry; origin's concurrent-request gauge spikes to 30. Then the single-flight
+lock (the load-bearing ~10 lines: one fetcher, everyone else waits on its
+result) and the same 30 virtual threads produce exactly 1 origin hit.</li>
+</ul>
+<h2 id="readme-14-experiments--predict-then-run">14. EXPERIMENTS — predict, then run</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Predict first</th>
+  <th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>5 requests, <code>max-age=60</code>: how many reach the origin? After the price changes at t+10 s: what price do users see, and until when?</td>
+  <td><code>java experiments/Exp01ARealCache.java</code></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Menu unchanged: how many <em>body</em> bytes does revalidation move? What does it still cost?</td>
+  <td><code>java experiments/Exp02The304Diet.java</code></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>30 simultaneous requests, entry just expired: origin hits without the fix? With single-flight?</td>
+  <td><code>java experiments/Exp03Stampede.java</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Then run the four viz scenarios you haven't yet.</p>
+<hr />
+<h2 id="readme-15-production">15. PRODUCTION</h2>
+<p><strong>The four response archetypes</strong> — nearly every endpoint is one of these; the
+decision procedure is to name the archetype, not to hand-craft headers:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Archetype</th>
+  <th>Contract</th>
+  <th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Fingerprinted static asset (<code>app.9f3a2c.js</code>)</td>
+  <td><code>public, max-age=31536000, immutable</code></td>
+  <td>content can never change at this URL (§10.4)</td>
+</tr>
+<tr>
+  <td>HTML shell / entry point</td>
+  <td><code>no-cache</code> (+ <code>ETag</code>)</td>
+  <td>deploys must land next load; 304 keeps it cheap</td>
+</tr>
+<tr>
+  <td>Personalized API (<code>/me</code>, <code>/orders</code>)</td>
+  <td><code>private, no-store</code> — or <code>private, no-cache</code> + <code>ETag</code> if bodies are big</td>
+  <td>never in shared caches (§11.2); ETag still saves bytes</td>
+</tr>
+<tr>
+  <td>Shared, slowly-changing API (<code>/menu</code>, catalogs)</td>
+  <td><code>public, s-maxage=60, stale-while-revalidate=300</code> (+ purge on write)</td>
+  <td>CDN absorbs the world; you can purge what you own (§10.3)</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Architecture:</strong> real CDNs run <strong>tiers</strong> — many edge nodes near users, a
+smaller <strong>shield/mid-tier</strong> in front of your origin so a miss at 100 edges
+becomes ~1 origin request (request coalescing = §11.4's single-flight, run
+for you at planet scale). Reverse-proxy caches (Varnish, nginx
+<code>proxy_cache</code>) apply the same RFC inside your own rack. Purge/invalidation
+APIs (by URL, or better by <strong>surrogate key/tag</strong> — &quot;purge everything tagged
+<code>restaurant-42</code>&quot;) — that's how &quot;purge on write&quot; in the table is actually
+wired, typically off the same event feed your outbox/cqrs labs built.</p>
+<p><strong>What the on-call watches:</strong> hit ratio (edge and origin-shield separately) —
+a dip means a deploy changed URLs/headers/<code>Vary</code> somewhere; <strong>origin offload</strong>
+(requests the origin didn't see — capacity planning is done on this number);
+<code>Age</code> percentiles (how stale is lived experience); purge latency; and after
+every incident, the reflex question of §11.6: <em>which</em> cache.</p>
+<p><strong>What this lab intentionally omits:</strong> service workers and the browser's
+programmable cache (<code>Cache API</code>) — a whole client-side layer with its own
+lifecycle; proxy-revalidation details (<code>proxy-revalidate</code>); range/partial
+responses; <code>Expires</code> (the legacy absolute-date header <code>max-age</code> replaced);
+request-side <code>Cache-Control</code> beyond refresh semantics; cache poisoning
+attacks via unkeyed inputs (a security topic worth its own hour); HTTP/2
+push's failed cache story; and consistency protocols CDN vendors layer on
+top (instant purge propagation).</p>
+<hr />
+<h2 id="readme-16-exercises">16. EXERCISES</h2>
+<p><a href="notes.html#exercises"><code>EXERCISES.md</code></a> — eight rungs, from explaining the two
+mechanisms to designing Tiffin's full caching architecture. Answers in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>; attempt first.</p>
+<hr />
+<h2 id="readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">flowchart LR
+    HTTP[HTTP ✓&lt;br/&gt;communication-protocols] --&gt; HC[http-caching]
+    CQRS[cqrs ✓&lt;br/&gt;consistency window] -.same trade.-&gt; HC
+    CAP[cap-theorem ✓] -.stale-if-error.-&gt; HC
+    HC --&gt; CDN[cdn-architecture?]
+    HC --&gt; SW[service-workers?]
+    HC --&gt; CP[cache-poisoning?]
+    HC --&gt; AC[application-caching?&lt;br/&gt;redis, memcached]
+</pre>
+<p><strong>Commonly confused, one sentence each:</strong></p>
+<ul>
+<li><em>HTTP caching vs application caching (Redis/Memcached):</em> HTTP caching reuses
+whole responses via headers any infrastructure obeys; application caching is
+your code storing arbitrary values behind your API — invisible to HTTP,
+invalidated by your own logic.</li>
+<li><em><code>no-cache</code> vs <code>no-store</code>:</em> store-but-always-revalidate vs never-store (§10.4).</li>
+<li><em><code>max-age</code> vs <code>s-maxage</code>:</em> everyone vs shared-caches-only lifetime.</li>
+<li><em><code>ETag</code> vs fingerprinted URL:</em> same idea (content identity) applied at
+validation time vs baked into the address so validation is never needed.</li>
+<li><em>Purge vs expiry:</em> an action you perform on caches you own vs a clock that
+runs everywhere.</li>
+</ul>
+<p><strong>Next steps:</strong></p>
+<ul>
+<li><code>/learn cdn-architecture</code> — tiers, shields, anycast, purge propagation.</li>
+<li><code>/learn cache-poisoning</code> — the security flip side of cache keys and <code>Vary</code>.</li>
+<li><code>/learn application-caching</code> — Redis-side patterns: cache-aside, write-through, TTL jitter.</li>
+<li><code>/learn io-multiplexing</code> — still queued from the protocols lab.</li>
+</ul>
+<hr />
+<h2 id="readme-18-glossary-in-order-of-appearance">18. GLOSSARY (in order of appearance)</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>CDN</td>
+  <td>content delivery network — shared caches placed near users</td>
+</tr>
+<tr>
+  <td>cache</td>
+  <td>any store of response copies governed by HTTP's reuse rules</td>
+</tr>
+<tr>
+  <td>origin</td>
+  <td>the authoritative server the copies descend from</td>
+</tr>
+<tr>
+  <td>hit / miss</td>
+  <td>served from the copy / had to contact the origin</td>
+</tr>
+<tr>
+  <td>hit ratio</td>
+  <td>hits ÷ requests — the practice's headline metric</td>
+</tr>
+<tr>
+  <td>fresh / stale</td>
+  <td>young enough to reuse without asking / must check first</td>
+</tr>
+<tr>
+  <td>freshness lifetime / TTL</td>
+  <td>how long a copy stays fresh (<code>max-age=N</code>)</td>
+</tr>
+<tr>
+  <td>age / <code>Age</code> header</td>
+  <td>seconds since the origin generated the copy; caches expose it</td>
+</tr>
+<tr>
+  <td>private vs shared cache</td>
+  <td>one user's cache (browser) vs many users' (CDN, proxy)</td>
+</tr>
+<tr>
+  <td><code>public</code> / <code>private</code> / <code>no-store</code></td>
+  <td>audience directives: anyone / that user only / nobody ever</td>
+</tr>
+<tr>
+  <td>validator</td>
+  <td>fingerprint used for the cheap check (<code>ETag</code>, <code>Last-Modified</code>)</td>
+</tr>
+<tr>
+  <td>conditional request</td>
+  <td>&quot;send only if changed&quot; (<code>If-None-Match</code> / <code>If-Modified-Since</code>)</td>
+</tr>
+<tr>
+  <td><code>304 Not Modified</code></td>
+  <td>&quot;your copy is still right&quot; — renews freshness, carries no body</td>
+</tr>
+<tr>
+  <td>cache key</td>
+  <td>what counts as the same request (method + URL, extended by <code>Vary</code>)</td>
+</tr>
+<tr>
+  <td><code>Vary</code></td>
+  <td>response header naming request headers the answer depends on</td>
+</tr>
+<tr>
+  <td>heuristic caching</td>
+  <td>a cache's permitted guess when no lifetime was declared</td>
+</tr>
+<tr>
+  <td>purge</td>
+  <td>deleting entries from a cache you control</td>
+</tr>
+<tr>
+  <td><code>s-maxage</code></td>
+  <td>freshness lifetime for shared caches only</td>
+</tr>
+<tr>
+  <td>fingerprinted URL / cache busting</td>
+  <td>content hash in the filename; updates become new URLs</td>
+</tr>
+<tr>
+  <td><code>immutable</code></td>
+  <td>&quot;this URL's bytes will never change — don't even revalidate&quot;</td>
+</tr>
+<tr>
+  <td><code>no-cache</code></td>
+  <td>store, but revalidate before every reuse (≠ <code>no-store</code>)</td>
+</tr>
+<tr>
+  <td>safe methods</td>
+  <td>GET/HEAD — side-effect-free, hence legally cacheable</td>
+</tr>
+<tr>
+  <td><code>stale-while-revalidate</code></td>
+  <td>serve stale briefly while refreshing in the background</td>
+</tr>
+<tr>
+  <td><code>stale-if-error</code></td>
+  <td>serve stale rather than fail when the origin errors</td>
+</tr>
+<tr>
+  <td><code>must-revalidate</code></td>
+  <td>once stale, never serve without a successful check</td>
+</tr>
+<tr>
+  <td>stampede / dogpile</td>
+  <td>synchronized misses at expiry crushing the origin</td>
+</tr>
+<tr>
+  <td>single-flight</td>
+  <td>one request refills an expired entry; the rest wait/reuse</td>
+</tr>
+<tr>
+  <td>negative caching</td>
+  <td>caching an error/absence response (dangerous by accident)</td>
+</tr>
+<tr>
+  <td><code>X-Cache</code> / <code>CF-Cache-Status</code></td>
+  <td>CDN debug headers announcing HIT or MISS</td>
+</tr>
+<tr>
+  <td>shield / mid-tier</td>
+  <td>CDN layer between edges and origin, coalescing misses</td>
+</tr>
+<tr>
+  <td>surrogate key</td>
+  <td>CDN tag on responses enabling group purge (&quot;everything for restaurant 42&quot;)</td>
+</tr>
+<tr>
+  <td>origin offload</td>
+  <td>fraction of traffic the origin never saw</td>
+</tr>
+</tbody>
+</table></div>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--http-caching">Exercises — HTTP caching</h1>
+<p>Climb in order. Rungs 2–4 use <code>visualization.html</code>; 4–6 use <code>experiments/</code>;
+7–8 are design discussions. Attempt before opening <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<h2 id="exercises-rung-1--explain-no-header-names-allowed">Rung 1 — Explain (no header names allowed)</h2>
+<p>1a. Explain to a non-engineer why a website can show you a price that no
+longer exists, even though the company fixed it an hour ago — and why the
+company often cannot do anything about it for that specific person.</p>
+<p>1b. HTTP caching has exactly two mechanisms. Name both in plain words, and say
+what each one saves. (Hint: one of them saves something the other cannot.)</p>
+<p>1c. A teammate says &quot;we set <code>no-cache</code> on the account page so it's never
+stored anywhere.&quot; What are they wrong about, and what did they probably mean?</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>2a. Open the visualization, set &quot;reuse freely for&quot; to 60 s, and click
+<strong>Alice → /menu</strong> twice. Which box changed colour, what does its bar mean, and
+why was the second request faster? Now click <strong>Bob → /menu</strong>: which cache
+answered him, and why could it, given the answer was fetched for Alice?</p>
+<p>2b. In the visualization, look at the two kinds of travelling dot (hollow vs
+filled). Which is a question and which is an answer? What does the label
+&quot;still good?&quot; on a dot tell you about what the cache already has?</p>
+<p>2c. Run experiment 01 and find, in its output: (i) the moment the contract was
+honoured at the cost of correctness, (ii) the header that tells a client how
+old its answer is, (iii) the header a CDN uses to tell you it didn't do any
+real work.</p>
+<h2 id="exercises-rung-3--predict-then-run">Rung 3 — Predict, then run</h2>
+<p>3a. Set max-age to 15 s. Predict: after clicking <strong>Alice → /menu</strong>, then
+<strong>Skip ahead 30 s</strong>, then <strong>Alice → /menu</strong> again — how many round trips does
+the third request make, and how many bytes of menu content travel? Run it and
+check the counters.</p>
+<p>3b. Same as 3a but <strong>untick the ETag box</strong> first. Predict what changes in both
+numbers. Which of the two mechanisms did you just disable?</p>
+<p>3c. Predict the outcome of the <strong>&quot;Bob sees Alice's account&quot;</strong> scenario before
+running it. Then switch the audience control to <em>that user only</em>, reset, and
+manually redo the same two requests. What is different in the CDN box, and
+which counter proves the fix?</p>
+<p>3d. Run experiment 03. Before you do: 30 readers arrive one millisecond after
+a copy expires. Predict the number of origin requests, then the number after
+single-flight is enabled. Were you within 5?</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>4a. In <code>experiments/Exp01ARealCache.java</code>, set <code>MAX_AGE = 2</code> and re-run.
+Describe precisely what changes in Phase B and Phase C, and state the general
+rule linking max-age to the two things it trades off.</p>
+<p>4b. In <code>experiments/Exp02The304Diet.java</code>, change the padding
+(<code>ITEM_COUNT = 800</code>) to <code>ITEM_COUNT = 5</code>. Predict first: does the <em>percentage</em>
+saved by a 304 go up, down, or stay the same? Run it. What does that tell you
+about which resources ETags are most worth having on?</p>
+<p>4c. In the visualization, turn on <strong>stale-while-revalidate</strong> and re-run the
+stampede scenario. Compare the origin counter with the previous run, and
+explain in one sentence who waits and who doesn't under each setting.</p>
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p>5a. <code>experiments/Exp01ARealCache.java</code>'s proxy has no validator support: when a
+copy goes stale it refetches the whole body. Add ETag handling — store the
+ETag with the entry, send <code>If-None-Match</code> when stale, and on a <code>304</code> renew
+<code>storedAtMillis</code> and serve the stored body. Verify: after expiry, the origin's hit
+counter still increments but the transferred body is zero, and the price only
+changes when the origin's content actually changed.</p>
+<p>5b. Add <code>Vary: Accept-Encoding</code> support to that proxy: make the cache key a
+pair of (path, whether the client sent <code>Accept-Encoding: gzip</code>). Prove it
+works by requesting the same path with and without the header and showing two
+separate entries are stored.</p>
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p>6a. A team ships this API. Find <strong>four</strong> distinct caching bugs, name the
+symptom each produces in production, and give the corrected header for each.</p>
+<div class="code"><pre><code class="language-text"># 1. the public restaurant menu — changes twice a day
+GET /menu       →  Cache-Control: no-cache
+                   (no ETag)
+
+# 2. the logged-in user&#x27;s order list
+GET /orders     →  Cache-Control: public, max-age=600
+
+# 3. the JS bundle, filename never changes across deploys
+GET /app.js     →  Cache-Control: public, max-age=31536000, immutable
+
+# 4. the search endpoint, response differs by Accept-Language
+GET /search?q=x →  Cache-Control: public, max-age=300
+                   (no Vary)
+</code></pre></div>
+<p>6b. Support reports: &quot;we deployed the fix 40 minutes ago; most users see it,
+one user still sees the bug, and it works for her in a private window.&quot; Walk
+through the diagnosis: what does the private window prove, what does it rule
+out, and what is the one header you'd ask her to screenshot from DevTools?</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>7a. Tiffin's origin goes down for 20 minutes during a regional outage. Design
+the caching contract for <code>/menu</code> so that customers keep seeing <em>something</em>
+rather than errors, state exactly which directive does it, and name the cost
+you just accepted. Then state what you would NOT apply this to, and why.</p>
+<p>7b. Tiffin's prices must never be shown wrong for more than 60 seconds, but
+the menu endpoint takes 400 ms and gets 30k requests/second. Design the
+contract and the surrounding machinery (what the CDN does, what happens at
+expiry, what happens on a price change) so that both the 60-second bound and
+the origin's survival hold. Name every mechanism you use.</p>
+<h2 id="exercises-rung-8--design-production-scale">Rung 8 — Design (production scale)</h2>
+<p>Tiffin now serves 40 countries. Design the complete caching architecture:</p>
+<ul>
+<li>the marketing site (static, changes weekly)</li>
+<li>the SPA's JS/CSS bundles, deployed ~10× a day</li>
+<li><code>GET /restaurants?city=X</code> — same for everyone in a city, changes hourly</li>
+<li><code>GET /restaurants/42/menu</code> — changes twice daily, must be correct within 5
+minutes of a restaurant editing it</li>
+<li><code>GET /orders/97</code> — one customer's live order, changes every few seconds</li>
+<li><code>GET /me</code> — personal profile</li>
+<li><code>POST /orders</code> — placing an order</li>
+</ul>
+<p>For each: the exact <code>Cache-Control</code>, whether an ETag is worth it, what the
+cache key must include, and how a change propagates (expiry? purge? new URL?).
+Then: name the three metrics on the on-call dashboard and what each one
+failing would look like.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<p>Attempt <a href="notes.html#exercises"><code>EXERCISES.md</code></a> first. Rungs 7–8 are worked
+discussions, not single right answers. Numbers quoted here were produced by
+actually running the experiments on this machine.</p>
+<h2 id="solutions-rung-1">Rung 1</h2>
+<p><strong>1a.</strong> When you visit a site, your phone (and often a helper server in your
+city) keeps a copy of the answer so it doesn't have to ask again — that's why
+pages load instantly the second time. Each copy comes with an expiry time
+chosen by the company <em>when the copy was made</em>. If they said &quot;good for an
+hour&quot; and then changed the price ten minutes later, every copy already handed
+out keeps showing the old price for the remaining fifty minutes. The company
+can delete copies on machines it owns, but it has no way to reach into your
+phone and erase what's there — the internet has no &quot;recall&quot; button. All it can
+do is choose shorter expiry times next time, which costs speed.</p>
+<p><strong>1b.</strong> <strong>Freshness</strong> — &quot;reuse your copy for N seconds without asking me&quot; —
+saves the entire request: no network trip, no bytes, zero milliseconds.
+<strong>Validation</strong> — &quot;ask me cheaply whether your copy is still right&quot; — saves
+only the <em>content</em>: you still pay a full round trip to hear &quot;still good,&quot; but
+almost no bytes come back. Freshness is the one that saves the trip; that's
+why <code>max-age</code> still matters even when you have ETags.</p>
+<p><strong>1c.</strong> They're wrong that <code>no-cache</code> prevents storage: <code>no-cache</code> means
+<em>store it, but revalidate with the origin before every single reuse</em>. The copy
+is written to disk; it's just never reused blindly. What they meant is
+<code>no-store</code> — never write it down at all. This exact confusion is everywhere in
+real config files. (README §10.4)</p>
+<h2 id="solutions-rung-2">Rung 2</h2>
+<p><strong>2a.</strong> Alice's browser-cache box gained a coloured border and a draining bar:
+the bar is the remaining freshness, shrinking teal → amber → clay as the copy
+ages. The second request was faster because it never left the phone — the copy
+was fresh, so the decision procedure stopped at the first step. Bob was
+answered by the <strong>CDN</strong>, which stored the copy while relaying Alice's response;
+it's allowed to serve it to Bob because the contract said <code>public</code> and the
+menu is the same answer for everybody — nothing about it is Alice-specific.</p>
+<p><strong>2b.</strong> Hollow dots are requests (questions travelling right); filled dots are
+responses (answers travelling left). &quot;still good?&quot; means that cache <em>already
+holds a copy</em> and is sending only its fingerprint, asking whether it may keep
+using it — i.e. this is a validation, not a fetch, so if the answer is yes,
+nothing but headers comes back.</p>
+<p><strong>2c.</strong> (i) Phase C — the proxy serves ₹250 while the origin says ₹280; that
+is the max-age promise being kept, not a malfunction. (ii) <code>Age: 4s</code> — how
+many seconds old the served copy is. (iii) <code>X-Cache: HIT</code> — the CDN-style
+debug header announcing it answered from storage.</p>
+<h2 id="solutions-rung-3">Rung 3</h2>
+<p><strong>3a.</strong> One round trip, <strong>zero</strong> bytes of menu content. The copy is stale
+(30 s &gt; 15 s) so it can't be reused blindly, but the ETag lets the cache ask
+&quot;still good?&quot; and get a <code>304</code>. The &quot;still good&quot; replies counter increments;
+&quot;content bytes moved&quot; does not.</p>
+<p><strong>3b.</strong> Without the ETag: still one round trip, but now the <strong>full body</strong>
+travels again — &quot;content bytes moved&quot; jumps by another 6.4 KB. You disabled
+<strong>validation</strong>, leaving only freshness; once a copy without a fingerprint goes
+stale, there is no cheap question to ask, so the whole thing must be refetched.</p>
+<p><strong>3c.</strong> Bob sees Alice's account (leak counter = 1). With audience set to
+<em>that user only</em>, the CDN box no longer shows the <code>+ /account</code> line at all —
+it refused to store a <code>private</code> response — so Bob's request travels to the
+origin and he gets his own page. The <strong>privacy leaks</strong> counter staying at 0 is
+the proof. Note what this costs: Bob's request is now slow, which is the
+honest price of correctness here.</p>
+<p><strong>3d.</strong> Measured on this machine: <strong>30</strong> origin requests without the fix (all
+30 concurrent — the origin's peak in-flight was 30), and <strong>1</strong> with
+single-flight. The wall-clock for all 30 readers was ~320 ms without the fix
+and ~305 ms with it, so single-flight cost the users nothing (it was in fact
+marginally faster) and saved the origin 29 duplicate queries.</p>
+<h2 id="solutions-rung-4">Rung 4</h2>
+<p><strong>4a.</strong> Phase B: the first user still MISSes, but the copy expires after 2 s,
+so with ~1 s spacing you'll see a MISS on every other user — 3 of the 5 —
+instead of one MISS total; the origin count rises and average latency
+worsens. Phase C: the
+wrong price is served for at most 2 s instead of 60. <strong>The rule:</strong> max-age
+buys speed and origin offload with staleness — one dial, two opposed costs.
+There is no setting that's good at both; you choose the maximum wrongness
+you can tolerate, then take whatever performance that allows.</p>
+<p><strong>4b.</strong> The percentage saved goes <strong>down</strong>. Measured: with the large body,
+6601 → 89 bytes = <strong>98.7% saved</strong>; with the tiny body, 239 → 89 bytes =
+<strong>62.8% saved</strong>. The 304's ~89 bytes of headers are a fixed floor, so the
+saving is proportionally huge on big resources and modest on small ones.
+Conclusion: ETags earn their keep most on large bodies (bundles, images,
+long JSON); on tiny responses the round trip dominates and you should be
+reaching for freshness (a longer max-age) instead.</p>
+<p><strong>4c.</strong> With stale-while-revalidate on, the origin counter drops sharply
+(11 → ~2 in the packaged scenario) because the cache serves the slightly-stale
+copy instantly to everyone and sends exactly one refresh in the background.
+Without it, every one of the concurrent requests waits for the origin and all
+of them arrive there together. In one sentence: <strong>without SWR the users wait
+and the origin is crushed; with SWR nobody waits and one background request
+does the work</strong> — paid for by everyone briefly seeing data a few seconds past
+its declared lifetime.</p>
+<h2 id="solutions-rung-5">Rung 5</h2>
+<p><strong>5a.</strong> Give <code>Entry</code> an <code>etag</code> component and a <code>renewed()</code> helper, then change
+the proxy's <code>proxy(HttpExchange)</code>:</p>
+<div class="code"><pre><code class="language-java">record Entry(byte[] body, long storedAtMillis, int maxAge, String etag) {
+    Entry renewed() { return new Entry(body, System.currentTimeMillis(), maxAge, etag); }
+}
+
+Entry entry = STORE.get(path);
+if (entry != null) {
+    double age = (System.currentTimeMillis() - entry.storedAtMillis()) / 1000.0;
+    if (age &lt; entry.maxAge()) {
+        reply(ex, entry.body(), true, age);
+        return;
+    }
+    // stale, but we have a fingerprint: ask the cheap question (§10.2)
+    HttpRequest.Builder req = HttpRequest.newBuilder(URI.create(originBase + path));
+    if (entry.etag() != null) req.header(&quot;If-None-Match&quot;, entry.etag());
+    HttpResponse&lt;byte[]&gt; r = CLIENT.send(req.build(), HttpResponse.BodyHandlers.ofByteArray());
+    if (r.statusCode() == 304) {                 // nothing changed
+        STORE.put(path, entry.renewed());        // renew freshness, keep the body
+        reply(ex, entry.body(), true, 0);
+        return;
+    }
+    // 200: the content moved on — fall through and store the new body + new ETag
+}
+</code></pre></div>
+<p>(The origin must also send <code>ETag</code> and answer 304 on a match — copy that logic
+from <code>Exp02The304Diet.java</code>.) Verification: after expiry the origin's counter
+increments (the check happened) but the proxy transfers no new body, and the
+served price only changes after you actually mutate <code>price</code> at the origin.</p>
+<p><strong>5b.</strong> Make the key a record and vary on it (<code>Map&lt;Key, Entry&gt; STORE</code>):</p>
+<div class="code"><pre><code class="language-java">record Key(String path, boolean wantsGzip) { }
+
+static Key cacheKey(HttpExchange ex) {
+    String ae = ex.getRequestHeaders().getFirst(&quot;Accept-Encoding&quot;);
+    boolean wantsGzip = ae != null &amp;&amp; ae.contains(&quot;gzip&quot;);
+    return new Key(ex.getRequestURI().getPath(), wantsGzip);  // Vary: Accept-Encoding, as a key
+}
+</code></pre></div>
+<p>Request <code>/menu</code> twice — once with <code>Accept-Encoding: gzip</code>, once without — and
+print <code>STORE.keySet()</code>: you'll see two entries, <code>Key[path=/menu, wantsGzip=true]</code> and <code>Key[path=/menu, wantsGzip=false]</code>. That separation is
+precisely what <code>Vary</code> buys, and its absence is the §11.3 garbage bug.</p>
+<h2 id="solutions-rung-6">Rung 6</h2>
+<p><strong>6a.</strong></p>
+<ol>
+<li><strong><code>/menu</code> with <code>no-cache</code> and no ETag</strong> — the worst of both worlds: every
+single request goes to the origin (no freshness) <em>and</em> must transfer the
+whole body (no validator). Symptom: full origin load, no savings, and you
+probably believe you're &quot;cached.&quot; Fix:
+<code>Cache-Control: public, s-maxage=300, stale-while-revalidate=600</code> + an ETag.</li>
+<li><strong><code>/orders</code> with <code>public, max-age=600</code></strong> — a personalized response marked
+shareable. Symptom: the §11.2 privacy leak — one customer's order list
+served to another from a shared cache. Fix: <code>Cache-Control: private, no-store</code> (or <code>private, no-cache</code> + ETag if the payload is big).</li>
+<li><strong><code>/app.js</code> immutable at a stable filename</strong> — <code>immutable</code> promises the
+bytes at this URL will never change, and the deploy breaks that promise.
+Symptom: users stuck on last week's JavaScript for a year, unfixable
+remotely; mixed old-JS/new-HTML breakage. Fix: fingerprint the filename
+(<code>/app.9f3a2c.js</code>) and keep the long immutable lifetime — or, if the name
+must stay, <code>Cache-Control: no-cache</code> + ETag.</li>
+<li><strong><code>/search</code> without <code>Vary</code></strong> — one key, several right answers. Symptom: a
+French user gets the English results a German user's request cached (same
+class of bug as the gzip garbage). Fix: <code>Vary: Accept-Language</code>. Beware the
+opposite failure: <code>Vary: Cookie</code> on a shared cache gives every user a
+private variant and drops the hit ratio to near zero.</li>
+</ol>
+<p><strong>6b.</strong> The private window working proves the <em>server and CDN are serving the
+correct new content</em> — a private window has an empty browser cache but uses
+the same network path. So the problem is downstream of the CDN: a copy in her
+normal browser profile (or a service worker). It rules out a bad deploy, a
+stale CDN edge, and a code bug. Ask her to open DevTools → Network → the
+failing request and screenshot the response headers, specifically <strong><code>Age</code></strong>
+(with <code>X-Cache</code>/<code>CF-Cache-Status</code> if present): a large <code>Age</code> with a <code>HIT</code>
+tells you which cache is holding it and how long it has left. The lesson from
+§11.6: never say &quot;the cache&quot; — name which one, then check its headers.</p>
+<h2 id="solutions-rung-7-worked-discussion">Rung 7 (worked discussion)</h2>
+<p><strong>7a.</strong> Add <strong><code>stale-if-error=1800</code></strong> to <code>/menu</code>'s contract:
+<code>Cache-Control: public, s-maxage=300, stale-if-error=1800</code>. When the origin
+returns 5xx or is unreachable, caches may serve their expired copy for up to
+30 minutes instead of failing. The cost you accepted: during the outage
+customers see data up to 30 minutes old with no indication it's stale — you
+have explicitly chosen availability over consistency, the AP corner of
+<a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>, declared per response. <strong>Do not apply it to</strong>
+anything where a wrong answer is worse than no answer: payment status, order
+state, inventory-at-checkout, anything a customer will act on financially.
+For those, failing loudly is the correct behaviour, and <code>must-revalidate</code> is
+the directive that enforces it.</p>
+<p><strong>7b.</strong> The contract: <code>Cache-Control: public, s-maxage=60, stale-while-revalidate=30, must-revalidate</code> plus an ETag, and <code>max-age=0</code> so
+browsers always defer to the CDN tier you control.</p>
+<ul>
+<li><strong>The 60-second bound</strong> comes from <code>s-maxage=60</code>: no shared copy is served
+as fresh beyond a minute. The <code>stale-while-revalidate=30</code> window is a
+deliberate, bounded extension — if your bound is <em>hard</em> 60 s, either drop
+SWR or set <code>s-maxage=30, stale-while-revalidate=30</code> so the worst case stays
+inside 60.</li>
+<li><strong>Origin survival at expiry</strong> comes from three things working together:
+the CDN's <strong>request coalescing</strong> (its built-in single-flight — one miss
+refills the entry while the other 29,999 requests wait or get served stale),
+<strong>stale-while-revalidate</strong> so nobody actually waits, and <strong>jittered
+lifetimes</strong> across restaurants so 40,000 menus don't expire on the same
+second. Experiment 03 is the small proof of the first mechanism: 30 → 1.</li>
+<li><strong>On a price change</strong>, don't wait for expiry: fire a <strong>purge by surrogate
+key</strong> (<code>restaurant-42</code>) off the same event feed your
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> already publishes. Expiry
+is then just the safety net for missed purges, not the primary path — which
+is what lets you keep the 60 s bound without setting a punishing TTL.</li>
+<li><strong>A shield/mid-tier</strong> in front of the origin means a miss at 200 edge
+locations becomes ~1 origin request rather than 200.</li>
+</ul>
+<h2 id="solutions-rung-8-worked-discussion--defensible-not-unique">Rung 8 (worked discussion — defensible, not unique)</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Endpoint</th>
+  <th>Contract</th>
+  <th>ETag?</th>
+  <th>Key must include</th>
+  <th>How a change propagates</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Marketing site HTML</td>
+  <td><code>public, s-maxage=3600, stale-while-revalidate=86400</code></td>
+  <td>yes</td>
+  <td>URL</td>
+  <td>expiry + purge on publish</td>
+</tr>
+<tr>
+  <td>JS/CSS bundles</td>
+  <td><code>public, max-age=31536000, immutable</code></td>
+  <td>pointless</td>
+  <td>URL (already unique)</td>
+  <td><strong>new URL</strong> — never updated in place</td>
+</tr>
+<tr>
+  <td><code>/restaurants?city=X</code></td>
+  <td><code>public, s-maxage=600, stale-while-revalidate=3600</code></td>
+  <td>yes</td>
+  <td>URL incl. query</td>
+  <td>expiry; purge by <code>city-X</code> tag</td>
+</tr>
+<tr>
+  <td><code>/restaurants/42/menu</code></td>
+  <td><code>public, s-maxage=60, stale-while-revalidate=30</code></td>
+  <td>yes</td>
+  <td>URL</td>
+  <td><strong>purge by <code>restaurant-42</code></strong> on edit; 5-min requirement met with margin</td>
+</tr>
+<tr>
+  <td><code>/orders/97</code></td>
+  <td><code>private, no-cache</code> + ETag</td>
+  <td>yes — it's polled often and rarely changes</td>
+  <td>URL + user identity</td>
+  <td>revalidate every request; 304s make polling cheap</td>
+</tr>
+<tr>
+  <td><code>/me</code></td>
+  <td><code>private, no-store</code> (or <code>private, no-cache</code>)</td>
+  <td>optional</td>
+  <td>URL + user</td>
+  <td>never shared, never stale</td>
+</tr>
+<tr>
+  <td><code>POST /orders</code></td>
+  <td><code>no-store</code></td>
+  <td>n/a</td>
+  <td>n/a</td>
+  <td>not cacheable; it also invalidates cached copies of the URL it writes</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two decisions worth defending explicitly. First, <strong><code>/orders/97</code> gets
+<code>no-cache</code> rather than a short max-age</strong>: a customer watching their order
+would tolerate 5 s of staleness, but the revalidation is nearly free (a 304
+on a small payload) and &quot;never wrong&quot; is easier to reason about than &quot;wrong
+for up to 5 seconds&quot; on the screen people stare at. Second, <strong>the menu uses
+purge-on-write plus a short TTL rather than a long TTL alone</strong> — TTL alone
+would force a choice between origin load and the 5-minute correctness
+requirement, whereas purge decouples them: the TTL is now the safety net,
+not the mechanism.</p>
+<p><strong>Three on-call metrics:</strong></p>
+<ol>
+<li><strong>Edge hit ratio</strong> (and origin-shield ratio separately). A sudden dip means
+someone changed URLs, headers, or <code>Vary</code> — the classic cause is a new
+<code>Vary</code> header exploding the variant count, or a personalization cookie
+leaking into the key.</li>
+<li><strong>Origin offload / origin RPS.</strong> This is your capacity plan; a spike shaped
+like a sawtooth is a stampede (synchronized TTLs), a step change is a
+caching regression.</li>
+<li><strong>Purge propagation latency</strong> and <strong><code>Age</code> p95.</strong> If purges are slow or
+failing, your &quot;5 minutes&quot; guarantee is silently broken and only <code>Age</code>
+percentiles will show it — nothing errors when caching is too <em>effective</em>,
+which is exactly what makes it dangerous.</li>
+</ol>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../11-caching/notes.html"><small>← Lab 11</small>caching</a><a href="../13-redis/notes.html" style="text-align:right"><small>Lab 13 →</small>redis</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-layer-map">Layer map</a><a href="#readme-1-why--the-fastest-request-is-the-one-never-sent">1. WHY — the fastest request is the one never sent</a><a href="#readme-2-problem--two-million-people-keep-asking-for-the-same-menu">2. PROBLEM — two million people keep asking for the same menu</a><a href="#readme-3-naive-solution--keep-a-copy-reuse-it">3. NAIVE SOLUTION — keep a copy, reuse it</a><a href="#readme-4-failure--the-copy-doesnt-know-when-its-wrong">4. FAILURE — the copy doesn&#x27;t know when it&#x27;s wrong</a><a href="#readme-5-the-real-requirement">5. THE REAL REQUIREMENT</a><a href="#readme-6-key-idea">6. KEY IDEA</a><a href="#readme-7-terminology--the-words-on-the-contract">7. TERMINOLOGY — the words on the contract</a><a href="#readme-8-mental-models">8. MENTAL MODELS</a><a href="#readme-9-visualization--watch-a-copy-age">9. VISUALIZATION — watch a copy age</a><a href="#readme-10-actual-mechanism--building-the-contract-break-by-break">10. ACTUAL MECHANISM — building the contract, break by break</a><a href="#readme-11-failure-scenarios">11. FAILURE SCENARIOS</a><a href="#readme-12-correctness--what-the-contract-does-and-doesnt-promise">12. CORRECTNESS — what the contract does and doesn&#x27;t promise</a><a href="#readme-13-code--what-each-experiment-proves">13. CODE — what each experiment proves</a><a href="#readme-14-experiments--predict-then-run">14. EXPERIMENTS — predict, then run</a><a href="#readme-15-production">15. PRODUCTION</a><a href="#readme-16-exercises">16. EXERCISES</a><a href="#readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-18-glossary-in-order-of-appearance">18. GLOSSARY (in order of appearance)</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

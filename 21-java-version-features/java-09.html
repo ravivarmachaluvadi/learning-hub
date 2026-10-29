@@ -1,0 +1,351 @@
+<!doctype html>
+<html lang="en" data-hub-lab="21-java-version-features">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Java 9 — the release that broke the world, and then fixed how releases work</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 21 · java-09.md</span><nav class="tabs" aria-label="This lab"><a href="notes.html">Lab notes</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 21 · java-version-features</p><h1 id="doc-java-9--the-release-that-broke-the-world-and-then-fixed-how-releases-work">Java 9 — the release that broke the world, and then fixed how releases work</h1>
+<p><strong>GA:</strong> September 2017 · <strong>LTS:</strong> no (superseded by 10 in six months) ·
+<strong>Class file major version:</strong> 53 ·
+<strong>Oracle support:</strong> ended March 2018 <strong>[documented — Oracle roadmap]</strong></p>
+<p><strong>Previous:</strong> Java 8 (outside this lab) · <strong>Next:</strong> <a href="java-10.html">Java 10</a> ·
+<strong>Back to:</strong> <a href="notes.html#readme">the story</a></p>
+<hr />
+<h2 id="doc-the-one-thing-to-remember">The one thing to remember</h2>
+<p><strong>Java 9 is the reason everything after it looks the way it does.</strong> It arrived
+three and a half years late, carrying a change so large it broke a significant
+fraction of the ecosystem, and the lesson learned from it — <em>never ship a
+release this big again</em> — produced the six-month train, preview features, and
+the LTS designation. If you only read one version file, the value of this one
+is the story, not the feature list.</p>
+<p>It also contains, quietly, several things you use daily without knowing they
+arrived here: <code>List.of()</code>, <code>var</code>'s groundwork, the HTTP client, and G1 as the
+default garbage collector.</p>
+<h2 id="doc-what-you-actually-get">What you actually get</h2>
+<p>Ordered by how likely a backend engineer is to touch it.</p>
+<h3 id="doc-collection-factory-methods--jep-269">Collection factory methods — JEP 269</h3>
+<p>The single most-used thing in Java 9. Before:</p>
+<div class="code"><pre><code class="language-java">List&lt;String&gt; l = Collections.unmodifiableList(Arrays.asList(&quot;a&quot;, &quot;b&quot;, &quot;c&quot;));
+Map&lt;String,Integer&gt; m = new HashMap&lt;&gt;();
+m.put(&quot;a&quot;, 1); m.put(&quot;b&quot;, 2);
+m = Collections.unmodifiableMap(m);
+</code></pre></div>
+<p>After:</p>
+<div class="code"><pre><code class="language-java">List&lt;String&gt;       l = List.of(&quot;a&quot;, &quot;b&quot;, &quot;c&quot;);
+Set&lt;String&gt;        s = Set.of(&quot;a&quot;, &quot;b&quot;);
+Map&lt;String,Integer&gt; m = Map.of(&quot;a&quot;, 1, &quot;b&quot;, 2);
+</code></pre></div>
+<p>Three things to know, because all three surprise people:</p>
+<ol>
+<li>The result is <strong>immutable</strong> — <code>add</code> throws <code>UnsupportedOperationException</code>.
+That is a feature, not a limitation, but it means <code>List.of(...)</code> is not a
+drop-in replacement for <code>new ArrayList&lt;&gt;(...)</code>.</li>
+<li><strong>Nulls are rejected.</strong> <code>List.of(&quot;a&quot;, null)</code> throws <code>NullPointerException</code>.
+<code>Arrays.asList(&quot;a&quot;, null)</code> does not. This bites when converting old code.</li>
+<li><strong>Iteration order of <code>Set.of</code> and <code>Map.of</code> is unspecified and deliberately
+randomised per JVM run.</strong> If a test asserts on the order of a <code>Set.of</code>, it
+will pass locally and fail in CI, eventually. This is intentional — it stops
+you depending on an order that was never promised.</li>
+</ol>
+<p><code>Map.of</code> takes at most 10 key-value pairs; beyond that use <code>Map.ofEntries( Map.entry(k, v), ...)</code>.</p>
+<h3 id="doc-the-module-system--jep-261-200-220-260">The module system — JEP 261, 200, 220, 260</h3>
+<p>The headline, the delay, and the pain. The full treatment is a lab of its own
+(<code>/learn java-module-system</code>); here is what you need to make a decision.</p>
+<p>A module declares what it needs and what it shares:</p>
+<div class="code"><pre><code class="language-java">// module-info.java
+module com.acme.orders {
+    requires java.net.http;              // I need this
+    requires transitive com.acme.model;  // and anyone who needs me needs this too
+    exports com.acme.orders.api;         // others may compile against this
+    // everything else is invisible to the outside world
+}
+</code></pre></div>
+<p><strong>The decision you actually have to make:</strong> you almost certainly should not
+write one of these. Classpath code lands in the <strong>unnamed module</strong>, which reads
+everything and tolerates split packages, and this is fully supported forever —
+not a deprecated compatibility mode. The overwhelming majority of production
+Java applications, including Spring Boot ones, run on the classpath on JDK 25
+with no <code>module-info.java</code> anywhere.</p>
+<p><strong>Where modules genuinely earn their keep:</strong> building a stripped-down runtime
+image with <code>jlink</code> (smaller containers), and publishing a library where you
+want a compiler-enforced public surface.</p>
+<p><strong>What you inherit whether you opt in or not:</strong> the JDK itself is modular, and
+that is what produced <a href="notes.html#readme-11-failure-scenarios--what-actually-breaks-and-why">F1 and F3 in the README</a>
+— split packages and <code>InaccessibleObjectException</code>. You do not escape the
+consequences by staying on the classpath; you only escape the authoring work.</p>
+<h3 id="doc-jshell--jep-222"><code>jshell</code> — JEP 222</h3>
+<p>A REPL. <code>jshell</code> at a terminal, type an expression, get a result. Genuinely
+useful for checking what an API does without creating a project — and for a
+no-code lab like this one, it is the right way to poke at anything you read
+here.</p>
+<div class="code"><pre><code>jshell&gt; List.of(1,2,3).stream().map(i -&gt; i*2).toList()
+$1 ==&gt; [2, 4, 6]
+</code></pre></div>
+<h3 id="doc-the-http-client--jep-110-incubator-here-standard-in-11">The HTTP client — JEP 110 (incubator here; standard in 11)</h3>
+<p>An HTTP/2-capable client to replace <code>HttpURLConnection</code>. <strong>In Java 9 it is an
+incubator module</strong> (<code>jdk.incubator.http</code>) — a textbook instance of the
+incubator mechanism from the README, including the package rename on
+graduation. See <a href="java-11.html">Java 11</a> for the finished version, which is the
+one to use.</p>
+<h3 id="doc-private-interface-methods--part-of-jep-213-milling-project-coin">Private interface methods — part of JEP 213 (&quot;Milling Project Coin&quot;)</h3>
+<p>Java 8 gave interfaces <code>default</code> methods. Java 9 lets those share private
+helpers:</p>
+<div class="code"><pre><code class="language-java">interface Validator {
+    default boolean isValidEmail(String s) { return matches(s, EMAIL); }
+    default boolean isValidPhone(String s) { return matches(s, PHONE); }
+    private boolean matches(String s, Pattern p) {   // new in 9
+        return s != null &amp;&amp; p.matcher(s).matches();
+    }
+}
+</code></pre></div>
+<p>JEP 213 also allows <code>try</code> with an effectively-final resource variable, <code>@SafeVarargs</code>
+on private instance methods, and diamond with anonymous classes.</p>
+<h3 id="doc-stream-and-optional-additions">Stream and Optional additions</h3>
+<p>Small but frequently reached for:</p>
+<div class="code"><pre><code class="language-java">Stream.of(1,2,3,4,5).takeWhile(i -&gt; i &lt; 3)   // [1, 2]
+Stream.of(1,2,3,4,5).dropWhile(i -&gt; i &lt; 3)   // [3, 4, 5]
+Stream.iterate(1, i -&gt; i &lt; 100, i -&gt; i * 2)  // 3-arg form: has a termination test
+Stream.ofNullable(maybeNull)                 // 0 or 1 elements
+
+opt.ifPresentOrElse(this::use, this::fallback);
+opt.or(() -&gt; Optional.of(fallback));
+opt.stream()                                 // flat-map Optionals cleanly
+</code></pre></div>
+<h3 id="doc-varhandle--jep-193"><code>VarHandle</code> — JEP 193</h3>
+<p>The supported replacement for <code>sun.misc.Unsafe</code>'s field operations: typed,
+checked, atomic access to fields and array elements, with explicit memory
+ordering modes (<code>getVolatile</code>, <code>compareAndSet</code>, <code>getAcquire</code>, <code>setRelease</code>).</p>
+<p>This matters for two reasons beyond its direct use. It is what made
+<a href="notes.html#readme-f4--sunmiscunsafe-is-on-its-way-out-jdk-23-24-and-beyond">deprecating <code>Unsafe</code> possible</a>
+— you cannot remove a thing with no replacement. And its ordering modes are the
+API-level expression of the happens-before rules from the
+<a href="../17-java-memory-model/notes.html#readme">java-memory-model</a> lab; if that lab's <code>volatile</code>
+discussion made sense, <code>VarHandle</code>'s access modes are the same ideas with
+finer granularity.</p>
+<h3 id="doc-processhandle--jep-102"><code>ProcessHandle</code> — JEP 102</h3>
+<p>Finally, a way to ask about a process without shelling out:</p>
+<div class="code"><pre><code class="language-java">ProcessHandle.current().pid();
+ProcessHandle.current().info().commandLine();
+ProcessHandle.of(pid).ifPresent(ProcessHandle::destroy);
+proc.onExit().thenAccept(p -&gt; log(&quot;exited &quot; + p.exitValue()));  // CompletableFuture
+</code></pre></div>
+<h3 id="doc-multi-release-jars--jep-238">Multi-release JARs — JEP 238</h3>
+<p>One jar with version-specific class files under <code>META-INF/versions/N/</code>. The JVM
+picks the highest version it supports. This is how libraries offer a Java 9+
+optimised implementation while still running on 8 — and if you have ever
+wondered why a dependency's jar has that directory, this is it.</p>
+<h3 id="doc-g1-becomes-the-default-garbage-collector--jep-248">G1 becomes the default garbage collector — JEP 248</h3>
+<p>Replacing Parallel GC. A change in default behaviour with no code change on
+your side: G1 trades some throughput for much shorter and more predictable
+pauses. Worth knowing if you have benchmarks that straddle Java 8 and 9.</p>
+<h3 id="doc-the-rest-briefly">The rest, briefly</h3>
+<p>Unified JVM logging (<code>-Xlog</code>, JEP 158/271 — one consistent logging framework
+for the whole VM, and the origin of every <code>-Xlog:gc</code>, <code>-Xlog:class+load</code>
+command in this lab), compact strings (JEP 254 — <code>String</code> stores Latin-1 in a
+<code>byte[]</code> instead of always <code>char[]</code>, typically a large heap saving, entirely
+invisible), the stack-walking API (JEP 259), a platform logging SPI (JEP 264),
+reserved stack areas (JEP 270), and <code>Indify</code> string concatenation (JEP 280 —
+<code>+</code> on strings now compiles to an <code>invokedynamic</code> that the JVM can optimise,
+rather than fixed <code>StringBuilder</code> calls).</p>
+<h2 id="doc-pipeline-movement-this-release">Pipeline movement this release</h2>
+<p>Java 9 predates the preview mechanism (JEP 12 arrives with the release train).
+It has incubators only:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Feature</th>
+  <th>State here</th>
+  <th>Ends up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>HTTP Client (JEP 110)</td>
+  <td>Incubator (<code>jdk.incubator.http</code>)</td>
+  <td>Standard in <a href="java-11.html">11</a> (JEP 321)</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="doc-what-broke">What broke</h2>
+<p>The list that made 8→9 famous. All of these are expanded in the README's
+<a href="notes.html#readme-11-failure-scenarios--what-actually-breaks-and-why">failure scenarios</a>.</p>
+<ul>
+<li><strong>Deep reflection into JDK internals now warns</strong> — the first rung of the
+five-release ladder that ends in <code>InaccessibleObjectException</code> at
+<a href="java-16.html">Java 16</a>/<a href="java-17.html">17</a>. In Java 9 it is <em>permitted</em>, with a
+one-time warning per package, and <code>--illegal-access=permit</code> is the default.</li>
+<li><strong><code>javax.xml.bind</code> and friends deprecated for removal</strong> — the groundwork for
+their removal in <a href="java-11.html">Java 11</a>. <code>--add-modules java.xml.bind</code> is the
+temporary bridge here.</li>
+<li><strong>Split packages become fatal on the module path.</strong></li>
+<li><strong>The version string changed</strong> — JEP 223. <code>1.8.0_281</code> became <code>9.0.4</code>. Every
+script that parsed <code>java -version</code> with a regex expecting <code>1.x</code> broke. If you
+have build scripts older than 2017, check them.</li>
+<li><strong>Underscore is no longer a legal identifier.</strong> <code>int _ = 5;</code> was a warning in
+8, an error in 9. (It later comes back with a <em>different</em> meaning as the
+unnamed variable in <a href="java-22.html">Java 22</a>.)</li>
+<li><strong>Internal APIs encapsulated</strong> — JEP 260. <code>sun.misc.BASE64Encoder</code> and
+similar simply vanish. Use <code>java.util.Base64</code> (which arrived in Java 8).</li>
+<li><strong>Removed:</strong> the <code>hprof</code> agent (JEP 240), <code>jhat</code> (JEP 241), the GC
+combinations deprecated in 8 (JEP 214), launch-time JRE version selection
+(JEP 231), demos and samples (JEP 298).</li>
+<li><strong>Deprecated:</strong> the Applet API (JEP 289 — finally removed in JDK 26),
+the CMS collector (JEP 291 — removed in <a href="java-14.html">14</a>).</li>
+</ul>
+<h2 id="doc-verdict-for-your-day-job">Verdict for your day job</h2>
+<p><strong>Do not target Java 9.</strong> It received six months of updates and ended in March
+2018. Its value to you is entirely historical <em>plus</em> the APIs it introduced,
+all of which you get in any later release.</p>
+<p>Read this file to understand where <code>List.of</code>, <code>VarHandle</code> and the module
+system's consequences came from, then go to <a href="java-11.html">Java 11</a> or, better,
+<a href="java-17.html">Java 17</a> for the first target worth having.</p>
+</main><aside aria-label="On this page"><h2>On this page</h2><a href="#doc-the-one-thing-to-remember">The one thing to remember</a><a href="#doc-what-you-actually-get">What you actually get</a><a href="#doc-pipeline-movement-this-release">Pipeline movement this release</a><a href="#doc-what-broke">What broke</a><a href="#doc-verdict-for-your-day-job">Verdict for your day job</a><h2>More in this lab</h2><a href="java-09.html">java-09</a><a href="java-10.html">java-10</a><a href="java-11.html">java-11</a><a href="java-12.html">java-12</a><a href="java-13.html">java-13</a><a href="java-14.html">java-14</a><a href="java-15.html">java-15</a><a href="java-16.html">java-16</a><a href="java-17.html">java-17</a><a href="java-18.html">java-18</a><a href="java-19.html">java-19</a><a href="java-20.html">java-20</a><a href="java-21.html">java-21</a><a href="java-22.html">java-22</a><a href="java-23.html">java-23</a><a href="java-24.html">java-24</a><a href="java-25.html">java-25</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

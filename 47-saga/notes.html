@@ -1,0 +1,780 @@
+<!doctype html>
+<html lang="en" data-hub-lab="47-saga">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>47. saga</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 47 of 71 · Stage 6</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 47 · Work That Spans Services</p><article id="readme"><h1 id="readme-the-saga-pattern--a-learning-lab">The Saga Pattern — a learning lab</h1>
+<p><em>Audience: a backend engineer who has never met this pattern. By the end you
+should be able to design a saga, argue orchestration vs choreography in a
+design review, name the isolation anomalies, and read the Temporal /
+microservices.io / Garcia-Molina material fluently.</em></p>
+<p><strong>Lab contents</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>This document — the full story</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>Interactive simulator — fail any step, crash the coordinator, watch compensations run backwards</td>
+</tr>
+<tr>
+  <td><code>SagaLab.java</code></td>
+  <td>Runnable simulation: orchestrator + saga log + idempotent services + choreography variant</td>
+</tr>
+<tr>
+  <td><code>SagaTest.java</code></td>
+  <td>11 scenario-named tests, <code>java SagaTest.java</code></td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code> / <code>SOLUTIONS.md</code></td>
+  <td>Predict / modify / debug exercises, answers separate</td>
+</tr>
+</tbody>
+</table></div>
+<p>Sibling lab: <a href="../48-transactional-outbox/notes.html#readme"><code>../48-transactional-outbox/</code></a> —
+how each saga participant <em>reliably publishes</em> its events. This lab assumes
+messages get delivered and focuses on the layer above: coordinating many
+steps. The two patterns are almost always deployed together.</p>
+<hr />
+<h2 id="readme-1-why-does-this-exist">1. WHY does this exist?</h2>
+<p>One business action often spans several services, each with its <strong>own</strong>
+database: &quot;book a trip&quot; touches flights, hotels, and car rentals. A database
+transaction can make several writes inside <em>one</em> database all-or-nothing, but
+nothing built into databases makes writes across <em>three different services'
+databases</em> all-or-nothing. The saga pattern exists to get the <em>effect</em> of
+all-or-nothing across services — without any shared transaction.</p>
+<h2 id="readme-2-the-problem-as-a-story">2. THE PROBLEM, as a story</h2>
+<p>You run a travel agency. A customer wants a package trip: a flight, a hotel
+room, and a rental car — <strong>all three or none</strong>. Half a trip (flight but no
+hotel) is worse than no trip: the customer pays for a flight to a city where
+they'll sleep in the airport.</p>
+<p>The airline, the hotel, and the car-rental company are three separate
+businesses. Each has its own booking book, its own phone line, its own
+policies. There is no planet on which all three slam their books shut and
+write your booking in perfect unison. You book with one phone call at a
+time — and between calls, the world can go wrong: the car office can be sold
+out, your own office can lose power mid-way, a fax can arrive twice.</p>
+<h2 id="readme-3-the-naive-solutions">3. THE NAIVE SOLUTIONS</h2>
+<p><strong>Naive #1 — &quot;just use one transaction.&quot;</strong> Wrap all three bookings in one
+<code>@Transactional</code> method. Doesn't exist: a transaction is a promise made by
+<em>one</em> database about <em>its own</em> writes. Three services, three databases, three
+independent commits. The annotation covers whichever database you're
+connected to and silently ignores the two network calls.</p>
+<p><strong>Naive #2 — &quot;then make all three promise together&quot;</strong> (this one has a real
+name: <em>two-phase commit</em>, 2PC). A coordinator asks all three: &quot;prepared to
+commit?&quot; — everyone locks their row and says yes — then &quot;commit!&quot;. This
+genuinely gives atomicity, and it is exactly what the
+<a href="../48-transactional-outbox/notes.html#readme-16-related-concepts--and-when-to-choose-which">outbox lab</a>
+called &quot;the road not taken&quot;, for the same reasons: every participant must
+speak the protocol (most SaaS APIs, message brokers, and NoSQL stores
+don't), everyone holds <strong>locks while waiting</strong> on the slowest participant,
+and if the coordinator dies after &quot;prepare&quot;, participants sit <strong>blocked</strong>,
+rows locked, unable to decide, until it returns. Availability of the whole
+is the product of the availability of everyone. Across microservices —
+let alone across a real airline's API — 2PC is a non-starter.</p>
+<p><strong>Naive #3 — &quot;just call them one by one and hope.&quot;</strong> Book flight, book
+hotel, book car. Works until the car call fails — and now you hold a flight
+and a hotel you never asked to keep, with no plan for getting rid of them.</p>
+<h2 id="readme-4-why-naive-3-fails-concretely">4. WHY NAIVE #3 FAILS, concretely</h2>
+<p>Flight booked (₹8,000 charged). Hotel booked (₹5,000 charged). Car: &quot;sold
+out.&quot; The code throws an exception, returns HTTP 500 — and the flight and
+hotel bookings <strong>stay</strong>. They were separate commits in other services; your
+exception rolls back nothing anywhere else. The customer is charged ₹13,000
+for a trip that doesn't exist. Retrying later double-books the flight.
+Naive #3 isn't wrong about calling one at a time — that part is forced by
+physics. It's wrong because it has <strong>no plan for partial success</strong>.</p>
+<h2 id="readme-5-the-key-idea">5. THE KEY IDEA</h2>
+<p><strong>Accept that the steps commit one at a time — and prepare, for every step,
+an explicit &quot;undo&quot; action. Run the steps in order; if one fails, run the
+undo actions of every completed step in reverse order.</strong> You can't roll back
+another service's committed transaction, but you <em>can</em> cancel a hotel room.
+All-or-nothing stops being a database guarantee and becomes a <em>choreographed
+sequence of ordinary transactions</em> — forward to the end, or backward to the
+start.</p>
+<h2 id="readme-6-terminology">6. TERMINOLOGY</h2>
+<ul>
+<li><strong>Saga</strong> — a sequence of <em>local transactions</em> where each step has a
+defined undo; on failure, completed steps are undone in reverse. (The name
+comes from a 1987 paper by Garcia-Molina &amp; Salem about long-running
+transactions in a single database; microservices adopted it wholesale.)</li>
+<li><strong>Local transaction</strong> — an ordinary ACID transaction inside ONE service's
+own database (hotel writes its own <code>bookings</code> row).</li>
+<li><strong>Compensating transaction (compensation)</strong> — the explicit undo for a
+step: <code>cancelBooking</code> compensates <code>book</code>. A <em>new forward transaction</em> that
+reverses the business effect — not a database rollback.</li>
+<li><strong>Orchestration</strong> — one coordinator (the <em>orchestrator</em>) tells each
+service what to do next and decides when to compensate. Flow lives in one
+place.</li>
+<li><strong>Choreography</strong> — no coordinator: each service reacts to the previous
+service's events (&quot;HotelBooked&quot; → car service books). Flow is distributed
+across subscriptions.</li>
+<li><strong>Saga log</strong> — the orchestrator's durable record of which steps have
+completed, so a crashed orchestrator can resume where it left off.</li>
+<li><strong>Compensatable / pivot / retryable steps</strong> — the three roles a step can
+play: <em>compensatable</em> (has an undo, runs before the point of no return),
+the <strong>pivot</strong> (the go/no-go step — once it commits, the saga must finish),
+and <em>retryable</em> (after the pivot; cannot fail permanently, only be
+retried until they succeed).</li>
+<li><strong>Semantic lock</strong> — marking mid-saga state explicitly (<code>status=PENDING</code>
+instead of <code>BOOKED</code>) so other transactions know it's provisional — a
+business-level substitute for the isolation sagas don't have.</li>
+<li><strong>Idempotent</strong> — safe to apply twice (see the
+<a href="../48-transactional-outbox/notes.html#readme">outbox lab</a>, section 6 — same word,
+same reason: retries are everywhere).</li>
+</ul>
+<h2 id="readme-7-mental-model">7. MENTAL MODEL</h2>
+<p>Carry this picture: <strong>a saga is a two-way staircase.</strong> Each stair is a
+committed local transaction. You climb one stair at a time; at every stair
+you can still walk back down, because each stair has a matching &quot;down&quot;
+action. Somewhere there is a landing — the pivot — after which there is no
+down staircase, only up: the remaining stairs <em>must</em> eventually be climbed.
+And crucially, the staircase is <strong>in public</strong>: anyone can see you standing
+mid-way, holding bookings that might be gone tomorrow.</p>
+<pre class="mermaid">flowchart LR
+    subgraph forward[&quot;forward: local transactions&quot;]
+        F[book flight] --&gt; H[book hotel] --&gt; C[book car]
+    end
+    C -- &quot;car FAILS&quot; --&gt; CH[cancel hotel]
+    subgraph backward[&quot;backward: compensations, reverse order&quot;]
+        CH --&gt; CF[cancel flight]
+    end
+    style CH fill:none,stroke-dasharray: 5 5
+    style CF fill:none,stroke-dasharray: 5 5
+</pre>
+<h2 id="readme-8-see-it-move--the-interactive-simulator">8. SEE IT MOVE — the interactive simulator</h2>
+<p>Open <strong><code>visualization.html</code></strong> (also published as an artifact). It shows the
+trip saga as a live itinerary — orchestrator, the three services with their
+own capacity counters and booking tables, and the saga log — and lets you:</p>
+<ul>
+<li>step through the saga one action at a time,</li>
+<li>choose <strong>which step fails</strong> and watch compensations run backwards,</li>
+<li><strong>crash the orchestrator mid-saga</strong> and restart it to see log-based
+recovery (and why the hotel isn't double-charged),</li>
+<li>make a compensation fail and watch it retried,</li>
+<li>switch to <strong>choreography</strong> and watch the same flow as an event chain,</li>
+<li>peek as a <strong>second customer</strong> mid-saga to see the isolation anomaly,</li>
+<li>or press <strong>&quot;run the story for me&quot;</strong> for a narrated tour of all of it.</li>
+</ul>
+<p>The verdict banner always states the trip's current truth in one plain
+sentence. Play first; the next section explains what you saw.</p>
+<h2 id="readme-9-the-actual-mechanism-step-by-step-orchestration">9. THE ACTUAL MECHANISM, step by step (orchestration)</h2>
+<p>Concrete case: <code>trip-42</code>, each service starts with capacity 3.</p>
+<p><strong>Step 0 — start.</strong> The orchestrator writes <code>SAGA_STARTED</code> for <code>trip-42</code> to
+its <strong>saga log</strong> (a durable table in the orchestrator's own database), then
+begins.</p>
+<p><strong>Step 1 — flight.</strong> Orchestrator → flight service: <code>book(trip-42)</code>. The
+flight service, in one local ACID transaction of its own, checks capacity,
+decrements 3→2, records <code>trip-42: BOOKED</code>. Orchestrator appends
+<code>flight:done</code> to the log.</p>
+<p><strong>Step 2 — hotel.</strong> Same shape: hotel books, capacity 3→2, log gets
+<code>hotel:done</code>.</p>
+<p><strong>Step 3 — car.</strong> Same shape; on success the log gets <code>car:done</code> and then
+<code>SAGA_COMPLETED</code>. Trip exists. Notice what never existed: any distributed
+transaction, any cross-service lock, any moment where two databases had to
+agree simultaneously.</p>
+<p>The failure path (car sold out) is section 10(a). The lab implements
+exactly this: <code>Orchestrator.run</code> and <code>SagaLog</code> in <code>SagaLab.java</code>.</p>
+<pre class="mermaid">sequenceDiagram
+    participant O as Orchestrator (+ saga log)
+    participant F as Flight svc
+    participant H as Hotel svc
+    participant C as Car svc
+    O-&gt;&gt;O: log SAGA_STARTED
+    O-&gt;&gt;F: book(trip-42)
+    F--&gt;&gt;O: booked (local commit, cap 3→2)
+    O-&gt;&gt;O: log flight:done
+    O-&gt;&gt;H: book(trip-42)
+    H--&gt;&gt;O: booked (local commit, cap 3→2)
+    O-&gt;&gt;O: log hotel:done
+    O-&gt;&gt;C: book(trip-42)
+    C--&gt;&gt;O: booked (local commit, cap 3→2)
+    O-&gt;&gt;O: log car:done, SAGA_COMPLETED
+</pre>
+<p><strong>The same saga as choreography</strong> has no orchestrator and no saga log;
+the flow lives in subscriptions: the flight service listens for
+<code>TripRequested</code>, books, and publishes <code>FlightBooked</code>; the hotel listens for
+<code>FlightBooked</code>; the car listens for <code>HotelBooked</code>. Failure events
+(<code>CarFailed</code>) trigger the cancellation chain backwards
+(<code>HotelCancelled</code> → flight cancels). Where do those events travel, and how
+does &quot;book + publish event&quot; stay atomic inside each service? <strong>That is
+literally the <a href="../48-transactional-outbox/notes.html#readme">transactional outbox</a></strong> —
+each participant writes its booking and its event in one local transaction,
+and a relay delivers it. Saga on top, outbox underneath.</p>
+<h2 id="readme-10-failure-scenarios--walk-each-one">10. FAILURE SCENARIOS — walk each one</h2>
+<p><strong>(a) A middle/late step fails (car sold out).</strong> The orchestrator reads its
+log — <code>flight:done</code>, <code>hotel:done</code> — and runs compensations <strong>in reverse
+order</strong>: <code>hotel.cancel(trip-42)</code> (capacity 2→3), then <code>flight.cancel</code>
+(2→3), then logs <code>SAGA_ABORTED</code>. Reverse order matters when steps depend on
+each other (you release the hotel booked <em>for those flight dates</em> before
+releasing the flight). Run: <code>java SagaLab.java car-fails-compensate</code>.</p>
+<div class="code"><pre><code class="language-text">    car.book(trip-2) -&gt; FAILED: car: sold out
+    COMPENSATE hotel.cancel(trip-2) -&gt; cancelled (capacity back to 3)
+    COMPENSATE flight.cancel(trip-2) -&gt; cancelled (capacity back to 3)
+    saga trip-2: ABORTED (all completed steps undone)
+</code></pre></div>
+<p><strong>(b) The orchestrator crashes mid-saga.</strong> ⚠️ The important one. Say it dies
+<em>after</em> <code>hotel.book()</code> succeeded but <em>before</em> writing <code>hotel:done</code> to the
+log. A new orchestrator starts, reads the log for <code>trip-42</code>: <code>flight:done</code>
+— skip flight; nothing about hotel — <strong>call <code>hotel.book(trip-42)</code> again</strong>.
+The hotel service sees <code>trip-42</code> already in its bookings table and answers
+&quot;already booked&quot; without charging again. This is the same lesson as the
+outbox relay's gap, one layer up: <em>a durable log tells the coordinator where
+it roughly was; participant <strong>idempotency</strong> absorbs the uncertainty of
+&quot;did my last command land?&quot;</em>. A saga whose participants aren't idempotent
+double-books on every recovery. Run:
+<code>java SagaLab.java orchestrator-crash-recovery</code>.</p>
+<p><strong>(c) A compensation fails.</strong> The hotel's cancel endpoint times out while the
+saga is aborting. The orchestrator cannot shrug — the saga is half-undone —
+so it <strong>retries the compensation until it succeeds</strong> (with backoff in real
+life, and a human-alert escape hatch after N attempts). This is why
+compensations must be <em>retryable and idempotent</em>, and must be designed to
+always eventually succeed (a cancel can't be &quot;sold out&quot;). Run:
+<code>java SagaLab.java compensation-retry</code>.</p>
+<p><strong>(d) A command or event is delivered twice.</strong> Broker redelivery, relay
+crash (outbox lab, scenario d) — the hotel receives <code>book(trip-42)</code> twice.
+Same answer as always: idempotency by saga id. Every arrow in the sequence
+diagram must tolerate duplication.</p>
+<p><strong>(e) The isolation anomaly — the one ACID letter sagas drop.</strong> While
+<code>trip-42</code> is mid-flight, hotel capacity already reads 0. Another customer
+asks &quot;any rooms?&quot; and is told <strong>sold out</strong>. Then the car step fails, the
+saga aborts, the room comes back. That customer read state that was later
+undone — a business-level <strong>dirty read</strong>. Related anomaly, the <strong>lost
+update</strong>: a second transaction changes the same row mid-saga, and the
+compensation later stomps on it. Sagas do not prevent these; you must
+<em>manage</em> them with <strong>countermeasures</strong>:</p>
+<ul>
+<li><strong>Semantic lock</strong> — write <code>status=PENDING_TRIP_42</code> instead of silently
+taking the room; other transactions can then decide to wait, warn, or
+treat pending as unavailable-but-explainable.</li>
+<li><strong>Commutative updates</strong> — design updates so order doesn't matter
+(reserve/release counters rather than absolute writes).</li>
+<li><strong>Reread value / version check</strong> — compensation verifies the row is
+still what it wrote before undoing it.
+Run: <code>java SagaLab.java dirty-read</code>.</li>
+</ul>
+<p><strong>(f) Choreography-specific failure: the invisible flow.</strong> Nothing &quot;fails,&quot;
+yet nobody can say where <code>trip-6b</code> is stuck, because the flow exists only as
+subscriptions scattered across services — and a cancellation chain is easy
+to wire wrong (miss one event type and hotels leak). Run:
+<code>java SagaLab.java choreography</code> and read the event chains.</p>
+<h2 id="readme-11-correctness--what-is-and-isnt-guaranteed">11. CORRECTNESS — what is and isn't guaranteed</h2>
+<p><strong>Guaranteed (if you build it right):</strong></p>
+<ul>
+<li><strong>Eventual atomicity-in-effect</strong>: every saga eventually ends in exactly one
+of two states — all steps done (<code>COMPLETED</code>) or all completed steps
+compensated (<code>ABORTED</code>). Nothing stays half-done <em>forever</em>.</li>
+<li><strong>Durability of progress</strong>: the saga log survives coordinator crashes;
+recovery resumes, never restarts from scratch.</li>
+</ul>
+<p><strong>Explicitly NOT guaranteed:</strong></p>
+<ul>
+<li><strong>Isolation.</strong> The &quot;I&quot; of ACID is gone — mid-saga state is visible to
+everyone (scenario e). ACD, not ACID. This is the pattern's defining cost,
+and the reason the countermeasures vocabulary exists.</li>
+<li><strong>Instant atomicity.</strong> Between first commit and last compensation the
+system <em>is</em> inconsistent; the guarantee is only that it converges.</li>
+<li><strong>Rollback.</strong> Compensation is a business undo, not a time machine: the
+charge happened and was refunded (two ledger lines, maybe an email and a
+fee) — not erased. Some actions are <em>un-compensatable</em> (an email cannot be
+unsent; a mug already shipped can only be recalled) — those must be
+sequenced <strong>after the pivot</strong>, as retryable steps.</li>
+</ul>
+<p><strong>Traded away:</strong> simultaneous consistency and isolation — in exchange for no
+distributed locks, no blocking protocol, participation by anything that can
+process a request (including third-party APIs), and availability that
+doesn't multiply failure probabilities across services.</p>
+<h2 id="readme-12-the-code">12. THE CODE</h2>
+<p><code>SagaLab.java</code>, ~250 lines of mechanism:</p>
+<ul>
+<li><code>Service</code> — one per business; own state, <code>book</code>/<code>cancel</code>, both idempotent
+by booking id; knobs to force failures.</li>
+<li><code>SagaLog</code> — durable append-only record per saga id.</li>
+<li><code>Orchestrator.run</code> — the forward loop: skip logged steps, book, log,
+handle <code>StepFailed</code> by calling <code>compensate</code> (reverse order, retry
+<code>ConnectionError</code> forever). Crash injection sits in the
+book-succeeded-but-not-logged gap.</li>
+<li><code>Bus</code> + <code>wireChoreography</code> — the same saga as pure event reactions,
+compensation chain included.</li>
+</ul>
+<p>What one orchestration step looks like in a production Java stack
+(illustrative, not part of the lab):</p>
+<div class="code"><pre><code class="language-java">// inside the orchestrator, on receiving BookHotelReply.success
+sagaLog.append(sagaId, HOTEL_DONE);                 // durable first
+commandBus.send(new BookCar(sagaId, dates));        // then next command
+// on BookCarReply.failure:
+for (Step s : completedStepsInReverse(sagaId))
+    commandBus.send(s.compensationCommand(sagaId)); // cancel hotel, flight
+</code></pre></div>
+<p>(Real frameworks — section 14 — generate this loop from a declarative
+definition; the mechanism underneath is exactly the lab's.)</p>
+<h2 id="readme-13-experiments--break-it-yourself">13. EXPERIMENTS — break it yourself</h2>
+<div class="code"><pre><code class="language-bash">java SagaLab.java happy-path                   # three local commits, glued
+java SagaLab.java car-fails-compensate         # backward staircase
+java SagaLab.java orchestrator-crash-recovery  # log + idempotency
+java SagaLab.java compensation-retry           # undo is not allowed to quit
+java SagaLab.java dirty-read                   # the missing I
+java SagaLab.java choreography                 # same saga, no coordinator
+java SagaTest.java                             # all 11 scenarios as tests
+</code></pre></div>
+<p>Each maps to a scenario in section 10 and prints a verdict paragraph.</p>
+<h2 id="readme-14-production--what-the-lab-omits-and-how-real-systems-do-it">14. PRODUCTION — what the lab omits and how real systems do it</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Lab simplification</th>
+  <th>Production reality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Commands are direct method calls</td>
+  <td>Commands/replies and events go through a broker, and each participant publishes via a <strong>transactional outbox</strong> (your other lab) so &quot;commit my booking + emit my event&quot; is atomic.</td>
+</tr>
+<tr>
+  <td>Saga log is a list in memory that we keep alive</td>
+  <td>A real table (or the workflow engine's event-sourced history). Writing the log entry and the orchestrator's own state change is — again — a local-transaction-plus-outbox problem.</td>
+</tr>
+<tr>
+  <td>Retry loop is <code>while True</code></td>
+  <td>Backoff + max attempts + <strong>dead-letter / human escalation</strong>: a compensation that fails for hours becomes a support ticket, not an infinite loop. Timeouts are first-class: &quot;hotel hasn't replied in 30s&quot; is itself a failure that triggers compensation.</td>
+</tr>
+<tr>
+  <td>One orchestrator instance</td>
+  <td>Frameworks do the heavy lifting: <strong>Temporal</strong> (durable workflow code — your saga is literally a function whose every await is checkpointed), <strong>Camunda/Zeebe</strong> (BPMN-modeled), <strong>AWS Step Functions</strong>, <strong>Axon / Eventuate Tram</strong> (JVM saga orchestrators), <strong>MassTransit / NServiceBus</strong> (.NET). Rolling your own is reasonable at small scale — it's this lab plus persistence.</td>
+</tr>
+<tr>
+  <td>Steps in a fixed list</td>
+  <td>Real definitions mark each step compensatable / <strong>pivot</strong> / retryable, and put un-compensatable effects (send email, ship goods) after the pivot.</td>
+</tr>
+<tr>
+  <td>Capacity counters visible to all</td>
+  <td>Semantic locks (<code>PENDING</code> states), commutative reserve/release operations, version checks — the countermeasures of section 10(e), plus explicit UX for &quot;provisional&quot; (your airline seat &quot;held for 20 minutes&quot; is a semantic lock you have met in real life).</td>
+</tr>
+<tr>
+  <td>Nobody watches</td>
+  <td>Observability is <em>the</em> operational pain: every saga gets a correlation id carried through every command/event; dashboards show sagas by state; alerts fire on sagas stuck in one state too long. Orchestration makes this dramatically easier than choreography — one place knows every saga's state.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Orchestration vs choreography, the honest rule of thumb:</strong> choreography is
+fine for 2–3 steps with trivial failure handling; the moment the flow has
+branches, timeouts, or someone asks &quot;where is order 4711 stuck?&quot;, you want
+orchestration. Modern practice (and Temporal's existence) leans strongly
+orchestration for anything non-trivial — with the orchestrator kept to
+<em>coordination only</em> (no business logic), so it doesn't become a god-service.</p>
+<h2 id="readme-15-exercises">15. EXERCISES</h2>
+<p>See <code>EXERCISES.md</code> — predict / modify / debug tiers, answers in
+<code>SOLUTIONS.md</code>. The debug tier hides a compensation-ordering bug and an
+un-compensatable-step design flaw.</p>
+<h2 id="readme-16-related-concepts--and-when-to-choose-which">16. RELATED CONCEPTS — and when to choose which</h2>
+<ul>
+<li><strong>Two-phase commit (2PC/XA)</strong> — true atomicity + isolation, at the price
+of blocking, locks, and universal protocol support; dead across
+microservices and third-party APIs. Saga = availability over isolation;
+2PC = the reverse. (Longer comparison in the
+<a href="../48-transactional-outbox/notes.html#readme-16-related-concepts--and-when-to-choose-which">outbox lab</a>.)</li>
+<li><strong>Transactional outbox</strong> — the layer <em>below</em>: reliable delivery of one
+participant's events. Saga assumes it; nearly every real saga rides on it.</li>
+<li><strong>TCC (Try-Confirm-Cancel)</strong> — a cousin: every service exposes a <em>reserve</em>
+(&quot;try&quot;: hold the room, don't book it), then the coordinator confirms or
+cancels all holds. Buys back some isolation (holds are invisible-ish)
+at the price of every participant implementing three operations and
+holds needing expiry. Think &quot;application-level 2PC with timeouts&quot;.</li>
+<li><strong>Process manager / workflow engine</strong> — the orchestrator generalized: a
+state machine reacting to events with commands. A saga orchestrator <em>is</em>
+a process manager whose specialty is compensation; Temporal/Camunda are
+process managers you rent.</li>
+<li><strong>Event sourcing</strong> — orthogonal storage choice; pairs naturally (the saga
+log becomes just another event stream), but neither requires the other.</li>
+</ul>
+<p>Rule of thumb: <strong>one business action, several services' databases, and
+&quot;undo&quot; is expressible in business terms ⇒ saga</strong> (orchestrated, on top of
+outboxes). If undo is <em>not</em> expressible and the steps can't be reordered
+behind a pivot — reconsider the service boundaries; that pain usually means
+one service should own the whole invariant.</p>
+<h2 id="readme-17-next-steps--knowledge-map">17. NEXT STEPS — knowledge map</h2>
+<pre class="mermaid">flowchart TD
+    ACID[&quot;ACID transactions&lt;br/&gt;(prerequisite — you have it)&quot;] --&gt; SAGA
+    OB[&quot;transactional-outbox&lt;br/&gt;(sibling lab ✓ — delivery layer)&quot;] --&gt; SAGA
+    SAGA[&quot;saga&lt;br/&gt;(this lab)&quot;] --&gt; TEMP[&quot;/learn temporal&lt;br/&gt;(durable execution engines)&quot;]
+    SAGA --&gt; TCC[&quot;/learn tcc&lt;br/&gt;(try-confirm-cancel)&quot;]
+    SAGA --&gt; TPC[&quot;/learn two-phase-commit&lt;br/&gt;(the blocking alternative)&quot;]
+    SAGA --&gt; ES[&quot;/learn event-sourcing&lt;br/&gt;(state as event log)&quot;]
+    SAGA --&gt; PM[&quot;/learn process-manager&lt;br/&gt;(the general shape)&quot;]
+</pre>
+<p>Suggested order: two-phase-commit next (<strong>sibling lab:
+<a href="../45-two-phase-commit/notes.html#readme"><code>../45-two-phase-commit/</code></a></strong> — you know <em>both</em>
+of its replacements, outbox for delivery and saga for coordination, so its
+tradeoffs will land), then <code>/learn temporal</code> to see sagas as they're
+actually shipped in 2026, then <code>/learn event-sourcing</code>.</p>
+<hr />
+<p><strong>Glossary recap:</strong> saga · local transaction · compensating transaction ·
+orchestration · choreography · saga log · pivot / compensatable / retryable
+step · semantic lock · countermeasures · TCC. All defined in section 6 and
+10(e).</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--saga">Exercises — saga</h1>
+<p>Attempt each before opening <code>SOLUTIONS.md</code>. Predict exercises are runnable;
+commit to an answer first, then run the command.</p>
+<h2 id="exercises-tier-1--predict">Tier 1 — Predict</h2>
+<p><strong>P1.</strong> All three services have capacity 1. Two sagas, <code>trip-A</code> and
+<code>trip-B</code>, run one after the other (A fully first, then B). Then rerun it
+where A books flight+hotel, pauses (<code>stopAfter = &quot;hotel&quot;</code>), B runs fully,
+then A resumes and its car step succeeds… can it? Predict both outcomes,
+then check the second with:</p>
+<div class="code"><pre><code class="language-bash">cat &gt; P1.java &lt;&lt;&#x27;EOF&#x27;
+public class P1 {
+    public static void main(String[] args) {
+        var w = SagaLab.freshWorld(1);
+        var a = new SagaLab.Orchestrator(w.services(), w.log());
+        System.out.println(a.run(&quot;trip-A&quot;, null, &quot;hotel&quot;));
+        System.out.println(new SagaLab.Orchestrator(w.services(), w.log()).run(&quot;trip-B&quot;));
+        System.out.println(a.run(&quot;trip-A&quot;));
+    }
+}
+EOF
+java P1.java
+</code></pre></div>
+<p>Which customer lost, and to a trip that ended how? What is this anomaly
+called in section 10(e)?</p>
+<p><strong>P2.</strong> The orchestrator crashes after <code>flight.book()</code> succeeds but before
+logging <code>flight:done</code>. On recovery, exactly which services receive a
+(re-)call, and why does the flight service's answer differ from the hotel's
+in experiment 3?</p>
+<p><strong>P3.</strong> In the choreography experiment, suppose the HOTEL is sold out
+instead of the car (<code>services.get(&quot;hotel&quot;).failNextBook = true</code>). Write down
+the exact event sequence you expect on the bus, then run a scratch
+<code>P3.java</code> (adapt experiment 6) to verify. How many compensation
+events fire, and which service is never touched at all?</p>
+<p><strong>P4.</strong> A saga's steps are: (1) reserve inventory, (2) charge card,
+(3) ship parcel, (4) email receipt. Shipping a parcel cannot be
+compensated (recalling a shipped parcel is a new business process, not an
+undo). Where must the pivot sit, which steps must be retryable, and what
+does that force you to say about a card charge that fails <em>after</em> the
+parcel shipped?</p>
+<h2 id="exercises-tier-2--modify">Tier 2 — Modify</h2>
+<p><strong>M1.</strong> Change <code>Orchestrator.compensate</code> to run compensations in FORWARD
+order (<code>completed</code> instead of <code>completed.reversed()</code>). Which test fails?
+Construct a concrete business case (any domain) where forward-order
+compensation is not just untested but actually <em>wrong</em>.</p>
+<p><strong>M2.</strong> Remove the idempotency guard from <code>Service.book</code> (delete the first
+two lines). Which test fails, with what wrong number? Explain why the
+<em>combination</em> saga-log-after-action + non-idempotent-participant is the
+broken pair, and name the two possible fixes (only one of which is
+generally available).</p>
+<p><strong>M3.</strong> Add a semantic lock: give <code>Service</code> a <code>pending</code> map; <code>book</code> puts
+the id in <code>pending</code> (still decrementing capacity), a new <code>confirm(id)</code>
+moves it to <code>bookings</code>, and the orchestrator confirms all steps only after
+the last step succeeds. What does the &quot;another customer peeks&quot; experiment
+show now? What NEW operational question does confirm-at-the-end create
+(hint: what if confirm never arrives)? You have just re-invented which
+related pattern from section 16?</p>
+<p><strong>M4.</strong> In <code>wireChoreography</code>, add a fourth step: travel insurance, booked
+after the car. List every subscription you had to add or change, including
+the failure chain. Compare with the one-line change in
+<code>Orchestrator.STEPS</code> (+ one entry in <code>services</code>). What does this tell you
+about where each style's complexity grows?</p>
+<h2 id="exercises-tier-3--debug">Tier 3 — Debug</h2>
+<p><strong>D1.</strong> A teammate reworks the orchestrator to write the saga log entry
+BEFORE calling the service (&quot;log the intent, then act&quot;):
+<code>log.append(sagaId, step + &quot;:done&quot;); svc.book(sagaId);</code>. All tests still pass
+except one crash-recovery scenario. Which test catches it, what is the
+end-state of the world, and is this failure mode losing money or losing
+bookings? Compare it to the outbox lab's mark-then-publish exercise (M2
+there) — what is the general law here?</p>
+<p><strong>D2.</strong> Production incident: about once a week, a trip ends with a
+cancelled flight, a cancelled hotel — and a BOOKED car. No errors in the
+orchestrator's logs; the saga log shows <code>SAGA_ABORTED</code>. The car service's
+logs show its <code>book</code> succeeded <em>after</em> the saga aborted. Reconstruct the
+timeline (hint: the orchestrator uses a 30-second timeout on commands and
+treats timeout as <code>StepFailed</code>). Which two properties from this lab, in
+combination, prevent it? (One is a compensation-design rule, one is a
+delivery-layer rule.)</p>
+<p><strong>D3.</strong> Someone &quot;simplifies&quot; the compensation loop: on <code>ConnectionError</code>
+the orchestrator logs <code>{step}:compensated</code> anyway and continues (&quot;we'll
+clean it up in a nightly job&quot;). Which test fails? Then argue the harder
+question: the nightly-cleanup design is not insane — what would it need to
+be actually correct, and what has it become at that point?</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<h2 id="solutions-tier-1--predict">Tier 1 — Predict</h2>
+<p><strong>P1.</strong> Sequential case: A completes (all capacities 1→0); B is refused at
+the flight step and aborts having booked nothing — correct and fair.
+Interleaved case, actual output: A pauses holding flight+hotel; <strong>B is
+refused at its first step (<code>flight: sold out</code>) and ABORTS</strong>; A resumes and
+COMPLETES (car capacity was untouched by B). B lost — here to a trip that
+did ultimately happen, so no harm was done <em>this time</em>. The anomaly is that
+B's rejection was based on <strong>provisional, in-flight state</strong>: had A's car
+step failed instead, A would have aborted, capacity would have returned,
+and B was turned away for a room that was never really sold — the
+business-level <strong>dirty read</strong> of section 10(e). Whether the provisional
+read &quot;turns out fine&quot; is decided by A's future, which B cannot see; the
+countermeasure (semantic lock / PENDING status) doesn't prevent the read,
+it makes the provisionality explicit so the business can choose a policy
+(waitlist B, hold B for 10 minutes, oversell by one).</p>
+<p><strong>P2.</strong> Recovery reads the log: it contains <code>SAGA_STARTED</code> only (the crash
+hit before <code>flight:done</code> was written). So the new orchestrator re-calls
+<strong>flight</strong> — which answers &quot;already-booked (idempotent)&quot; because the crash
+in P2 happened <em>after</em> the service committed — then proceeds to call hotel
+and car normally (first time each). In experiment 3 the crash was after
+<em>hotel's</em> book: flight WAS logged (skipped without any call), hotel was
+re-called and deduped, car ran fresh. The general rule: the step in the
+&quot;acted but not yet logged&quot; gap is exactly the one that gets a duplicate
+call; everything before is skipped by the log, everything after runs
+normally.</p>
+<p><strong>P3.</strong> Expected bus history:
+<code>TripRequested → FlightBooked → HotelFailed → FlightCancelled</code> —
+one compensation event (<code>FlightCancelled</code>, undoing the flight); the <strong>car
+service is never touched</strong> (its trigger, <code>HotelBooked</code>, never fired).
+Compensation count scales with how deep the saga got, not with saga length.</p>
+<p><strong>P4.</strong> The pivot must sit <strong>before shipping</strong> — at the card charge:
+order = reserve (compensatable) → charge (pivot) → ship (retryable) →
+email (retryable). &quot;Charge fails after the parcel shipped&quot; must be made
+<strong>impossible by ordering</strong>, because shipping can't be undone and a failed
+charge can't be tolerated after it. If the business insists on
+ship-before-charge, then the charge must be made <em>retryable</em> — i.e. it is
+not allowed to fail permanently, which means pre-authorizing the card
+(a hold) before shipping… which is a reserve step, which is the same
+answer wearing a different hat: un-compensatable and can-fail steps must
+be separated by a pivot, and &quot;can-fail&quot; is converted to &quot;can't-fail&quot; by
+reserving earlier.</p>
+<h2 id="solutions-tier-2--modify">Tier 2 — Modify</h2>
+<p><strong>M1.</strong> <code>test_compensations_run_in_reverse_order</code> fails (<code>[flight, hotel]</code>
+instead of <code>[hotel, flight]</code>). Concrete case where forward
+order is <em>wrong</em>, not just untested: step 1 creates a customer record,
+step 2 creates an order <strong>referencing</strong> that customer. Forward-order
+compensation deletes the customer first — and the order-cancellation then
+runs against a dangling reference (or a foreign-key error, and now the
+compensation itself fails). Undo must unwind dependencies in the opposite
+order they were built — same reason destructors and <code>defer</code> stacks run
+LIFO.</p>
+<p><strong>M2.</strong> <code>test_recovery_retry_does_not_double_book_thanks_to_idempotency</code>
+fails: hotel capacity ends at <strong>1</strong> (two seats taken for one trip; expected
+2). The broken pair: logging <em>after</em> acting means a crash in the gap makes
+the recovery re-act; that's only safe if re-acting is a no-op — i.e. the
+participant is idempotent. The two candidate fixes: (1) make participants
+idempotent by saga id — generally available, the standard answer; (2) make
+&quot;act + log&quot; atomic — only possible when the orchestrator and participant
+share one database (a modular monolith), which across services they don't.
+(Logging <em>before</em> acting just moves the hole — see D1.)</p>
+<p><strong>M3.</strong> The peeking customer now sees capacity 0 but with the room in
+<code>pending</code>, not <code>bookings</code> — the system can now <em>say</em> &quot;1 room held
+provisionally, may free up&quot; instead of lying &quot;sold out&quot;; and after the
+abort, the pending entry vanishes without a <code>CANCELLED</code> tombstone. The new
+operational question: <strong>a hold with no confirm is a leak</strong> — the
+orchestrator might die forever between last step and the confirm sweep, so
+every hold needs an expiry (and expiry of a hold whose saga actually
+completed but whose confirm was lost = a booked customer losing their
+room — so confirm must beat expiry, with margin, and expiry must check the
+saga's fate first). You have re-invented <strong>TCC (Try-Confirm-Cancel)</strong>:
+<code>book→pending</code> is Try, <code>confirm</code> is Confirm, compensation is Cancel, and
+the expiry is TCC's timeout. Section 16's line &quot;application-level 2PC with
+timeouts&quot; should now feel earned.</p>
+<p><strong>M4.</strong> Choreography: you must add/change at least four wirings —
+subscribe insurance to <code>CarBooked</code>; give insurance its own
+<code>InsuranceBooked</code>/<code>InsuranceFailed</code> events; subscribe a handler for
+<code>InsuranceFailed</code> that cancels the car and publishes <code>CarCancelled</code>; and
+subscribe <code>CarCancelled</code> to the existing hotel-cancel handler (extending
+the backward chain by one link). Miss the last one and a failed insurance
+strands a booked hotel+flight — silently. Orchestration: append
+<code>&quot;insurance&quot;</code> to <code>STEPS</code>, register the service — the compensation chain
+comes free from <code>completed.reversed()</code>. Lesson: choreography's complexity
+grows in the <em>edges</em> (every step touches its neighbors' subscriptions,
+failure paths are hand-wired); orchestration's grows in one node.</p>
+<h2 id="solutions-tier-3--debug">Tier 3 — Debug</h2>
+<p><strong>D1.</strong> <code>test_orchestrator_crash_then_recovery_completes_saga</code> — with
+intent-logging, the crash-after-book run has already written <code>hotel:done</code>…
+but so has a crash <em>before</em> book, and that's the killer: log says done,
+service never acted. Concretely: crash between <code>log.append(sagaId, &quot;hotel:done&quot;)</code>
+and <code>hotel.book()</code> → recovery skips the hotel → saga &quot;COMPLETES&quot; with <strong>no
+hotel room</strong> — the customer lands with nowhere to sleep (losing a booking
+and the customer; arguably worse than double-charging, which idempotency
+can prevent and support can refund). The general law, same as outbox M2:
+with two non-atomic acts, the one you do FIRST is the one that can end up
+done-without-the-other. Record-then-act risks phantom completions
+(at-most-once); act-then-record risks duplicate actions (at-least-once) —
+and you choose act-then-record because duplicates are absorbable by
+idempotency, while phantoms are unrecoverable silence.</p>
+<p><strong>D2.</strong> Timeline: car.book command sent; car service is slow (GC pause,
+lock wait); orchestrator times out at 30 s, treats it as <code>StepFailed</code>,
+compensates hotel and flight, logs <code>SAGA_ABORTED</code>; the car service then
+finishes processing the <em>still-queued</em> command and books — after the saga
+closed. A timeout is not a failure — it is <em>unknown outcome</em>. The two
+missing properties: (1) <strong>compensate the timed-out step too</strong> — the
+abort path must send <code>car.cancel(trip)</code> even though car never confirmed
+booking, and idempotent-cancel (&quot;nothing to cancel&quot; is a fine no-op) makes
+that safe whether the book landed or not — the lab's <code>Service.cancel</code>
+no-op branch is exactly this; (2) at the delivery layer, commands need to
+be <strong>cancellable/fenced</strong> (the cancel must not be overtaken by the stale
+book — ordering per saga id, e.g. same partition key, per the outbox lab's
+ordering section). Cancel-the-unknown + ordered delivery closes the hole.</p>
+<p><strong>D3.</strong> <code>test_failing_compensation_is_retried_until_it_succeeds</code> fails —
+the hotel booking stays <code>BOOKED</code>, capacity stays 2, while the log claims
+<code>hotel:compensated</code>: the log now <em>lies</em>, which is worse than being behind,
+because recovery trusts it. For the nightly job to be correct it would
+need: a durable record that the compensation is <em>pending</em> (not &quot;done&quot; —
+so a new log state, <code>compensation-pending</code>), idempotent cancels (have),
+detection of which cancels actually landed (reconciliation against the
+service's state), retry with escalation, and ordering guarantees against
+in-flight duplicates. At that point the &quot;nightly job&quot; has become… a
+message relay draining a durable to-do table — i.e. the <strong>transactional
+outbox's relay</strong>, rediscovered. The correct design was never &quot;log
+compensated and hope&quot;; it is &quot;log compensation-<em>requested</em> durably, let a
+reliable deliverer own the retries&quot; — which is what real orchestrators do
+by emitting compensation commands through their outbox.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../46-distributed-transactions/notes.html"><small>← Lab 46</small>distributed-transactions</a><a href="../48-transactional-outbox/notes.html" style="text-align:right"><small>Lab 48 →</small>transactional-outbox</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-exist">1. WHY does this exist?</a><a href="#readme-2-the-problem-as-a-story">2. THE PROBLEM, as a story</a><a href="#readme-3-the-naive-solutions">3. THE NAIVE SOLUTIONS</a><a href="#readme-4-why-naive-3-fails-concretely">4. WHY NAIVE #3 FAILS, concretely</a><a href="#readme-5-the-key-idea">5. THE KEY IDEA</a><a href="#readme-6-terminology">6. TERMINOLOGY</a><a href="#readme-7-mental-model">7. MENTAL MODEL</a><a href="#readme-8-see-it-move--the-interactive-simulator">8. SEE IT MOVE — the interactive simulator</a><a href="#readme-9-the-actual-mechanism-step-by-step-orchestration">9. THE ACTUAL MECHANISM, step by step (orchestration)</a><a href="#readme-10-failure-scenarios--walk-each-one">10. FAILURE SCENARIOS — walk each one</a><a href="#readme-11-correctness--what-is-and-isnt-guaranteed">11. CORRECTNESS — what is and isn&#x27;t guaranteed</a><a href="#readme-12-the-code">12. THE CODE</a><a href="#readme-13-experiments--break-it-yourself">13. EXPERIMENTS — break it yourself</a><a href="#readme-14-production--what-the-lab-omits-and-how-real-systems-do-it">14. PRODUCTION — what the lab omits and how real systems do it</a><a href="#readme-15-exercises">15. EXERCISES</a><a href="#readme-16-related-concepts--and-when-to-choose-which">16. RELATED CONCEPTS — and when to choose which</a><a href="#readme-17-next-steps--knowledge-map">17. NEXT STEPS — knowledge map</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

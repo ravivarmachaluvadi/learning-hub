@@ -1,0 +1,720 @@
+<!doctype html>
+<html lang="en" data-hub-lab="24-cap-theorem">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>24. cap-theorem</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 24 of 71 · Stage 4</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 24 · Why Distribution Is Hard</p><article id="readme"><h1 id="readme-the-cap-theorem--a-learning-lab">The CAP Theorem — A Learning Lab</h1>
+<blockquote>
+<p><strong>The three-sentence version:</strong> When your data lives on more than one computer
+and the network between them breaks, you must choose: refuse to answer until
+the network heals (stay <em>consistent</em>), or keep answering with possibly-stale
+data (stay <em>available</em>). You cannot do both — that impossibility is the CAP
+theorem. Every distributed database you will ever use has made this choice,
+and knowing which one it made tells you how it will hurt you.</p>
+</blockquote>
+<hr />
+<h2 id="readme-1-why--why-does-this-idea-exist">1. WHY — why does this idea exist?</h2>
+<p>Once your application's data lives on <strong>more than one computer</strong> — for speed,
+for surviving crashes, or for serving users on different continents — those
+computers have to keep their copies in sync by talking over a network. But
+networks fail. Cables get cut, routers die, a whole data center goes dark for
+ten minutes. The CAP theorem exists because engineers kept promising systems
+that would stay perfectly in sync AND always answer requests, even during
+network failures — and kept failing to deliver. In 2000, Eric Brewer
+conjectured this wasn't bad engineering, it was <em>impossible</em>, and in 2002
+Gilbert and Lynch proved it. Knowing something is impossible is incredibly
+useful: it stops you searching for it and makes you design for the tradeoff
+instead.</p>
+<h2 id="readme-2-problem--the-story-of-the-two-bank-tellers">2. PROBLEM — the story of the two bank tellers</h2>
+<p>Imagine a small bank with two branches: one downtown, one uptown. Your account
+balance is written in a ledger book, and <strong>each branch keeps its own copy</strong> so
+you can walk into either one. Whenever a teller changes a balance, she phones
+the other branch so both books stay identical.</p>
+<p>You have $100. One stormy day, the phone line between the branches goes dead.</p>
+<p>You walk into the downtown branch: &quot;I'd like to withdraw $100.&quot;
+At the same moment, your roommate (who shares the account) walks into the
+uptown branch: &quot;I'd like to withdraw $100.&quot;</p>
+<p>Each teller looks at her book. Each book says $100. Neither teller can call
+the other branch to check or to announce the withdrawal.</p>
+<p><strong>What should the tellers do?</strong></p>
+<h2 id="readme-3-naive-solution--just-keep-both-books-updated">3. NAIVE SOLUTION — &quot;just keep both books updated&quot;</h2>
+<p>The bank's original plan was exactly that: every change is phoned to the other
+branch immediately, so both books always match, and every customer is served
+at either branch instantly. When the phone line works, this plan is fine.</p>
+<h2 id="readme-4-failure--the-storm-breaks-the-plan">4. FAILURE — the storm breaks the plan</h2>
+<p>With the line dead, each teller has exactly two options, and both hurt:</p>
+<ul>
+<li><strong>Option 1 — serve the customer anyway.</strong> Both you and your roommate walk
+out with $100 each. Total withdrawn: $200 from a $100 account. When the
+line is repaired, the books disagree ($0 downtown, $0 uptown, but the bank
+is missing $100). The bank stayed <strong>open</strong> but its books became <strong>wrong</strong>.</li>
+<li><strong>Option 2 — refuse until the line is fixed.</strong> The teller says &quot;Sorry, I
+can't safely do this right now, come back later.&quot; The books stay <strong>correct</strong>
+but the bank was effectively <strong>closed</strong> to you.</li>
+</ul>
+<p>There is no third option. The teller cannot both give a guaranteed-correct
+answer <em>and</em> serve you, because being correct requires information sitting on
+the other side of a dead phone line. That's the entire theorem, in a storm.</p>
+<h2 id="readme-5-key-idea">5. KEY IDEA</h2>
+<p><strong>When replicas of your data cannot communicate, every request forces a
+choice: answer possibly-wrongly, or don't answer. Correctness and
+responsiveness cannot both survive a communication failure.</strong></p>
+<h2 id="readme-6-terminology--the-same-story-in-professional-words">6. TERMINOLOGY — the same story, in professional words</h2>
+<p>Now let's name the pieces the way engineers do. Every term defined at first
+use:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain-English meaning (in our story)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Node</strong> / <strong>replica</strong></td>
+  <td>One computer holding a copy of the data (one bank branch with its ledger book).</td>
+</tr>
+<tr>
+  <td><strong>Replication</strong></td>
+  <td>Keeping copies of the same data on several nodes (the phone-call protocol between branches).</td>
+</tr>
+<tr>
+  <td><strong>Network partition</strong></td>
+  <td>A network failure that splits nodes into groups that cannot talk to each other, while each group is still running (the dead phone line — both branches are open, they just can't communicate).</td>
+</tr>
+<tr>
+  <td><strong>Consistency (the C in CAP)</strong></td>
+  <td>Every read returns the most recent write — as if there were only ONE ledger book that everyone shares. Formally called <strong>linearizability</strong>. ⚠️ <em>Not</em> the same &quot;C&quot; as in ACID transactions (that one means &quot;no rule of the database is violated&quot;).</td>
+</tr>
+<tr>
+  <td><strong>Availability (the A in CAP)</strong></td>
+  <td>Every request sent to any working node gets a real (non-error) answer, without waiting for the partition to heal (no teller ever says &quot;come back later&quot;).</td>
+</tr>
+<tr>
+  <td><strong>Partition tolerance (the P in CAP)</strong></td>
+  <td>The system keeps operating <em>in some form</em> even when a partition happens (the bank as a whole doesn't burn down just because the phone line died).</td>
+</tr>
+<tr>
+  <td><strong>CP system</strong></td>
+  <td>A system that, during a partition, chooses Consistency: some requests get refused or blocked (Option 2 — the teller says no).</td>
+</tr>
+<tr>
+  <td><strong>AP system</strong></td>
+  <td>A system that, during a partition, chooses Availability: all requests get answers, some possibly stale or conflicting (Option 1 — everyone gets their $100).</td>
+</tr>
+<tr>
+  <td><strong>Split-brain</strong></td>
+  <td>The dangerous situation where both sides of a partition keep accepting writes, each believing it's authoritative — the two ledger books diverging.</td>
+</tr>
+<tr>
+  <td><strong>Quorum</strong></td>
+  <td>A majority of the nodes; enough that any two majorities always share at least one member. A common trick for building CP systems: only the side of the partition holding a majority may proceed.</td>
+</tr>
+<tr>
+  <td><strong>Eventual consistency</strong></td>
+  <td>The AP world's consolation prize: replicas may disagree during the partition, but once it heals, they reconcile and converge to the same value — <em>eventually</em>.</td>
+</tr>
+<tr>
+  <td><strong>Stale read</strong></td>
+  <td>A read that returns an old value because the node answering hasn't heard about a newer write.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-7-mental-model--two-islands">7. MENTAL MODEL — two islands</h2>
+<p>Carry this picture: a partition turns your cluster into <strong>two islands with no
+boats between them</strong>. A write lands on Island 1. Now someone on Island 2 asks
+to read that data. There are only two honest behaviors:</p>
+<ul>
+<li>Island 2 says <strong>&quot;I can't answer safely&quot;</strong> → you preserved consistency,
+sacrificed availability. <strong>CP.</strong></li>
+<li>Island 2 answers <strong>with what it has</strong> (the old value) → you preserved
+availability, sacrificed consistency. <strong>AP.</strong></li>
+</ul>
+<p>And the most important correction to the popular &quot;pick 2 of 3&quot; picture:
+<strong>partitions are not optional.</strong> You don't get to &quot;not pick P&quot; — networks
+<em>will</em> partition; that's physics and backhoes, not a design choice. A &quot;CA
+system&quot; would be one that never experiences partitions, which means a system
+that isn't distributed at all (one node — one ledger book). So the real
+decision is never &quot;which 2 of 3?&quot; It is:</p>
+<blockquote>
+<p><strong>When (not if) a partition happens, do we give up C or A?</strong></p>
+</blockquote>
+<h2 id="readme-8-visualization">8. VISUALIZATION</h2>
+<p>Two static diagrams here; the <strong>interactive simulator</strong> is in
+<a href="visualization.html"><code>visualization.html</code></a> — open it and actually cut the
+network yourself.</p>
+<p>The decision, as a flowchart:</p>
+<pre class="mermaid">flowchart TD
+    A[Request arrives at a node] --&gt; B{Can this node reach&lt;br/&gt;the other replicas?}
+    B -- yes --&gt; C[Coordinate normally:&lt;br/&gt;consistent AND available]
+    B -- &quot;no — PARTITION&quot; --&gt; D{What did the designers choose?}
+    D -- &quot;CP: refuse / block&quot; --&gt; E[Answer is correct or absent.&lt;br/&gt;Some users see errors.]
+    D -- &quot;AP: answer anyway&quot; --&gt; F[Every user gets an answer.&lt;br/&gt;Some answers are stale;&lt;br/&gt;concurrent writes may conflict.]
+</pre>
+<p>The two-island moment, as a sequence (this is also the shape of the formal
+proof — see stage 9):</p>
+<pre class="mermaid">sequenceDiagram
+    participant W as Client 1 (Island 1)
+    participant G1 as Node G1 (Island 1)
+    participant G2 as Node G2 (Island 2)
+    participant R as Client 2 (Island 2)
+    Note over G1,G2: ✂️ partition — no messages cross
+    W-&gt;&gt;G1: write balance = 150
+    G1--&gt;&gt;W: OK (if AP) / blocked (if CP)
+    G1--xG2: replicate 150 (LOST)
+    R-&gt;&gt;G2: read balance
+    alt AP choice
+        G2--&gt;&gt;R: 100  ← stale: consistency violated
+    else CP choice
+        G2--&gt;&gt;R: error/timeout  ← availability violated
+    end
+</pre>
+<h2 id="readme-9-actual-mechanism--the-proof-with-real-numbers">9. ACTUAL MECHANISM — the proof, with real numbers</h2>
+<p>CAP isn't a rule of thumb; it's a two-paragraph proof (Gilbert &amp; Lynch, 2002).
+Walk it with concrete values:</p>
+<ol>
+<li>Setup: nodes <strong>G1</strong> and <strong>G2</strong>, both storing <code>balance = 100</code>. The network
+between them partitions. Assume the system claims to be <strong>both</strong> consistent
+and available during this partition.</li>
+<li>Client 1 sends <code>write balance = 150</code> to G1. Because the system is
+<em>available</em>, G1 must complete it and answer OK. The replication message to
+G2 cannot arrive — the partition eats it.</li>
+<li>Client 2 sends <code>read balance</code> to G2. Because the system is <em>available</em>, G2
+must answer with a real value, now, without hearing from G1. The only value
+G2 has is <code>100</code>.</li>
+<li>G2 answers <code>100</code>. But the most recent completed write was <code>150</code>. That read
+is stale — <strong>consistency is violated.</strong> The only way G2 could have avoided
+it was to block or error — <strong>violating availability.</strong></li>
+</ol>
+<p>Contradiction either way. So no system can guarantee all three of C, A, P.
+Notice the proof needs only two nodes, one write, and one read — the
+impossibility is that fundamental. Everything real systems do (quorums,
+leaders, retries, clever clocks) only decides <em>which</em> guarantee bends and how
+gracefully — never escapes the choice.</p>
+<p><strong>How real designs pick a side, mechanically:</strong></p>
+<ul>
+<li><strong>CP via quorum:</strong> with N replicas, require a majority (⌊N/2⌋+1) to
+acknowledge each write, and a majority to serve each read. Any two
+majorities overlap in at least one node, so every read intersects the
+latest write. During a partition, the minority side can't assemble a
+majority → it refuses. Correct, but partially unavailable.</li>
+<li><strong>AP via accept-locally:</strong> every node accepts reads and writes with what it
+has, records them (often with version metadata), and syncs when the
+partition heals. Always answers, but reads can be stale and concurrent
+writes conflict.</li>
+</ul>
+<p>A tiny code sketch of the fork in the road (pseudo-Python, not a project —
+the interactive simulator is the real &quot;runnable&quot; here):</p>
+<div class="code"><pre><code class="language-python">def handle_write(node, key, value):
+    acks = replicate_to_peers(node, key, value, timeout=1.0)
+    if mode == &quot;CP&quot;:
+        if acks + 1 &lt; majority(N):          # couldn&#x27;t reach a quorum
+            raise Unavailable(&quot;partition: refusing rather than diverge&quot;)
+        commit(node, key, value)             # safe: any future quorum read sees this
+    else:  # AP
+        commit(node, key, value)             # answer now, sync later
+        queue_for_reconciliation(key, value) # divergence is now possible
+</code></pre></div>
+<p>The <strong>R + W &gt; N</strong> rule generalizes this: with N replicas, W acks per write and
+R nodes per read, reads are guaranteed to see the latest write iff the read
+and write sets must overlap — <code>R + W &gt; N</code>. Cassandra exposes exactly these
+knobs (<code>ONE</code>, <code>QUORUM</code>, <code>ALL</code>), letting you slide between CP-ish and AP-ish
+per query.</p>
+<h2 id="readme-10-failure-scenarios--walking-through-the-ways-it-hurts">10. FAILURE SCENARIOS — walking through the ways it hurts</h2>
+<p><strong>Scenario 1 — the stale read (AP).</strong> Partition splits {G1} from {G2}. User
+updates their shipping address via G1; the confirmation page (served from G2)
+shows the old address. Harmless-looking, until it's a password change that
+&quot;didn't take&quot; on half the site.</p>
+<p><strong>Scenario 2 — split-brain writes (AP).</strong> During the partition, you write
+<code>balance = 0</code> (withdrew $100) on Island 1; your roommate writes <code>balance = 0</code>
+on Island 2. The partition heals. Both islands now sync… two different
+histories for the same account. The system must <strong>reconcile</strong>:</p>
+<ul>
+<li><em>Last-write-wins (LWW):</em> keep the write with the newest timestamp, silently
+discard the other. Simple — and quietly <strong>loses data</strong> (one withdrawal
+vanishes from history; the bank eats the loss).</li>
+<li><em>Keep both, ask the application:</em> version metadata (vector clocks) detects
+the conflict and hands both values to the app (Amazon's Dynamo did this —
+the shopping cart merged by union, which is why deleted items sometimes
+reappeared).</li>
+<li><em>Design values to merge themselves:</em> CRDTs — data types (counters, sets)
+built so concurrent updates merge deterministically. <code>/learn crdt</code> later.</li>
+</ul>
+<p><strong>Scenario 3 — the minority island (CP).</strong> A 5-node quorum system partitions
+3-vs-2. The 3-side keeps a majority and keeps working; every client routed to
+the 2-side gets errors until the partition heals. Users on the wrong side of
+the backhoe see an outage — <em>by design</em>. This is also why quorum clusters
+have <strong>odd</strong> node counts: 4 nodes can split 2-2 and then <em>nobody</em> has a
+majority — the whole system stalls.</p>
+<p><strong>Scenario 4 — retries turn one write into two.</strong> Client writes to G1, the
+ACK is lost (partitions eat answers too, not just requests), client retries
+against G2. The write happened twice. CAP-world systems need idempotency
+(safe-to-repeat operations) on top of everything else — a preview of
+<code>/learn idempotency</code> and <code>/learn transactional-outbox</code>.</p>
+<p><strong>Scenario 5 — the partition heals.</strong> CP systems: minority catches up from
+the majority, life resumes; nothing to reconcile because the minority never
+accepted anything. AP systems: anti-entropy kicks in — replicas exchange
+version metadata (hashes/Merkle trees), detect divergence, run the
+reconciliation policy from Scenario 2. The pain of an AP system is deferred,
+not avoided.</p>
+<h2 id="readme-11-correctness--what-cap-does-and-does-not-say">11. CORRECTNESS — what CAP does and does not say</h2>
+<p><strong>The guarantee, precisely:</strong> in an asynchronous network (messages can be
+delayed or lost, no shared clock), no read-write system can guarantee both
+linearizable consistency and total availability under arbitrary partitions.
+It is a <em>safety vs liveness</em> tradeoff:</p>
+<ul>
+<li><strong>Consistency is a safety property</strong> — &quot;nothing bad ever happens&quot; (no read
+ever returns stale data).</li>
+<li><strong>Availability is a liveness property</strong> — &quot;something good eventually
+happens, for every request&quot; (every request gets an answer).</li>
+<li>A partition forces you to break one. Pick which, per system — or even per
+operation.</li>
+</ul>
+<p><strong>What CAP does NOT say — the famous misreadings:</strong></p>
+<ol>
+<li><em>&quot;Pick 2 of 3.&quot;</em> No — P isn't optional (stage 7). The choice is C-vs-A,
+and only during partitions.</li>
+<li><em>&quot;An AP system is never consistent.&quot;</em> No — the theorem constrains behavior
+<strong>during partitions</strong>. Most of the time there is no partition, and the
+tradeoff that dominates daily life is <strong>latency vs consistency</strong>: waiting
+for replicas before ACKing costs milliseconds on <em>every</em> write. PACELC
+captures both: <em>if Partitioned, choose A or C; Else, choose Latency or
+Consistency.</em> (<code>/learn pacelc</code>.)</li>
+<li><em>&quot;C means ACID.&quot;</em> No — CAP's C is linearizability (single-copy illusion);
+ACID's C is &quot;constraints hold.&quot; Unrelated claims sharing a letter.</li>
+<li><em>&quot;Availability = high availability / five nines.&quot;</em> No — CAP availability
+is a strict formal property (<em>every</em> request to <em>any</em> live node answers).
+A CP system can still have superb uptime in practice; it just can't
+<em>guarantee</em> answers under partition.</li>
+<li><em>&quot;It's binary.&quot;</em> Real systems are dials, not switches: R/W/N quorum knobs,
+per-query consistency levels, bounded-staleness modes. CAP marks the ends
+of the dial; engineering picks the position.</li>
+</ol>
+<h2 id="readme-1213-code--experiment--the-simulator">12–13. CODE &amp; EXPERIMENT → the simulator</h2>
+<p>For a theorem there is no protocol to implement — the &quot;lab equipment&quot; is the
+interactive simulator, <a href="visualization.html"><code>visualization.html</code></a>: three
+replicas holding one bank balance, two customers, a partition switch you flip
+yourself, CP/AP modes, and R/W quorum sliders. Every event is narrated in
+plain English (&quot;Customer R was shown the wrong balance&quot;) with the protocol
+detail underneath, and a scoreboard counts the two casualties separately:
+times a customer saw wrong data (C violated) and times a customer was refused
+(A violated). Four guided experiments play themselves if you press
+<strong>Run this for me</strong>.</p>
+<p>Two controls carry more weight than they look like:</p>
+<ul>
+<li><strong>Which machine each customer talks to.</strong> Nothing about a customer decides
+whether they experience the outage — only which replica their connection
+happens to land on. Move customer L from machine A to machine B before
+cutting the network and L's outage disappears entirely, while the storm is
+identical. This is why real clients are handed a <em>list</em> of nodes to try.</li>
+<li><strong>Where the network tears</strong> (<code>{A} | {B,C}</code> vs <code>{A,B} | {C}</code>). Same cluster,
+same mode, same requests — the tear location alone decides who is refused.</li>
+</ul>
+<p>Both are exercises 2.2 and 2.2b in <a href="notes.html#exercises"><code>EXERCISES.md</code></a>.</p>
+<h2 id="readme-14-production--where-the-real-systems-sit">14. PRODUCTION — where the real systems sit</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>System</th>
+  <th>Choice during partition</th>
+  <th>How it does it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>ZooKeeper, etcd, Consul</strong></td>
+  <td><strong>CP</strong></td>
+  <td>Raft/ZAB consensus; the majority side elects a leader and serves; the minority refuses. Used exactly where wrong answers are worse than no answers: locks, leader election, config.</td>
+</tr>
+<tr>
+  <td><strong>Cassandra, DynamoDB (Dynamo lineage), Riak</strong></td>
+  <td><strong>AP (tunable)</strong></td>
+  <td>Accept-locally + anti-entropy; per-query consistency levels (<code>ONE</code>…<code>QUORUM</code>…<code>ALL</code>) move individual reads/writes along the C↔A dial.</td>
+</tr>
+<tr>
+  <td><strong>MongoDB</strong></td>
+  <td><strong>CP-leaning</strong></td>
+  <td>Single-primary replica set; a partitioned-away primary steps down, minority side stops accepting writes; read preferences can relax C for reads.</td>
+</tr>
+<tr>
+  <td><strong>Kafka</strong></td>
+  <td><strong>Configurable</strong></td>
+  <td>In-sync-replica (ISR) machinery: <code>acks=all</code> + <code>min.insync.replicas=2</code> ≈ CP for produce; <code>acks=1</code> trades toward availability/latency and can lose acknowledged writes on failover.</td>
+</tr>
+<tr>
+  <td><strong>Google Spanner</strong></td>
+  <td><strong>CP</strong> (marketed &quot;effectively CA&quot;)</td>
+  <td>Still refuses when it must — but Google's private network plus TrueTime (GPS/atomic-clock time bounds) makes partitions so rare that users almost never observe the C-vs-A moment. The theorem isn't beaten; the P is engineered toward zero.</td>
+</tr>
+<tr>
+  <td><strong>Plain old single-node Postgres</strong></td>
+  <td>Not in the game</td>
+  <td>One node — no partition between replicas is possible. This is the &quot;CA&quot; corner, and the price is that it's not distributed (its replication add-ons re-enter the game: synchronous ≈ CP, asynchronous ≈ AP).</td>
+</tr>
+</tbody>
+</table></div>
+<p>The production question is never &quot;is this database CP or AP?&quot; as trivia — it's
+<strong>&quot;when the network partitions at 3 a.m., which page do I get: 'error rate
+up' (CP) or 'customers seeing wrong data' (AP)?&quot;</strong> Pick the page you'd rather
+receive, per use case: payments and inventory counters usually CP; shopping
+carts, likes, presence indicators usually AP.</p>
+<h2 id="readme-15-exercises">15. EXERCISES</h2>
+<p>In <a href="notes.html#exercises"><code>EXERCISES.md</code></a> — predict / modify / debug, most of them
+runnable against the simulator. Answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>;
+attempt first.</p>
+<h2 id="readme-16-related-concepts">16. RELATED CONCEPTS</h2>
+<ul>
+<li><strong>PACELC</strong> — CAP's needed upgrade: adds the <em>no-partition</em> tradeoff
+(latency vs consistency) that dominates normal operation.</li>
+<li><strong>Consensus (Raft/Paxos)</strong> — the machinery that makes the CP choice safely:
+how a majority side agrees on a leader and a log. CAP says you must
+sometimes refuse; Raft is <em>how</em> you refuse correctly.</li>
+<li><strong>Eventual consistency &amp; CRDTs</strong> — the machinery that makes the AP choice
+livable: how diverged replicas converge without losing your shopping cart.</li>
+<li><strong>ACID vs BASE</strong> — single-database transaction guarantees vs the
+&quot;Basically Available, Soft-state, Eventually consistent&quot; posture of AP
+stores; CAP is the <em>why</em> behind BASE's existence.</li>
+<li><strong>Linearizability vs serializability</strong> — CAP's C is linearizability (one
+object, real-time order); serializability is about multi-object
+transactions. Different guarantees, frequently confused.</li>
+</ul>
+<h2 id="readme-17-next-steps--knowledge-map">17. NEXT STEPS — knowledge map</h2>
+<pre class="mermaid">flowchart LR
+    subgraph you_are_here [&quot; &quot;]
+        CAP[[&quot;CAP theorem ✅&quot;]]
+    end
+    REP[replication basics] --&gt; CAP
+    NET[why networks fail] --&gt; CAP
+    CAP --&gt; PACELC[&quot;/learn pacelc&quot;]
+    CAP --&gt; Q[&quot;/learn quorum&quot;]
+    Q --&gt; RAFT[&quot;/learn raft&quot;]
+    CAP --&gt; EC[&quot;/learn eventual-consistency&quot;]
+    EC --&gt; CRDT[&quot;/learn crdt&quot;]
+    CAP --&gt; LIN[&quot;/learn linearizability&quot;]
+    RAFT --&gt; KAFKA[&quot;/learn kafka&quot;]
+    Q --&gt; CH[&quot;/learn consistent-hashing&quot;]
+</pre>
+<p><strong>Prerequisites you used (informally):</strong> replication, network failure. If
+either felt shaky: <code>/learn replication</code>.</p>
+<p><strong>Best next steps, in order:</strong></p>
+<ol>
+<li><code>/learn quorum</code> — the R+W&gt;N math from stage 9, in full.</li>
+<li><strong><a href="../39-paxos/notes.html#readme"><code>../39-paxos/</code></a> — already built.</strong> Paxos is the
+machinery that makes the CP choice <em>safe</em>: how the majority side agrees on
+one value while the minority refuses. If you played with the CP mode here
+and wondered &quot;but how does the majority side actually agree?&quot;, that lab is
+the answer, with a runnable implementation.</li>
+<li><code>/learn raft</code> — the same job as Paxos, redesigned to be teachable
+(also a full protocol lab).</li>
+<li><code>/learn eventual-consistency</code> — how AP systems clean up after themselves.</li>
+<li><code>/learn pacelc</code> — the tradeoff you pay on the 99.9% of days without
+partitions.</li>
+</ol>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-cap-theorem--exercises">CAP Theorem — Exercises</h1>
+<p>Work top to bottom. Most run against the simulator
+(<a href="visualization.html"><code>visualization.html</code></a>). Answers in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a> — attempt each one before looking.</p>
+<h2 id="exercises-part-1--predict">Part 1 — Predict</h2>
+<p><strong>1.1</strong> The cluster is healthy (no partition), mode is <strong>AP · one</strong> (W=1,
+R=1). Client L writes, then client R immediately reads. Will R's read be
+stale? Decide first, then run it in the simulator. Then explain: why does
+R+W ≤ N <em>not</em> guarantee a stale read here?</p>
+<p><strong>1.2</strong> Mode <strong>CP · quorum</strong> (W=2, R=2), network <strong>cut</strong> ({A} | {B,C}).
+Predict the outcome of each of these four requests, in order:
+L write, L read, R write, R read. Which island's customers experience the
+outage? Run it and check all four.</p>
+<p><strong>1.3</strong> Set the sliders to <strong>W=3, R=1</strong> and cut the network. Predict: can
+<em>either</em> side write? Can either side read? Is a stale read possible in this
+configuration — and does R+W&gt;N still hold? Run it.</p>
+<p><strong>1.4</strong> Set <strong>W=1, R=3</strong>, healthy network. A write happens, then a read. Now
+cut the network and repeat on the majority side. What does this configuration
+optimize for, and who pays?</p>
+<h2 id="exercises-part-2--modify">Part 2 — Modify</h2>
+<p><strong>2.1</strong> In the simulator, find a slider setting where <strong>both</strong> islands can
+keep writing during the partition. What is the <em>smallest</em> W that allows it?
+What new problem have you just signed up for (run experiment 4 if unsure)?</p>
+<p><strong>2.2</strong> Predict <em>first</em>, then check with the <strong>Split</strong> dropdown. Switch the
+tear to <code>{A,B} | {C}</code> in CP mode (W=2, R=2), leaving L on machine A and R on
+machine C. Which customer is refused now, and which one never notices the
+storm? Then answer the real question: what actually decided who suffered —
+anything about the customer, or purely which machine their connection landed
+on?</p>
+<p><strong>2.2b</strong> Keep the tear at <code>{A} | {B,C}</code> and instead use the <strong>Customer L is
+talking to machine</strong> dropdown to move L onto B. Now cut. L is refused
+nothing. Explain in one sentence why real clients are given a list of several
+nodes to try rather than a single fixed one — and what that costs you in a
+CP system when <em>every</em> node the client can reach is on the minority side.</p>
+<p><strong>2.3</strong> Real quorum clusters use 5 nodes, not 3. With N=5, W=3, R=3: how many
+nodes can be partitioned away before the majority side stops accepting
+writes? Why do operators pick odd N — what specifically goes wrong with N=4,
+W=3 under a 2-2 split?</p>
+<h2 id="exercises-part-3--debug">Part 3 — Debug</h2>
+<p><strong>3.1</strong> A teammate proposes: &quot;Our system is CA — we replicate synchronously
+to both replicas, so it's consistent, and both replicas serve reads, so it's
+available. We just won't have partitions because we use a really good
+network.&quot; Find the two separate flaws in this claim.</p>
+<p><strong>3.2</strong> Incident report: <em>&quot;Customer changed their email address; confirmation
+page showed the new address. Ten minutes later, password-reset emails were
+still going to the OLD address. No errors were logged anywhere.&quot;</em> The system
+runs on an AP store with read-repair. Explain the mechanism of this bug in
+CAP terms, why <em>no errors</em> is the expected signature, and name the two knobs
+from this lab that would have prevented it (and their cost).</p>
+<p><strong>3.3</strong> In the simulator, do: AP mode → cut → L write (bal=150) → heal →
+read from R. The read returns 150 and is logged OK. A teammate concludes
+&quot;see, AP systems are consistent once the partition heals, so nothing was
+ever really at risk.&quot; Using only actions available in the simulator, produce
+the counterexample that proves an <strong>acknowledged write can be permanently
+lost</strong> — and state which log line is the smoking gun.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-cap-theorem--solutions">CAP Theorem — Solutions</h1>
+<h2 id="solutions-part-1--predict">Part 1 — Predict</h2>
+<p><strong>1.1</strong> No — the read returns the new value. With a healthy network, W=1
+still triggers <em>asynchronous</em> replication to the other replicas (in the
+simulator it lands everywhere immediately; in real systems within
+milliseconds). R+W ≤ N means staleness is <strong>possible</strong> (no overlap is
+<em>guaranteed</em>), not that it's certain. This is why AP systems look perfectly
+consistent in demos and dev environments: the tradeoff only becomes visible
+under partition or replication lag. CAP constrains the <em>worst case</em>, not the
+average day.</p>
+<p><strong>1.2</strong></p>
+<ul>
+<li><strong>L write → REFUSED.</strong> Island 1 is {A} alone: 1 reachable &lt; W=2.</li>
+<li><strong>L read → REFUSED.</strong> 1 reachable &lt; R=2.</li>
+<li><strong>R write → OK.</strong> Island 2 is {B,C}: 2 ≥ W=2. The write commits on the
+majority side.</li>
+<li><strong>R read → OK, and consistent.</strong> B and C both have the latest write.</li>
+</ul>
+<p>Island 1's customers experience the outage; island 2's customers never notice
+anything. A CP partition outage is <em>partial</em> — it hits whoever is stuck with
+the minority. This is why real CP systems put replicas in 3+ failure domains:
+to make the majority side as reachable as possible.</p>
+<p><strong>1.3</strong> <strong>Nobody can write</strong> — W=3 needs all three nodes, and no island has
+three. <strong>Both sides can read</strong> (R=1). No stale read is possible: reads may
+return <em>old</em> data in wall-clock terms, but no <em>newer committed write</em> can
+exist anywhere — writes are frozen — so every read returns the latest
+committed value. R+W=4 &gt; 3 still holds, and the guarantee holds with it; you
+paid with total write unavailability. (This is roughly &quot;read-only mode during
+incidents,&quot; a real production pattern.)</p>
+<p><strong>1.4</strong> W=1, R=3 optimizes for <strong>fast, always-available writes</strong> — a write
+needs only one node. Readers pay: every read must assemble all three
+replicas, so during the partition <strong>no one can read at all</strong> (no island has
+3 nodes), while writes keep landing on both sides — diverging. It's the
+mirror image of 1.3. Write-heavy ingest systems (metrics, logs) pick shapes
+like this; interactive systems rarely do, because reads are what users feel.</p>
+<h2 id="solutions-part-2--modify">Part 2 — Modify</h2>
+<p><strong>2.1</strong> <strong>W=1</strong> (the only value ≤ the minority island's size of 1). Both
+islands then accept writes independently — you've enabled <strong>split-brain</strong>.
+The bill arrives at heal time: experiment 4's <code>CONFLICT</code> line, where
+last-write-wins discards an acknowledged write. Allowing writes everywhere
+during a partition and keeping every write are incompatible wishes; you get
+to keep at most one.</p>
+<p><strong>2.2</strong> Nobody is refused. Island {A,B} has 2 nodes ≥ quorum, so L (on A)
+works normally. R talks to C — alone on its island, so C <em>should</em> be refused
+for both reads and writes (1 &lt; 2)... and that's the answer: <strong>R is refused,
+L is fine</strong> — the outage moved to whoever is attached to the minority. The
+point of the exercise: which clients suffer depends entirely on <em>where the
+network happens to tear</em>, not on anything about the clients. Route-around
+logic (retry against the other island) is how real clients cope.</p>
+<p><strong>2.2b</strong> Because a client pinned to one node inherits that node's fate: a
+single fixed endpoint turns &quot;one replica is on the wrong side of the tear&quot;
+into &quot;this customer is down,&quot; even when a perfectly healthy majority is
+sitting one hop away. Giving the client a node list (or a smart driver, as
+Cassandra and MongoDB do) lets it retry elsewhere and ride out the storm.
+What it does <em>not</em> buy you in a CP system: if every node the client can
+reach sits on the minority side, retrying finds no quorum anywhere and the
+client is still down — routing can move you to the majority, but it cannot
+manufacture one. That residual outage is exactly the A that CP gave up.</p>
+<p><strong>2.3</strong> With N=5, W=3: the majority side keeps writing as long as it holds
+≥3 nodes, so up to <strong>2 nodes</strong> can be cut away. With N=4, W=3 under a 2-2
+split, <em>neither</em> side has 3 nodes: the entire system stops accepting writes
+even though all 4 machines are healthy. Even N buys you extra hardware and
+zero extra fault tolerance (N=4 tolerates the same 1-node-loss as N=3, with
+a new total-stall failure mode added). Hence 3, 5, 7 everywhere in ZooKeeper
+/ etcd deployments.</p>
+<h2 id="solutions-part-3--debug">Part 3 — Debug</h2>
+<p><strong>3.1</strong> Flaw 1 — <strong>&quot;a really good network&quot; is not a property you can
+guarantee.</strong> Partitions come from switch firmware, misconfigured firewalls,
+GC pauses that make a node <em>look</em> partitioned, overloaded NICs, and backhoes.
+P is decided by physics and operations, not by the designer's optimism; a
+distributed system that hasn't chosen its partition behavior has still chosen
+— it just doesn't know which. Flaw 2 — <strong>the design already contradicts
+itself under its own failure</strong>: &quot;replicate synchronously&quot; means a write must
+reach both replicas, so the moment the network <em>does</em> hiccup, writes block —
+that's giving up A (it's a CP design wearing a CA badge). If it instead kept
+serving writes from both replicas during the hiccup, it would diverge —
+giving up C. The claim never survives its first partition; the only honest
+version of &quot;CA&quot; is a single node.</p>
+<p><strong>3.2</strong> Mechanism: the email write landed on replica set X; the
+password-reset service read from a replica that hadn't received it — a
+<strong>stale read</strong> in an AP store. The confirmation page read its own write
+(likely served by the same node that took it), which <em>masked</em> the divergence
+from the user. <em>No errors is the signature of choosing A</em>: an AP system's
+failure mode is wrong answers delivered successfully, so nothing throws — the
+system is working exactly as configured. (A CP system's signature is the
+opposite: errors everywhere, data wrong nowhere.) The two knobs from this
+lab: raise <strong>R and W so that R+W &gt; N</strong> (quorum reads/writes for the email
+field — cost: latency on every operation, unavailability of the minority
+side during partitions), or serve security-critical reads from the
+<strong>leader/primary only</strong> (cost: the leader becomes a bottleneck and its
+island's failure takes reads down). Ten minutes is long for replication lag —
+the report also hints anti-entropy wasn't running; read-repair only fixes a
+value <em>after</em> something reads it with quorum.</p>
+<p><strong>3.3</strong> The sequence in 3.3 healed with only ONE island having written —
+nothing conflicted, so nothing was lost, and the OK read proves nothing about
+safety. The counterexample is experiment 4's sequence: AP → cut →
+<strong>L write (bal=150)</strong> → <strong>R write (bal=200)</strong> → heal. Both writes were
+acknowledged OK to their clients; the heal line reads
+<code>CONFLICT … last-write-wins kept bal=200 … bal=150 DISCARDED</code>. That line is
+the smoking gun: client L was told &quot;OK&quot; and its write no longer exists
+anywhere. &quot;Consistent after healing&quot; (convergence) guarantees replicas
+<em>agree</em>, not that they agree on a history that kept your write. Eventual
+consistency promises <em>a</em> value — not <em>your</em> value.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../23-jvm-performance-tuning/notes.html"><small>← Lab 23</small>jvm-performance-tuning</a><a href="../25-pacelc/notes.html" style="text-align:right"><small>Lab 25 →</small>pacelc</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why--why-does-this-idea-exist">1. WHY — why does this idea exist?</a><a href="#readme-2-problem--the-story-of-the-two-bank-tellers">2. PROBLEM — the story of the two bank tellers</a><a href="#readme-3-naive-solution--just-keep-both-books-updated">3. NAIVE SOLUTION — &quot;just keep both books updated&quot;</a><a href="#readme-4-failure--the-storm-breaks-the-plan">4. FAILURE — the storm breaks the plan</a><a href="#readme-5-key-idea">5. KEY IDEA</a><a href="#readme-6-terminology--the-same-story-in-professional-words">6. TERMINOLOGY — the same story, in professional words</a><a href="#readme-7-mental-model--two-islands">7. MENTAL MODEL — two islands</a><a href="#readme-8-visualization">8. VISUALIZATION</a><a href="#readme-9-actual-mechanism--the-proof-with-real-numbers">9. ACTUAL MECHANISM — the proof, with real numbers</a><a href="#readme-10-failure-scenarios--walking-through-the-ways-it-hurts">10. FAILURE SCENARIOS — walking through the ways it hurts</a><a href="#readme-11-correctness--what-cap-does-and-does-not-say">11. CORRECTNESS — what CAP does and does not say</a><a href="#readme-1213-code--experiment--the-simulator">12–13. CODE &amp; EXPERIMENT → the simulator</a><a href="#readme-14-production--where-the-real-systems-sit">14. PRODUCTION — where the real systems sit</a><a href="#readme-15-exercises">15. EXERCISES</a><a href="#readme-16-related-concepts">16. RELATED CONCEPTS</a><a href="#readme-17-next-steps--knowledge-map">17. NEXT STEPS — knowledge map</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

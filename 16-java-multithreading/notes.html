@@ -1,0 +1,3302 @@
+<!doctype html>
+<html lang="en" data-hub-lab="16-java-multithreading">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>16. java-multithreading</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 16 of 71 · Stage 3</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 16 · The JVM Underneath: One Machine, Many Threads</p><article id="readme"><h1 id="readme-multithreading-in-java--how-one-program-does-several-things-at-once-and-every-way-that-goes-wrong">Multithreading in Java — how one program does several things at once, and every way that goes wrong</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Ana and Ben each add one box to the stockroom and write the
+new total on the same whiteboard. Both can read 10 before either walks back to
+write, so both write 11, and one box vanishes from the record. Threads are Ana
+and Ben, the whiteboard is a field in memory, and <code>count++</code> is the walk. Fixing
+it needs two promises, not one: nobody else is half-way through my job while I
+do it, and when I finish somebody can see it. Locks, <code>volatile</code>, <code>wait</code>,
+atomics and pools are all one of those promises or the bill for it, and none of
+them throws an exception when you get it wrong.</p>
+</blockquote>
+<p>Drive it yourself in <strong>The Interleaving Machine</strong>, where you pick which thread runs next: <a href="https://claude.ai/code/artifact/10d168d6-8a4f-49fe-9b39-471e067a6bc7" target="_blank" rel="noopener">https://claude.ai/code/artifact/10d168d6-8a4f-49fe-9b39-471e067a6bc7</a>.
+What this lab is made of, and where each of its numbers came from, is section 17.</p>
+<hr />
+<h1 id="readme-beginner-model--stages-1-to-9">BEGINNER MODEL — stages 1 to 9</h1>
+<h2 id="readme-1-why-would-a-program-ever-do-two-things-at-once">1. Why would a program ever do two things at once?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A program that does one thing at a time must finish the slow
+thing before it starts the next one. Threads let it start the next one anyway.
+That is the whole upside, and the rest of this lab is the bill.</p>
+</blockquote>
+<p>A program normally does one thing at a time. It reads a line, does it, reads the
+next. That is fine until one of those things is <em>slow</em>. Waiting for a database, a
+payment provider or a file all count. While your program waits, it does nothing
+else. Every other customer queues behind the slow one.</p>
+<p>A modern machine has many CPU cores sitting idle during that wait.
+<strong>Multithreading is the ability to have several places in your program running at
+once.</strong> A slow customer no longer blocks a fast one, and eight cores do eight
+things instead of one.</p>
+<p>What does it cost to go without? Three prices, and each is concrete. Read the
+right-hand column as &quot;what the user actually experiences&quot;.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>If you only ever run one thing at a time</th>
+  <th>What it costs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a web server handling one request at a time</td>
+  <td>100 users sharing one 200-millisecond database call wait 20 seconds for the last one</td>
+</tr>
+<tr>
+  <td>a report that could use eight cores using one</td>
+  <td>it takes eight times as long</td>
+</tr>
+<tr>
+  <td>code that must watch a socket and a timer at once</td>
+  <td>it cannot be written at all without contorting it</td>
+</tr>
+</tbody>
+</table></div>
+<p>That is the good news, and it is the entire upside. Everything from here on is
+the bill.</p>
+<p>Before you turn the page, one belief worth killing. People say concurrency bugs
+are rare, so they are not a priority. They are not rare. They are <strong>rare per run
+and certain per fleet</strong>. A race that shows up in one execution in ten thousand
+happens roughly forty times a second in a service handling four hundred thousand
+requests a second. And it never throws. The number is just wrong, and it stays
+wrong.</p>
+<h2 id="readme-2-why-does-the-stockroom-tally-say-11-when-ana-and-ben-each-added-a-box">2. Why does the stockroom tally say 11 when Ana and Ben each added a box?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two people can both read the same number before either of
+them writes a new one. The second write then does not build on the first. One
+box disappears from the record and nobody is at fault.</p>
+</blockquote>
+<p>A warehouse has a whiteboard in the stockroom with one number on it: <strong>how many
+boxes of paper we have</strong>. Two workers, Ana and Ben, both need to record that they
+have added a box.</p>
+<p>Here is what a worker actually does. She walks to the stockroom and <strong>reads</strong> the
+number off the board. She writes it on her own notepad and walks back to her
+desk. She <strong>adds one</strong> on the notepad. She walks back to the stockroom and
+<strong>writes</strong> her new number on the board.</p>
+<p>Three separate actions, with walking in between: <strong>read, change, write.</strong></p>
+<p>Today the board says <strong>10</strong>. Ana adds a box. Ben adds a box. The board should say
+<strong>12</strong>.</p>
+<ul>
+<li>Ana walks in, reads <strong>10</strong>, notes it down, walks out.</li>
+<li>Ben walks in and reads <strong>10</strong>, because Ana has not written anything yet. He notes it down and walks out.</li>
+<li>Ana comes back and writes <strong>11</strong>.</li>
+<li>Ben comes back and writes <strong>11</strong>.</li>
+</ul>
+<p>The board says <strong>11</strong>. Two boxes were added. One of them has vanished from the
+record, and nothing anywhere went wrong in a way anyone can see. Ana did her job
+perfectly. Ben did his job perfectly. Nobody made a mistake. There is no
+complaint to file, no alarm to ring, and no way to tell later that it happened.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Ana and Ben each add exactly one box, starting from 10. Over
+every possible ordering of their walks, what values can the board end up
+showing?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>11 or 12, never 13.</strong> You get 12 when one finishes completely before the
+other starts. You get 11 when both read before either writes. It can never be
+13, because neither worker ever writes anything other than <em>the number they
+read, plus one</em>. Nobody invents a value out of nothing.</p>
+<p>If you guessed that a write could be lost entirely, look again. Both writes
+land on the board. The second one simply carries a number that went stale while
+its owner was walking.</p>
+<p>This is not a guess. Scenario 1 of the visualization is exactly this, and the
+checker walks <strong>every</strong> interleaving of the two threads rather than sampling
+one. From a start of 0, the complete set of reachable answers is <code>{1, 2}</code>. The
+bad outcome is not exotic. It is half the state space.</p>
+</details>
+
+</blockquote>
+<p>Where does this lab take you from here? Stop at any checkpoint and you still have
+something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–9</td>
+  <td>tell Ana and Ben's story, and say why one line of Java is three actions</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>10</td>
+  <td>build the fix yourself, and say what each version does and does not promise</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>11–12</td>
+  <td>name every failure, classify it, and argue about what locking costs</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>13–17</td>
+  <td>size a pool, read a thread dump, and say what a real service adds</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-surely-count-is-one-action--isnt-it">3. Surely <code>count++</code> is one action — isn't it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The naive solution says Ana and Ben made a simple job
+complicated, because in Java the whole thing is one line. That line is about to
+lose a box.</p>
+</blockquote>
+<p>The obvious objection is that Ana and Ben made it complicated. In Java the whole
+thing is <em>one line</em>:</p>
+<div class="code"><pre><code class="language-java">count++;              // surely this is one action?
+</code></pre></div>
+<p>It looks atomic. It is one statement, one semicolon, one keystroke's worth of
+thought. Surely the machine does it in one go.</p>
+<h2 id="readme-4-what-if-one-line-is-really-three--and-volatile-cannot-save-it">4. What if one line is really three — and <code>volatile</code> cannot save it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> <code>count++</code> is Ana's three trips, written in machine
+instructions. Behind it hides a second, completely separate problem: your write
+may never be looked at again by anybody.</p>
+</blockquote>
+<p>It is not one action. <code>count++</code> compiles to roughly:</p>
+<div class="code"><pre><code class="language-java">int r = count;        // read  memory      -&gt; CPU register
+r     = r + 1;        // add   inside the CPU only
+count = r;            // write CPU register -&gt; memory
+</code></pre></div>
+<p>Those are Ana's three trips. The register <code>r</code> is her notepad. Memory is the
+whiteboard.</p>
+<p><strong>Open scenario 1 in the visualization and cause the bug yourself.</strong> Run Thread A
+one step, and it reads 0 — that is Ana reading the board. Run Thread B one step,
+and it also reads 0 — that is Ben reading the same board. Then let each finish.
+The engine counts the machine steps for you, so compare the two runs.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What you drive</th>
+  <th style="text-align:right">Machine steps</th>
+  <th style="text-align:right">Final <code>count</code></th>
+  <th>What that means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>A reads, B reads, then both finish</td>
+  <td style="text-align:right">8</td>
+  <td style="text-align:right">1</td>
+  <td>two boxes added, one record</td>
+</tr>
+<tr>
+  <td>a sequential run: A to the end, then B</td>
+  <td style="text-align:right">8</td>
+  <td style="text-align:right">2</td>
+  <td>the answer everybody expected</td>
+</tr>
+</tbody>
+</table></div>
+<p>Same code, same two threads, same eight steps. Only the order changed.</p>
+<p>Now comes the part that makes this a <em>deep</em> problem rather than an annoying one.
+A reasonable person, having understood the above, says this: <em>the problem is that
+Ana and Ben cannot see each other's writes, so let me make the board more
+visible.</em> Java has a keyword for exactly that idea. Marking a field so that every
+read goes all the way to memory, and every write is published to memory, is
+called making it <strong>volatile</strong>. The keyword is <code>volatile</code>.</p>
+<p><strong>It does not fix this.</strong> Making the board more visible says nothing about what
+happens <em>between</em> your read and your write. Ana still reads 10. While she is
+walking back to her desk with her notepad, Ben reads a genuinely fresh, perfectly
+visible 10.</p>
+<p>So there are <strong>two different problems wearing the same clothes</strong>, and no single
+keyword covers both. The table names them; the rest of the lab keeps them apart.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The problem, in words</th>
+  <th>What Ben does</th>
+  <th>Where you watch it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>nobody can see my write</td>
+  <td>he never even looks at the board again</td>
+  <td>scenario 2</td>
+</tr>
+<tr>
+  <td>somebody slipped in between my read and my write</td>
+  <td>he looked, and what he saw was true at the time</td>
+  <td>scenario 1</td>
+</tr>
+</tbody>
+</table></div>
+<p>Scenario 2 is worth running now, because it is the one that surprises experienced
+engineers. A worker loops on <code>while (!stop)</code>, waiting to be told to go home.
+Another thread sets <code>stop = true</code>. Memory genuinely holds <code>true</code>, and the
+visualization shows it in the shared-memory panel. The worker read <code>stop</code> once,
+copied it onto his notepad, and <strong>has no reason to ever look again</strong>.</p>
+<p>Watch the worker's <em>private copy</em> row across a whole run. It is the proof.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Scenario 2 run</th>
+  <th>What memory holds</th>
+  <th>What the worker keeps reading</th>
+  <th>Does he stop?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>volatile</code> off</td>
+  <td><code>true</code></td>
+  <td><code>false</code>, from his own private copy</td>
+  <td>no, the loop never terminates</td>
+</tr>
+<tr>
+  <td><code>volatile</code> on</td>
+  <td><code>true</code></td>
+  <td><code>true</code></td>
+  <td>yes, it terminates</td>
+</tr>
+</tbody>
+</table></div>
+<p>That hang uses 100% of a CPU, throws nothing, logs nothing, and looks like a
+healthy thread. In production it is &quot;the service will not shut down&quot;.</p>
+<h2 id="readme-5-what-exactly-do-we-have-to-guarantee">5. What exactly do we have to guarantee?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two promises. Nobody else is half-way through my job while I
+am doing it. And when I finish, somebody else can actually see that I did.</p>
+</blockquote>
+<p>Stated in plain words, and this is the whole rest of the lesson:</p>
+<ol>
+<li><strong>When a piece of work must happen as a unit, no other thread may be part-way
+through the same piece of work at the same time.</strong></li>
+<li><strong>When one thread finishes writing, there must be some guarantee that another
+thread will actually see it.</strong></li>
+</ol>
+<p>Requirement 1 is about <strong>which orderings are possible</strong>. Requirement 2 is about
+<strong>which values are legal to see</strong>. They are separate, and a correct program needs
+both.</p>
+<p>Ana and Ben's lost box is requirement 1 failing. The worker who never goes home
+is requirement 2 failing. Keep those two pictures apart and the rest of this lab
+is bookkeeping.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>thread</em>, <em>atomic</em> or <em>visible</em>, tell
+a friend why two people each adding one box can leave the tally showing that
+one box arrived.</p>
+<details><summary>A good answer sounds like</summary>
+"Each of them copies the number down before changing it. If they both copy it
+down before either walks back, the second one writes a total that was already
+out of date. Both totals are correct for the number each person copied. The
+board only keeps the last one written."
+</details>
+
+</blockquote>
+<h2 id="readme-6-what-does-one-key-on-the-stockroom-door-actually-buy">6. What does one key on the stockroom door actually buy?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A lock is not a speed limit. It does not make Ana walk
+faster. It makes the world in which Ben walks in during her trips stop
+existing.</p>
+</blockquote>
+<p>The invention is embarrassingly simple: <strong>put a single key on the stockroom
+door.</strong> You may not enter without holding the key, and there is only one key.</p>
+<p>The key does not make Ana walk faster. It does not turn her three trips into one
+trip. What it does is make the <em>interleaving where Ben walks in during Ana's
+trips</em> <strong>cease to exist</strong>. A lock is a deletion of possibilities, not a speed
+limit.</p>
+<p>And here is the part people miss. Java attaches the second guarantee to the same
+key. Handing the key back publishes everything you wrote. Taking the key up
+throws away everything you were remembering privately on your notepad.</p>
+<p><strong>One mechanism, both requirements.</strong> That is why <code>synchronized</code> is the default
+answer, and why everything else in this lab is either a refinement of it or an
+escape from it.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Ana takes the key, reads 10, and then her manager stops her for
+a long chat before she writes 11. What is Ben doing meanwhile, and what does the
+board show?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Ben is standing at the door doing nothing, and the board still says 10.</strong>
+That is both the point and the price. The tally is safe and Ben is stalled.</p>
+<p>If you guessed &quot;Ben goes and does something else&quot;, you are describing a thread
+pool with other jobs queued, not a lock. A thread that wants a held key is
+stopped dead until it gets it. Section 11's fifth failure is this chat running
+for thirty seconds while fifty people queue at the door.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-7-what-do-engineers-call-the-things-ana-and-ben-just-did">7. What do engineers call the things Ana and Ben just did?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You have already felt every idea in this section. Now each
+one gets its real name, so the rest of the lab can say it in one word instead
+of a paragraph.</p>
+</blockquote>
+<p>This is the lab's terminology, and each name below marks a distinction you have
+already met in the stockroom. Minor terms are defined at first use later on; these
+are the load-bearing ones.</p>
+<h3 id="readme-who-is-running-and-what-do-they-share">Who is running, and what do they share?</h3>
+<p>Ana is not the program. Ana is a <em>position in</em> the program, and it is the position
+that is currently running. She is somewhere in the middle of the instruction
+sheet, holding her own notepad. Engineers call that a <strong>thread</strong>.</p>
+<p>Technically it is an independent flow of execution with <strong>its own
+program counter and its own stack</strong>, meaning its local variables and its
+method-call chain. It shares <strong>one heap</strong> with every other thread in the process,
+and that heap holds all objects and all fields.</p>
+<p>The word exists to separate the <em>thing that runs</em> from the <em>program</em>. A program
+is text. A thread is a position in that text, and there can be many.</p>
+<p>In scenario 1, Thread A and Thread B run identical code but each has its own <code>r</code>.
+<code>r</code> lives on the stack, so it is private: Ana's notepad. <code>count</code> is a field, so it
+is shared: the whiteboard.</p>
+<p>You have already met a variant of this. In <code>java-virtual-threads</code> a <strong>virtual
+thread</strong> is one of these whose stack lives on the heap, multiplexed onto a small
+number of <strong>carrier threads</strong>. Everything in this lab applies to virtual threads
+unchanged. Same memory model, same locks, same bugs.</p>
+<p>The whiteboard has a name too. Data that more than one thread can both read and
+change is <strong>shared mutable state</strong>. Technically: any location reachable from two
+threads where at least one access is a write. That phrase names the <strong>only</strong> thing
+that causes these bugs. Shared-and-immutable is safe. Mutable-but-not-shared is
+safe. Only the intersection hurts, and naming the intersection tells you where to
+attack.</p>
+<p><code>count</code> is shared and mutable. <code>r</code> is mutable but not shared. A <code>String</code> is shared
+but not mutable. Neither of the last two can produce a race.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>In the stockroom</th>
+  <th>In Java</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Thread</td>
+  <td>Ana, walking</td>
+  <td>own program counter, own stack, shared heap</td>
+  <td>section 2</td>
+</tr>
+<tr>
+  <td>Stack</td>
+  <td>her notepad</td>
+  <td>locals and the call chain, private to one thread</td>
+  <td><code>r</code>, section 4</td>
+</tr>
+<tr>
+  <td>Heap</td>
+  <td>the whiteboard</td>
+  <td>every object and every field, shared by all</td>
+  <td><code>count</code>, section 4</td>
+</tr>
+<tr>
+  <td>Shared mutable state</td>
+  <td>a board two people write on</td>
+  <td>a location two threads reach, one of them writing</td>
+  <td>section 2</td>
+</tr>
+<tr>
+  <td>Virtual thread</td>
+  <td>Ana, but cheap to hire</td>
+  <td>a thread whose stack lives on the heap</td>
+  <td><code>java-virtual-threads</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-exactly-is-going-wrong">What exactly is going wrong?</h3>
+<p>When the answer depends on who happened to get there first, engineers call it a
+<strong>race condition</strong>. Technically: correctness depends on the relative timing of
+operations in different threads, when nothing in the program constrains that
+timing.</p>
+<p>The word exists to make one point. The bug is not in any one line. Every line in
+scenario 1 is correct. The defect lives in the <em>set of orderings the program
+permits</em>.</p>
+<p>Ana and Ben's particular race has two more precise names. Its shape is
+<strong>check-then-act</strong>, or more usefully <strong>read-modify-write</strong>: read a value, decide
+something from it, write a value derived from it. Its result is a <strong>lost update</strong>,
+which is a completed write silently overwritten by a write derived from stale
+data.</p>
+<p>That name will follow you around. <code>isolation-levels</code> and
+<code>optimistic-vs-pessimistic-locking</code> both call this exact thing a lost update. It
+is the same bug at three scales: between two CPU registers, between two database
+transactions, and between two HTTP requests.</p>
+<p>The property Ana needed and did not have is <strong>atomicity</strong>: all of it happens, or
+none of it, with no visible middle. Precisely, an operation is atomic <strong>with
+respect to a set of threads</strong> if those threads can never observe it half-done.</p>
+<p>The word exists because &quot;one line of code&quot; and &quot;one indivisible action&quot; are
+different things, and only the second one is worth anything. <code>count = 5</code> is atomic
+for an <code>int</code>. <code>count++</code> is not. Assignment to a <code>long</code> or a <code>double</code> is not
+guaranteed atomic on 32-bit JVMs unless the field is <code>volatile</code> <strong>[JVM rule, not
+this lab's model — JLS §17.7]</strong>.</p>
+<p>The property the never-stopping worker needed is a different one. <strong>Visibility</strong>
+is whether your write ever shows up for somebody else. Precisely: whether a read
+in thread B is permitted to return a value written by thread A. The word exists to
+separate &quot;when did it happen?&quot; from &quot;who is allowed to see it?&quot;. Scenario 2 has no
+timing problem at all, because the write definitely happened first, and it is
+still broken.</p>
+<p>Visibility's guarantee has a formal name you have met. <code>java-memory-model</code> calls
+it <strong>happens-before</strong>. If action X happens-before action Y, then whatever X wrote
+is visible to Y. Two edges matter here. Releasing a lock happens-before any later
+acquisition of that same lock. A write to a <code>volatile</code> field happens-before any
+later read of that same field. Without such an edge, there is no promise at all.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>What it means, in one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Race condition</td>
+  <td>the answer depends on who got there first</td>
+  <td>section 2</td>
+</tr>
+<tr>
+  <td>Read-modify-write</td>
+  <td>read, decide, write, with a gap in the middle</td>
+  <td>section 4</td>
+</tr>
+<tr>
+  <td>Lost update</td>
+  <td>a good write overwritten by a stale-based one</td>
+  <td>section 2, the board saying 11</td>
+</tr>
+<tr>
+  <td>Atomicity</td>
+  <td>nobody can observe it half-done</td>
+  <td><code>count++</code>, section 4</td>
+</tr>
+<tr>
+  <td>Visibility</td>
+  <td>your write is allowed to be seen by others</td>
+  <td>the worker, section 4</td>
+</tr>
+<tr>
+  <td>happens-before</td>
+  <td>the ordering rule that makes a write visible</td>
+  <td><code>java-memory-model</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-are-the-tools-called">What are the tools called?</h3>
+<p>The bit of code only one worker may be inside at a time is the <strong>critical
+section</strong>. In scenario 3 it is the three lines between <code>synchronized (lock) {</code> and
+<code>}</code>. Precisely, it is a region of code protected so that at most one thread
+executes it concurrently for a given lock.</p>
+<p>The guarantee that only one worker is inside is <strong>mutual exclusion</strong>, and the
+property of enforcing it has its own word for a reason. The critical section is
+<em>where</em>. Mutual exclusion is <em>the guarantee</em>. You choose the first. The runtime
+provides the second.</p>
+<p>The key on the door is a <strong>lock</strong>. In Java it is not something extra you create.
+Every Java object already has one, called its <strong>intrinsic lock</strong> or its
+<strong>monitor</strong>. <code>synchronized (obj)</code> acquires it and releases it on exit, including
+when an exception is thrown.</p>
+<p>A monitor has three parts. There is an <strong>owner</strong>, an <strong>entry set</strong> of threads
+blocked trying to get in, and a <strong>wait set</strong> of threads that have deliberately
+gone to sleep inside it. The entry set is the queue at the door. The wait set is
+the waiting room down the corridor. All three parts are shown in the visualization's
+Locks panel. In scenario 5, <code>buffer</code> is the monitor, and two consumers sit in its
+wait set while the producer holds it.</p>
+<p>Why &quot;monitor&quot;? It is Hoare's 1974 name for &quot;a lock plus a place to wait&quot;. Mutual
+exclusion alone cannot express &quot;wait until there is something to consume&quot;. You
+need both, so Java bolted both onto every object. Compare <code>distributed-locking</code>,
+whose lock service is this same idea rebuilt out of messages, and which loses
+mutual exclusion in the process. Here the JVM releases a dead thread's monitors
+for you. There, nobody can tell death from slowness.</p>
+<p>When everyone is politely waiting for someone else, forever, that is <strong>deadlock</strong>.
+Technically it is a cycle in the &quot;thread X holds a lock thread Y wants&quot; graph.
+With plain <code>synchronized</code> there is no timeout and no detection. The threads simply
+stop. The word exists to distinguish <em>stopped because of a cycle</em> from <em>stopped
+because it is slow</em>. Those look identical from outside and have completely
+different cures. Scenario 4 is two transfers in opposite directions, each holding
+one account and asking for the other, and it ends with both threads <code>BLOCKED</code>.</p>
+<p>Hiring a new worker for every box is expensive, so real systems keep a fixed crew
+and a queue of jobs. That is a <strong>thread pool</strong>, driven by an <code>ExecutorService</code>
+holding N worker threads that repeatedly take tasks from a shared queue. It exists
+because creating a thread costs a system call and roughly a megabyte of reserved
+stack <strong>[JVM rule, not this lab's model]</strong>, so one thread per request stops
+scaling. The pool tab shows the shape with twelve tasks of five ticks each.</p>
+<div class="table"><table><thead>
+<tr>
+  <th style="text-align:right">Workers in the pool</th>
+  <th style="text-align:right">Everything finishes at tick</th>
+  <th>What the number says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">2</td>
+  <td style="text-align:right">30</td>
+  <td>six tasks each, back to back</td>
+</tr>
+<tr>
+  <td style="text-align:right">4</td>
+  <td style="text-align:right">15</td>
+  <td>three tasks each</td>
+</tr>
+<tr>
+  <td style="text-align:right">6</td>
+  <td style="text-align:right">10</td>
+  <td>two tasks each</td>
+</tr>
+</tbody>
+</table></div>
+<p>The last name is the escape hatch. <strong>Compare-and-set</strong>, usually written CAS, means
+&quot;write this, but only if nobody has touched it since I looked&quot;. It is a single CPU
+instruction. It compares a memory location to an expected value, writes a new one
+only if they match, leaves no gap in between, and returns whether it succeeded.</p>
+<p>It exists because the gap between read and write is the entire bug, and hardware
+can eliminate the gap without any thread having to wait. Scenario 6 is Ana and Ben
+again: both read 0, Ana's compare-and-set succeeds, and Ben's is refused. That
+refusal is not an error. Ben simply retries from 1 and wins.</p>
+<p>You have met this primitive twice already. <code>optimistic-vs-pessimistic-locking</code>'s
+conditional <code>UPDATE … WHERE version = ?</code> <strong>is</strong> compare-and-set. And
+<code>linearizability</code> named <code>compareAndSet</code> as the canonical atomic operation. Same
+primitive, three labs.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>The stockroom version</th>
+  <th>The Java version</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Critical section</td>
+  <td>the stockroom itself</td>
+  <td>code no two threads may share</td>
+  <td>scenario 3</td>
+</tr>
+<tr>
+  <td>Mutual exclusion</td>
+  <td>one key, one person inside</td>
+  <td>at most one thread inside, per lock</td>
+  <td>section 6</td>
+</tr>
+<tr>
+  <td>Monitor / intrinsic lock</td>
+  <td>key, door queue, waiting room</td>
+  <td>owner, entry set and wait set on every object</td>
+  <td>scenario 5</td>
+</tr>
+<tr>
+  <td>Deadlock</td>
+  <td>two keys, two people, no way out</td>
+  <td>a cycle in the holds-and-wants graph</td>
+  <td>scenario 4</td>
+</tr>
+<tr>
+  <td>Thread pool</td>
+  <td>a fixed crew and a job queue</td>
+  <td><code>ExecutorService</code> over a shared queue</td>
+  <td>the pool tab</td>
+</tr>
+<tr>
+  <td>Compare-and-set</td>
+  <td>&quot;write only if it still says 10&quot;</td>
+  <td>one indivisible CPU instruction</td>
+  <td>scenario 6</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-which-mental-models-should-you-carry--and-where-do-they-lie-to-you">8. Which mental models should you carry — and where do they lie to you?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Keep two pictures. The friendly one is Ana walking to a
+whiteboard. The precise one is several program counters sharing one heap. The
+friendly one lies in exactly three places.</p>
+</blockquote>
+<p><strong>The simple model is the stockroom.</strong> Workers walk between their desks and a
+whiteboard. Reading takes a trip. Thinking happens at the desk. Writing takes
+another trip. There is one key on the door, and a bell to call people out of the
+waiting room.</p>
+<p><strong>The engineering model is the same machine, stated precisely.</strong> Several <strong>program
+counters</strong> advance independently through code. Each has a <strong>private stack</strong> of
+locals, parameters and its call chain. Each may keep field values in <strong>CPU
+registers</strong>. All of them share <strong>one heap</strong>.</p>
+<p>Between any two machine instructions of any thread, any other thread may execute
+any number of its own. A <strong>monitor</strong> is a record <code>{owner, entry set, wait set}</code>.
+The Java Memory Model defines a partial order called <strong>happens-before</strong>. A read
+may return a write's value only where that order allows it, or where an unlucky
+data race lets it.</p>
+<p>Here is the mapping, in two halves. First the pieces of the machine.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Stockroom</th>
+  <th>Java</th>
+  <th>Where you see it in the visualization</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a worker</td>
+  <td>a thread</td>
+  <td>the coloured thread cards</td>
+</tr>
+<tr>
+  <td>her notepad</td>
+  <td>CPU registers, the private copy</td>
+  <td>&quot;Private registers&quot; and &quot;Private copy&quot; rows</td>
+</tr>
+<tr>
+  <td>the whiteboard</td>
+  <td>a field on the heap</td>
+  <td>the Shared memory panel</td>
+</tr>
+<tr>
+  <td>walking to the board and back</td>
+  <td>the read and write machine steps</td>
+  <td>each <code>LOAD</code> and <code>STORE</code> line</td>
+</tr>
+<tr>
+  <td>the single door key</td>
+  <td>an object's intrinsic lock</td>
+  <td>the Locks panel, &quot;Held by&quot;</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then the things that happen to those pieces.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Stockroom</th>
+  <th>Java</th>
+  <th>Where you see it in the visualization</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>waiting outside the locked door</td>
+  <td>thread state <code>BLOCKED</code>, the entry set</td>
+  <td>&quot;Queued to enter&quot;</td>
+</tr>
+<tr>
+  <td>going to the waiting room until the bell</td>
+  <td><code>wait()</code>, the wait set</td>
+  <td>&quot;Asleep in <code>wait()</code>&quot;</td>
+</tr>
+<tr>
+  <td>ringing the bell</td>
+  <td><code>notifyAll()</code></td>
+  <td>scenario 5</td>
+</tr>
+<tr>
+  <td>two workers each holding a key the other needs</td>
+  <td>deadlock</td>
+  <td>scenario 4</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Ana writes 11 on the board. Ben is in a loop, reading the board
+over and over, and his field is not marked <code>volatile</code>. How long can he keep
+reading 10?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Forever.</strong> Not &quot;for a while&quot;. The compiler is allowed to notice that Ben's
+loop never writes the field, hoist the read out of the loop, and emit machine
+code that reads it exactly once.</p>
+<p>If you guessed &quot;a few microseconds, until the cache line syncs&quot;, you are
+reasoning about hardware and the answer is compilers. Nothing in the machine
+code ever asks memory again, so no amount of waiting helps. That is lie number
+one below, and it is the biggest one in the analogy.</p>
+</details>
+
+</blockquote>
+<p><strong>Where the story lies to you — three places, and each one matters.</strong></p>
+<ol>
+<li><strong>A person will eventually glance at the board again. A CPU may genuinely never
+look.</strong> This is the biggest lie in the analogy. In the stockroom, &quot;stale&quot; means
+&quot;out of date for a while&quot;. In Java it can mean <strong>forever</strong>. The compiler is
+allowed to hoist a non-<code>volatile</code> field read out of a loop entirely, so the
+machine code contains no re-read at all. Scenario 2 is not a slow worker. It is
+a worker who has been <em>optimised into never checking</em>.</li>
+<li><strong>The analogy makes your own actions look ordered. From outside, they are
+not.</strong> If Ana writes the board and then writes her diary, everyone agrees that
+is the order. In Java, without a happens-before edge, another thread may
+observe those two writes in the opposite order. That is the <code>java-memory-model</code>
+lab's reordering and store-buffer material. This lab's visualization does
+<strong>not</strong> model reordering; it models one shared memory with private copies. The
+simplification is deliberate, and it is why the two labs are separate.</li>
+<li><strong>A locked door with a dead worker inside is obvious. A hung thread holding a
+monitor is not.</strong> In real terms this is better than it sounds. If a thread
+<em>dies</em>, the JVM releases its monitors. But if it merely <em>hangs</em>, say on an
+HTTP call with no timeout, it holds the lock forever. Every other thread then
+piles into the entry set. That is the single most common Java production
+incident in this whole area, and section 13 shows what it looks like on a
+dashboard.</li>
+</ol>
+<h2 id="readme-9-can-you-watch-the-bug-happen">9. Can you watch the bug happen?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Yes, one machine step at a time, with you choosing which
+thread moves next. Six scenarios and a thread-pool tab, and the whole subject
+lives on the first screen.</p>
+</blockquote>
+<p><strong><a href="https://claude.ai/code/artifact/10d168d6-8a4f-49fe-9b39-471e067a6bc7" target="_blank" rel="noopener">https://claude.ai/code/artifact/10d168d6-8a4f-49fe-9b39-471e067a6bc7</a></strong>
+(also <code>visualization.html</code> in this folder, works offline).</p>
+<p>The page has two tabs. On the first there are six scenarios. On each one, the
+<em>interleaving ribbon</em> under the verdict records every machine step as a coloured
+tick. That strip <strong>is</strong> the interleaving, and clicking any tick rewinds to that
+moment.</p>
+<p>Do these in order, and answer each prediction card before pressing anything.</p>
+<ol>
+<li><strong>Scenario 1</strong> — press Thread A once, then Thread B once, then finish both.
+Watch the moment two threads hold <code>r = 0</code> at the same time. That single screen
+is the whole subject.</li>
+<li><strong>Scenario 2</strong> — run the demonstration, then stare at the Worker's <em>private
+copy</em> row. It says <code>stop = false — memory says true</code>. Then tick the <code>volatile</code>
+box and run it again.</li>
+<li><strong>Scenario 3</strong> — deliberately try to re-create scenario 1. Run Thread A once,
+so it takes the lock, then try to press Thread B. <strong>The button is disabled.</strong>
+That is mutual exclusion made physical: not slower, just fewer possible worlds.</li>
+<li><strong>Scenario 4</strong> — give each thread its first lock, then ask each for its second.
+Then turn on lock ordering and watch the cycle become impossible.</li>
+<li><strong>Scenario 5</strong> — put both consumers to sleep first, then run the producer once.
+Watch <code>notifyAll()</code> move both sleepers from the wait set into the entry set,
+not into &quot;running&quot;, and watch the buffer go to <strong>−1</strong>.</li>
+<li><strong>Scenario 6</strong> — interleave the two reads, then let it run. One compare-and-set
+is refused and retried, and nothing blocks.</li>
+</ol>
+<p>Then open the <strong>Thread pool</strong> tab. Set workers to 2 and press Play. Then tick
+<em>&quot;each task submits a sub-task to the same pool and waits for it&quot;</em> and press Play
+again.</p>
+<blockquote>
+<p><strong>✅ CHECKPOINT — end of the beginner model.</strong>
+You can now say what a race condition is, why <code>count++</code> is not one action, and
+why a loop can miss a flag forever. You can also say what a lock buys you: two
+things, not one.
+<strong>Next:</strong> the actual rules. How a monitor really behaves, why <code>notify</code> is not a
+message, and what you use instead of writing any of this by hand.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Ben says: &quot;I made the counter field <code>volatile</code>, so it is
+thread-safe now.&quot; In two sentences, tell him what he fixed and what he did not.</p>
+<details><summary>A good answer sounds like</summary>
+"You fixed the case where somebody never sees the new value at all, which is the
+worker who never goes home. You did not fix the gap between reading the board
+and writing it, so Ana and Ben can still both read 10 and both write 11."
+</details>
+
+</blockquote>
+<hr />
+<h1 id="readme-intermediate-model--stage-10">INTERMEDIATE MODEL — stage 10</h1>
+<h2 id="readme-10-how-would-you-build-the-fix-yourself-and-where-would-it-break">10. How would you build the fix yourself, and where would it break?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nobody hands you the right answer first. You try the obvious
+thing, watch it fail, and the failure tells you the next refinement. Six
+versions, and every strange-looking rule at the end is the scar of a failure in
+the middle.</p>
+</blockquote>
+<p>Rather than hand you <code>java.util.concurrent</code>, this stage builds the answer the way
+a smart engineer actually arrives at it. The obvious version comes first. Then
+comes the failure that forces the next refinement. Ana and Ben stay on stage the
+whole way: Ana is Thread A, Ben is Thread B, and the whiteboard is still <code>count</code>.</p>
+<h3 id="readme-v1--why-doesnt-volatile-fix-the-counter">v1 — why doesn't <code>volatile</code> fix the counter?</h3>
+<p>Ana and Ben cannot see each other's writes, so make the board maximally visible.</p>
+<div class="code"><pre><code class="language-java">volatile int count;      // now everybody sees my writes
+void increment(){ count++; }
+</code></pre></div>
+<p><strong>Why it looks right.</strong> It attacks the visibility problem from scenario 2
+head-on. Marking the field <code>volatile</code> really does give a happens-before edge on
+every read and every write of it.</p>
+<p><strong>Why it breaks.</strong> Run scenario 1's interleaving in your head, with perfect
+visibility switched on. Ana reads 0, truthfully. Ben reads 0, also truthfully,
+because Ana has not written yet. Both write 1. The keyword did its job flawlessly
+and the update is still lost.</p>
+<p><strong>The lesson, precisely.</strong> <code>volatile</code> makes single reads and single writes visible
+and ordered. It does not join a read and a write into one action. It is the right
+tool for exactly one shape: a flag that one thread writes and others read, which
+is scenario 2. It is the wrong tool for anything of the form <em>read, decide,
+write</em>.</p>
+<h3 id="readme-v2--what-does-one-lock-actually-change">v2 — what does one lock actually change?</h3>
+<p>Give the stockroom its single key.</p>
+<div class="code"><pre><code class="language-java">synchronized (lock) { count++; }
+</code></pre></div>
+<p>This is scenario 3, and the checker settles it exhaustively rather than by
+example. It enumerates <strong>every possible schedule</strong> of both threads through the
+locked version and finds no schedule producing anything but 2. The same code with
+the lock removed, driven through the identical interleaving, lands on 1.</p>
+<p>Below is a hand-worked trace, taken from the engine's own log for scenario 3 with
+&quot;let the scheduler choose&quot; selected. Read it as Ana and Ben with one key between
+them. The fourth column is the state of the world after that step.</p>
+<div class="table"><table><thead>
+<tr>
+  <th style="text-align:right">Step</th>
+  <th>Thread</th>
+  <th>Instruction</th>
+  <th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">1</td>
+  <td>A (Ana)</td>
+  <td><code>LOCK lock</code></td>
+  <td>Ana owns the monitor; her private copies are discarded</td>
+</tr>
+<tr>
+  <td style="text-align:right">2</td>
+  <td>B (Ben)</td>
+  <td><code>LOCK lock</code></td>
+  <td><strong>refused</strong> — Ben goes to <code>BLOCKED</code>, and his program counter does not move</td>
+</tr>
+<tr>
+  <td style="text-align:right">3</td>
+  <td>A</td>
+  <td><code>r = count</code></td>
+  <td>Ana reads 0 from memory</td>
+</tr>
+<tr>
+  <td style="text-align:right">4</td>
+  <td>A</td>
+  <td><code>r = r + 1</code></td>
+  <td>Ana's register holds 1; memory still holds 0</td>
+</tr>
+<tr>
+  <td style="text-align:right">5</td>
+  <td>A</td>
+  <td><code>count = r</code></td>
+  <td>memory now holds 1</td>
+</tr>
+<tr>
+  <td style="text-align:right">6</td>
+  <td>A</td>
+  <td><code>UNLOCK lock</code></td>
+  <td>everything Ana wrote is published to whoever takes this lock next</td>
+</tr>
+<tr>
+  <td style="text-align:right">7</td>
+  <td>B</td>
+  <td><code>LOCK lock</code></td>
+  <td>Ben owns it, and discards his private copies</td>
+</tr>
+<tr>
+  <td style="text-align:right">8</td>
+  <td>B</td>
+  <td><code>r = count</code></td>
+  <td>Ben reads <strong>1</strong>, and because of step 6 this is guaranteed, not lucky</td>
+</tr>
+<tr>
+  <td style="text-align:right">…</td>
+  <td></td>
+  <td></td>
+  <td>final <code>count = 2</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Two things in that trace deserve their own sentence.</p>
+<p><strong>Step 2 is the whole of mutual exclusion.</strong> Ben did not run slower. Ben did not
+run at all. His program counter stayed put. Interleavings were not discouraged.
+They were removed from the set of possible executions.</p>
+<p><strong>Step 8's guarantee comes from step 6, not from luck.</strong> The monitor gave a
+<em>happens-before</em> edge. Had Ana used no lock, Ben could legally have read 0 at step
+8 even after Ana wrote 1.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> A lock's first job is mutual exclusion. What is its second job,
+and which earlier scenario does that second job fix?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Visibility — it fixes scenario 2 as well.</strong> Releasing a monitor publishes
+everything you wrote inside it. Acquiring the same monitor discards your private
+copies. So <code>synchronized</code> is a complete answer to both requirements from section
+5, which is exactly why it is the default and why <code>volatile</code> is a specialist
+tool.</p>
+<p>If you guessed &quot;speed&quot; or &quot;fairness&quot;, the lock gives you neither. The guarantee
+is one-way and <em>lock-specific</em>. It only helps threads that acquire <strong>the same</strong>
+monitor. A reader that skips the lock gets no promise at all, even if every
+writer takes it religiously. That is the mistake behind almost every &quot;but I do
+synchronize the writes&quot; bug report.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v3--two-locks-and-what-kills-a-service">v3 — two locks, and what kills a service?</h3>
+<p>One lock around everything is correct and slow. Two threads touching completely
+unrelated accounts still queue for the same key. So you use one lock per account.
+Now a transfer needs two.</p>
+<div class="code"><pre><code class="language-java">synchronized (from) {
+  synchronized (to) { … }        // Thread A: from=accountA, to=accountB
+}                                // Thread B: from=accountB, to=accountA
+</code></pre></div>
+<p>This is scenario 4, and it stops dead. The run ends <code>run = STUCK</code>, with both
+threads <code>BLOCKED</code>, <code>accountA</code> owned by Ana and <code>accountB</code> owned by Ben.</p>
+<p>The cause fits in one sentence, and the sentence is worth memorising: <strong>a thread
+was holding a lock while asking for another one.</strong> Every deadlock has that shape.
+The four classic conditions are mutual exclusion, hold-and-wait, no preemption and
+circular wait. They are just that sentence expanded, and the practical attack is
+always the last one.</p>
+<p><strong>The refinement is a global order on locks.</strong> Always take <code>accountA</code> before
+<code>accountB</code>. Order them by account id, by <code>System.identityHashCode</code>, by anything at
+all, as long as everybody agrees. A cycle needs someone to go &quot;up&quot; while someone
+else goes &quot;down&quot;, and a total order makes that impossible. Turn on the ordering
+option in scenario 4 and the same code completes.</p>
+<p><strong>A second refinement, for when a global order is impractical: be able to give
+up.</strong> <code>ReentrantLock.tryLock(timeout)</code> returns <code>false</code> instead of blocking
+forever, so you can release what you hold and retry. <code>synchronized</code> cannot do
+this. It has no timeout, no interruption, and no way to abandon the attempt. That
+single missing capability is most of the reason <code>ReentrantLock</code> exists.</p>
+<h3 id="readme-v4--how-do-you-wait-for-something-that-has-not-arrived-yet">v4 — how do you wait for something that has not arrived yet?</h3>
+<p>Locks answer &quot;not at the same time&quot;. They do not answer &quot;not yet&quot;. A consumer
+needs to <em>wait until there is something to consume</em>, without holding the key while
+it waits. That is what the waiting room down the corridor, the wait set, is for.</p>
+<div class="code"><pre><code class="language-java">synchronized (buffer) {
+  if (items == 0) buffer.wait();      // &lt;- the bug
+  items--;                            
+  consume();
+}
+</code></pre></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Consumer 1 is inside <code>synchronized (buffer)</code>, so it holds the
+lock, and it calls <code>buffer.wait()</code>. While it sleeps, can the producer get in to
+add an item?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Yes — and it has to, or nothing could ever work.</strong> <code>wait()</code> <strong>releases the
+lock</strong> as it puts the thread to sleep, and re-acquires it before returning.</p>
+<p>If you guessed no, picture the consequence. A consumer falls asleep holding the
+only key, and the producer that is supposed to wake it can never get in. That is
+a guaranteed deadlock on the first empty buffer.</p>
+<p>This is the single most-forgotten fact about <code>wait()</code>. It is also why the thread
+has to <strong>queue for the lock again</strong> after being notified. Waking up and running
+are two different events, with an unbounded amount of other threads' execution
+possible in between. That gap is the entire bug in this section.</p>
+</details>
+
+</blockquote>
+<p>So <code>wait()</code> does something people consistently forget: <strong>it gives the lock back</strong>,
+and puts the thread in the monitor's wait set. Then <code>notify()</code> and <code>notifyAll()</code>
+move sleepers out of the wait set and <strong>into the entry set</strong>, not into &quot;running&quot;.
+They still have to acquire the lock like anyone else.</p>
+<p>Scenario 5 runs this with two consumers and one producer that adds <strong>one</strong> item.
+The run ends with <code>items = −1</code>. Two consumers each took an item, and one item
+existed.</p>
+<p>Here is the trace from the engine. Watch step 14 and step 18, where a consumer
+returns from <code>wait()</code> and acts on a fact that was true when it fell asleep.</p>
+<div class="table"><table><thead>
+<tr>
+  <th style="text-align:right">Step</th>
+  <th>Thread</th>
+  <th>What happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">1–4</td>
+  <td>Consumer 1</td>
+  <td>takes lock, reads <code>items = 0</code>, calls <code>wait()</code> → <strong>gives the lock back</strong>, sleeps</td>
+</tr>
+<tr>
+  <td style="text-align:right">5–8</td>
+  <td>Consumer 2</td>
+  <td>takes lock, reads <code>items = 0</code>, calls <code>wait()</code> → sleeps</td>
+</tr>
+<tr>
+  <td style="text-align:right">9–13</td>
+  <td>Producer</td>
+  <td>takes lock, sets <code>items = 1</code>, <code>notifyAll()</code> wakes <strong>both</strong> into the entry set, releases</td>
+</tr>
+<tr>
+  <td style="text-align:right">14</td>
+  <td>Consumer 1</td>
+  <td>re-acquires the lock, returns from <code>wait()</code>, and with <code>if</code> <strong>does not re-check</strong></td>
+</tr>
+<tr>
+  <td style="text-align:right">15–17</td>
+  <td>Consumer 1</td>
+  <td><code>items</code> 1 → 0, consumes, unlocks</td>
+</tr>
+<tr>
+  <td style="text-align:right">18</td>
+  <td>Consumer 2</td>
+  <td>re-acquires, returns from <code>wait()</code>, with <code>if</code> <strong>does not re-check</strong></td>
+</tr>
+<tr>
+  <td style="text-align:right">19–21</td>
+  <td>Consumer 2</td>
+  <td><code>items</code> 0 → <strong>−1</strong>, and &quot;consumes&quot; an item that does not exist</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The refinement: <code>wait()</code> must always sit inside a <code>while</code>, never an <code>if</code>.</strong></p>
+<div class="code"><pre><code class="language-java">while (items == 0) buffer.wait();     // correct
+</code></pre></div>
+<p>Turn on the <code>while</code> option and re-run. Now the buffer ends at <code>items = 0</code>, with
+Consumer 2 back asleep in the wait set. That is not a failure. One item genuinely
+cannot feed two consumers, so it is the correct outcome.</p>
+<p>The rule is absolute because <strong>being woken tells you only that something changed,
+never that your condition is true</strong>. There are three independent ways it can be
+false. Another thread got there first, which is what you just watched.
+<code>notifyAll</code> wakes everyone, including threads waiting for a different condition.
+And the JVM is explicitly permitted <strong>spurious wakeups</strong>: a return from <code>wait()</code>
+with no <code>notify()</code> at all <strong>[JVM rule, not this lab's model — <code>Object.wait</code>
+javadoc]</strong>.</p>
+<p>The same scenario exposes a second trap. Run the producer <em>before</em> any consumer
+falls asleep, and the log says <strong>&quot;called notifyAll() and woke nobody&quot;</strong>. A
+notification is not a message. It is not queued, counted or remembered. If nobody
+is in the wait set, it is gone. That is why the <em>condition</em>, the value of <code>items</code>,
+is the source of truth, and the notification is only a nudge to go and look.</p>
+<h3 id="readme-v5--why-should-you-stop-writing-any-of-this">v5 — why should you stop writing any of this?</h3>
+<p>Everything above is the machinery. You should almost never touch it. The
+refinement that ends the sequence is this: <strong>use the library that already got it
+right.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Instead of</th>
+  <th>Use</th>
+  <th>Because</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>synchronized</code> + <code>wait</code>/<code>notify</code> for a producer/consumer</td>
+  <td><code>ArrayBlockingQueue</code> / <code>LinkedBlockingQueue</code></td>
+  <td><code>put</code>/<code>take</code> block correctly, loop correctly, and cannot miss a signal</td>
+</tr>
+<tr>
+  <td><code>synchronized</code> around a counter</td>
+  <td><code>AtomicInteger</code>, <code>LongAdder</code></td>
+  <td>no blocking; <code>LongAdder</code> splits the counter across cells to kill contention</td>
+</tr>
+<tr>
+  <td><code>synchronized</code> around a map</td>
+  <td><code>ConcurrentHashMap</code></td>
+  <td>lock-free reads; per-bin locking for writes; <code>compute</code>/<code>merge</code> are atomic</td>
+</tr>
+<tr>
+  <td><code>synchronized</code> with a timeout you cannot have</td>
+  <td><code>ReentrantLock.tryLock(…)</code></td>
+  <td>can time out, be interrupted, and be fair if you ask</td>
+</tr>
+<tr>
+  <td>hand-rolled thread creation</td>
+  <td><code>ExecutorService</code></td>
+  <td>bounded threads, a queue, and a shutdown story</td>
+</tr>
+<tr>
+  <td>hand-rolled &quot;wait for these 3 things&quot;</td>
+  <td><code>CompletableFuture</code>, or a structured-concurrency scope</td>
+  <td>composition and error propagation</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-v6--can-you-fix-it-with-no-lock-at-all">v6 — can you fix it with no lock at all?</h3>
+<p>For the counter specifically there is a better answer than a lock, and it is
+scenario 6. Ana no longer waits at the door. She writes only if the board still
+says what she read.</p>
+<div class="code"><pre><code class="language-java">int old, next;
+do {
+  old  = count.get();
+  next = old + 1;
+} while (!count.compareAndSet(old, next));
+</code></pre></div>
+<p>The CPU compares and writes in one indivisible instruction, so the gap that lost
+the box in scenario 1 does not exist. The checker walks every interleaving to
+depth 18, and the answer is always 2.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What the run records</th>
+  <th style="text-align:right">Number</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>final <code>count</code></td>
+  <td style="text-align:right">2</td>
+  <td>both boxes counted</td>
+</tr>
+<tr>
+  <td>compare-and-set refused</td>
+  <td style="text-align:right">1</td>
+  <td>Ben's write, because Ana got there first</td>
+</tr>
+<tr>
+  <td>retries</td>
+  <td style="text-align:right">1</td>
+  <td>Ben read again and redid the addition</td>
+</tr>
+<tr>
+  <td>threads that ever entered <code>BLOCKED</code></td>
+  <td style="text-align:right">0</td>
+  <td>nobody ever waited at a door</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The trade, stated honestly.</strong> The cost has not disappeared. It has moved from
+<em>waiting</em> to <em>redoing</em>. A blocked thread costs a context switch and then sleeps. A
+retrying thread costs CPU and stays hot. Under low contention retries are near
+zero and atomics win easily. Under heavy contention many threads spin, redo
+arithmetic and throw it away.</p>
+<p>That waste is exactly what <code>optimistic-vs-pessimistic-locking</code> put numbers on in
+its <code>crossover</code> experiment. Read the middle column as &quot;work the CPU did that
+nobody wanted&quot;.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>From the <code>crossover</code> experiment</th>
+  <th style="text-align:right">Number</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>retries</td>
+  <td style="text-align:right">862</td>
+  <td>attempts thrown away and redone</td>
+</tr>
+<tr>
+  <td>CPU time burned on them</td>
+  <td style="text-align:right">2124 ms</td>
+  <td>pure waste, hidden by spare cores</td>
+</tr>
+<tr>
+  <td>useful work in the same run</td>
+  <td style="text-align:right">400 ms</td>
+  <td>what the job actually needed</td>
+</tr>
+</tbody>
+</table></div>
+<p>Same shape, one level down. When the spare cores stop being spare, the hiding
+stops too.</p>
+<blockquote>
+<p><strong>✅ CHECKPOINT — end of the intermediate model.</strong>
+You can now read <code>synchronized</code>, <code>wait</code>/<code>notify</code> and an atomic, and say what
+each one guarantees and what it does not. <strong>Next:</strong> the failure modes as a
+catalogue — how each one is created, what it protects, what it sacrifices, and
+how it appears on a production dashboard.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>lock</em>, <em>monitor</em> or <em>happens-before</em>,
+explain to a friend why Ben reading 1 at step 8 of the v2 trace is a promise
+rather than good luck.</p>
+<details><summary>A good answer sounds like</summary>
+"Ana had to put the key back before Ben could pick it up. Putting the key back
+means publishing everything she wrote. Picking it up means throwing away
+everything he had remembered privately. So the only number left for him to read
+is hers."
+</details>
+
+</blockquote>
+<hr />
+<h1 id="readme-engineering-model--stages-11-and-12">ENGINEERING MODEL — stages 11 and 12</h1>
+<h2 id="readme-11-what-are-all-the-ways-this-breaks">11. What are all the ways this breaks?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Twelve failures, and each one is either &quot;something wrong has
+already happened&quot; or &quot;nothing wrong has happened but nothing will move again&quot;.
+Knowing which of the two you have tells you how urgent the incident is.</p>
+</blockquote>
+<p>The important split runs through the whole section. <strong>Safety</strong> means nothing wrong
+ever happens. <strong>Liveness</strong> means something right eventually happens. Almost every
+mechanism here trades one for the other. A safety failure has already corrupted
+something. A liveness failure has not corrupted anything yet.</p>
+<h3 id="readme-which-six-failures-can-you-cause-on-screen">Which six failures can you cause on screen?</h3>
+<p><strong>1 · Race condition, the lost update.</strong> This is Ana and Ben in section 2. Drive
+it in scenario 1 by interleaving two reads before either write. Both threads read 0 and both write 1, because each write is based on
+a value that was true when read and stale when used.</p>
+<p>Nothing detects it. Both threads report success. The program keeps running, fast,
+forever, and the value is gone permanently. There is no later moment at which the
+system notices.</p>
+<p>In production this is a balance that drifts, a stock count that goes negative over
+months, or a &quot;processed&quot; flag set twice. Reconciliation finds it; monitoring never
+does. The <code>isolation-levels</code> lab's 8 × 40 = 320 experiment is this same bug inside
+a database.</p>
+<p><strong>2 · Visibility failure: the stale read and the non-terminating loop.</strong> This is
+the worker who never goes home. Drive it in scenario 2 with <code>volatile</code> off. He kept a private copy: memory holds <code>true</code>, and the run
+shows him looping 13 more times with every read returning <code>false</code>.</p>
+<p>No timeout exists, so there is no response, ever. Safety survives untouched,
+because nothing incorrect is written. What is lost is termination. In production
+this is &quot;the pod will not drain&quot;, a shutdown hook that never completes, one core
+pinned at 100%. The cure is <code>volatile</code>, or reading inside the same lock the writer
+used, or <code>AtomicBoolean</code>.</p>
+<p><strong>3 · Deadlock.</strong> Drive it in scenario 4 with the opposite lock order. Ana holds
+<code>accountA</code> and wants <code>accountB</code>; Ben holds <code>accountB</code> and wants <code>accountA</code>. That
+is a cycle in the holds-and-wants graph, and both threads end <code>BLOCKED</code>. Liveness
+is lost totally and permanently.</p>
+<p>There is <strong>no</strong> response available, because <code>synchronized</code> has no detection and no
+timeout. Safety survives perfectly: nothing incorrect happened. Those threads are
+lost forever, and if they are pool workers the pool dies with them.</p>
+<p>In production, requests time out while CPU sits at zero and the error rate looks
+<em>calm</em>. It is diagnosed with <code>jstack &lt;pid&gt;</code>, which prints <strong>&quot;Found one Java-level
+deadlock&quot;</strong> and names both threads and both monitors. That is one of the few times
+the JVM hands you the exact answer. Cure it with global lock ordering, with
+<code>tryLock</code> and a timeout, or by holding one lock at a time.</p>
+<p><strong>4 · Livelock.</strong> This one is not built into the visualization, and that gap is
+flagged rather than hidden. The shape: two threads each detect a conflict,
+politely back off, and retry in lockstep, forever. Or two <code>tryLock</code> users each
+release and retry at identical intervals.</p>
+<p>It is worse than deadlock because CPU is high and threads are <code>RUNNABLE</code>. A thread
+dump shows nothing obviously wrong, and every automated deadlock detector says
+&quot;fine&quot;. The cure is randomised back-off, which is the same trick, for the same
+reason, as the randomised election timeouts in the <code>raft</code> lab.</p>
+<p><strong>5 · Starvation and the convoy.</strong> This is Ana's long chat from section 6, at
+scale. Liveness is lost for one thread, and throughput is lost for everyone. Plain
+<code>synchronized</code> promises nothing about who enters next, so a thread can lose the
+race many times running. That is starvation.</p>
+<p>The <strong>convoy</strong> is worse. One thread holds a lock across a slow call, such as an
+HTTP request with no timeout or a <code>synchronized</code> method that logs to a blocking
+appender. It turns <em>its</em> delay into <em>everyone's</em> delay, because they are all in
+the entry set. This is the classic Java incident. Latency goes vertical, CPU goes
+to near zero, and thread dumps show fifty threads <code>BLOCKED</code> on one monitor while
+one thread sits in a socket read.</p>
+<p>The rule that prevents it is short: <strong>never hold a lock across I/O.</strong> The database
+version of exactly this appears in <code>optimistic-vs-pessimistic-locking</code>. There, one
+client pausing 2 s mid-save cost five neighbours all their saves and produced 15
+lock timeouts. The optimistic version of the same run cost only the sleeper.</p>
+<p>The cure is to shrink the critical section down to the state change, and do the
+I/O outside it. If fairness genuinely matters, <code>new ReentrantLock(true)</code> gives
+FIFO order, at a real throughput cost. Fairness forbids <strong>barging</strong>, which is
+letting a thread that has just arrived take a free lock ahead of the queue.
+Barging is what makes an uncontended lock cheap, so banning it is not free.</p>
+<p><strong>6 · The missed signal, <code>if</code> instead of <code>while</code>.</strong> Drive it in scenario 5 with
+<code>if</code>. The buffer ends at <code>items = −1</code>: two consumers took the single item. Nothing
+useful survives here, because this one corrupts state, and the invariant
+<code>items &gt;= 0</code> is gone.</p>
+<p>In production the second consumer reads element −1 of an array, or processes a
+null, or double-charges. The cure is <code>while</code>, always. The better cure is
+<code>BlockingQueue</code>, which removes the opportunity. Its sibling failure is
+<code>notifyAll()</code> with an empty wait set, where the log says &quot;woke nobody&quot; and the
+signal is simply gone. The condition is the truth; the notification is only a
+nudge.</p>
+<h3 id="readme-what-breaks-in-the-thread-pool">What breaks in the thread pool?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> A pool of 2 workers deadlocks because each task submits a
+sub-task to the same pool and waits for it. You raise the pool to 8 workers and
+it now completes. Is the bug fixed?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>No — and &quot;it completes&quot; is the worst possible outcome.</strong> The pool tab shows
+both runs: 2 workers deadlock at tick 4, and the identical configuration with 8
+workers finishes normally. Nothing structural changed. A task still blocks on
+work that needs a worker from the same pool. All you altered is <em>how many parent
+tasks must be in flight simultaneously</em> before every worker is consumed.</p>
+<p>If you guessed &quot;yes, it has enough capacity now&quot;, look at what you actually
+built. You converted a deterministic bug that fails on the first test run into a
+load-dependent one. It now waits for a traffic spike, a slow downstream or a
+retry storm, and then hangs permanently, at peak, with no code change to blame.
+A fix that makes a bug harder to trigger without removing it has made things
+worse.</p>
+</details>
+
+</blockquote>
+<p><strong>7 · Thread-pool starvation deadlock.</strong> Liveness is lost, and the loss is
+invisible. Drive it on the pool tab: workers 2, tick <em>&quot;each task submits a
+sub-task to the same pool and waits for it&quot;</em>, press Play. The run reaches
+<code>DEADLOCK</code> at tick 4, with every worker <code>blockedOn</code> a sub-task and every sub-task
+queued waiting for a worker.</p>
+<p>Each worker is holding a pool thread hostage while waiting for work that needs a
+pool thread. There is no response: <code>ThreadPoolExecutor</code> has no idea this is
+happening. Safety survives; the entire pool is lost, permanently.</p>
+<p>In production the classic form is a task that calls a service which uses the same
+executor, or a parallel stream inside a task on the common ForkJoinPool. A bigger
+pool does not fix it, as the 8-worker run shows, so the bug simply hides until
+load rises. <strong>The cure: never block, inside a pool task, on work submitted to that
+same pool.</strong> Use a separate pool, or make it non-blocking.</p>
+<p><strong>8 · Rejection, and the queue that eats your heap.</strong> Drive it on the pool tab
+with queue capacity 0, 12 tasks and 2 workers. Then compare the two policies.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Pool tab setting</th>
+  <th style="text-align:right">Tasks rejected</th>
+  <th style="text-align:right">Tasks completed</th>
+  <th>What it costs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>queue 0, default policy</td>
+  <td style="text-align:right">10 of 12</td>
+  <td style="text-align:right">2</td>
+  <td>one <code>RejectedExecutionException</code> per lost task</td>
+</tr>
+<tr>
+  <td>queue 0, <code>CallerRunsPolicy</code></td>
+  <td style="text-align:right">0</td>
+  <td style="text-align:right">12</td>
+  <td>4 of them run by the submitting thread, which can submit nothing else meanwhile</td>
+</tr>
+</tbody>
+</table></div>
+<p>A bounded queue makes you choose between <strong>dropping work</strong>, which is rejection,
+and <strong>slowing the producer down until it stops outrunning you</strong>. The second one is
+what &quot;back-pressure&quot; means, and it is exactly what <code>CallerRunsPolicy</code> does by
+making the submitter do the work itself.</p>
+<p>An <em>unbounded</em> queue refuses the choice and pays in heap.
+<code>Executors.newFixedThreadPool</code> uses an unbounded <code>LinkedBlockingQueue</code>. Under
+sustained overload it accepts everything, latency climbs without limit, and the
+process eventually dies of <code>OutOfMemoryError</code> having never rejected a single task.
+<strong>A queue never creates throughput. It only decides who waits.</strong></p>
+<h3 id="readme-which-four-failures-never-show-up-in-a-simulator">Which four failures never show up in a simulator?</h3>
+<p><strong>9 · The exception nobody saw.</strong> Safety is lost, silently. <code>executor.submit(task)</code>
+catches any exception the task throws and stores it in the returned <code>Future</code>. If
+you never call <code>future.get()</code>, <strong>the exception is gone</strong>. No stack trace, no log
+line, and the worker thread quietly picks up the next task. Half your pipeline
+stops working and nothing is logged. <strong>[JVM rule, not this lab's model —
+<code>AbstractExecutorService.submit</code> wraps in <code>FutureTask</code>.]</strong></p>
+<p>Cure it by using <code>execute()</code> when you do not need a result, so uncaught exceptions
+reach the thread's uncaught-exception handler. Or always consume the <code>Future</code>. Or
+wrap every task body in try/catch-and-log.</p>
+<p><strong>10 · Cancellation ignored.</strong> <code>Thread.interrupt()</code> does not stop a thread. It sets
+a flag, and it causes blocking calls such as <code>sleep</code>, <code>wait</code> and <code>take</code> to throw
+<code>InterruptedException</code>. A <code>catch (InterruptedException e) {}</code> that logs and
+continues <strong>destroys the only evidence</strong> that cancellation was requested, because
+the flag was cleared when the exception was thrown.</p>
+<p>Cure it by choosing one of two moves: either rethrow, or restore the flag with
+<code>Thread.currentThread().interrupt()</code> and return. Then <code>shutdownNow()</code> works.
+<code>structured-concurrency</code>'s cooperative cancellation is built entirely on this,
+which is why that lab stressed that cancellation flows down and that side effects
+do not roll back.</p>
+<p><strong>11 · <code>ThreadLocal</code> in a pool.</strong> Pool threads live forever, so a <code>ThreadLocal</code>
+set during request 1 is still set during request 5000. That leaks user context
+between unrelated requests, and it pins the object it holds for the lifetime of
+the pool. Cure it by removing it in a <code>finally</code>, or by using <code>ScopedValue</code>, whose
+entire design is this bug's autopsy. Your <code>scoped-values</code> lab called these the
+<em>write-from-anywhere</em> and <em>lifetime-until-remove</em> diseases. This is where they
+bite.</p>
+<p><strong>12 · Unsafe publication.</strong> Writing a reference into a shared field publishes the
+reference. Without a happens-before edge, another thread may see the reference and
+<strong>not</strong> see the object's fields as initialised. Cure it by publishing through a
+<code>volatile</code> field, an <code>AtomicReference</code>, a lock, a <code>final</code> field set in the
+constructor, or a <code>static</code> initialiser. This is <code>java-memory-model</code> territory, and
+the <code>Publication</code> and <code>DoubleCheckedLocking</code> experiments in that lab are exactly
+this failure.</p>
+<h3 id="readme-can-you-see-all-twelve-at-once">Can you see all twelve at once?</h3>
+<p>The table below is the one place all twelve sit side by side. Read the third
+column first, because it decides how fast you have to move.</p>
+<div class="table"><table><thead>
+<tr>
+  <th style="text-align:right">#</th>
+  <th>Failure</th>
+  <th>Safety or liveness</th>
+  <th>What is gone for good</th>
+  <th>What on-call sees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">1</td>
+  <td>race condition, lost update</td>
+  <td>safety</td>
+  <td>one update, silently</td>
+  <td>a number slightly wrong, forever</td>
+</tr>
+<tr>
+  <td style="text-align:right">2</td>
+  <td>visibility failure, stale read</td>
+  <td>liveness</td>
+  <td>termination</td>
+  <td>a pod that will not drain, one core at 100%</td>
+</tr>
+<tr>
+  <td style="text-align:right">3</td>
+  <td>deadlock</td>
+  <td>liveness</td>
+  <td>those threads, permanently</td>
+  <td>latency vertical, CPU at zero, errors calm</td>
+</tr>
+<tr>
+  <td style="text-align:right">4</td>
+  <td>livelock</td>
+  <td>liveness</td>
+  <td>progress, while looking busy</td>
+  <td>CPU pinned, threads <code>RUNNABLE</code>, nothing moves</td>
+</tr>
+<tr>
+  <td style="text-align:right">5</td>
+  <td>starvation and convoy</td>
+  <td>liveness</td>
+  <td>throughput for everyone</td>
+  <td>fifty threads <code>BLOCKED</code> on one monitor</td>
+</tr>
+<tr>
+  <td style="text-align:right">6</td>
+  <td>missed signal, <code>if</code> not <code>while</code></td>
+  <td>safety</td>
+  <td>the invariant <code>items &gt;= 0</code></td>
+  <td>a double charge, or a null downstream</td>
+</tr>
+<tr>
+  <td style="text-align:right">7</td>
+  <td>pool starvation deadlock</td>
+  <td>liveness</td>
+  <td>the whole pool</td>
+  <td>permanently hung shortly after a deploy</td>
+</tr>
+<tr>
+  <td style="text-align:right">8</td>
+  <td>rejection or unbounded queue</td>
+  <td>pick your poison</td>
+  <td>dropped work, or the heap</td>
+  <td><code>RejectedExecutionException</code>, or <code>OutOfMemoryError</code></td>
+</tr>
+<tr>
+  <td style="text-align:right">9</td>
+  <td>the exception nobody saw</td>
+  <td>safety</td>
+  <td>the error report</td>
+  <td>half a pipeline stops, logs stay clean</td>
+</tr>
+<tr>
+  <td style="text-align:right">10</td>
+  <td>cancellation ignored</td>
+  <td>liveness</td>
+  <td>clean shutdown</td>
+  <td>deploys that never drain</td>
+</tr>
+<tr>
+  <td style="text-align:right">11</td>
+  <td><code>ThreadLocal</code> in a pool</td>
+  <td>safety and memory</td>
+  <td>request isolation</td>
+  <td>one user seeing another user's data</td>
+</tr>
+<tr>
+  <td style="text-align:right">12</td>
+  <td>unsafe publication</td>
+  <td>safety</td>
+  <td>a half-built object</td>
+  <td>rare, unreproducible, hardware-dependent</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-does-a-lock-actually-promise-and-what-does-it-cost">12. What does a lock actually promise, and what does it cost?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Taking the key promises you four things and refuses you five.
+Learn the refusals. Almost every surprising bug in this area is somebody
+assuming one of the five.</p>
+</blockquote>
+<h3 id="readme-what-does-taking-the-key-actually-promise">What does taking the key actually promise?</h3>
+<p>Ana holds the key to the stockroom. Engineers say she has acquired monitor <strong>M</strong>.
+Here is everything she is owed, and nothing more.</p>
+<ul>
+<li>No other thread executes any block synchronized on <strong>M</strong> while she is inside.</li>
+<li>Everything written by any thread before <em>its</em> release of M is visible to her.</li>
+<li>The monitor is released on every exit path, including exceptions and thread
+death.</li>
+<li>It is <strong>reentrant</strong>. The thread already holding M can acquire it again, so a
+<code>synchronized</code> method calling another one on the same object does not
+self-deadlock.</li>
+</ul>
+<h3 id="readme-what-does-the-key-explicitly-not-promise">What does the key explicitly not promise?</h3>
+<ul>
+<li><strong>Fairness.</strong> No promise about who enters next. Ben can be passed over
+repeatedly. Barging is permitted, and it is what makes uncontended locks fast.</li>
+<li><strong>Any protection from threads that do not take M.</strong> The guarantee is per-lock. A
+reader that skips the key gets nothing, no matter how careful the writers are.</li>
+<li><strong>Progress.</strong> Nothing prevents deadlock, livelock or starvation.</li>
+<li><strong>Ordering across different locks.</strong> Two monitors give you no relationship at
+all.</li>
+<li><strong>Atomicity of anything larger than the block.</strong> Two correctly synchronized
+calls in a row are two atomic operations, not one.</li>
+</ul>
+<blockquote>
+<p><strong>🔮 Predict:</strong> A cache is a <code>ConcurrentHashMap</code>, which is genuinely
+thread-safe. Ben writes <code>if (!map.containsKey(k)) map.put(k, v)</code>. Both calls are
+individually atomic. Is the pair safe?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>No.</strong> Ana can slip between the two calls, exactly as she slipped between a
+read and a write in section 2. Both of Ben's calls succeed. The invariant he
+meant to hold was &quot;this key is loaded at most once&quot;, and nothing ever protected
+it.</p>
+<p>If you guessed yes, you have merged two ideas that must stay apart:
+<strong>thread-safe per call</strong> and <strong>thread-safe per business operation</strong>. That is why
+<code>putIfAbsent</code> and <code>compute</code> exist. They make the whole decision one operation.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-what-are-the-three-ways-to-be-thread-safe">What are the three ways to be thread-safe?</h3>
+<p>In order of preference, because the first two require no reasoning at all.</p>
+<ol>
+<li><strong>Do not share.</strong> Confine the state to one thread: a local variable, a
+<code>ScopedValue</code>, one owning actor. No sharing, no race, nothing to prove.</li>
+<li><strong>Do not mutate.</strong> An immutable object, with all fields <code>final</code> and no setters,
+is safe to share with everyone, forever, with no synchronization. That is why
+<code>String</code>, <code>Integer</code> and records are safe.</li>
+<li><strong>Synchronize.</strong> Only when you actually need shared mutable state. Then pick
+one lock per invariant, document it, and hold it for every access — read <em>and</em>
+write.</li>
+</ol>
+<p>Ana and Ben never needed the third option. A per-worker tally added up at the end
+is option 1. A whiteboard nobody rubs out is option 2.</p>
+<h3 id="readme-how-urgent-is-each-incident">How urgent is each incident?</h3>
+<p>A safety failure means data is already wrong, and no amount of waiting fixes it.
+A liveness failure means nothing is wrong yet, but nothing will progress. That
+distinction sets the severity.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>If the failure is…</th>
+  <th>Which ones</th>
+  <th>What it means for you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>safety</td>
+  <td>1, 6, 9, 12</td>
+  <td>already corrupted; a data problem you may have to reconstruct</td>
+</tr>
+<tr>
+  <td>liveness</td>
+  <td>2, 3, 4, 5, 7, 10</td>
+  <td>nothing corrupted; a deadlocked pool is an outage you can restart out of</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-does-locking-cost-you">What does locking cost you?</h3>
+<p>Every critical section is a serial section. Only one worker is in the stockroom,
+however many workers you hire. If a fraction <em>s</em> of the work must be serial, then
+no matter how many cores you add, the speed-up is capped at 1/<em>s</em>. That is
+<strong>Amdahl's law</strong>.</p>
+<p>The pool sweep shows the benign version of the same ceiling, with no lock in sight
+at all. Twelve five-tick tasks, one to six workers. The makespans run from 60
+ticks with one worker down to 10 ticks with six.</p>
+<div class="table"><table><thead>
+<tr>
+  <th style="text-align:right">Workers</th>
+  <th style="text-align:right">Makespan: everything finishes at tick</th>
+  <th>What the number tells you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td style="text-align:right">1</td>
+  <td style="text-align:right">60</td>
+  <td>twelve tasks, one at a time</td>
+</tr>
+<tr>
+  <td style="text-align:right">2</td>
+  <td style="text-align:right">30</td>
+  <td>six each</td>
+</tr>
+<tr>
+  <td style="text-align:right">3</td>
+  <td style="text-align:right">20</td>
+  <td>four each</td>
+</tr>
+<tr>
+  <td style="text-align:right">4</td>
+  <td style="text-align:right">15</td>
+  <td>three each</td>
+</tr>
+<tr>
+  <td style="text-align:right">5</td>
+  <td style="text-align:right">15</td>
+  <td><strong>no better than 4</strong> — whole tasks cannot be split</td>
+</tr>
+<tr>
+  <td style="text-align:right">6</td>
+  <td style="text-align:right">10</td>
+  <td>two each</td>
+</tr>
+</tbody>
+</table></div>
+<p>Note the shape. Four workers and five workers both finish at 15, because a task
+cannot be cut in half. Adding capacity stops helping long before the graph looks
+full, and locks make that ceiling arrive much sooner.</p>
+<blockquote>
+<p><strong>✅ CHECKPOINT — end of the engineering model.</strong>
+You can now name what a lock does and does not promise, classify a failure as
+safety or liveness, and argue about the cost. <strong>Next:</strong> what all of this looks
+like from an on-call rotation, and which parts of this lab a real system
+replaces.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Ben says: &quot;every writer synchronizes on the same lock, so my
+reader is safe without one.&quot; In your own words, tell him why not.</p>
+<details><summary>A good answer sounds like</summary>
+"The key does not protect the board. It protects the people who pick the key up.
+A reader who walks past the door without touching the key was never part of the
+deal, so nothing was ever promised to him."
+</details>
+
+</blockquote>
+<hr />
+<h1 id="readme-production-model--stage-13">PRODUCTION MODEL — stage 13</h1>
+<h2 id="readme-13-what-does-all-this-look-like-from-an-on-call-rotation">13. What does all this look like from an on-call rotation?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The stockroom becomes a service with sixty-four threads, a
+scheduler you do not control, and shared state you did not know was shared. The
+bugs are identical. Only the blast radius changes.</p>
+</blockquote>
+<h3 id="readme-what-is-the-chain-from-this-lab-to-a-real-service">What is the chain from this lab to a real service?</h3>
+<p><strong>This lab's model</strong> is a three-step <code>count++</code> over a shared field, one monitor,
+and a scheduler you drive by hand.</p>
+<p><strong>Real Java</strong> is the same semantics, plus reordering, plus a JIT compiler that
+deletes redundant reads, plus 64 threads instead of 2, plus an OS scheduler that
+preempts anywhere.</p>
+<p><strong>A production service</strong> is a servlet container or a Netty event loop, a
+connection pool, a thread pool per subsystem, and shared state you did not know
+was shared. A <code>SimpleDateFormat</code> field, a lazily-built cache, a <code>HashMap</code> someone
+assumed was per-request: each of those is Ana's whiteboard, wearing a disguise.</p>
+<h3 id="readme-what-does-the-educational-version-leave-out">What does the educational version leave out?</h3>
+<p>Named, not hidden. Each row is a real thing the model does not do.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted here</th>
+  <th>What real systems do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Instruction reordering</strong></td>
+  <td>The JMM allows compiler and CPU reordering; <code>java-memory-model</code> covers it. This page models one memory with private copies — enough for visibility, not for reordering.</td>
+</tr>
+<tr>
+  <td><strong>The JIT compiler</strong></td>
+  <td>Hoists reads out of loops, inlines, and can turn scenario 2's loop into a genuinely infinite one at machine level. The model shows the <em>effect</em>, not the mechanism.</td>
+</tr>
+<tr>
+  <td><strong><code>ReentrantLock</code>, <code>Condition</code>, <code>ReadWriteLock</code>, <code>StampedLock</code></strong></td>
+  <td>Timeouts, interruptibility, fairness, multiple wait sets per lock, and read/write separation. All are refinements of the monitor shown here.</td>
+</tr>
+<tr>
+  <td><strong><code>ConcurrentHashMap</code> internals</strong></td>
+  <td>Per-bin locking, lock-free reads, resizing while readers run.</td>
+</tr>
+<tr>
+  <td><strong><code>ForkJoinPool</code> and work stealing</strong></td>
+  <td>Per-worker deques; idle workers steal from the tails of busy ones. Backs parallel streams and <code>CompletableFuture</code> by default.</td>
+</tr>
+<tr>
+  <td><strong>False sharing</strong></td>
+  <td>Two unrelated fields in one 64-byte cache line make independent threads fight. <code>@Contended</code>, <code>LongAdder</code>'s padded cells.</td>
+</tr>
+<tr>
+  <td><strong>Thread priorities, affinity, NUMA</strong></td>
+  <td>Mostly advisory, mostly ignored, occasionally decisive.</td>
+</tr>
+<tr>
+  <td><strong>Memory-model strength on real hardware</strong></td>
+  <td>x86 is strongly ordered and hides many bugs that ARM (Apple silicon, Graviton) exposes. Code that &quot;works&quot; on your laptop can fail in production for this reason alone.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-how-many-workers-should-the-pool-have">How many workers should the pool have?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> You have an 8-core box. Each task waits 90 ms on a network call
+and computes for 10 ms. You want the cores busy. How many threads do you want in
+the pool?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>About 80.</strong> The formula is below, and the intuition is that each thread is
+only working one tenth of the time, so you need ten of them per core to keep one
+core busy.</p>
+<p>If you guessed 8 or 9, you applied the CPU-bound rule to I/O-bound work, and
+your cores would sit idle at 10% utilisation. If the number 80 makes you
+uncomfortable, that discomfort is exactly what pushed a generation of engineers
+into reactive frameworks, and exactly what <code>java-virtual-threads</code> removed.</p>
+</details>
+
+</blockquote>
+<ul>
+<li><strong>CPU-bound work:</strong> threads ≈ number of cores (<code>Runtime.availableProcessors()</code>),
+plus one. More threads add context switches, not throughput. The sweep in
+section 12 is this case: past the point where every task has a worker, extra
+workers finish nothing sooner.</li>
+<li><strong>I/O-bound work:</strong> threads ≈ cores × target utilisation × (1 + wait / compute).
+A task that waits 90 ms and computes 10 ms has a ratio of 9, so an 8-core box
+targeting full utilisation wants roughly 80 threads. That is precisely the
+number that used to force people to a reactive framework, and precisely what
+<code>java-virtual-threads</code> made unnecessary.</li>
+<li><strong>Always bound the queue.</strong> An unbounded queue converts overload into
+<code>OutOfMemoryError</code> instead of into back-pressure. Choose deliberately between
+rejection and <code>CallerRunsPolicy</code>; the pool tab lets you feel the difference
+between 10 rejections and 0 rejections with a throttled submitter.</li>
+<li><strong>Name your threads.</strong> <code>Executors.newFixedThreadPool(n, namedFactory(&quot;payments-&quot;))</code>.
+This costs nothing, and it is the difference between a readable thread dump and
+an unreadable one at 3 a.m.</li>
+<li><strong>Separate pools per dependency.</strong> One pool per downstream service means a slow
+dependency starves only its own pool, which is the bulkhead pattern. One shared
+pool means a slow dependency takes the whole service down.</li>
+</ul>
+<h3 id="readme-what-does-on-call-actually-see">What does on-call actually see?</h3>
+<p>You will never see &quot;race condition&quot; in a log. You will see one of these seven
+shapes. The middle column is the guess; the right-hand column is the first thing
+to type.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Symptom</th>
+  <th>Likely cause</th>
+  <th>First move</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>latency vertical, <strong>CPU near zero</strong>, error rate calm</td>
+  <td>deadlock, or a lock held across a hung I/O call</td>
+  <td><code>jstack &lt;pid&gt;</code> — look for &quot;Found one Java-level deadlock&quot;, then count threads <code>BLOCKED</code> on one monitor</td>
+</tr>
+<tr>
+  <td>latency vertical, <strong>CPU pinned</strong>, no progress</td>
+  <td>livelock, or a CAS retry storm on a hot atomic</td>
+  <td>thread dump twice, 5 s apart: same stacks <em>and</em> <code>RUNNABLE</code> means livelock or spin</td>
+</tr>
+<tr>
+  <td>pool queue depth climbing without limit</td>
+  <td>unbounded queue plus arrival rate above service rate</td>
+  <td>bound the queue, then choose rejection or caller-runs</td>
+</tr>
+<tr>
+  <td><code>RejectedExecutionException</code> in logs</td>
+  <td>queue full — the pool is doing its job</td>
+  <td>this is back-pressure working; fix capacity or shed load deliberately</td>
+</tr>
+<tr>
+  <td>everything fine, then permanently hung after a deploy</td>
+  <td>pool starvation from a nested submit</td>
+  <td>look for a <code>.get()</code> or <code>.join()</code> inside a task on the same executor</td>
+</tr>
+<tr>
+  <td>a counter that is slightly wrong, forever</td>
+  <td>lost update — Ana and Ben, in production</td>
+  <td>reconciliation query, then make the write conditional</td>
+</tr>
+<tr>
+  <td>one user seeing another user's data, intermittently</td>
+  <td><code>ThreadLocal</code> not cleared in a pooled thread</td>
+  <td>clear it in a <code>finally</code>, or move to <code>ScopedValue</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Instrument these four numbers</strong> for every pool: active threads, queue depth,
+rejection count, and task latency split into <em>queue wait</em> versus <em>execution time</em>.
+The split is the one that matters. Rising queue wait with flat execution time
+means you need capacity. Rising execution time means the dependency is slow, and
+more threads will make it worse.</p>
+<h3 id="readme-where-does-anas-story-go-next">Where does Ana's story go next?</h3>
+<p>Everything in this document exists because <strong>a platform thread is expensive and
+blocking it wastes it</strong>. That single fact forced pools. It forced bounded queues.
+It forced the whole reactive-programming detour, and it forced you to think about
+pool sizing at all.</p>
+<p><code>java-virtual-threads</code> removed that fact. A virtual thread's stack lives on the
+heap, so blocking parks it and frees the carrier. Waiting becomes nearly free, and
+<code>Executors.newVirtualThreadPerTaskExecutor()</code> makes &quot;a thread per task&quot; sane again
+at 100k concurrency. Two things carry over exactly, and both are worth stating
+plainly.</p>
+<ul>
+<li><strong>Every bug in this lab still happens on virtual threads.</strong> Same memory model,
+same locks, same lost updates, same deadlocks. Ana and Ben are cheaper to hire
+and they still lose the box. Cheap threads changed the cost of <em>waiting</em>, not
+the rules of <em>sharing</em>.</li>
+<li><strong>Pool starvation deadlock, failure 7, genuinely goes away</strong> when there is no
+pool to starve. That is the strongest single argument for the model. But
+CPU-bound work still needs a bounded pool. And pinning brings the old ceiling
+straight back, whether from native frames or from <code>synchronized</code> before JDK 24
+and JEP 491. That is why that lab flagged it.</li>
+</ul>
+<p>And <code>structured-concurrency</code> is what you use <em>instead of</em> raw threads once they
+are cheap. Fork subtasks into a scope, join by a policy, and leaving the block
+guarantees nothing is left running. Read that lab's &quot;close guarantee&quot; again now.
+It is a direct answer to failure 10 in this lab, the thread you asked to stop that
+never stopped.</p>
+<blockquote>
+<p><strong>✅ CHECKPOINT — end of the production model.</strong>
+You can now size a pool and name the four numbers to graph. You can read the
+on-call table backwards, from a symptom to a cause. And you can say which parts
+of this lab virtual threads delete. <strong>Next:</strong> the ladder of exercises, the map
+of neighbouring labs, and the glossary.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> A dashboard shows latency going vertical while CPU falls to
+almost nothing. Without using the words <em>deadlock</em> or <em>monitor</em>, say what is
+probably happening in the stockroom.</p>
+<details><summary>A good answer sounds like</summary>
+"Somebody is inside the stockroom holding the key and not coming out, probably
+because they are waiting on something outside the building. Everyone else is
+queued at the door doing nothing at all, which is why the machine looks idle
+while every customer waits."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-14-where-are-the-exercises">14. Where are the exercises?</h2>
+<p>They are in <code>EXERCISES.md</code>: eight rungs that climb from &quot;explain it back&quot; to
+&quot;design a payment worker pool&quot;. Everything is pencil-and-paper or work in the
+visualization, with nothing to install and no code to write. Worked answers are in
+<code>SOLUTIONS.md</code>.</p>
+<p>Rung 1 asks you to explain Ana and Ben's lost box to a non-programmer. Rung 8 asks
+you to design the threading for a real payments service. Attempt each rung before
+opening the answers.</p>
+<h2 id="readme-15-what-does-this-connect-to-and-what-should-you-learn-next">15. What does this connect to, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab is the machine underneath four other labs and the
+same fight as three more. The knowledge map shows which is which, and the
+sentences after it separate the ideas people keep merging.</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+  JMM[&quot;java-memory-model&lt;br&gt;happens-before, volatile, reordering&quot;] --&gt; MT
+  OS[&quot;threads &amp;amp; scheduling&lt;br&gt;(OS-level, assumed)&quot;] --&gt; MT
+  MT[&quot;&lt;b&gt;multithreading in Java&lt;/b&gt;&lt;br&gt;races, locks, wait/notify, atomics, pools&quot;]
+
+  MT --&gt; VT[&quot;java-virtual-threads&lt;br&gt;blocking made cheap&quot;]
+  MT --&gt; SC[&quot;structured-concurrency&lt;br&gt;lifetimes made a tree&quot;]
+  MT --&gt; SV[&quot;scoped-values&lt;br&gt;context without ThreadLocal&quot;]
+  MT --&gt; OPL[&quot;optimistic-vs-pessimistic-locking&lt;br&gt;the same fight, in a database&quot;]
+  MT --&gt; DL[&quot;distributed-locking&lt;br&gt;the same fight, across machines&quot;]
+  MT --&gt; IOM[&quot;io-multiplexing&lt;br&gt;the other answer to &#x27;do not block&#x27;&quot;]
+
+  MT -.confused with.-&gt; PAR[&quot;parallelism&lt;br&gt;&lt;i&gt;doing many things at once&lt;/i&gt;&quot;]
+  MT -.confused with.-&gt; ASY[&quot;async / non-blocking&lt;br&gt;&lt;i&gt;not waiting on a thread&lt;/i&gt;&quot;]
+</pre>
+<h3 id="readme-which-pairs-of-ideas-keep-getting-merged">Which pairs of ideas keep getting merged?</h3>
+<p>Five commonly confused pairs, one sentence each, and every one of them has cost
+somebody a weekend.</p>
+<ul>
+<li><strong>Concurrency versus parallelism.</strong> Concurrency is <em>structuring</em> a program as
+independent tasks so they can make progress in overlapping periods. Parallelism
+is <em>actually executing</em> things simultaneously on multiple cores. You can have
+concurrency on one core, and all of this lab's bugs with it. You can have
+parallelism with no shared state, and none of them.</li>
+<li><strong>Concurrency versus asynchrony.</strong> Async means &quot;do not sit on a thread while
+waiting&quot;. It is a way to spend fewer threads, not a way to avoid races. Two
+async callbacks touching the same field race exactly like Ana and Ben.</li>
+<li><strong><code>volatile</code> versus <code>synchronized</code>.</strong> <code>volatile</code> makes individual reads and
+writes visible and ordered. <code>synchronized</code> additionally makes a <em>sequence</em> of
+them indivisible. If your operation is read-modify-write, <code>volatile</code> is not
+enough.</li>
+<li><strong>Atomic versus thread-safe.</strong> <code>ConcurrentHashMap</code> is thread-safe, and a
+<code>containsKey</code> followed by a <code>put</code> on it is still a race. Thread-safe per call is
+not thread-safe per business operation.</li>
+<li><strong><code>BLOCKED</code> versus <code>WAITING</code>.</strong> <code>BLOCKED</code> means queuing for a monitor somebody
+holds, so it will run when they leave. <code>WAITING</code> means deliberately asleep in a
+wait set, so it runs only if someone signals. In a thread dump these mean
+completely different things: fifty <code>BLOCKED</code> on one monitor is a convoy, and
+fifty <code>WAITING</code> is usually normal.</li>
+</ul>
+<h3 id="readme-which-real-technologies-are-running-this-in-production">Which real technologies are running this in production?</h3>
+<p>Tomcat and Jetty request pools. Netty event loops and its <code>EventExecutor</code>
+confinement rules. HikariCP's connection pool. Kafka's consumer, which is
+single-threaded by contract and will throw if you break it. <code>ConcurrentHashMap</code> in
+essentially every Java service. And <code>ForkJoinPool.commonPool</code> under every parallel
+stream, including in library code you did not write.</p>
+<h3 id="readme-what-should-you-learn-next">What should you learn next?</h3>
+<p>Six suggestions, in the order that makes each one easiest.</p>
+<ul>
+<li><code>/learn java-concurrent-collections</code> — <code>ConcurrentHashMap</code>,
+<code>CopyOnWriteArrayList</code> and <code>BlockingQueue</code> internals; the natural sequel to
+section 10's v5 table.</li>
+<li><code>/learn amdahls-law</code> — put a number on what section 12 argued qualitatively.</li>
+<li><code>/learn queueing-theory</code> — why the pool tab's queue behaves as it does, and why
+latency explodes near full utilisation rather than at it.</li>
+<li><code>/learn completable-future</code> — composing asynchronous work without the callback
+pyramid, and where its default executor bites.</li>
+<li><code>/learn jvm-thread-dumps</code> — reading <code>jstack</code> output properly, which is the
+actual on-call skill implied by section 13.</li>
+<li><code>/learn reactive-streams</code> — the back-pressure model, and the design space
+virtual threads were arguing against.</li>
+</ul>
+<h2 id="readme-16-glossary--what-does-each-word-mean-again">16. Glossary — what does each word mean again?</h2>
+<p>Every term this lab introduced, grouped by the part of the story where it was
+earned, so you can find one by remembering where you were when it bit you.</p>
+<p><strong>The moving parts.</strong> Who runs, what they hold, and the three ways to be safe
+without any key at all.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Thread</strong></td>
+  <td>one independently running position in your program, with its own stack, sharing the heap</td>
+  <td>Ana, section 2</td>
+</tr>
+<tr>
+  <td><strong>Shared mutable state</strong></td>
+  <td>data two or more threads can both read and change; the only thing that causes these bugs</td>
+  <td>the whiteboard, section 2</td>
+</tr>
+<tr>
+  <td><strong>Thread confinement</strong></td>
+  <td>keeping state reachable by exactly one thread so no synchronization is needed</td>
+  <td>option 1, section 12</td>
+</tr>
+<tr>
+  <td><strong>Immutability</strong></td>
+  <td>all fields <code>final</code> and never changed, therefore safe to share unsynchronized</td>
+  <td>option 2, section 12</td>
+</tr>
+<tr>
+  <td><strong>Safe publication</strong></td>
+  <td>making a new object's fields visible along with its reference</td>
+  <td>failure 12, section 11</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What goes wrong with a value.</strong> The vocabulary for Ana and Ben's lost box.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Race condition</strong></td>
+  <td>the result depends on timing that nothing in the program controls</td>
+  <td>section 2</td>
+</tr>
+<tr>
+  <td><strong>Lost update</strong></td>
+  <td>a completed write silently overwritten by a write derived from stale data</td>
+  <td>the board saying 11</td>
+</tr>
+<tr>
+  <td><strong>Read-modify-write</strong></td>
+  <td>the read/change/write shape that all lost updates have</td>
+  <td>Ana's three trips, section 2</td>
+</tr>
+<tr>
+  <td><strong>Atomicity</strong></td>
+  <td>no other thread can observe the operation half-done</td>
+  <td><code>count++</code>, section 4</td>
+</tr>
+<tr>
+  <td><strong>Visibility</strong></td>
+  <td>whether one thread's write is ever seen by another thread's read</td>
+  <td>scenario 2, section 4</td>
+</tr>
+<tr>
+  <td><strong>happens-before</strong></td>
+  <td>the Java Memory Model's ordering relation; if X happens-before Y, X's writes are visible to Y</td>
+  <td>section 7</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The key and the door.</strong> Everything the monitor is made of.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>volatile</code></strong></td>
+  <td>makes every read and write of a field go to memory and be ordered; does not make sequences atomic</td>
+  <td>section 4, then v1</td>
+</tr>
+<tr>
+  <td><strong>Critical section</strong></td>
+  <td>the region of code that must not be entered by two threads at once</td>
+  <td>scenario 3</td>
+</tr>
+<tr>
+  <td><strong>Mutual exclusion</strong></td>
+  <td>the guarantee that it is not</td>
+  <td>section 6</td>
+</tr>
+<tr>
+  <td><strong>Lock / monitor / intrinsic lock</strong></td>
+  <td>every Java object's built-in lock; has an owner, an entry set and a wait set</td>
+  <td>section 7</td>
+</tr>
+<tr>
+  <td><strong>Entry set</strong></td>
+  <td>threads <code>BLOCKED</code> waiting to acquire a monitor; the queue at the door</td>
+  <td>scenario 3</td>
+</tr>
+<tr>
+  <td><strong>Wait set</strong></td>
+  <td>threads asleep inside <code>wait()</code> on a monitor, waiting to be notified; the waiting room</td>
+  <td>scenario 5</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Sleeping, waking, and never waking.</strong> The part of the machine that stalls.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Reentrant</strong></td>
+  <td>a lock the holding thread may acquire again without blocking itself</td>
+  <td>section 12</td>
+</tr>
+<tr>
+  <td><strong><code>wait()</code> / <code>notify()</code> / <code>notifyAll()</code></strong></td>
+  <td>release the lock and sleep / move one or all sleepers from the wait set to the entry set</td>
+  <td>v4, section 10</td>
+</tr>
+<tr>
+  <td><strong>Spurious wakeup</strong></td>
+  <td>a permitted return from <code>wait()</code> with no notification; the reason <code>wait()</code> must sit in a <code>while</code></td>
+  <td>v4, section 10</td>
+</tr>
+<tr>
+  <td><strong>Deadlock</strong></td>
+  <td>a cycle of threads each holding a lock another one needs; permanent, silent, no timeout</td>
+  <td>scenario 4, failure 3</td>
+</tr>
+<tr>
+  <td><strong>Lock ordering</strong></td>
+  <td>imposing one global order on lock acquisition so a cycle cannot form</td>
+  <td>v3, section 10</td>
+</tr>
+<tr>
+  <td><strong>Livelock</strong></td>
+  <td>threads busily retrying forever without progress; looks healthy in a dump</td>
+  <td>failure 4</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Who gets to go next.</strong> Fairness, and the two words that decide how loudly to
+page.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Starvation</strong></td>
+  <td>a thread that keeps losing the race for a lock it is entitled to</td>
+  <td>failure 5</td>
+</tr>
+<tr>
+  <td><strong>Convoy</strong></td>
+  <td>one slow lock-holder turning its own delay into every waiter's delay</td>
+  <td>failure 5</td>
+</tr>
+<tr>
+  <td><strong>Fairness</strong></td>
+  <td>FIFO lock granting; available from <code>ReentrantLock(true)</code>, never from <code>synchronized</code></td>
+  <td>failure 5</td>
+</tr>
+<tr>
+  <td><strong>Barging</strong></td>
+  <td>a newly arrived thread taking a free lock ahead of the queue; the reason unfair locks are fast</td>
+  <td>failure 5</td>
+</tr>
+<tr>
+  <td><strong>Safety</strong></td>
+  <td>nothing wrong ever happens</td>
+  <td>section 11</td>
+</tr>
+<tr>
+  <td><strong>Liveness</strong></td>
+  <td>something right eventually happens</td>
+  <td>section 11</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Doing it without a key, and running it at scale.</strong> The escape hatch and the
+crew.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Compare-and-set (CAS)</strong></td>
+  <td>one indivisible instruction: write only if the value still matches what I read</td>
+  <td>scenario 6, v6</td>
+</tr>
+<tr>
+  <td><strong>Atomic classes</strong></td>
+  <td><code>AtomicInteger</code>, <code>AtomicReference</code>, <code>LongAdder</code>: CAS-based, non-blocking</td>
+  <td>v5 and v6, section 10</td>
+</tr>
+<tr>
+  <td><strong>Thread pool / executor</strong></td>
+  <td>a fixed set of worker threads consuming a shared task queue</td>
+  <td>section 7, the pool tab</td>
+</tr>
+<tr>
+  <td><strong>Bounded / unbounded queue</strong></td>
+  <td>a queue with a capacity limit, versus one that grows until the heap does not</td>
+  <td>failure 8</td>
+</tr>
+<tr>
+  <td><strong>Rejection policy</strong></td>
+  <td>what a full pool does: throw (<code>AbortPolicy</code>), run on the caller (<code>CallerRunsPolicy</code>), or discard</td>
+  <td>failure 8</td>
+</tr>
+<tr>
+  <td><strong>Back-pressure</strong></td>
+  <td>slowing the producer instead of dropping or buffering its work</td>
+  <td>failure 8</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>When the crew itself is the problem.</strong> Pools, cancellation, and reading the
+evidence.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Pool starvation deadlock</strong></td>
+  <td>every worker blocked on work that needs a worker</td>
+  <td>failure 7</td>
+</tr>
+<tr>
+  <td><strong>Bulkhead</strong></td>
+  <td>separate pools per dependency, so one slow dependency cannot sink the service</td>
+  <td>section 13</td>
+</tr>
+<tr>
+  <td><strong>Interruption</strong></td>
+  <td>a cooperative cancellation request; a flag plus an exception from blocking calls, not a stop</td>
+  <td>failure 10</td>
+</tr>
+<tr>
+  <td><strong><code>ThreadLocal</code></strong></td>
+  <td>per-thread storage; leaks between requests when the thread is pooled</td>
+  <td>failure 11</td>
+</tr>
+<tr>
+  <td><strong>Thread dump / <code>jstack</code></strong></td>
+  <td>a snapshot of every thread's stack and state; the primary diagnostic for all of section 11</td>
+  <td>failure 3, section 13</td>
+</tr>
+<tr>
+  <td><strong><code>BLOCKED</code> / <code>WAITING</code> / <code>RUNNABLE</code></strong></td>
+  <td>queuing for a monitor / asleep awaiting a signal / able to run</td>
+  <td>sections 11 and 15</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The two ceilings.</strong> Why more cores stop helping.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One-line meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>False sharing</strong></td>
+  <td>unrelated fields in one cache line causing contention between threads that share nothing logically</td>
+  <td>section 13</td>
+</tr>
+<tr>
+  <td><strong>Amdahl's law</strong></td>
+  <td>the speed-up ceiling imposed by the serial fraction of the work</td>
+  <td>section 12</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-17-about-this-lab--where-do-the-numbers-come-from">17. About this lab — where do the numbers come from?</h2>
+<p><strong>Lab contents.</strong> Five files, and nothing to install.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document — 16 stages, four depth layers, plus this appendix</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td><strong>The Interleaving Machine</strong> — you choose which thread runs next · <a href="https://claude.ai/code/artifact/10d168d6-8a4f-49fe-9b39-471e067a6bc7" target="_blank" rel="noopener">https://claude.ai/code/artifact/10d168d6-8a4f-49fe-9b39-471e067a6bc7</a></td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code></td>
+  <td>eight rungs, pencil-and-paper plus the visualization</td>
+</tr>
+<tr>
+  <td><code>SOLUTIONS.md</code></td>
+  <td>worked answers</td>
+</tr>
+<tr>
+  <td><code>validate-visualization.sh</code></td>
+  <td>replays both simulation engines headlessly — 42 engine checks + 12 render checks</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the numbers come from.</strong> Every executed trace, count and tick figure in
+this document was produced by the two simulation engines inside
+<code>visualization.html</code>. They are replayed by <code>./validate-visualization.sh</code>, which
+runs 42 engine checks and 12 render checks, all passing.</p>
+<p>Two of those checks are <em>exhaustive</em>. Rather than sampling one run, they enumerate
+every possible interleaving of the threads in scenarios 1, 3 and 6. That is why
+section 2 can say the reachable set is <code>{1, 2}</code> and mean it. It is also why
+section 10's v2 can claim that no schedule of the locked version produces anything
+but 2.</p>
+<p><strong>What the marker means.</strong> Some statements are about the real JVM rather than
+about this lab's model. Those are marked <strong>[JVM rule, not this lab's model]</strong> and
+sourced to the specification or to a prior lab. They were not measured here. The
+page is a model of Java's rules, not a JVM, and its honest boundaries are listed
+at the bottom of the page itself and again in section 13's omissions table.</p>
+<p><strong>What a run does and does not prove.</strong> A replay is evidence that the model
+behaves the way the rules say under a schedule you chose. Because you choose the
+schedule, every trace in this document is reproducible by clicking the same
+buttons in the same order. It is not a statement about any production JVM, and it
+is not a claim about timing on real hardware.</p>
+<p><strong>Where this sits among your other labs, and why it arrives late on purpose.</strong> You
+have already done <code>java-virtual-threads</code>, <code>structured-concurrency</code> and
+<code>scoped-values</code>. Those are the 2025 answers. This lab is <strong>the machine underneath
+them</strong>, and the pile of problems they were invented to hide. Reading it now is not
+going backwards. It is finally seeing what those three labs were arguing <em>with</em>.</p>
+<p>There are three specific joins to things you already know.</p>
+<p><strong>The first join is <code>java-memory-model</code>.</strong> It gave you <em>happens-before</em>,
+<code>volatile</code>, reordering and the store buffer. That lab answered &quot;which values is a
+thread allowed to see?&quot; This lab answers &quot;which <strong>interleavings</strong> are possible,
+and what do I do about them?&quot; What that lab covered turns out to be only one of
+the two problems in this one, and section 4 is where you see why they are
+genuinely separate.</p>
+<p><strong>The second join is <code>optimistic-vs-pessimistic-locking</code>,</strong> this lab's twin one
+level up. Its version column, <code>UPDATE … WHERE id = ? AND version = ?</code>, where the
+update count is the only witness, is the same trick this lab reaches in section 10
+under the name <em>compare-and-set</em>. It is written in SQL, across a network, between
+requests instead of between two CPU registers.</p>
+<p>That lab's <code>lunch</code> measurement is the database-sized version of failure 5 in
+section 11.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>From the <code>lunch</code> experiment</th>
+  <th style="text-align:right">Number</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>one client pausing mid-save under a pessimistic lock</td>
+  <td style="text-align:right">2 s</td>
+  <td>Ana's long chat, in a database</td>
+</tr>
+<tr>
+  <td>neighbours who lost <strong>all</strong> their saves</td>
+  <td style="text-align:right">5</td>
+  <td>the convoy behind her</td>
+</tr>
+<tr>
+  <td>lock timeouts produced</td>
+  <td style="text-align:right">15</td>
+  <td>what the convoy looked like in the logs</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The third join is <code>distributed-locking</code>.</strong> It taught that a lock between
+machines needs a <strong>lease with a TTL</strong>, because death and slowness are
+indistinguishable from outside. Notice what is <em>missing</em> from every lock in this
+lab: there is no TTL anywhere, and no fencing token. That is not sloppiness.</p>
+<p>Inside one JVM the runtime genuinely knows when a thread has died, and it releases
+every lock that thread held. There is no network, no ghost packet, no partition.
+<strong>A single JVM is the
+one place where a lock can be exactly a lock.</strong> Everything that lab called a
+compromise was the price of leaving this building.</p>
+<p><strong>The cast.</strong> Ana and Ben are the two workers in the stockroom, and they are
+Thread A and Thread B in every scenario on the page. They appear in other labs in
+this workspace too, so if they feel familiar, they should.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--multithreading-in-java">Exercises — multithreading in Java</h1>
+<p>Everything here is pencil-and-paper or work in <strong>The Interleaving Machine</strong>
+(<code>visualization.html</code> · <a href="https://claude.ai/code/artifact/10d168d6-8a4f-49fe-9b39-471e067a6bc7" target="_blank" rel="noopener">https://claude.ai/code/artifact/10d168d6-8a4f-49fe-9b39-471e067a6bc7</a>).
+No code to write and nothing to run. Attempt each before opening <code>SOLUTIONS.md</code>.</p>
+<p>The rungs climb: explain → identify → predict → modify → trace → spot the flaw →
+handle failure → design.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> In your own words, with no Java terms at all, explain to a non-programmer why
+two people each adding one box to a stockroom can leave the tally showing one box
+added. Then say what the single-key-on-the-door fix actually changes — and what it
+does <em>not</em> change.</p>
+<p><strong>1.2</strong> A colleague says: <em>&quot;I made the field <code>volatile</code>, so the counter is now
+thread-safe.&quot;</em> Write the two-sentence reply that says exactly what they fixed and
+exactly what they did not. Then name the one situation where their instinct would
+have been right.</p>
+<p><strong>1.3</strong> State the difference between <strong>safety</strong> and <strong>liveness</strong> in one sentence
+each, and classify these four as one or the other: a lost update; a deadlock; a
+buffer that goes to −1; a thread that never notices a stop flag. For each, say
+whether waiting longer could possibly help.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Open <strong>scenario 1</strong> and run three steps: Thread A, then Thread B, then Thread
+A. Now read the screen and answer without stepping further: what is in <code>count</code>? What
+is in Thread A's <code>r</code>? What is in Thread B's <code>r</code>? Which of those three numbers is
+shared, and why are the other two not?</p>
+<p><strong>2.2</strong> Open <strong>scenario 5</strong> and run its demonstration until both consumers are
+asleep. From the Locks panel alone, answer: who holds <code>buffer</code>? Who is in the entry
+set? Who is in the wait set? Then say what would have to happen for each of the two
+sleepers to become RUNNABLE again — the answers are different in kind, not just in
+timing.</p>
+<p><strong>2.3</strong> In <strong>scenario 3</strong>, run Thread A once. Look at the &quot;Run one step of&quot; controls.
+Why is the Thread B button disabled, and what would have to be true on the screen for
+it to become enabled again?</p>
+<p><strong>2.4</strong> In <strong>scenario 2</strong> with <code>volatile</code> off, run the demonstration to the end. Point
+at the two places on screen that together prove this is a <em>visibility</em> failure and
+not a <em>timing</em> failure.</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> Three threads each run <code>count++</code> once on a shared <code>int</code> starting at 0, with no
+synchronization. What is the full set of possible final values? Justify the highest
+and the lowest.</p>
+<p><strong>3.2</strong> In <strong>scenario 4</strong>, before touching anything: Thread A has taken <code>accountA</code> and
+Thread B has taken <code>accountB</code>. Both now ask for the other. Predict the exact state of
+each thread and each lock after two more steps. Check on screen.</p>
+<p><strong>3.3</strong> In <strong>scenario 5</strong>, suppose the producer runs <em>completely</em> before either
+consumer takes the lock. Predict the final value of <code>items</code> and the final state of
+each consumer, for the <code>if</code> version. Then predict it for the <code>while</code> version. Run
+both (use the ribbon to rewind and re-drive the schedule) and say which of your two
+predictions was the one that surprised you.</p>
+<p><strong>3.4</strong> Open the <strong>Thread pool</strong> tab. Set 3 workers, queue 12, 12 tasks, 5 ticks.
+Before pressing Play, write down the tick at which everything finishes. Then do it
+for 5 workers. One of those two numbers is not what the naive formula predicts —
+which one, and why?</p>
+<p><strong>3.5</strong> In <strong>scenario 6</strong>, both threads read 0 and Thread A's compare-and-set
+succeeds. Predict what Thread B's compare-and-set returns, what B does next, and how
+many total compare-and-set attempts the run makes. Check the counters.</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> In <strong>scenario 3</strong>, tick <em>&quot;Remove the <code>synchronized</code> block&quot;</em> and drive the same
+interleaving that scenario 1 uses (A, B, A, A, B, B). What is the final count? Now
+put the lock back and try to drive that same interleaving. Describe precisely what
+stops you — and say why &quot;the lock made it slower&quot; is the wrong description of what
+happened.</p>
+<p><strong>4.2</strong> In <strong>scenario 4</strong>, turn on <em>&quot;lock accounts in the same order&quot;</em>. The deadlock
+disappears. Explain why an ordering rule is enough, using the four conditions for
+deadlock — and say which one of the four the rule actually attacks.</p>
+<p><strong>4.3</strong> In <strong>scenario 2</strong>, turn <code>volatile</code> on. Watch the Worker's <em>private copy</em> row
+across the whole run and describe what changed about it. Then answer: would putting
+the flag read inside a <code>synchronized</code> block have worked too? What would it have cost?</p>
+<p><strong>4.4</strong> In the <strong>Thread pool</strong> tab, set queue capacity to 0 with 2 workers and 12
+tasks. Record the rejection count. Now tick <em>CallerRunsPolicy</em> and record it again.
+Both configurations are &quot;correct&quot;. Describe the situation in which you would choose
+each, and name the third option and the failure mode it buys you.</p>
+<p><strong>4.5</strong> In the pool tab with nesting on and 2 workers, the pool deadlocks. Raise the
+worker count until it completes. Explain why this is a <em>dangerous</em> fix rather than a
+real one, in terms of what changes under production load.</p>
+<hr />
+<h2 id="exercises-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1</strong> By hand, on paper, complete this table for two unsynchronized threads running
+<code>count++</code> from <code>count = 5</code>, under the interleaving A-read, B-read, B-add, B-write,
+A-add, A-write. Fill in memory and both registers after every step, then state the
+final value and how many increments were lost.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>Who</th>
+  <th>Instruction</th>
+  <th><code>count</code> in memory</th>
+  <th>A's <code>r</code></th>
+  <th>B's <code>r</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>A</td>
+  <td><code>r = count</code></td>
+  <td></td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>…</td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+  <td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>5.2</strong> Trace <strong>scenario 5</strong> with <code>if</code>, by hand, from the moment the producer calls
+<code>notifyAll()</code>. For each of the next six steps, write which thread runs, its state
+before and after, who owns <code>buffer</code>, and the value of <code>items</code>. Your trace must show
+the exact step at which the second consumer's decision becomes wrong, and name what
+it is relying on that is no longer true.</p>
+<p><strong>5.3</strong> Trace <strong>scenario 6</strong> by hand from &quot;both threads have read 0&quot; to termination.
+Write down every compare-and-set with its expected value, the actual value in memory,
+and the outcome. State the total wasted work in units of &quot;additions performed but
+thrown away&quot;.</p>
+<hr />
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p>Each of these is a described design, not code you can run. For each: construct a
+concrete interleaving (with real values, like the traces above) in which it produces
+a wrong answer or hangs, and name the guarantee that is violated.</p>
+<p><strong>6.1</strong> <em>&quot;We removed the lock from <code>get()</code> because reads can't corrupt anything —
+only writes need synchronizing. All writers still synchronize properly on the same
+lock.&quot;</em> What can <code>get()</code> return that it should not, and why does the writers'
+diligence not help?</p>
+<p><strong>6.2</strong> <em>&quot;Our cache is a <code>ConcurrentHashMap</code>, which is thread-safe, so this is
+fine:</em></p>
+<div class="code"><pre><code class="language-java">if (!cache.containsKey(k)) cache.put(k, expensiveLoad(k));
+</code></pre></div>
+<p><em>&quot;</em> Both calls really are atomic. Show the interleaving that still breaks it, and say
+what the actual invariant was that got violated. What single method call fixes it?</p>
+<p><strong>6.3</strong> <em>&quot;Double-checked locking without <code>volatile</code> is fine on x86 — we tested it
+thoroughly on our laptops and in CI.&quot;</em> Name what is wrong with the reasoning, what
+the reader can observe that it must not, and why the test evidence is worthless. Which
+earlier lab measured this exact thing?</p>
+<p><strong>6.4</strong> <em>&quot;To avoid deadlock we changed every <code>synchronized</code> to <code>tryLock()</code> with an
+immediate retry on failure. Now nothing can ever block forever.&quot;</em> Construct the run
+where this hangs anyway. What is that failure called, and why is it harder to
+diagnose than the deadlock it replaced?</p>
+<p><strong>6.5</strong> <em>&quot;Our worker catches <code>InterruptedException</code>, logs it, and continues the loop
+so a transient interrupt can't kill the worker.&quot;</em> Describe what breaks at shutdown,
+what specific piece of information was destroyed by that catch block, and the
+two-line fix.</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> A <code>synchronized</code> method updates an order and then calls a payment provider
+over HTTP inside the same block. The provider starts taking 30 seconds. Describe,
+step by step, what happens to the other 50 request threads, what CPU and latency
+graphs show, what a thread dump shows, and why adding more threads makes it worse.
+Then redesign the method so the outage cannot happen, and state precisely which
+invariant you must be careful not to break while shrinking the critical section.</p>
+<p><strong>7.2</strong> Extend scenario 5's design so it survives <em>multiple producers and multiple
+consumers of a bounded buffer of capacity N</em>, on paper. Say what each side waits on,
+what each side signals, why <code>notifyAll()</code> rather than <code>notify()</code> becomes important
+once producers and consumers share one monitor, and what the standard library class
+is that you should have used instead.</p>
+<p><strong>7.3</strong> Failure 7 in the README (pool starvation deadlock) has no runtime detection.
+Design a monitoring rule that would have caught it <em>before</em> it became an outage,
+using only the four pool metrics named in stage 13. Then design the code-level rule
+that would have prevented it, and say what a reviewer should grep for.</p>
+<p><strong>7.4</strong> A pooled request handler puts the tenant id in a <code>ThreadLocal</code> and clears it
+&quot;at the end of the handler&quot;. A rare exception path skips the clear. Describe the
+symptom the customer reports, why it is intermittent, why it is worse than a crash,
+and give two fixes — one that keeps <code>ThreadLocal</code> and one that removes the whole
+class of bug.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — The payments worker.</strong> Design the threading for a service that consumes
+payment instructions from a queue and calls three downstream providers. Constraints:
+8 cores; each provider call waits ~200 ms and computes ~5 ms; provider C fails over
+to a 3-second timeout roughly 1% of the time; the same payment must never be sent
+twice; and the service must drain cleanly within 30 seconds on deploy.</p>
+<p>State: how many pools and why; the size of each and the arithmetic behind it; queue
+type and capacity; the rejection policy and what happens to a rejected payment; what
+shared mutable state exists and how each piece is protected; every place a lock is
+held and proof that none is held across a network call; the shutdown sequence; and
+the five things you would put on a dashboard. Then say which parts of this design
+<code>java-virtual-threads</code> would let you delete outright, and which parts survive
+unchanged — and why.</p>
+<p><strong>8.2 — The duplicate that got through.</strong> Reconciliation shows 12 payments in a month
+were sent twice, out of 40 million. There is no error in any log. Using this lab's
+failure catalogue, list the candidate mechanisms, and for each one name the single
+observation that would confirm or eliminate it. Then say which of them cannot be
+distinguished by observation alone, and what you would have to add to the system to
+tell them apart in future. (Compare your answer with <code>idempotency</code> and
+<code>optimistic-vs-pessimistic-locking</code> — one of them argues the fix does not belong in
+the locking layer at all.)</p>
+<p><strong>8.3 — The same problem, three scales.</strong> A lost update can happen between two CPU
+registers (this lab), between two database transactions (<code>isolation-levels</code>), and
+between two HTTP requests with a human in the middle
+(<code>optimistic-vs-pessimistic-locking</code>). Write the one-paragraph account of what is
+identical at all three scales and what is genuinely different. Then explain why the
+in-JVM version can use a plain lock while the cross-machine version
+(<code>distributed-locking</code>) cannot — and what specifically the distributed version has to
+add to compensate.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--multithreading-in-java">Solutions — multithreading in Java</h1>
+<p>Worked answers. Rungs 7 and 8 are design discussions, not single correct outputs —
+compare shape and reasoning, not wording. Figures cited as <em>verified</em> come from
+<code>./validate-visualization.sh</code> (42 engine checks + 12 render checks, all passing).</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Each person's job is really three separate trips: read the number, change it
+at their own desk, come back and write it. If the second person reads before the
+first one writes, both of them are working from the same starting number, and the
+second write simply covers the first. Nobody made a mistake; the tally is wrong
+anyway.</p>
+<p>The key on the door changes <em>which sequences of events are possible</em>: it deletes the
+ones where the second person reads while the first is mid-job. It does <strong>not</strong> make
+the three trips into one trip, and it does not make anyone faster. Everything is
+still three trips — there just can no longer be a second person in the middle of
+them.</p>
+<p><strong>1.2</strong> <em>&quot;You fixed whether other threads can see the value, which was a real
+problem. You did not fix that <code>count++</code> is a read, an add and a write with a gap
+between them — two threads can both read the same number and both write the same
+result, and <code>volatile</code> allows that.&quot;</em> Their instinct is exactly right for a <strong>flag
+one thread writes and others only read</strong>, which is scenario 2 — there is no
+read-modify-write, so there is no gap to protect.</p>
+<p><strong>1.3</strong> Safety: nothing incorrect ever happens. Liveness: something correct
+eventually happens.</p>
+<ul>
+<li>Lost update — <strong>safety</strong>. Waiting cannot help; the data is already wrong.</li>
+<li>Deadlock — <strong>liveness</strong>. Waiting cannot help either, but nothing is corrupted; a
+restart recovers fully.</li>
+<li>Buffer at −1 — <strong>safety</strong>. An invariant is broken.</li>
+<li>Missed stop flag — <strong>liveness</strong>. Nothing is wrong, nothing will ever progress.</li>
+</ul>
+<p>The pattern worth keeping: waiting never fixes either kind. The difference is what
+you have to do afterwards — a liveness failure needs a restart, a safety failure
+needs a reconstruction.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> After A, B, A: <code>count</code> in memory is <strong>0</strong>; A's <code>r</code> is <strong>1</strong>; B's <code>r</code> is
+<strong>0</strong>. <code>count</code> is a field, so it lives on the heap and every thread can reach it.
+Both <code>r</code>s are local variables, so they live on their thread's own stack — there is
+one <code>r</code> <em>per thread</em>, and neither thread can see or affect the other's. That is why
+the visualization draws them inside the thread cards and <code>count</code> outside them.</p>
+<p><strong>2.2</strong> <code>buffer</code> is <strong>held by nobody</strong> (both consumers gave the lock back when they
+called <code>wait()</code>); the <strong>entry set is empty</strong>; the <strong>wait set holds both consumers</strong>.</p>
+<p>The two ways out are different in kind, and this is the point of the question:</p>
+<ul>
+<li>To leave the <em>wait set</em>, a consumer needs <strong>another thread to call <code>notify</code> or
+<code>notifyAll</code></strong>. Nothing it does itself can help. Time passing does not help.</li>
+<li>To leave the <em>entry set</em> (where it lands after being notified), it needs only
+<strong>the lock to become free</strong>. That happens on its own as other threads finish.</li>
+</ul>
+<p><code>WAITING</code> depends on someone else's cooperation; <code>BLOCKED</code> resolves itself.</p>
+<p><strong>2.3</strong> Thread B is disabled because Thread A owns the <code>lock</code> monitor, so B is
+<code>BLOCKED</code> — and a blocked thread cannot execute any instruction at all, so there is
+no &quot;one step of B&quot; to run. It becomes enabled the moment the Locks panel shows
+<code>lock</code> <strong>held by nobody</strong>, which happens when A executes its <code>UNLOCK</code>.</p>
+<p><strong>2.4</strong> The two places are (a) the <strong>Shared memory</strong> panel, which reads
+<code>stop = true</code>, and (b) the Worker's <strong>private copy</strong> row, which reads
+<code>stop = false — memory says true</code>. Together they show the write completed <em>before</em>
+the read, and the read still returned the old value. A timing failure would require
+the read to have happened first; here it did not. Verified: memory holds <code>true</code>,
+the worker has looped 13 more times, and every read returned <code>false</code>.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> <strong>{1, 2, 3}.</strong>
+<em>Highest, 3:</em> each thread runs to completion before the next starts — every write is
+based on a fresh read.
+<em>Lowest, 1:</em> all three read 0, all three compute 1, all three write 1. Two
+increments vanish.
+There is no way to reach 0 (someone writes at least 1) or 4 (nobody ever writes more
+than what they read plus one).</p>
+<p><strong>3.2</strong> Both threads attempt their second <code>LOCK</code>, both are refused, and neither
+program counter moves. Final state: Thread A <code>BLOCKED</code> on <code>accountB</code>; Thread B
+<code>BLOCKED</code> on <code>accountA</code>; <code>accountA</code> held by A with B in its entry set; <code>accountB</code>
+held by B with A in its entry set; nothing <code>RUNNABLE</code>. Verified: <code>run = STUCK</code>, both
+threads <code>BLOCKED</code>, and each monitor owned by the thread the other one wants.</p>
+<p><strong>3.3</strong> If the producer runs first, <code>items</code> is already 1 when the consumers arrive,
+so <strong>neither consumer ever calls <code>wait()</code></strong> — the <code>if</code>/<code>while</code> distinction never
+comes into play. Consumer 1 takes the item (<code>items</code> 1 → 0). Consumer 2 finds
+<code>items == 0</code> and goes to sleep, and stays asleep because the producer has already
+finished. Final <code>items = 0</code> in <strong>both</strong> versions, with one consumer <code>WAITING</code>.</p>
+<p>The surprise for most people is that the buggy version looks perfectly correct here.
+That is the actual lesson: the <code>if</code> bug is invisible on the schedule where the
+producer is early, and appears only when both consumers sleep first. The bug is in
+the <em>set of permitted schedules</em>, not in the code you can point at. Verified: the
+schedule where both consumers sleep first gives <code>items = -1</code> with <code>if</code> and <code>items = 0</code>
+with <code>while</code>.</p>
+<p>Second thing to notice: run the producer before anyone sleeps and the log says
+<strong>&quot;called <code>notifyAll()</code> and woke nobody&quot;</strong> — verified. The notification was
+discarded, and it did not matter, because the <em>condition</em> (<code>items == 1</code>) was still
+true when the consumers looked. The condition is the truth; the signal is a nudge.</p>
+<p><strong>3.4</strong> 3 workers → finishes at tick <strong>20</strong>. 5 workers → finishes at tick <strong>15</strong>.</p>
+<p>The naive formula (total work ÷ workers = 60/W) predicts 20 for three workers, which
+is right, and <strong>12</strong> for five workers, which is wrong. Tasks cannot be split: with
+five workers, the twelve tasks run in three rounds of at most five, so the makespan
+is <code>5 ticks × ceil(12/5) = 15</code>. The fifth worker sits idle for the whole final
+round. Verified across the sweep: 60, 30, 20, 15, 15, 10 for one to six workers —
+note that <strong>four and five workers finish at the same tick</strong>.</p>
+<p>The practical version of this: capacity you add stops buying anything well before
+the utilisation graph looks full.</p>
+<p><strong>3.5</strong> Thread B's compare-and-set returns <strong>false</strong> — it expected 0 and memory holds</p>
+<ol>
+<li>B does not block and does not lose its increment; it loops back, re-reads
+(getting 1), computes 2, and its second compare-and-set succeeds. Total attempts:
+<strong>3</strong> (A once, B twice). Verified: final count 2, <code>casFail = 1</code>, <code>retries = 1</code>, and
+no thread ever entered <code>BLOCKED</code>.</li>
+</ol>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Without the lock and under the interleaving A, B, A, A, B, B the final count
+is <strong>1</strong> — verified. With the lock back on, you cannot drive that interleaving at
+all: after A's first step it <em>holds</em> the lock, so B's button is disabled, and there
+is no sequence of button presses that puts B between A's read and A's write.</p>
+<p>&quot;The lock made it slower&quot; is the wrong description because nothing was slowed. The
+same six instructions execute. What changed is the <strong>set of executions that exist</strong>:
+the interleaving that produced 1 is not a legal execution of the locked program.
+Verified exhaustively — enumerating every possible schedule of the locked version
+produces 2 every time.</p>
+<p><strong>4.2</strong> The four conditions are mutual exclusion, hold-and-wait, no preemption, and
+<strong>circular wait</strong>. Ordering attacks the last one, and only the last one — the other
+three are all still true after the fix.</p>
+<p>Why ordering is sufficient: a cycle requires at least one thread holding a
+higher-ranked lock while requesting a lower-ranked one. If every thread acquires in
+ascending order, no thread ever does that, so no cycle can be drawn. Whoever gets
+<code>accountA</code> will eventually get <code>accountB</code>, because everyone waiting for <code>accountB</code>
+either already holds <code>accountA</code> (only one thread can) or is not holding anything
+above it. Verified: with ordering on, the same code completes.</p>
+<p><strong>4.3</strong> With <code>volatile</code> on, the private copy row stays empty — there is never a
+private copy of <code>stop</code> to be stale, because every read goes to memory. Verified: the
+worker terminates.</p>
+<p>A <code>synchronized</code> block around the read would also work: acquiring the monitor
+discards private copies, so each iteration re-reads from memory, and the writer must
+use the same lock. The cost is that you now take and release a lock on <strong>every loop
+iteration</strong> — far more expensive than a <code>volatile</code> read, and it introduces a lock
+where none is needed. <code>volatile</code> is the right tool precisely because this is a single
+read of a single field with no read-modify-write. (<code>AtomicBoolean</code> is equivalent here
+and reads better.)</p>
+<p><strong>4.4</strong> Queue 0, no caller-runs: <strong>10 of 12 rejected</strong> (verified). With
+<code>CallerRunsPolicy</code>: <strong>0 rejected, all 12 completed, 4 run by the submitting thread</strong>
+(verified) — and while the submitter is running one, it cannot submit anything else.</p>
+<ul>
+<li>Choose <strong>rejection</strong> when losing work is acceptable and <em>latency</em> is not — a
+metrics ping, a best-effort cache warm, anything with a &quot;shed load&quot; story. You
+must handle <code>RejectedExecutionException</code>; silently swallowing it is how requests
+disappear.</li>
+<li>Choose <strong>caller-runs</strong> when the work must not be lost and the producer <em>can</em> be
+slowed — the classic case is reading from a queue or a file, where slowing the
+reader is exactly right. Do not use it when the caller is an HTTP request thread
+you are trying to keep responsive: you have just made an inbound thread do
+arbitrary background work.</li>
+<li>The third option is an <strong>unbounded queue</strong> (what <code>Executors.newFixedThreadPool</code>
+gives you). It never rejects and never blocks the producer — and it buys you
+unbounded latency and eventually <code>OutOfMemoryError</code> under sustained overload. It
+does not remove the choice; it defers it until the heap makes it for you.</li>
+</ul>
+<p><strong>4.5</strong> With nesting on and 2 workers the pool deadlocks at tick 4 (verified); at 8
+workers the identical configuration completes (verified).</p>
+<p>That is dangerous because nothing was fixed — the <em>dependency</em> is still &quot;a task
+blocks on work that needs a worker from the same pool&quot;. A larger pool only means it
+takes more simultaneous parent tasks to consume every worker. Under production load
+— a traffic spike, a slow downstream that makes tasks last longer, a retry storm —
+the number of concurrently blocked parents rises, and the pool deadlocks then, at
+peak, permanently, with no code change to blame. You have converted a deterministic
+bug that fails in the first test run into a load-dependent one that waits for your
+worst day. The real fix is structural: a separate pool for sub-tasks, or not
+blocking at all.</p>
+<hr />
+<h2 id="solutions-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>Who</th>
+  <th>Instruction</th>
+  <th><code>count</code></th>
+  <th>A's <code>r</code></th>
+  <th>B's <code>r</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>A</td>
+  <td><code>r = count</code></td>
+  <td>5</td>
+  <td>5</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>B</td>
+  <td><code>r = count</code></td>
+  <td>5</td>
+  <td>5</td>
+  <td>5</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>B</td>
+  <td><code>r = r + 1</code></td>
+  <td>5</td>
+  <td>5</td>
+  <td>6</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>B</td>
+  <td><code>count = r</code></td>
+  <td><strong>6</strong></td>
+  <td>5</td>
+  <td>6</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>A</td>
+  <td><code>r = r + 1</code></td>
+  <td>6</td>
+  <td>6</td>
+  <td>6</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>A</td>
+  <td><code>count = r</code></td>
+  <td><strong>6</strong></td>
+  <td>6</td>
+  <td>6</td>
+</tr>
+</tbody>
+</table></div>
+<p>Final: <strong>6</strong>. Two increments were performed; one was lost. Note step 6: A's write is
+not wrong in itself — it writes exactly what it computed. It is wrong because what it
+computed came from a read that is now stale, and nothing in the program checks that.</p>
+<p><strong>5.2</strong> From the producer's <code>notifyAll()</code>:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Step</th>
+  <th>Who</th>
+  <th>State before → after</th>
+  <th>Owner of <code>buffer</code></th>
+  <th><code>items</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Producer</td>
+  <td>RUNNABLE → RUNNABLE</td>
+  <td>Producer</td>
+  <td>1</td>
+</tr>
+<tr>
+  <td></td>
+  <td></td>
+  <td><code>notifyAll()</code> moves <strong>both</strong> consumers from the wait set to the <strong>entry set</strong>, not to running</td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Producer</td>
+  <td>RUNNABLE → TERMINATED (after <code>UNLOCK</code>)</td>
+  <td>nobody</td>
+  <td>1</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Consumer 1</td>
+  <td>BLOCKED → RUNNABLE</td>
+  <td>Consumer 1</td>
+  <td>1</td>
+</tr>
+<tr>
+  <td></td>
+  <td></td>
+  <td>re-acquires the lock and returns from <code>wait()</code></td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Consumer 1</td>
+  <td>with <code>if</code>, <strong>does not re-check</strong>; reads 1, writes 0</td>
+  <td>Consumer 1</td>
+  <td><strong>0</strong></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Consumer 1</td>
+  <td>releases, terminates</td>
+  <td>nobody</td>
+  <td>0</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Consumer 2</td>
+  <td>BLOCKED → RUNNABLE, re-acquires, does not re-check</td>
+  <td>Consumer 2</td>
+  <td>0</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>Consumer 2</td>
+  <td>reads 0, writes −1</td>
+  <td>Consumer 2</td>
+  <td><strong>−1</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The decision becomes wrong at <strong>step 6</strong>. Consumer 2 is relying on the condition
+<code>items &gt; 0</code> that it verified <em>before</em> it went to sleep. Being woken told it that
+something changed — it did not tell it that its condition is true, and between the
+notification and its own re-acquisition, Consumer 1 took the only item. Verified:
+<code>items = -1</code>, with two &quot;took an item&quot; events for one produced item.</p>
+<p><strong>5.3</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Attempt</th>
+  <th>Who</th>
+  <th>Expected</th>
+  <th>Actual in memory</th>
+  <th>Outcome</th>
+  <th><code>count</code> after</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>A</td>
+  <td>0</td>
+  <td>0</td>
+  <td><strong>succeeds</strong></td>
+  <td>1</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>B</td>
+  <td>0</td>
+  <td>1</td>
+  <td><strong>refused</strong></td>
+  <td>1</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>B</td>
+  <td>1</td>
+  <td>1</td>
+  <td><strong>succeeds</strong></td>
+  <td>2</td>
+</tr>
+</tbody>
+</table></div>
+<p>Wasted work: <strong>one addition</strong> (B's first <code>0 + 1 = 1</code>, discarded). Verified: final 2,
+<code>casFail = 1</code>, <code>retries = 1</code>, three attempts total, no thread ever <code>BLOCKED</code>.</p>
+<p>The generalisation worth carrying: the wasted work is proportional to contention, and
+it is <em>invisible in latency</em> as long as there are spare cores to absorb it — which is
+exactly the measurement <code>optimistic-vs-pessimistic-locking</code> made one level up (862
+retries, 2124 ms burned against 400 ms of useful work, wall clock nearly unchanged).</p>
+<hr />
+<h2 id="solutions-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p><strong>6.1</strong> <code>get()</code> can return a <strong>stale value indefinitely</strong>, or — for a <code>long</code>/<code>double</code>
+on a 32-bit JVM, or for a reference published unsafely — a value that never existed.</p>
+<p>Concrete run: writer takes the lock, sets <code>value = 42</code>, releases. Reader (no lock)
+reads <code>value</code> and gets 0. There is no rule broken: the reader has no
+<em>happens-before</em> edge to the writer's release, so it is permitted to see the old
+value, and permitted to keep seeing it forever.</p>
+<p>The writers' diligence does not help because <strong>the guarantee is per-lock and
+two-sided</strong>. Releasing a monitor publishes your writes <em>to threads that subsequently
+acquire the same monitor</em>. A reader that never acquires it never collects the
+publication. Violated guarantee: visibility. The cheap fix if <code>get()</code> really is a
+single field read is to make the field <code>volatile</code>; the correct fix if <code>get()</code> reads
+two related fields is to take the lock, because otherwise you can see one field's new
+value and the other's old one.</p>
+<p><strong>6.2</strong> Interleaving: thread 1 calls <code>containsKey(k)</code> → false. Thread 2 calls
+<code>containsKey(k)</code> → false. Both call <code>expensiveLoad(k)</code>. Both call <code>put</code>. The second
+<code>put</code> overwrites the first.</p>
+<p>Both calls really are individually atomic; the problem is that <strong>the invariant spans
+both of them</strong> — &quot;load exactly once per key&quot; is a property of the pair, and nothing
+holds any lock between them. This is the same <strong>check-then-act</strong> shape as
+<code>count++</code>; <code>ConcurrentHashMap</code> protects its own internal structure, not your
+business rule. Violated guarantee: the at-most-once loading invariant (and, if
+<code>expensiveLoad</code> has side effects, you have just done them twice).</p>
+<p>Fix: one atomic call — <code>cache.computeIfAbsent(k, this::expensiveLoad)</code>, which holds
+the bin lock across the check and the insert. (<code>putIfAbsent</code> fixes the overwrite but
+still calls <code>expensiveLoad</code> twice, so it is the wrong choice when the load is the
+expensive part.)</p>
+<p><strong>6.3</strong> Three separate problems with the reasoning.</p>
+<p><em>What is wrong:</em> &quot;thread-safe on x86&quot; is not a thing you are allowed to conclude. The
+Java Memory Model, not the CPU, defines what is legal, and the <strong>compiler</strong> is a
+reordering agent in its own right — the JIT can publish the reference before the
+constructor's field writes are complete regardless of how strongly ordered the
+hardware is. x86's store ordering hides the hardware half of the problem and none of
+the compiler half.</p>
+<p><em>What the reader can observe:</em> a non-null reference to a <strong>partially constructed
+object</strong> — fields still at their default values. Worse than a crash, because it looks
+like valid data.</p>
+<p><em>Why the test evidence is worthless:</em> the failure requires a specific interleaving
+plus a specific JIT compilation decision that only occurs after enough invocations to
+trigger optimisation. Laptop and CI runs are short, single-tenant and lightly loaded
+— precisely the conditions under which it does not reproduce. And most Apple-silicon
+and Graviton deployments are <em>weakly</em> ordered, so the hardware half comes back in
+production and not on the x86 CI box.</p>
+<p><em>Measured where:</em> the <code>java-memory-model</code> lab, whose <code>DoubleCheckedLocking</code> and
+<code>Publication</code> experiments are exactly this. Fix: <code>private static volatile Instance instance;</code> — or, better, a holder class or an <code>enum</code>, which get the guarantee from
+class initialisation for free.</p>
+<p><strong>6.4</strong> This is <strong>livelock</strong>. Concrete run: threads A and B both need locks X and Y.
+A gets X, B gets Y. A's <code>tryLock(Y)</code> fails, so A releases X and retries; B's
+<code>tryLock(X)</code> fails, so B releases Y and retries. They retry in lockstep, each
+grabbing the lock the other just dropped, forever.</p>
+<p>It is harder to diagnose than the deadlock it replaced because both threads are
+<code>RUNNABLE</code> and the CPU is busy. A thread dump shows threads doing work. Automated
+deadlock detection reports nothing, because there is no cycle at any instant — the
+cycle is in the <em>pattern over time</em>. You detect it by taking two dumps a few seconds
+apart and noticing the same stacks are still churning with no progress metric moving.</p>
+<p>The fix is the one the <code>raft</code> lab used for split votes, for the same reason:
+<strong>randomised back-off</strong> before retrying, so the lockstep breaks. Plus a bounded retry
+count so it eventually gives up loudly instead of quietly.</p>
+<p><strong>6.5</strong> At shutdown, <code>shutdownNow()</code> interrupts every worker; each one logs the
+exception and carries straight on. The pool never terminates, <code>awaitTermination</code>
+times out, and the deploy hangs or the container is killed mid-work.</p>
+<p>The destroyed information is the <strong>interrupt flag itself</strong>. When a blocking call
+throws <code>InterruptedException</code>, it <em>clears</em> the flag as it throws — the exception
+object is the only remaining record that cancellation was requested. Catching it and
+continuing throws away the sole copy, so every later check of
+<code>Thread.currentThread().isInterrupted()</code> says &quot;nobody asked me to stop&quot;.</p>
+<p>Two-line fix:</p>
+<div class="code"><pre><code class="language-java">} catch (InterruptedException e) {
+    Thread.currentThread().interrupt();   // put the evidence back
+    return;                               // and actually stop
+}
+</code></pre></div>
+<p>This is precisely the mechanism <code>structured-concurrency</code>'s cooperative cancellation
+is built on, which is why that lab insisted cancellation is cooperative and cannot be
+imposed.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1 — The lock held across HTTP.</strong></p>
+<p><em>What happens.</em> Thread 1 enters, holds the monitor, and blocks in a socket read for
+30 s. Threads 2…51 arrive, hit the same <code>synchronized</code>, and go to <code>BLOCKED</code> in the
+monitor's entry set. They are not doing work and not consuming CPU. Every request
+now takes up to 30 s, and the pool is exhausted, so even requests that never touch
+this code are rejected or queued behind it. One slow dependency has become a total
+outage.</p>
+<p><em>What the graphs show.</em> Latency vertical; <strong>CPU near zero</strong>; error rate initially
+<em>calm</em>, then a cliff when the pool queue fills. The near-zero CPU is the diagnostic
+signature — a busy service looks busy, a blocked one does not.</p>
+<p><em>What a thread dump shows.</em> Fifty threads in <code>BLOCKED (on object monitor)</code> all
+waiting on the same lock identity, and exactly one thread in <code>RUNNABLE</code> inside
+<code>SocketInputStream.read</code>. That single thread is your answer and the dump names it.</p>
+<p><em>Why more threads make it worse.</em> They all queue on the same monitor. You have added
+memory and context switches and zero throughput — the serial section is the ceiling,
+which is Amdahl's law with a very unfriendly <em>s</em>.</p>
+<p><em>The redesign.</em> Shrink the critical section to the state transition only:</p>
+<ol>
+<li>Under the lock: check the order is in a legal state and mark it <code>PENDING</code>, then
+release.</li>
+<li>Outside any lock: call the provider, with a <strong>timeout</strong> — a call with no timeout
+is the actual root cause and must be fixed regardless.</li>
+<li>Under the lock again: apply the result.</li>
+</ol>
+<p><em>The invariant to be careful about.</em> Between steps 1 and 3 the order is observable in
+a half-finished state by other threads. You must ensure <code>PENDING</code> is a state the rest
+of the system understands and refuses to double-process — which means the state
+machine, not the lock, is now carrying the safety property. That is the same
+conclusion <code>distributed-locking</code> reached: <strong>the guarantee has to live at the resource,
+and the lock is only an optimisation on top.</strong></p>
+<p><strong>7.2 — Bounded buffer, many producers, many consumers.</strong></p>
+<p>Producers wait while <code>count == capacity</code>; consumers wait while <code>count == 0</code>. Both
+wait on the same monitor guarding the buffer. Both signal after changing <code>count</code>.</p>
+<p>Why <strong><code>notifyAll()</code></strong> becomes essential once both kinds share one monitor: <code>notify()</code>
+wakes one arbitrary thread from the wait set, and the wait set contains both
+producers and consumers. A producer finishing can wake another <em>producer</em>, which
+re-checks, finds the buffer still full, and goes back to sleep — while the consumers
+that could have made progress are never woken. The signal is consumed and lost, and
+the system can wedge with work available and everybody asleep. <code>notifyAll()</code> wakes
+everyone; the <code>while</code> loops send the wrong ones back to sleep harmlessly.</p>
+<p>The cheaper structural fix is <strong>two <code>Condition</code> objects on one <code>ReentrantLock</code></strong>
+(<code>notFull</code>, <code>notEmpty</code>), so you can signal precisely the right group — this is the
+main reason <code>Condition</code> exists and <code>synchronized</code>'s single wait set is a limitation.</p>
+<p>And the answer you should actually give in a code review: <strong>use
+<code>ArrayBlockingQueue</code>.</strong> It is this design, correct, tested, and with <code>put</code>/<code>take</code>
+that cannot miss a signal. Hand-rolling it is how the <code>if</code>/<code>while</code> bug gets written.</p>
+<p><strong>7.3 — Catching pool starvation.</strong></p>
+<p><em>Monitoring rule.</em> Alert when, for a sustained window (say 60 s): <strong>active threads =
+pool size</strong> AND <strong>queue depth &gt; 0</strong> AND <strong>completed-task count is flat</strong>. Any two of
+those are normal saturation; all three together mean nothing is finishing while
+everything is occupied, which is the signature of blocked-not-working. Add the
+strongest single signal: <strong>queue wait time rising while execution time is flat</strong> —
+that separates &quot;the dependency got slow&quot; from &quot;the workers are not running&quot;.</p>
+<p><em>Prevention.</em> A rule with a name: <strong>a task may not block on a future produced by its
+own executor.</strong> Enforce it structurally — sub-work goes to a different, explicitly
+named pool, and the two pools' names encode the layering.</p>
+<p><em>What a reviewer greps for.</em> <code>.get(</code>, <code>.join(</code>, <code>.invokeAll(</code>, <code>.parallelStream()</code>
+and <code>CompletableFuture.…().join()</code> inside anything submitted to an executor —
+especially <code>parallelStream()</code>, which silently uses the shared
+<code>ForkJoinPool.commonPool</code> and therefore can starve code you have never read.</p>
+<p><strong>7.4 — The <code>ThreadLocal</code> that outlived the request.</strong></p>
+<p><em>Symptom.</em> A customer occasionally sees another tenant's data. It is a security
+incident, not a bug report.</p>
+<p><em>Why intermittent.</em> It requires the exception path, followed by that specific pooled
+thread being reused for a request that reads the value before setting it. Under low
+load the pool is large relative to traffic and reuse is rare; under high load it is
+constant.</p>
+<p><em>Why worse than a crash.</em> A crash is loud, local and self-limiting. This returns a
+plausible, well-formed, wrong answer, and every downstream system treats it as
+genuine — it propagates into caches, logs, exports and audit trails, and the blast
+radius keeps growing after the original bug is fixed.</p>
+<p><em>Fix 1, keeping <code>ThreadLocal</code>:</em> set it in a <code>try</code> and clear it in a <code>finally</code> in a
+single filter that wraps everything, so no application code can skip it. <code>finally</code>
+runs on the exception path; &quot;at the end of the handler&quot; does not.</p>
+<p><em>Fix 2, removing the class of bug:</em> <code>ScopedValue.where(TENANT, id).run(...)</code> — the
+binding is immutable, it is scoped to the block, and it is unbound on <strong>every</strong> exit
+path including exceptions, because unbinding is the runtime's job rather than yours.
+Your <code>scoped-values</code> lab called <code>ThreadLocal</code>'s two diseases <em>write-from-anywhere</em>
+and <em>lifetime-until-remove</em>; this incident is the second one, and <code>finally</code> is the
+manual discipline <code>ScopedValue</code> replaces with a guarantee.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — The payments worker.</strong> A defensible answer.</p>
+<p><em>Pools — three, not one.</em> One per provider (the bulkhead), so provider C's 3-second
+timeouts cannot consume the threads that talk to A and B. A single shared pool means
+C's bad day is an outage for all three.</p>
+<p><em>Sizing.</em> Each call waits ~200 ms and computes ~5 ms, so wait/compute ≈ 40. The
+I/O-bound formula <code>cores × utilisation × (1 + wait/compute)</code> gives
+<code>8 × 1.0 × 41 ≈ 328</code> threads to saturate 8 cores. That number is the point of the
+exercise: it is absurd on platform threads (~328 MB of reserved stack, heavy
+scheduling) and it is exactly why people historically went reactive. Choose
+deliberately: cap each pool at something you can actually afford (say 48 per
+provider, 144 total), accept that you will not saturate the CPU, and let the queue
+absorb bursts. Give provider C's pool a <em>smaller</em> cap and a <em>shorter</em> queue than A
+and B — you want its failures contained, not buffered.</p>
+<p><em>Queues.</em> Bounded, always. Capacity ≈ a few seconds of arrival rate, so a brief
+downstream hiccup is absorbed and a sustained one is refused rather than silently
+buffered into unbounded latency.</p>
+<p><em>Rejection.</em> Not <code>AbortPolicy</code> with a swallowed exception, and not caller-runs (the
+caller is a queue consumer whose job is flow control — making it run a 200 ms
+provider call destroys that). Reject, and on rejection <strong>negatively-acknowledge the
+message back to the source queue</strong> so it is retried later by whoever has capacity.
+The source queue is the buffer; the in-process queue must not try to be one.</p>
+<p><em>Shared mutable state, and how each piece is protected.</em></p>
+<ul>
+<li>Per-payment status: <strong>not shared</strong> — confine each payment to one task. This is
+option 1 from stage 12 and it removes most of the problem for free.</li>
+<li>The de-duplication record (&quot;has this payment been sent?&quot;): shared, and it is the
+one that must be right. Protect it with a <strong>conditional write in the database</strong>
+(a unique constraint on the instruction id, or <code>UPDATE … WHERE status = 'NEW'</code>
+with the update count as the witness) — not an in-JVM lock, because a JVM lock
+protects nothing against the second instance of your service.</li>
+<li>Metrics counters: <code>LongAdder</code>, not <code>synchronized</code> — high write contention, reads
+only at scrape time, which is precisely what <code>LongAdder</code> is for.</li>
+<li>Provider clients and config: <strong>immutable</strong>, built once at startup, shared freely.</li>
+</ul>
+<p><em>Locks held across a network call: none.</em> The dedup check is a single database
+statement; the provider call happens with nothing held. Write that down explicitly in
+review, because it is the failure that causes outages (rung 7.1).</p>
+<p><em>Shutdown, inside 30 s.</em> Stop consuming from the source queue first; then
+<code>shutdown()</code> each pool (not <code>shutdownNow()</code> — let in-flight payments finish);
+<code>awaitTermination(20s)</code>; then <code>shutdownNow()</code> and log whatever is still running by
+name. Every provider client must have a request timeout shorter than that budget, or
+the drain cannot possibly meet it. And every worker must handle <code>InterruptedException</code>
+by restoring the flag and returning (rung 6.5), or <code>shutdownNow()</code> does nothing.</p>
+<p><em>Dashboard — five things.</em> Per pool: active threads, queue depth, rejection rate, and
+task latency <strong>split into queue wait versus execution time</strong>; plus end-to-end
+duplicate-send count from reconciliation. The wait/execution split is the one that
+tells you whether to add capacity or to fix the dependency.</p>
+<p><em>What <code>java-virtual-threads</code> deletes.</em> The sizing arithmetic and the three pool caps
+go away: <code>Executors.newVirtualThreadPerTaskExecutor()</code> and one task per payment, with
+328 concurrent waits costing almost nothing. Failure 7 (pool starvation deadlock)
+becomes impossible because there is no pool to starve.</p>
+<p><em>What survives unchanged.</em> All of it that matters: bounded <strong>admission</strong> (you still
+must not accept unbounded work — the bound simply moves from a queue to a semaphore
+or to the source queue's prefetch), the dedup conditional write, &quot;no lock across a
+network call&quot;, timeouts on every call, interrupt handling, and the bulkhead —
+provider C can still exhaust a shared <em>downstream</em> resource such as a connection
+pool. Cheap threads changed the cost of waiting, not the rules of sharing.</p>
+<p><strong>8.2 — 12 duplicates in 40 million.</strong></p>
+<p>Candidates, each with the observation that settles it:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Mechanism</th>
+  <th>Confirming / eliminating observation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Lost update on a <code>status</code> flag (two threads both read <code>NEW</code>, both send)</td>
+  <td>Is the send guarded by a <strong>conditional</strong> write whose update count is checked? If the code does read-then-write with no condition, this is live. If it uses <code>UPDATE … WHERE status='NEW'</code> and checks the count, eliminated.</td>
+</tr>
+<tr>
+  <td>Retry after an ambiguous timeout (the first send actually succeeded)</td>
+  <td>Correlate duplicate timestamps with client-timeout events on the provider side. Two sends seconds apart with the first timing out points here.</td>
+</tr>
+<tr>
+  <td>At-least-once redelivery from the source queue</td>
+  <td>Look for redelivery counts / duplicate message ids in broker metrics for those 12.</td>
+</tr>
+<tr>
+  <td>Two service instances processing the same instruction</td>
+  <td>Are the 12 split across two hosts at the same instant? Host tags in the send log answer it immediately.</td>
+</tr>
+<tr>
+  <td>Pool task submitted twice on an exception path</td>
+  <td>Is there a retry wrapper <em>and</em> a queue redelivery on the same failure? Count send attempts logged per instruction id.</td>
+</tr>
+<tr>
+  <td><code>ThreadLocal</code>/context bleed causing the wrong id to be sent</td>
+  <td>The duplicates would be of <em>different</em> payments with a shared thread, not the same payment twice — check whether the pairs share an instruction id.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What observation alone cannot separate:</strong> a lost update and a same-instant
+double-delivery both look like <em>two sends, same id, same millisecond, different
+threads</em>. Nothing in the logs distinguishes &quot;both threads read <code>NEW</code>&quot; from &quot;two
+copies of the message arrived&quot;. To tell them apart in future you must <strong>record the
+decision, not just the action</strong>: log the update count (or the constraint violation)
+of the guard write with each send attempt. A send whose guard write matched <strong>zero
+rows</strong> and happened anyway is a lost update; two attempts each matching one row means
+two distinct message deliveries reached the guard.</p>
+<p>That instrumentation point is the practical lesson, and it is the same one
+<code>optimistic-vs-pessimistic-locking</code> reached: <strong>the update count is the only
+witness</strong> — a conflicting conditional write is not an error, it is an <code>UPDATE</code>
+matching zero rows, and if you do not check it you cannot tell the difference
+afterwards.</p>
+<p><strong>And the argument that the fix does not belong here at all:</strong> <code>idempotency</code> says
+stop trying to make the send happen exactly once — make it <em>safe to happen twice</em>.
+Give every instruction a key the provider deduplicates on, and all six mechanisms
+above become harmless. Locking reduces the probability of a duplicate; idempotency
+removes the consequence. The first is a race you can lose, the second is arithmetic.</p>
+<p><strong>8.3 — The same problem at three scales.</strong></p>
+<p><em>Identical at all three.</em> The shape is always <strong>read, decide, write</strong>, with a gap in
+the middle that the writer cannot see into, and a second party whose write lands in
+that gap. In every case the losing write is not detected by anything: no exception,
+no error, no log. And in every case the cure is one of exactly two things — make the
+gap impossible to enter (a lock), or make the write conditional on what you read (a
+version, a <code>compareAndSet</code>, an <code>If-Match</code>).</p>
+<p><em>Genuinely different.</em> The <strong>size of the gap</strong> and therefore what is affordable
+inside it. Between registers the gap is nanoseconds, so blocking is cheap and a lock
+is the obvious answer. Between transactions it is milliseconds and the gap contains
+I/O, so holding a lock starts costing other people throughput
+(<code>optimistic-vs-pessimistic-locking</code>'s <code>lunch</code>: 0 saves and 15 lock timeouts for the
+neighbours of one 2-second pause). Between HTTP requests the gap contains <strong>a human</strong>
+— seconds to minutes — and no lock is tolerable at all, so the conditional write is
+the only option.</p>
+<p><em>Why in-JVM can use a plain lock and cross-machine cannot.</em> Because a JVM lock rests
+on a fact the network destroys: <strong>the runtime knows when a thread has died</strong>, so it
+can release its monitors. Across machines, death and slowness are indistinguishable
+from outside — silence is the only evidence and it has two meanings needing opposite
+responses. So a distributed lock must be a <strong>lease with a TTL</strong>, which immediately
+creates the stale holder: a process paused longer than its TTL wakes up still
+believing it holds the lock.</p>
+<p><em>What the distributed version must add.</em> A <strong>fencing token</strong> — a strictly increasing
+grant number checked on every operation at the resource, so a stale holder's writes
+are refused. Note what that admits: fencing does not restore mutual exclusion —
+two holders still exist — it makes the overlap <em>harmless</em> by refusing stale effects.
+The safety comes from arithmetic (the token comparison, which has no timing
+assumptions); only the liveness comes from the timeout. Which is the same shape as
+the third scale's conditional write, and the same shape as <code>compareAndSet</code> at the
+first — one primitive wearing three costumes.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../15-ssh/notes.html"><small>← Lab 15</small>ssh</a><a href="../17-java-memory-model/notes.html" style="text-align:right"><small>Lab 17 →</small>java-memory-model</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-would-a-program-ever-do-two-things-at-once">1. Why would a program ever do two things at once?</a><a href="#readme-2-why-does-the-stockroom-tally-say-11-when-ana-and-ben-each-added-a-box">2. Why does the stockroom tally say 11 when Ana and Ben each added a box?</a><a href="#readme-3-surely-count-is-one-action--isnt-it">3. Surely count++ is one action — isn&#x27;t it?</a><a href="#readme-4-what-if-one-line-is-really-three--and-volatile-cannot-save-it">4. What if one line is really three — and volatile cannot save it?</a><a href="#readme-5-what-exactly-do-we-have-to-guarantee">5. What exactly do we have to guarantee?</a><a href="#readme-6-what-does-one-key-on-the-stockroom-door-actually-buy">6. What does one key on the stockroom door actually buy?</a><a href="#readme-7-what-do-engineers-call-the-things-ana-and-ben-just-did">7. What do engineers call the things Ana and Ben just did?</a><a href="#readme-8-which-mental-models-should-you-carry--and-where-do-they-lie-to-you">8. Which mental models should you carry — and where do they lie to you?</a><a href="#readme-9-can-you-watch-the-bug-happen">9. Can you watch the bug happen?</a><a href="#readme-10-how-would-you-build-the-fix-yourself-and-where-would-it-break">10. How would you build the fix yourself, and where would it break?</a><a href="#readme-11-what-are-all-the-ways-this-breaks">11. What are all the ways this breaks?</a><a href="#readme-12-what-does-a-lock-actually-promise-and-what-does-it-cost">12. What does a lock actually promise, and what does it cost?</a><a href="#readme-13-what-does-all-this-look-like-from-an-on-call-rotation">13. What does all this look like from an on-call rotation?</a><a href="#readme-14-where-are-the-exercises">14. Where are the exercises?</a><a href="#readme-15-what-does-this-connect-to-and-what-should-you-learn-next">15. What does this connect to, and what should you learn next?</a><a href="#readme-16-glossary--what-does-each-word-mean-again">16. Glossary — what does each word mean again?</a><a href="#readme-17-about-this-lab--where-do-the-numbers-come-from">17. About this lab — where do the numbers come from?</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

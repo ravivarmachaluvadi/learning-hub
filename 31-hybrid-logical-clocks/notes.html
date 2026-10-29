@@ -1,0 +1,1170 @@
+<!doctype html>
+<html lang="en" data-hub-lab="31-hybrid-logical-clocks">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>31. hybrid-logical-clocks</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 31 of 71 · Stage 4</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 31 · Why Distribution Is Hard</p><article id="readme"><h1 id="readme-hybrid-logical-clocks--a-learning-lab">Hybrid Logical Clocks — a learning lab</h1>
+<p><em>Audience: a backend engineer who has finished the causal-consistency and
+distributed-transactions labs. By the end you should be able to derive the
+HLC update rules from their two failure modes, state the drift bound and
+what invalidates it, explain what CockroachDB and MongoDB actually do with
+this clock, and say precisely what it buys compared to TrueTime's commit
+wait — and what it doesn't.</em></p>
+<p><strong>Lab contents</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>This document — the full story</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>Interactive space-time diagram — four clocks, skew sliders, a draggable snapshot cut</td>
+</tr>
+<tr>
+  <td><code>src/Core.java</code></td>
+  <td>The world: skewed clocks, messages, and a vector-clock ground-truth checker</td>
+</tr>
+<tr>
+  <td><code>src/Clocks.java</code></td>
+  <td>Four stamping designs behind one interface, plus the 64-bit packing</td>
+</tr>
+<tr>
+  <td><code>src/Fuzz.java</code></td>
+  <td>Randomized workloads + the metrics (inversions, drift, torn cuts)</td>
+</tr>
+<tr>
+  <td><code>src/Tests.java</code></td>
+  <td>25 scenario-named checks — <code>java src/Tests.java</code> (add <code>broken</code> for planted bugs)</td>
+</tr>
+<tr>
+  <td><code>src/Experiments.java</code></td>
+  <td>8 measured experiments — <code>java src/Experiments.java [1-8]</code></td>
+</tr>
+<tr>
+  <td><code>src/Scenes.java</code></td>
+  <td>5 narrated scenes — <code>java src/Scenes.java [1-5]</code></td>
+</tr>
+<tr>
+  <td><code>src/YourClock.java</code></td>
+  <td>Implement the HLC receive rule yourself (self-checking, 1/6 → 6/6)</td>
+</tr>
+<tr>
+  <td><code>validate-visualization.sh</code></td>
+  <td>Proves the page's JS clock agrees with the Java (node or macOS JavaScriptCore)</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code> / <code>SOLUTIONS.md</code></td>
+  <td>The eight-rung ladder, answers separate</td>
+</tr>
+</tbody>
+</table></div>
+<p>No dependencies. Every command is plain <code>java src/File.java</code> from this directory.</p>
+<p>Builds directly on: <a href="../29-causal-consistency/notes.html#readme"><code>../29-causal-consistency/</code></a>
+(happens-before, Lamport clocks, vector clocks, session tokens — all treated as
+known here) and <a href="../46-distributed-transactions/notes.html#readme"><code>../46-distributed-transactions/</code></a>
+(consistent cuts, external consistency, TrueTime, commit wait — this lab is the
+alternative that lab promised). Also <a href="../26-linearizability/notes.html#readme"><code>../26-linearizability/</code></a>
+(the real-time rule) and <a href="../08-isolation-levels/notes.html#readme"><code>../08-isolation-levels/</code></a> (MVCC
+versions — the place these timestamps will live).</p>
+<hr />
+<blockquote>
+<p><strong>Where you are: BEGINNER MODEL — stages 1–9.</strong></p>
+</blockquote>
+<h2 id="readme-1-why-does-this-exist">1. WHY does this exist?</h2>
+<p>Every distributed system stamps things — writes, messages, log lines, MVCC
+versions — and the stamp has two jobs that pull in opposite directions. Job
+one: <strong>order</strong> — if this event caused that one, its stamp must be smaller,
+always, or replicas apply effects before causes and debugging becomes
+archaeology of a fictional history. Job two: <strong>meaning</strong> — a stamp should
+answer human questions: <em>what did the system look like at 5 p.m.? delete
+everything older than 30 days.</em> Wall clocks do the second and betray the
+first; the counters you met in the causal-consistency lab do the first and
+know nothing of the second. HLC exists because real databases need one
+number that does both.</p>
+<h2 id="readme-2-the-problem-as-a-story">2. THE PROBLEM, as a story</h2>
+<p>A news agency has two bureaus. <strong>Asha</strong> in Mumbai stamps everything with the
+newsroom wall clock — which runs <strong>5 minutes fast</strong>. <strong>Ben</strong> in London
+stamps with his — <strong>5 minutes slow</strong>. (NTP in real life keeps machines
+within milliseconds-to-seconds of each other; nobody's clock is <em>right</em>.)</p>
+<p><strong>Zoe</strong>, the editor, has two needs. First, the archive must never show an
+effect before its cause — a correction filed before the article it
+corrects makes the archive fiction. Second, she assembles editions: <em>&quot;give
+me everything as of 5:00 p.m., exactly, from both bureaus&quot;</em> — and that cut
+through history must be whole: if it contains Ben's receipt of Asha's
+story, it must contain Asha's sending of it.</p>
+<p>Order, and meaning. Watch both fail.</p>
+<h2 id="readme-3-the-naive-solution">3. THE NAIVE SOLUTION</h2>
+<p>Stamp with the wall clock — it's right there, it survives restarts, NTP
+keeps it roughly honest, and everyone understands &quot;17:42:03.114&quot;.</p>
+<h2 id="readme-4-the-failure--twice-because-we-own-two-clocks">4. THE FAILURE — twice, because we own two clocks</h2>
+<p><strong>Failure one: the wall clock files effects before causes.</strong> Scene 1
+(<code>java src/Scenes.java 1</code>), the whole thing:</p>
+<div class="code"><pre><code>tick 10: Asha publishes an article and wires it to Ben. Her clock stamps it 15.
+tick 12: Ben receives it. HIS clock stamps the receipt 7.
+</code></pre></div>
+<p>Sent at 15, received at 7 — the receipt precedes its own cause by 8 ticks.
+Fuzzed against a vector-clock ground truth (experiment 1): at skew 8, <strong>65
+inversions</strong> among sampled happens-before pairs; at skew 20, <strong>341</strong>. And
+Zoe's editions? <strong>152 of 200</strong> candidate cut times produce a torn edition —
+a receive inside, its send outside (experiment 5).</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Set the skew to zero — clocks perfectly synchronized. Is
+the wall clock safe now?</em></p>
+<details><summary>Reveal</summary>
+No — it stops inverting and starts **tying**: 79 happens-before pairs per
+run that it cannot order at all, because two events inside the same clock
+tick get the identical reading. A clock has finite resolution, and a busy
+server does many things per millisecond. Even a perfect wall clock is too
+coarse to be an order. (Experiment 1, skew-0 row: 0 + 79.)
+</details>
+
+</blockquote>
+<p><strong>Failure two: the fix you already own burns the map.</strong> The
+causal-consistency lab gave you the Lamport clock — <code>counter = max(own, heard) + 1</code> — and it is flawless at job one: <strong>0 inversions, 0
+ties</strong>, every run. But run scene 2: after one busy afternoon, Asha's
+counter reads 41 while her wall says 18; fuzzed, the counter strays up to
+<strong>+460 ahead / −13 behind</strong> wall time, and events sharing one counter value
+span <strong>34 ticks</strong> of real time. Ask &quot;the newsroom at counter 20&quot; and that
+moment is mid-afternoon in Mumbai and next week in London. Ask &quot;at
+5 p.m.&quot; and there is no answer at all — the counter never heard of 5 p.m.
+Consistent cuts, yes — at values no human can name.</p>
+<p>So: two clocks, each perfect at the other one's failure. The deeper
+problem is now visible — we don't need a better clock, we need <strong>one stamp
+carrying both kinds of time without letting them corrupt each other</strong>.</p>
+<h2 id="readme-5-the-real-requirement">5. THE REAL REQUIREMENT</h2>
+<p>One stamp, small enough to put on every MVCC version and message header,
+such that:</p>
+<ol>
+<li><strong>Order:</strong> if e happened-before f, then stamp(e) &lt; stamp(f) — no
+inversions, no ties, ever, regardless of skew.</li>
+<li><strong>Meaning:</strong> the stamp stays within a <em>known, bounded</em> distance of wall
+time, so &quot;as of 5 p.m.&quot; and &quot;older than 30 days&quot; are real questions.</li>
+<li><strong>Size:</strong> O(1) — 64 bits, not a vector that grows with the cluster
+(the causal-consistency lab already showed you a vector clock's width
+is your replica count).</li>
+</ol>
+<h2 id="readme-6-the-key-idea">6. THE KEY IDEA</h2>
+<blockquote>
+<p><strong>Never let logical time masquerade as physical time.</strong> Keep the wall
+part <code>l</code> as exactly &quot;the freshest <em>actual wall-clock reading</em> anywhere on
+my causal path&quot; — a number some real clock really displayed — and keep a
+separate counter <code>c</code> for ordering the events that <code>l</code> cannot tell apart.</p>
+</blockquote>
+<p><code>l</code> can then never stray further from your own clock than the clocks
+themselves disagree — the bound. And <code>c</code> gives the strict order within a
+tick — the correctness. Two numbers, two jobs, one stamp: <code>(l, c)</code>,
+compared lexicographically.</p>
+<h2 id="readme-7-terminology">7. TERMINOLOGY</h2>
+<p><strong>Hybrid logical clock (HLC).</strong> A clock producing stamps <code>(l, c)</code> where <code>l</code>
+tracks the maximum physical-clock reading seen on the causal path and <code>c</code>
+is a logical counter reset whenever <code>l</code> advances. From Kulkarni, Demirbas
+et al., 2014. &quot;Hybrid&quot; because it is literally a physical clock and a
+Lamport clock fused, each doing the job the other can't.</p>
+<p><strong>l — the wall part.</strong> Invariant: <code>l</code> is always a reading some node's
+physical clock actually produced, and <code>l ≥</code> your own current reading.
+Example from scene 3: Ben's wall reads 8, but he received a message
+stamped 16 — his <code>l</code> becomes 16, a reading Asha's clock really took.</p>
+<p><strong>c — the logical part.</strong> Counts events that share one <code>l</code>. Resets to 0
+the moment <code>l</code> moves. Example: three edits inside one tick at wall 15 →
+stamps 15, 15.1, 15.2; next tick → 16 (c back to 0).</p>
+<p><strong>Drift.</strong> <code>l − pt</code>: how far a stamp's wall part sits ahead of the local
+clock's actual reading. The number that separates every design in this
+lab: unbounded for Lamport (+460) — and, as stage 10 shows, for the
+obvious first fix too — but <strong>bounded by the clock spread</strong> for HLC
+(measured: 15 at spread 16).</p>
+<p><strong>Clock spread / skew.</strong> How far apart the physical clocks are (fastest
+minus slowest). The honest input to every promise HLC makes — and the
+thing NTP controls in production.</p>
+<p><strong>Causality token.</strong> An HLC stamp carried by a <em>client</em> between requests
+and absorbed by each server through the ordinary receive rule — the
+implementation of the causal-consistency lab's session token
+(<code>afterClusterTime</code>). No new machinery: a token is a message with no
+payload.</p>
+<p><strong>Consistent cut at a wall time</strong> (revisited from distributed-transactions):
+the set of events with stamp ≤ (T, ∞). HLC's gift is that T is an actual
+time, not a counter value.</p>
+<p>Minor terms at first use later: one-way property (recalled), uncertainty
+restart, max-offset.</p>
+<h2 id="readme-8-two-mental-models">8. TWO MENTAL MODELS</h2>
+<p><strong>The simple model: dated pages, numbered lines.</strong> The newsroom writes in
+a shared style of notebook. Every entry lands on a <strong>page dated with a
+real calendar date</strong> — and the rule is: use the <em>latest date you have
+seen on any calendar</em>, yours or one mentioned in an incoming letter, never
+a made-up one. Many entries on the same page get <strong>line numbers</strong>: date
+15, line 0; date 15, line 1... Turn to a new page (a later date appears —
+your calendar caught up, or a letter mentioned one) and line numbering
+starts over at 0. Order of any two entries: compare dates, then lines.
+&quot;The archive as of the 15th&quot; = every page up to 15, whole by
+construction.</p>
+<p><strong>The engineering model.</strong> Per node: <code>(l, c)</code>. Local event or send at
+wall reading <code>pt</code>: <code>l' = max(l, pt)</code>; <code>c' = (l'==l) ? c+1 : 0</code>. Receive of
+message stamped <code>(ml, mc)</code>: <code>l' = max(l, ml, pt)</code>, and <code>c'</code> = (tie with
+both → <code>max(c, mc)+1</code>) / (tie with own → <code>c+1</code>) / (tie with message →
+<code>mc+1</code>) / (own wall won outright → <code>0</code>). Compare <code>(l, c)</code> lexicographically.
+Invariants: happens-before ⟹ strictly smaller stamp; <code>l ≥ pt</code> always;
+<code>l − pt ≤</code> clock spread.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Simple model</th>
+  <th>Engineering model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the date on the page</td>
+  <td><code>l</code> — a reading some clock actually produced</td>
+</tr>
+<tr>
+  <td>&quot;use the latest date you've seen&quot;</td>
+  <td><code>l' = max(l, ml, pt)</code></td>
+</tr>
+<tr>
+  <td>line number on the page</td>
+  <td><code>c</code></td>
+</tr>
+<tr>
+  <td>new page → numbering restarts</td>
+  <td><code>l</code> advanced → <code>c = 0</code></td>
+</tr>
+<tr>
+  <td>a letter mentioning its date</td>
+  <td>a message carrying its stamp</td>
+</tr>
+<tr>
+  <td>&quot;archive as of the 15th&quot;</td>
+  <td>consistent cut at <code>(T, ∞)</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the analogy breaks.</strong> (1) The page date can come from <em>someone
+else's</em> calendar — after Ben absorbs Asha's stamp, his pages are dated by
+her fast clock even though his says three days earlier; &quot;the 15th&quot; on a
+page is at most the clock spread away from anyone's calendar, but it is
+not <em>your</em> 15th. (2) Notebook dates never decrease and neither does <code>l</code> —
+but real wall clocks DO jump backwards (NTP corrections); the <code>max</code> means
+HLC glides through a backward step while a raw wall-clock stamp would
+happily file new events in the past. (3) Comparing two entries tells you
+their order but never whether they were <em>causally related or merely
+concurrent</em> — line numbers and dates are as one-way as Lamport's counter;
+detecting concurrency still costs a vector clock.</p>
+<h2 id="readme-9-visualization">9. VISUALIZATION</h2>
+<p>Open <strong><code>visualization.html</code></strong> (published: <a href="https://claude.ai/code/artifact/d3546629-3719-479e-b29a-25ce29f263d0" target="_blank" rel="noopener">&quot;Dated Pages, Numbered
+Lines&quot;</a>).
+A space-time diagram — nodes as rows, events
+as dots stamped live, messages as arrows — with the four clock designs as
+tabs, per-node skew sliders, a burst button, and the page's centerpiece:
+<strong>a draggable &quot;as of T&quot; cut line</strong>. Drag it under the wall clock and
+arrows cross it backwards (torn edition, flagged red); switch to HLC and
+no position of the line ever cuts an arrow backwards. Every event's
+<code>(l, c)</code> is inspectable; every scenario asks for your prediction first.</p>
+<blockquote>
+<p><strong>Checkpoint — you hold the beginner model.</strong> You can say why wall
+clocks and Lamport clocks each fail one of the two jobs, and state the
+key idea: l only ever holds a real wall reading; c counts what l can't
+separate. Next: derive the actual rules — by first building the obvious
+version and watching it sink.</p>
+</blockquote>
+<hr />
+<blockquote>
+<p><strong>Where you are: INTERMEDIATE MODEL — stage 10.</strong></p>
+</blockquote>
+<h2 id="readme-10-the-actual-mechanism--one-funeral-then-the-rules">10. THE ACTUAL MECHANISM — one funeral, then the rules</h2>
+<h3 id="readme-v1--the-obvious-hybrid-one-merged-value">v1 — the obvious hybrid: one merged value</h3>
+<p>Any smart engineer's first sketch (it is also the strawman in the HLC
+paper itself): keep a single value that never falls behind either clock or
+causality:</p>
+<div class="code"><pre><code>local/send:  l = max(l + 1, pt)
+receive:     l = max(l + 1, m.l + 1, pt)
+</code></pre></div>
+<p>Ordered? Perfectly — the <code>+1</code>s are a Lamport clock. Near wall time? It
+<em>starts</em> there...</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Does the merged value stay near wall time under load?</em></p>
+<details><summary>Reveal</summary>
+No — and the failure is structural, not a tuning matter. Every event
+adds `+1` to a number that is *supposed to be a wall reading*. Any burst
+of events inside one clock tick pushes `l` ahead of `pt`, and `max`
+means it **never comes back down** — the excess compounds forever.
+Experiment 3, same workload, growing run length:
+
+<p>| run length | NAIVE maxDrift | HLC maxDrift |
+|---|---|---|
+| 150 | 118 | 15 |
+| 300 | 244 | 15 |
+| 600 | 470 | 15 |
+| 1200 | <strong>898</strong> | <strong>15</strong> |</p>
+<p>By tick 1200 the naive clock is 898 ticks into the future and climbing —
+as unmoored as the Lamport counter it secretly is, but <em>disguised as a
+time</em>, which is worse: &quot;delete older than 30 days&quot; now deletes live
+data. And you cannot even measure how bad it is from inside, because
+physical and logical ticks are fused into one indistinguishable number.</p>
+</details>
+
+</blockquote>
+<p>The funeral teaches the design: <strong>the corruption came from <code>+1</code> landing on
+the wall-valued number.</strong> So forbid it. <code>l</code> may only ever be assigned a
+value some physical clock actually read — and everything <code>+1</code>-shaped moves
+into a second number.</p>
+<h3 id="readme-v2--the-real-hlc">v2 — the real HLC</h3>
+<p><strong>Local event or send</strong> (node's wall reads <code>pt</code>):</p>
+<div class="code"><pre><code class="language-java">l&#x27; = max(l, pt);                      // l: only ever a real wall reading
+c&#x27; = (l&#x27; == l) ? c + 1 : 0;          // wall stuck -&gt; borrow a counter tick
+                                      // wall advanced -&gt; counter owes nothing
+</code></pre></div>
+<p><strong>Receive</strong> of a message stamped <code>(ml, mc)</code>:</p>
+<div class="code"><pre><code class="language-java">l&#x27; = max(l, ml, pt);
+if (l&#x27; == l &amp;&amp; l&#x27; == ml)  c&#x27; = max(c, mc) + 1;   // tie with both sides
+else if (l&#x27; == l)         c&#x27; = c + 1;            // own l leads
+else if (l&#x27; == ml)        c&#x27; = mc + 1;           // message&#x27;s l leads
+else                      c&#x27; = 0;                // own WALL won outright
+</code></pre></div>
+<p>Walk it with scene 3's real values (<code>java src/Scenes.java 3</code>) — Asha's
+clock +5, Ben's −5:</p>
+<ol>
+<li>tick 10, Asha edits: wall reads 15, <code>l</code> adopts it → <strong>15</strong> (c=0).</li>
+<li>tick 10, two more edits: wall still 15, <code>l</code> stuck, <code>c</code> borrows →
+<strong>15.1</strong>, <strong>15.2</strong>.</li>
+<li>tick 11: wall reads 16 &gt; l → <strong>16</strong>, c back to 0. Then a send → <strong>16.1</strong>.</li>
+<li>tick 13, Ben receives it: his wall reads only 8, but the message says
+16.1 → <code>l' = max(0, 16, 8) = 16</code>, tie with the message → <code>c = mc+1</code> →
+<strong>16.2</strong>. Cause 16.1 &lt; effect 16.2. ✓</li>
+<li>tick 13, Ben works on: wall still 8, l still 16 → <strong>16.3</strong>.</li>
+</ol>
+<blockquote>
+<p><strong>🔮 Predict (the case that catches everyone):</strong> <em>Ben's clock is at
+<code>(50, 2)</code> and a message arrives stamped <code>(50, 7)</code> — the l's tie. What
+must the new c be? Is <code>c+1 = 3</code> enough?</em></p>
+<details><summary>Reveal</summary>
+No — `(50, 3)` would stamp the receive *below* its own send `(50, 7)`:
+an inversion. When l ties, the new c must beat **both** counters:
+`max(2, 7) + 1 = 8`. This is planted as the bug `recvIgnoresMsgC` — run
+`java src/Tests.java broken` and watch it produce 8 genuine
+happens-before inversions. `src/YourClock.java` makes you implement all
+four cases yourself; this is case 4.
+</details>
+
+</blockquote>
+<p><strong>Why the bound holds</strong> — the argument is one sentence: <code>l</code> is the maximum
+over a set of <em>actual wall readings</em> (yours, and everyone's on your causal
+path), so it can exceed your own reading by at most (fastest clock −
+slowest clock) = the clock spread. Experiment 4 measures it as an equality,
+not an inequality:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>skew</th>
+  <th>clock spread</th>
+  <th>measured drift</th>
+  <th>maxC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>2</td>
+  <td>4</td>
+  <td>3</td>
+  <td>17</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>16</td>
+  <td>15</td>
+  <td>31</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td>40</td>
+  <td>39</td>
+  <td>49</td>
+</tr>
+<tr>
+  <td>50</td>
+  <td>100</td>
+  <td>99</td>
+  <td>80</td>
+</tr>
+</tbody>
+</table></div>
+<p>And the division of labor is visible in the last column: crank the bursts
+to 30 events/tick and drift stays <strong>15</strong> while <code>maxC</code> climbs to 244 —
+<strong>load spills into c, never into l</strong>. That split is the entire invention.</p>
+<p>Full scorecard at seed 42 (2,629 events, 28,720 happens-before pairs
+checked against the vector-clock truth): WALL 65 inversions + 92 ties,
+152/200 torn cuts. LAMPORT 0 + 0 but drift +460/−13. NAIVE 0 + 0 but
+drift 470 and growing. <strong>HLC: 0 inversions, 0 ties, 0 torn cuts, drift ≤
+15, in 64 bits.</strong></p>
+<p><strong>What HLC does <em>not</em> do — two honest boundaries.</strong> First, it is as
+<strong>one-way</strong> as the Lamport clock it contains (causal-consistency lab,
+remembered): stamp(e) &lt; stamp(f) never proves e caused f; detecting
+concurrency still requires a vector clock. Second, order between events
+with <strong>no causal path and no token</strong> rests on nothing but the clocks
+being roughly right — a client writing via a fast node and a <em>different</em>
+client reading via a slow node has no arrow between them, and HLC
+promises that stranger nothing (that is external consistency, and it is
+exactly what TrueTime's commit wait bought in the distributed-transactions
+lab). Stage 11 and the token experiment put numbers on this.</p>
+<blockquote>
+<p><strong>Checkpoint — you hold the intermediate model.</strong> You can execute both
+update rules by hand, say why the naive merge fails structurally, and
+derive the drift bound in one sentence. Next: everything that bends or
+breaks it.</p>
+</blockquote>
+<hr />
+<blockquote>
+<p><strong>Where you are: ENGINEERING MODEL — stages 11–14.</strong></p>
+</blockquote>
+<h2 id="readme-11-failure-scenarios">11. FAILURE SCENARIOS</h2>
+<p><strong>A clock beyond its promised bound.</strong> Create: one node offset +60 in a
+cluster operated as ±8; watch: <code>java src/Experiments.java 7</code>. Measured:
+the believed drift bound was 16; actual <strong>67</strong> — because <code>l</code> is the max
+reading on the causal path, one liar <strong>infects every node downstream</strong> of
+its messages, and their stamps run an hour into the future together.
+What survives: ordering, completely (max doesn't care if the number is
+wrong). What dies: the bound — and with it every promise phrased in real
+time: staleness limits, &quot;as of 5 p.m.&quot;, GC-by-age, and (in CockroachDB)
+the correctness of the uncertainty window itself. Production: this is why
+the bound is enforced, not assumed — CockroachDB <strong>crashes</strong> a node whose
+offset exceeds max-offset (distributed-transactions lab: <em>crashing is the
+correct response to a lying clock</em>), and why MongoDB <strong>signs</strong> its
+clusterTime — an unsigned token would let any client push every server's
+clock to the year 3000 (this experiment, weaponized).</p>
+<p><strong>The stranger's stale read.</strong> Create: write via the fast-clock node, read
+via the slow one, carry nothing; watch: experiment 6 / scene 5. <strong>86 of
+86</strong> reads predate the write — the reader's &quot;now&quot; is simply smaller than
+the stamp the writer issued. Nothing is broken: there is no
+happens-before edge, so HLC promised nothing. Fixes, in production form:
+carry a <strong>causality token</strong> (the write's stamp; reader absorbs it via the
+ordinary receive rule) → <strong>0/86</strong> — this is MongoDB's
+clusterTime/afterClusterTime and the implementation of the
+causal-consistency lab's session token; or CockroachDB's route — treat
+every value stamped within <code>[readTs, readTs + maxOffset]</code> as ambiguous
+and <strong>restart the read above it</strong> (an <em>uncertainty restart</em>): pay ε in
+occasional read retries instead of TrueTime's 2ε on every write ack.
+Same ε, three different bills: writer waits (Spanner), reader retries
+(CockroachDB), client carries a token (MongoDB).</p>
+<p><strong>Counter overflow.</strong> Create: <code>Clocks.pack(new Stamp(5, 70000))</code>; watch:
+test <code>pack_counter_overflow_fails_loudly</code>, and the planted bug
+<code>neverResetC</code> — forget the reset-on-advance and <code>maxC</code> goes 31 → 718 in
+one small run; at production rates the 16-bit budget dies in
+milliseconds. Real overflow needs 65,536 <em>causally chained</em> events inside
+one wall tick — rare, but CockroachDB still handles it loudly rather
+than silently. The reset rule is what makes 16 bits a fortune.</p>
+<p><strong>The wall clock steps backwards.</strong> NTP corrections really do this.
+Create: lower a node's offset mid-run. HLC glides: <code>l = max(l, pt)</code> just
+holds <code>l</code> level while <code>pt</code> catches up, <code>c</code> absorbing the interval — no
+inversion possible, monotonicity by construction. A raw wall-clock
+stamper, by contrast, starts filing new events into the past. (Asserted
+from the rule; the visualization's skew sliders let you do it live.)</p>
+<p><strong>Messages reordered or lost.</strong> No effect on correctness: HLC stamps
+events, it does not deliver messages — there is no FIFO assumption
+anywhere in the rules (contrast the causal-consistency lab, where
+<em>delivery</em> needed the machinery). If you want causal <em>delivery</em>, HLC
+stamps are an input to it, not a replacement for it.</p>
+<h2 id="readme-12-correctness--the-full-scorecard">12. CORRECTNESS — the full scorecard</h2>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>orders hb?</th>
+  <th>detects concurrency?</th>
+  <th>wall-meaningful?</th>
+  <th>drift bound</th>
+  <th>size</th>
+  <th>waits?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>wall clock</td>
+  <td>✗ (65–341 inv.)</td>
+  <td>✗</td>
+  <td>✓</td>
+  <td>0</td>
+  <td>8 B</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>Lamport</td>
+  <td>✓</td>
+  <td>✗ (one-way)</td>
+  <td>✗ (+460/−13)</td>
+  <td>none</td>
+  <td>8 B</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>vector clock</td>
+  <td>✓</td>
+  <td><strong>✓</strong></td>
+  <td>✗</td>
+  <td>none</td>
+  <td>8 B × n</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>naive hybrid</td>
+  <td>✓</td>
+  <td>✗</td>
+  <td><em>pretends</em> (→898)</td>
+  <td>none</td>
+  <td>8 B</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td><strong>HLC</strong></td>
+  <td>✓</td>
+  <td>✗ (one-way)</td>
+  <td>✓</td>
+  <td><strong>clock spread</strong></td>
+  <td><strong>8 B</strong></td>
+  <td><strong>no</strong></td>
+</tr>
+<tr>
+  <td>TrueTime</td>
+  <td>✓ (via ts)</td>
+  <td>✗</td>
+  <td>✓</td>
+  <td>ε (hardware)</td>
+  <td>8 B</td>
+  <td><strong>2ε per write</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>What is guaranteed (honest clocks assumed): happens-before ⟹ strictly
+smaller stamp; <code>l ≥ pt</code>; <code>l − pt ≤ spread</code>; every cut at <code>(T, ∞)</code> is
+consistent; the clock never blocks anything — stamping is a local
+computation, which is the entire liveness story and the deepest contrast
+with commit wait.</p>
+<p>What is explicitly NOT guaranteed: concurrency detection (one-way,
+forever); external consistency for causally-unconnected clients (buy it
+with tokens, restarts, or commit wait); the drift bound under a clock
+that lies beyond its declared offset — the bound is <em>conditional</em>, and
+production systems spend real machinery (evictions, signatures) policing
+the condition.</p>
+<p>Traded away, relative to each neighbor: vs vector clocks — concurrency
+detection, for O(1) size; vs TrueTime — external consistency for
+strangers, for zero waiting and zero special hardware.</p>
+<h2 id="readme-13-the-code--the-lines-that-carry-the-guarantees">13. THE CODE — the lines that carry the guarantees</h2>
+<p>Read in this order (all in <code>src/Clocks.java</code> and <code>src/Core.java</code>):</p>
+<ol>
+<li><strong>The HLC receive rule</strong> — the four-branch <code>c</code> computation. The
+load-bearing subtlety is <code>max(c, mc) + 1</code> in the tie case; the planted
+bug <code>recvIgnoresMsgC</code> deletes the <code>max</code> and manufactures real
+inversions. <code>YourClock.java</code> is this rule with the branches blanked.</li>
+<li><strong><code>l' = max(l, pt)</code> with no <code>+1</code> anywhere</strong> — compare the NAIVE
+implementation one screen up, whose <code>l + 1</code> is the entire 898-tick
+drift. The diff between a broken design and the real one is two
+characters.</li>
+<li><strong><code>Core.hb</code></strong> — the vector-clock comparison serving as ground truth.
+The judge is a clock you already trust from the causal-consistency
+lab; every claim in this lab is &quot;scalar clock agrees with vector
+clock on 28,720 pairs&quot;.</li>
+<li><strong><code>Clocks.pack</code></strong> — 48+16 bits, overflow loud. The budget arithmetic
+is experiment 8.</li>
+<li><strong><code>Fuzz.tokenExperiment</code></strong> — note the token is absorbed by calling
+plain <code>receive()</code>: sessions are not a feature of the clock, just a
+use of it.</li>
+</ol>
+<h2 id="readme-14-experiments--break-it-yourself">14. EXPERIMENTS — break it yourself</h2>
+<p>Predict first, then run. All eight: <code>java src/Experiments.java</code>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Command</th>
+  <th>Ask yourself first</th>
+  <th>You should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><code>... 1</code></td>
+  <td>is skew 0 safe?</td>
+  <td>WALL 0+79 at skew 0, 341+100 at 20; others 0+0</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>... 2</code></td>
+  <td>what's wrong with Lamport?</td>
+  <td>drift +460/−13; one value spans 34 ticks</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>... 3</code></td>
+  <td>is one merged value enough?</td>
+  <td>NAIVE 118→898 with run length; HLC flat 15</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><code>... 4</code></td>
+  <td>how tight is the bound?</td>
+  <td>drift = spread−1 at every skew; bursts → c</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><code>... 5</code></td>
+  <td>which clocks give whole cuts?</td>
+  <td>WALL 152/200 torn; LAMPORT 0 (timeless); HLC 0</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>... 6</code></td>
+  <td>fast writer, slow reader?</td>
+  <td>86/86 stale → 0/86 with the token</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><code>... 7</code></td>
+  <td>one liar at +60 — what dies?</td>
+  <td>order holds; bound 16 → 67, infection downstream</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><code>... 8</code></td>
+  <td>why 64 bits matter</td>
+  <td>48+16 packing, 8,900-year budget, loud overflow</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>Checkpoint — you hold the engineering model.</strong> You can state the
+conditional bound, name the three ways to pay for external consistency,
+and point at the two-character diff separating NAIVE from HLC. Next:
+what ships.</p>
+</blockquote>
+<hr />
+<blockquote>
+<p><strong>Where you are: PRODUCTION MODEL — stage 15.</strong></p>
+</blockquote>
+<h2 id="readme-15-production--where-this-clock-actually-lives">15. PRODUCTION — where this clock actually lives</h2>
+<p><strong>CockroachDB</strong> is the flagship. Every transaction timestamp and every
+MVCC version (isolation-levels lab: the version chains) is an HLC stamp —
+<code>int64</code> wall nanoseconds + <code>int32</code> logical, the packing of experiment 8
+with wider fields. The distributed-transactions lab left you a question:
+how does CockroachDB skip TrueTime's commit wait? Now you own the answer:
+HLC orders everything causally connected for free, and for strangers it
+declares an <strong>uncertainty interval</strong> <code>[ts, ts + max_offset]</code> — a value in
+that window <em>might</em> have committed first by real time, so the read
+<strong>restarts above it</strong>. ε is paid in occasional read retries instead of on
+every write ack. The conditional bound is policed, not assumed: a node
+whose measured offset exceeds <code>max_offset</code> (default 500ms)
+<strong>self-terminates</strong> — experiment 7 is the incident it prevents. On
+restart, a node also waits out the offset before serving, so its <code>l</code>
+can't time-travel past its own crash.</p>
+<p><strong>MongoDB</strong>: <code>$clusterTime</code> is an HLC — 32-bit seconds + 32-bit counter —
+piggybacked on <strong>every</strong> message between every node and client, absorbed
+via the receive rule, which is how the whole deployment's clocks chase
+each other. <code>afterClusterTime</code> (the causal-consistency lab's session
+token, now with an implementation) is the token experiment shipped as a
+feature. And it is <strong>HMAC-signed</strong>, because experiment 7 shows exactly
+what an attacker could do with an unsigned one: one forged stamp poisons
+every server it touches, forever (l never comes back down).</p>
+<p><strong>YugabyteDB</strong> uses HLC the CockroachDB way plus leader leases; <strong>Kudu</strong>
+offers an HLC mode; the pattern generalizes: anywhere you meet &quot;timestamp
+= physical + logical&quot; in a storage engine, you are looking at this lab.</p>
+<p><strong>What the toy omits.</strong> Real resolution (nanoseconds, not ticks) and real
+NTP behavior (drift <em>rates</em>, not fixed offsets — the bound math is
+identical); persisting the clock across restarts (or waiting out
+max-offset instead, as Cockroach does); signing tokens; delivering the
+stamp inside RPC frameworks (piggybacking on everything, MongoDB-style);
+and the uncertainty-restart machinery itself — this lab's HLC <em>orders</em>;
+building a serializable database on top of it is the
+distributed-transactions lab's percolator plus these stamps.</p>
+<p><strong>What on-call sees.</strong> Clock-offset gauges with alerts long before
+max-offset (the bound is an SLO on NTP); node suicides tagged
+clock-offset (the correct crash); uncertainty-restart rates (the
+observable price of skew — rising restarts mean drifting clocks, not
+application bugs); and drift <code>l − pt</code> itself as a metric — a node whose
+HLC runs persistently ahead of its wall clock is downstream of a liar
+(experiment 7's infection, seen from the dashboard).</p>
+<h2 id="readme-16-exercises">16. EXERCISES</h2>
+<p>The eight-rung ladder is in <a href="notes.html#exercises"><code>EXERCISES.md</code></a> — from
+explaining the two jobs to designing the timestamp plan for a 3-region
+database. Attempt before opening <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<h2 id="readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">graph TD
+    CC[causal-consistency&lt;br/&gt;happens-before, Lamport, tokens] --&gt; HLC
+    DTX[distributed-transactions&lt;br/&gt;consistent cuts, TrueTime, commit wait] --&gt; HLC
+    LIN[linearizability&lt;br/&gt;the real-time rule] --&gt; HLC
+    HLC[hybrid logical clocks&lt;br/&gt;THIS LAB]
+    HLC --&gt; CRDB[CockroachDB timestamps&lt;br/&gt;+ uncertainty restarts]
+    HLC --&gt; MONGO[MongoDB clusterTime&lt;br/&gt;afterClusterTime]
+    HLC --&gt; YB[YugabyteDB / Kudu]
+    HLC -.the other answer.-&gt; TT[TrueTime + commit wait]
+    HLC --&gt; JEPSEN[jepsen?]
+    HLC --&gt; DET[deterministic-databases?]
+</pre>
+<p>Commonly confused, one sentence each:</p>
+<ul>
+<li><strong>HLC vs vector clock</strong>: an HLC <em>orders</em> (one-way, O(1) size); a vector
+clock <em>detects concurrency</em> (O(n) size) — the causal-consistency lab's
+distinction, unchanged by the hybrid.</li>
+<li><strong>HLC's l vs a Lamport counter</strong>: <code>l</code> is only ever a reading a physical
+clock actually produced (hence the bound); a Lamport counter counts
+events (hence +460).</li>
+<li><strong>HLC vs TrueTime</strong>: the same ε, billed differently — TrueTime makes
+every <em>writer wait</em> 2ε for external consistency for everyone; HLC waits
+never, and covers strangers with reader restarts or client tokens.</li>
+<li><strong>Causality token vs commit wait</strong>: the token protects one client's
+session; commit wait protects <em>all</em> observers, including ones who never
+met the writer.</li>
+</ul>
+<p>Next, ready to type:</p>
+<ul>
+<li><code>/learn jepsen</code> — you now own every anomaly its reports name and every
+clock trick its tests exploit.</li>
+<li><code>/learn deterministic-databases</code> — Calvin: skip timestamps <em>and</em> 2PC by
+agreeing on the order first; the remaining road not taken.</li>
+<li><code>/learn change-data-capture</code> — the practical pipeline pattern; ordering
+its events correctly is precisely an HLC use case.</li>
+</ul>
+<h2 id="readme-18-glossary">18. GLOSSARY</h2>
+<p>In order of appearance:</p>
+<ul>
+<li><strong>inversion</strong> — a happens-before pair the clock stamped in the wrong
+order (cause &gt; effect).</li>
+<li><strong>tie</strong> — a happens-before pair the clock cannot order (equal stamps).</li>
+<li><strong>torn cut</strong> — an &quot;as of T&quot; snapshot containing a receive without its
+send.</li>
+<li><strong>hybrid logical clock (HLC)</strong> — the <code>(l, c)</code> clock: max wall reading on
+the causal path + a counter for what it can't separate (Kulkarni/
+Demirbas 2014).</li>
+<li><strong>l (wall part)</strong> — always an actual physical-clock reading someone
+took; never incremented, only max'ed.</li>
+<li><strong>c (logical part)</strong> — orders events sharing one <code>l</code>; resets to 0 when
+<code>l</code> advances.</li>
+<li><strong>drift</strong> — <code>l − pt</code>: how far stamps run ahead of the local wall clock.</li>
+<li><strong>clock spread</strong> — fastest minus slowest physical clock; the bound on
+HLC drift, and a <em>condition</em>, not a fact.</li>
+<li><strong>naive hybrid</strong> — one merged value with <code>+1</code>s; ordered, and drifts
+without bound (118→898).</li>
+<li><strong>causality token</strong> — an HLC stamp carried by a client and absorbed via
+the receive rule; MongoDB's afterClusterTime.</li>
+<li><strong>one-way property</strong> — smaller stamp never proves causation; shared
+with Lamport clocks.</li>
+<li><strong>uncertainty restart</strong> — CockroachDB's answer to strangers: retry a
+read above a value stamped within <code>[ts, ts+max_offset]</code>.</li>
+<li><strong>max-offset</strong> — the declared clock-spread bound a node must honor or
+die (Cockroach default 500ms).</li>
+<li><strong>clusterTime</strong> — MongoDB's signed HLC, piggybacked on every message.</li>
+<li><strong>48+16 packing</strong> — one 64-bit long: 8,900 years of milliseconds +
+65,536 counter values, overflowing loudly.</li>
+</ul>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--hybrid-logical-clocks">Exercises — hybrid logical clocks</h1>
+<p>Climb in order. Answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a> — attempt first, in
+writing, before opening it.</p>
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p>1.1 A colleague says &quot;we stamp everything with <code>System.currentTimeMillis()</code>
+and NTP keeps us within 50ms — good enough.&quot; Explain, without jargon, the two
+distinct ways this goes wrong (one needs skew, one doesn't), and what each
+does to a support engineer reading the logs.</p>
+<p>1.2 The key idea in one breath: what may <code>l</code> contain, what may it never
+contain, and why does that single restriction produce the drift bound?</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Run <code>java src/Scenes.java 3</code> (HLC event by event).</p>
+<p>2.1 Ben's wall clock reads 8, yet his receive event is stamped 16.2. Which of
+the three inputs to the receive rule won, and where did the value 16
+physically come from?</p>
+<p>2.2 In the same scene, find the moment <code>c</code> returns to 0. What exactly
+happened to permit it?</p>
+<p>2.3 In experiment 4's table, why does the measured drift equal spread − 1
+rather than spread exactly? (Look at how <code>pt</code> and the offsets are pinned in
+<code>Fuzz.build</code>.)</p>
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Write your answer down BEFORE running the command.</p>
+<p>3.1 Node clock at <code>(50, 2)</code>; a message arrives stamped <code>(50, 7)</code>; wall reads
+50. Compute the new stamp by hand, then check with case 4 of
+<code>java src/YourClock.java</code> (or the rule in <code>Clocks.java</code>).</p>
+<p>3.2 Experiment 3 doubles run length from 600 to 1200 ticks. Predict roughly
+what NAIVE's maxDrift does and what HLC's does, then run
+<code>java src/Experiments.java 3</code>. What single syntactic difference explains the
+two columns?</p>
+<p>3.3 In the token experiment, why is it 86/86 stale — every single read —
+rather than &quot;some&quot;? What about the setup makes staleness certain instead of
+probabilistic, and what real deployment does that setup correspond to?</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>4.1 In <code>Clocks.java</code>, change the HLC local rule to <code>l = max(l, pt); c++;</code>
+(increment always, never reset). Run <code>java src/Tests.java</code>. Which tests fail?
+Which practical resource is being silently consumed, and how long would it
+last at 1M causally-chained events/sec with 16 counter bits?</p>
+<p>4.2 Change <code>Fuzz.build</code> so offsets are NOT pinned to the extremes (delete the
+two pinning lines). Which measured numbers get <em>weaker</em> (not wrong), and what
+lesson from two earlier labs does that echo?</p>
+<p>4.3 Make messages ALSO carry the sender's <code>pt</code> and absorb it into <code>l</code>. Is
+anything gained? Is anything broken? (Think before you code — the answer is
+short.)</p>
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p>5.1 <code>java src/YourClock.java</code> — implement the receive rule until 6/6. The six
+cases cover all four branches; the hints name the two ties people mishandle.</p>
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><code>java src/Tests.java broken</code> runs four planted bugs. For each, before reading
+the printed line: which of the lab's four guarantees (order / bound /
+cut-consistency / packing budget) does it break, and which experiment or test
+number would catch it in CI? One of the four produces NO inversions and NO
+drift — argue why it is still a production incident.</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>7.1 A read replica rejoins after a 3-day network partition, its wall clock
+now 40s slow (NTP daemon died during the partition). Using only mechanisms
+from this lab, describe what happens to (a) its stamps' correctness, (b) its
+stamps' drift, (c) queries &quot;as of now&quot; served locally by it — and what a
+production system should do at rejoin time before serving anything.</p>
+<p>7.2 Design the abuse case: a malicious client sends a fabricated causality
+token of <code>(Long.MAX_VALUE/2, 0)</code> to an unsigned-token deployment. Trace the
+damage through the receive rule, node by node. Which experiment is this, at
+scale? What are the two independent defenses production systems use?</p>
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p>A 3-region (EU/US/APAC, ~80ms apart) multi-tenant SaaS keeps an append-only
+audit log per tenant, writable in every region, with three requirements:
+regulators replay any tenant's log in an order consistent with causality;
+support engineers query &quot;the tenant's state as of <wall time>&quot;; and a tenant's
+own dashboard must always see its just-written entries (&quot;did my change
+land?&quot;). NTP holds ±25ms normally, ±2s during incidents.</p>
+<p>Design the timestamping: which clock, carried where, what the comparison and
+conflict story is for concurrent entries, how each of the three requirements
+maps to a lab mechanism, what you monitor, and — explicitly — which
+requirement CANNOT be met by clocks alone and what you add for it. State what
+breaks at ±2s and what merely degrades.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--hybrid-logical-clocks">Solutions — hybrid logical clocks</h1>
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Way one (needs skew): machine B's clock is behind machine A's, so an
+event on B <em>caused by</em> an event on A gets a smaller timestamp — sort the logs
+and the effect precedes its cause (measured: 65 such inversions per run at
+skew 8, 341 at 20). The support engineer traces a request &quot;backwards through
+time&quot; and concludes the impossible. Way two (needs no skew at all): a clock
+has finite resolution, so two related events inside one tick get the <em>same</em>
+stamp — 79 unorderable pairs per run at skew zero. Fifty-millisecond NTP
+accuracy fixes neither: the first needs zero error, the second needs infinite
+resolution.</p>
+<p><strong>1.2</strong> <code>l</code> may contain only a value some physical clock actually displayed —
+yours, or one carried in on a message. It may never contain an <em>arithmetic
+invention</em> (no <code>+1</code>). Since <code>l</code> is the max over a set of genuine readings
+taken &quot;now-ish&quot; on your causal path, it can exceed your own reading by at
+most the gap between the fastest and slowest clock — the spread. The moment
+you allow one <code>+1</code> (the naive hybrid), <code>l</code> stops being a reading and the
+bound is gone (118→898 in experiment 3).</p>
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> The message's <code>l</code> won: <code>l' = max(own 0, msg 16, wall 8) = 16</code>. The
+value 16 was physically produced by <em>Asha's</em> wall clock (running +5 at true
+tick 11) — Ben is now keeping time with a reading someone else's clock took,
+which is exactly what &quot;freshest reading on the causal path&quot; means.</p>
+<p><strong>2.2</strong> <code>tick 11: wall reads 16 &gt; l. l advances, and c owes nothing: 16.</code>
+Asha's own wall clock overtook her <code>l</code> (15) — when the wall part genuinely
+moves, the counter resets, which is the rule that keeps <code>c</code> tiny (maxC 31
+over 2,629 events) and the 16-bit budget effectively infinite.</p>
+<p><strong>2.3</strong> <code>Fuzz.build</code> pins node 0 to <code>+skew</code> and node 1 to <code>-skew</code>, so the
+spread is exactly <code>2*skew</code>. The drift maximum is achieved when the slow node
+absorbs the fast node's freshest reading — but a message takes ≥1 tick to
+arrive, during which the slow node's own <code>pt</code> advanced by 1. Hence
+<code>spread − 1</code> in every row: the measurement is tight to the mechanism, not
+noisy.</p>
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> Three-way tie at <code>l = 50</code>: <code>c' = max(own 2, msg 7) + 1 = 8</code> → stamp
+<strong>(50, 8)</strong>. Anything that only beats your own counter — <code>(50, 3)</code> — stamps
+the receive <em>below</em> its own send <code>(50, 7)</code>: causality inverted.</p>
+<p><strong>3.2</strong> NAIVE roughly doubles (470 → 898): its drift is accumulated <code>+1</code>s, so
+it scales with total events, i.e. with run length. HLC stays exactly 15: its
+drift is the clock spread, which time does not change. The syntactic
+difference: <code>max(l + 1, pt)</code> versus <code>max(l, pt)</code> — the <code>+1</code> is on the
+wall-valued number in one design and banished to a separate field in the
+other.</p>
+<p><strong>3.3</strong> The harness pins the writer to the <code>+skew</code> node and the reader to the
+<code>-skew</code> node, and the read follows the write within a tick — so the reader's
+&quot;now&quot; is <em>always</em> about <code>2*skew</code> behind the stamp the writer just issued.
+Staleness isn't a race you sometimes lose; it is arithmetic. The real-world
+shape: a client whose writes go to one region (or primary) and whose reads
+go to a follower in another — precisely the MongoDB topology that made them
+ship clusterTime/afterClusterTime on by default.</p>
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Measured: <strong>3 tests fail</strong> — the two rule tests
+(<code>local_wall_advanced_resets_c</code>, <code>local_wall_stuck_increments_c</code>) and
+<code>hlc_maxC_small_relative_to_events</code> (maxC 31 → 81 in this small run; the
+receive branches still reset, which is why it isn't worse). Crucially,
+<strong>order, drift, and cut tests all still pass</strong> — the bug is invisible to
+every correctness metric. The consumed resource is the 16-bit counter budget
+in the packed form: c now grows monotonically with events instead of
+resetting thousands of times a second, and at 1M causally-chained events/sec,
+65,536 values last <strong>~65 milliseconds</strong>. A bug with zero anomalies and a
+hard crash on a timer — the reset-on-advance rule is what makes 16 bits &quot;a
+fortune&quot;.</p>
+<p><strong>4.2</strong> Random offsets in <code>[-8, +8]</code> usually span less than the full ±8, so
+WALL's inversions shrink and HLC's measured drift lands below <code>spread − 1</code> —
+every exhibit gets <em>softer</em> while remaining true. The echo: the
+linearizability lab's calm-network row and causal-consistency's
+no-injected-asymmetry lesson, third appearance — <strong>a test that doesn't force
+the adversarial configuration understates the failure</strong>; pinning the
+extremes is the harness making the adversary real.</p>
+<p><strong>4.3</strong> Nothing gained, nothing broken — and you can prove it without
+running: after every event, the sender's own rule enforced <code>l ≥ pt</code>, so the
+stamp's <code>m.l</code> already dominates any <code>m.pt</code> you could ship alongside it.
+Absorbing <code>m.pt</code> adds a value that is <code>≤</code> one already in the max. (Shipping
+<code>pt</code> <em>instead of</em> <code>l</code> would be the recvIgnoresPt bug with extra steps.)</p>
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<div class="code"><pre><code class="language-java">long lNew = Math.max(l, Math.max(ml, pt));
+if (lNew == l &amp;&amp; lNew == ml) c = Math.max(c, mc) + 1;
+else if (lNew == l)          c = c + 1;
+else if (lNew == ml)         c = mc + 1;
+else                         c = 0;          // own wall won outright
+l = lNew;
+</code></pre></div>
+<p>Verified 6/6 against the harness. The hints decoded: reset only when <code>l</code>
+genuinely moved past <em>everything</em> it must dominate (the final branch — your
+wall reading alone won); when <code>l</code> ties with the message you must beat the
+<em>message's</em> counter, when it ties with both you must beat <em>both</em> — cases 3
+vs 4 are exactly those two ties.</p>
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>bug</th>
+  <th>guarantee broken</th>
+  <th>caught by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>recvIgnoresMsgC</code></td>
+  <td><strong>order</strong> — 8 real inversions (receive below its own send on l-ties)</td>
+  <td>any hb fuzz; test <code>hlc_zero_inversions_zero_ties</code></td>
+</tr>
+<tr>
+  <td><code>recvIgnoresPt</code></td>
+  <td><strong>bound (floor)</strong> — minDrift −14: l falls behind your own wall, &quot;as of 5 p.m.&quot; misses local 5 p.m. events</td>
+  <td>test <code>hlc_l_never_below_own_wall_reading</code></td>
+</tr>
+<tr>
+  <td><code>compareIgnoresC</code></td>
+  <td><strong>order (ties)</strong> — 124 unorderable hb pairs; everything one wall tick apart collapses</td>
+  <td>tie counting; cut checks at <code>(T, c)</code> boundaries</td>
+</tr>
+<tr>
+  <td><code>neverResetC</code></td>
+  <td><strong>packing budget</strong> — maxC 31 → 718; 16 bits die in ms at production rates</td>
+  <td>maxC bound test; overflow test at pack time</td>
+</tr>
+</tbody>
+</table></div>
+<p>The no-anomaly one is <code>neverResetC</code> (rung 4.1's measurement): zero
+inversions, zero drift, zero torn cuts — and a guaranteed hard failure at
+<code>pack()</code> time on a schedule set by your traffic. Production incidents don't
+require wrong answers; &quot;correct until the counter wraps at peak load&quot; is a
+worse class of bug than one a fuzz can see.</p>
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> (a) Correctness of stamps: intact — the rules never depended on the
+clock being right, and its first received message hands it a fresh <code>l</code>.
+(b) Drift: its own <em>view</em> is fine (<code>l − pt</code> on this node is large but that
+is the metric working: 40s slow clock → l runs ~40s &quot;ahead&quot; of its wall —
+a dashboard's downstream-of-a-liar signature in reverse). The cluster-wide
+bound is violated in the declared sense: this node is outside max-offset.
+(c) Local &quot;as of now&quot; queries: its <code>pt</code>-based notion of <em>now</em> is 40s in the
+past — it will serve snapshots that silently exclude 40 seconds of
+perfectly-visible history: stale reads with no error. At rejoin, before
+serving: re-sync NTP and <em>verify</em> offset within bound (or refuse — the
+CockroachDB suicide, applied at startup), and wait out max-offset so no
+stamp it issues can precede one it issued before the partition —
+CockroachDB literally does this sleep on restart.</p>
+<p><strong>7.2</strong> The token enters the receive rule: <code>l' = max(l, HUGE, pt) = HUGE</code> —
+the first server's clock jumps ~146,000 years ahead; every message it sends
+carries HUGE onward; <code>max</code> means <strong>no node ever recovers</strong> (l never
+decreases). All ordering still &quot;works&quot;, but every wall-time promise —
+snapshots, TTLs, GC-by-age, uncertainty windows — is destroyed cluster-wide,
+permanently, from one packet. That is experiment 7 (the +60 liar) with the
+offset chosen by an attacker. Defenses: (1) <strong>authenticate the token</strong> —
+MongoDB HMAC-signs clusterTime so only servers can advance it; (2) <strong>bound
+the jump</strong> — refuse/clamp any incoming stamp more than max-offset ahead of
+local <code>pt</code> (a liar can then only push you to the edge of the already-
+tolerated spread). Belt and suspenders; production uses both.</p>
+<h2 id="solutions-rung-8--design-worked-discussion-not-a-single-right-answer">Rung 8 — Design (worked discussion, not a single right answer)</h2>
+<p><strong>Clock</strong>: HLC per region-node, 48+16 packed, stamps on every audit entry;
+tokens (the entry's stamp) returned to writers and piggybacked on
+inter-region replication messages, MongoDB-style, so the regions' clocks
+chase each other continuously.</p>
+<p><strong>Requirement mapping.</strong> <em>Causally-consistent replay</em>: HLC order is exactly
+this — sort a tenant's entries by <code>(l, c, regionId)</code>; the one-way property
+is fine because replay needs <em>an</em> order consistent with causality, not
+concurrency detection. <em>&quot;As of <wall time>&quot;</em>: the consistent-cut property —
+cut at <code>(T, ∞)</code>; correct within the clock spread, so publish the caveat &quot;±
+clock offset&quot; with the answer, and alarm when NTP degrades. <em>Dashboard
+read-your-writes</em>: the causality token — client carries its last write's
+stamp; any region absorbing it serves reads at ≥ that stamp (or waits the
+few ms until its clock passes it). This is the requirement that <strong>cannot be
+met by clock quality alone</strong>: no bound short of zero makes a slow-clock
+region's &quot;now&quot; cover a fast-clock region's fresh write; you need the token
+(per-session, cheap) — or global coordination you explicitly don't want for
+an audit log.</p>
+<p><strong>Concurrent entries</strong> (same tenant, two regions, no causal path): both
+stamps are valid and unequal; <code>(l, c, regionId)</code> totally orders them
+arbitrarily-but-consistently everywhere — acceptable for an append-only log
+(no conflict to resolve, only an order to agree on). Never present that
+order as &quot;who acted first&quot; to regulators when the gap is inside the clock
+spread — within ±offset, wall order between unrelated events is fiction;
+say so in the product.</p>
+<p><strong>At ±25ms vs ±2s.</strong> Ordering, replay, tokens: unaffected at any skew —
+that is the whole point of the design. What degrades at ±2s: &quot;as of <time>&quot;
+gains a ±2s ambiguity band (disclose it), and cross-region &quot;first&quot; claims
+inside 2s become meaningless. What <em>breaks</em> if unpoliced: any component that
+trusted the bound (TTL cleanup, retention). So monitor: per-node NTP offset
+with a hard eviction threshold (crash beats lie), <code>l − pt</code> drift per node
+(the downstream-of-a-liar detector), token-wait durations at read time
+(rising = spread rising), and c-value distribution (bursts and chained load
+made visible). During the ±2s incident you <em>widen the disclosed band and
+keep running</em> — the availability-shaped answer an audit log wants, and the
+exact opposite of commit wait, which would have every writer stall 4s. If
+the product ever needs strangers'-order guarantees (billing cutoffs,
+auctions), that is external consistency: buy it with commit wait or a
+single sequencer for that stream alone — not by pretending the clocks are
+better than they are.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../30-clock-synchronization/notes.html"><small>← Lab 30</small>clock-synchronization</a><a href="../32-crdts/notes.html" style="text-align:right"><small>Lab 32 →</small>crdts</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-exist">1. WHY does this exist?</a><a href="#readme-2-the-problem-as-a-story">2. THE PROBLEM, as a story</a><a href="#readme-3-the-naive-solution">3. THE NAIVE SOLUTION</a><a href="#readme-4-the-failure--twice-because-we-own-two-clocks">4. THE FAILURE — twice, because we own two clocks</a><a href="#readme-5-the-real-requirement">5. THE REAL REQUIREMENT</a><a href="#readme-6-the-key-idea">6. THE KEY IDEA</a><a href="#readme-7-terminology">7. TERMINOLOGY</a><a href="#readme-8-two-mental-models">8. TWO MENTAL MODELS</a><a href="#readme-9-visualization">9. VISUALIZATION</a><a href="#readme-10-the-actual-mechanism--one-funeral-then-the-rules">10. THE ACTUAL MECHANISM — one funeral, then the rules</a><a href="#readme-11-failure-scenarios">11. FAILURE SCENARIOS</a><a href="#readme-12-correctness--the-full-scorecard">12. CORRECTNESS — the full scorecard</a><a href="#readme-13-the-code--the-lines-that-carry-the-guarantees">13. THE CODE — the lines that carry the guarantees</a><a href="#readme-14-experiments--break-it-yourself">14. EXPERIMENTS — break it yourself</a><a href="#readme-15-production--where-this-clock-actually-lives">15. PRODUCTION — where this clock actually lives</a><a href="#readme-16-exercises">16. EXERCISES</a><a href="#readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-18-glossary">18. GLOSSARY</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

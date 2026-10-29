@@ -1,0 +1,3336 @@
+<!doctype html>
+<html lang="en" data-hub-lab="38-anti-entropy">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>38. anti-entropy</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 38 of 71 · Stage 5</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 38 · Copies and Agreement</p><article id="readme"><h1 id="readme-anti-entropy">Anti-Entropy</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Asha at head office puts the croissant price up and rings
+her three shops. Meera and Arjun answer, so the change is live. Omar's line is
+busy, and no part of the process is supposed to go back for him, so his shop
+sells at last week's price for a year. Anti-entropy is the background job that
+does go back: it compares a summary of each shop's whole price list, splits
+wherever two summaries disagree, and repairs what it finds. The rest of this
+lab is the eleven ways that repair still leaves a customer paying the wrong
+price.</p>
+</blockquote>
+<p>The simulator is <a href="visualization.html"><code>visualization.html</code></a>, also published at
+<a href="https://claude.ai/code/artifact/f8ee9833-c3e8-4c29-9796-c2c68b8954b2" target="_blank" rel="noopener">https://claude.ai/code/artifact/f8ee9833-c3e8-4c29-9796-c2c68b8954b2</a>. The lab
+contents, the engine runs, and how every number in this document was made are
+in <a href="#readme-17-about-this-lab">section 17</a> at the end.</p>
+<hr />
+<h1 id="readme-beginner-model">BEGINNER MODEL</h1>
+<h2 id="readme-1-what-part-of-the-system-goes-back-and-fixes-the-third-copy">1. What part of the system goes back and fixes the third copy?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You keep three copies of every row so that one dead machine
+cannot lose your data. The moment you do, the three copies can stop being the
+same. Nothing in the ordinary business of reading and writing is responsible
+for noticing.</p>
+</blockquote>
+<p>Asha runs pricing at head office. She keeps three copies of every price,
+because a machine holding the only copy will one day die.</p>
+<p>The instant she does that, she creates a new thing that can go wrong. <strong>The
+three copies can stop being the same.</strong></p>
+<p>Here is the part that surprises people. This is not caused by a bug. It is
+caused by the system working exactly as designed.</p>
+<p>A write that reached two of the three copies is a <em>successful</em> write. Asha
+configured it that way on purpose, so that one sick machine cannot stop her
+shops selling. The write returns success. And the third copy is now holding
+last week's value.</p>
+<p>So ask the obvious question. <strong>What part of the system goes back and fixes that
+third copy?</strong></p>
+<p>In the write path, nothing. The write is finished, and it was a success.</p>
+<p>In the read path, almost nothing. A read that happens to touch the stale copy
+might notice. But only if it touches it, and only for the one row it asked
+about.</p>
+<p>There is no other code running. The third copy holds a wrong value for as long
+as nobody happens to look. For most rows in most databases, that means
+<em>forever</em>.</p>
+<p>So divergence is not a rare accident to be handled. It is the continuous,
+normal residue of a system that keeps serving while machines come and go. And
+it accumulates.</p>
+<p><strong>Anti-entropy</strong> is the name for the background work that goes looking for
+those differences and removes them. Without it, &quot;eventually consistent&quot; is a
+promise with no machinery behind it.</p>
+<h3 id="readme-why-did-your-last-three-labs-walk-past-this">Why did your last three labs walk past this?</h3>
+<p>Three labs you have already done all pointed here and then changed the subject.</p>
+<p><a href="../34-quorums-and-replication/notes.html#readme">quorums-and-replication</a> ended by listing
+<em>&quot;read repair, anti-entropy, Merkle tree&quot;</em> among its key terms. Three names, no
+mechanism. It is also the lab where you learned the counting rule that this one
+leans on: tell enough replicas and ask enough replicas, and the two groups are
+forced to share one. In symbols, <code>R + W &gt; N</code>.</p>
+<p><a href="../28-eventual-consistency/notes.html#readme">eventual-consistency</a> told you the replicas
+converge. It did not tell you what does the converging.</p>
+<p><a href="../37-gossip-protocols/notes.html#readme">gossip-protocols</a> taught you, the hard way, that a
+merge rule must be a <strong>join</strong>. You built one that was not, and forty orderings
+of the same five facts produced two permanently different states.</p>
+<p>Put those together. You have a system that creates divergence on purpose, then
+promises it will go away, and holds one rule for combining two versions.
+<strong>Nothing in any of them ever goes and looks.</strong> That missing piece is this lab.</p>
+<h2 id="readme-2-why-does-omars-shop-sell-croissants-at-last-weeks-price-for-a-year">2. Why does Omar's shop sell croissants at last week's price for a year?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Head office changes a price and rings three shops. Two
+answer and one does not, and the rule says two is enough. Nobody's job
+includes going back for the third.</p>
+</blockquote>
+<p>A chain of three bakeries: <strong>shop A</strong>, <strong>shop B</strong>, <strong>shop C</strong>. Meera runs A.
+Arjun runs B. Omar runs C.</p>
+<p>Asha at head office sets the prices. Each shop also keeps its own printed price
+list, the whole list, all sixteen items. A shop has to be able to sell when the
+office phone is engaged.</p>
+<p>Monday morning, Asha puts the price of a croissant up to £4.00 and rings round.
+Meera answers and writes it down. Arjun answers and writes it down. Omar's line
+is busy, because he is out at the back signing for a flour delivery.</p>
+<p>Asha's rule is simple. <strong>Two shops confirmed means the change is live.</strong> Two
+shops confirmed. She ticks the job off her list and moves on to the scones.</p>
+<p>Nobody is coming back for Omar.</p>
+<p>Omar sells croissants at £2.40 on Tuesday. And next month. And next year. Not
+because anything broke. The phone worked, the rule was followed, the change was
+recorded as a success. The only thing that happened is that no part of the
+process was responsible for going back to check.</p>
+<p>Here is that morning as numbers. The middle column is the one to read: it says
+what each figure is counting.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>After Asha's one price change</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+  <th>Where to see it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Rows the three shops disagree about</td>
+  <td>1 of 16</td>
+  <td>items with different records on different shops</td>
+  <td>Scenario 1</td>
+</tr>
+<tr>
+  <td>What Priya is told at Omar's shop</td>
+  <td>2.40</td>
+  <td>the price a customer is actually charged there</td>
+  <td>Scenario 1</td>
+</tr>
+<tr>
+  <td>What Meera and Arjun charge</td>
+  <td>4.00</td>
+  <td>the price everyone else believes</td>
+  <td>Scenario 1</td>
+</tr>
+</tbody>
+</table></div>
+<p>One row. Now leave the chain running for a week, with the usual mix of a
+machine rebooting for a kernel patch, a switch dropping packets for ninety
+seconds, and a maintenance window.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Three hundred price changes over that week, on a longer
+catalogue of sixty-four items, with Omar's shop away for a few short blips and
+one five-hour outage. How many of the sixty-four items end up different
+between the shops? And of those, how many are items customers ask about often?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>16 of the 64 rows differ, and only 3 of them are items anyone reads.</strong>
+Thirteen are rows nobody has looked at in weeks.</p>
+<p>If you guessed a handful, you have the right instinct for how often things go
+wrong and the wrong instinct for how long each one lasts. Nothing removes a
+difference once it exists. They pile up.</p>
+<p>If you guessed that most of the damage would be on popular items, you have it
+backwards, and that backwardness is the whole point of the next three
+sections. Popular items get looked at, and looking is what fixes things.</p>
+<p>| The week-long run | Figure | What that figure counts |
+|---|---|---|
+| Writes issued | 300 | price changes over seven days |
+| Catalogue size | 64 | items in the price list |
+| Divergent at the end | 16 | items the shops hold different records for |
+| Of those, hot | 3 | divergent items customers read often |
+| Of those, cold | 13 | divergent items nobody has read in weeks |</p>
+</details>
+
+</blockquote>
+<p>That ratio, 3 rows where somebody is watching against 13 where nobody is, is
+the shape of the whole problem. Hold on to it for the next two sections.</p>
+<p>Here is how far this lab follows Asha, Omar and Dev, and what you can do after
+each layer.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner</strong></td>
+  <td>1–9</td>
+  <td>say why the copies drift, and why fixing-on-read cannot save you</td>
+</tr>
+<tr>
+  <td><strong>Intermediate</strong></td>
+  <td>10</td>
+  <td>build the mechanism yourself, one failure at a time</td>
+</tr>
+<tr>
+  <td><strong>Engineering</strong></td>
+  <td>11–12</td>
+  <td>reason about all eleven failures and state what repair guarantees</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>13</td>
+  <td>run repair on a real cluster and know what the alert means</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-why-not-just-fix-it-when-a-customer-asks">3. Why not just fix it when a customer asks?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> When Priya asks the price, ring two shops instead of one,
+believe the newer answer, and correct the shop that was behind. It is cheap,
+it is real, and on its own it is close to useless.</p>
+</blockquote>
+<p>The trouble is that one shop is out of date. So check when it matters.</p>
+<p>When Priya actually asks the price of a croissant, ring two shops instead of
+one. Take the newer of the two answers. And while you have them on the phone,
+correct the one that was behind.</p>
+<p>This is genuinely a good idea, and every real system does it.</p>
+<p>It costs almost nothing, because you were making the phone call anyway. It
+fixes the row Priya cares about at the exact moment she cares about it. It
+needs no new background process, no schedule, and no extra machine.</p>
+<p>It is also, on its own, close to useless. There are three separate reasons.
+Each one teaches a different thing about what a repair mechanism has to do, so
+it is worth seeing all three.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Five price changes have missed Omar's shop. Priya now asks
+about one of the five. After that phone call, how many of the five rows are
+still wrong at Omar's?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Four.</strong> The call fixed exactly the one row it was about. There is no
+mechanism by which asking about croissants tells you anything about scones.</p>
+<p>If you said &quot;all five, because the shops synced&quot;, you are imagining a
+mechanism that does not exist. Nothing compared the two price lists. Two
+people compared one line of them.</p>
+<p>| Before Priya's call | After it | What changed | Where to see it |
+|---|---|---|---|
+| 5 divergent rows | 4 divergent rows | one row, the one she named | Scenario 2 |</p>
+<p>This sounds obvious once it is said this baldly, and it is. But notice what it
+ties the fix rate to. It is tied to the <em>read</em> rate. And in every real
+catalogue, the vast majority of rows are read approximately never.</p>
+</details>
+
+</blockquote>
+<h2 id="readme-4-where-does-fixing-on-read-break">4. Where does fixing-on-read break?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> It only fixes rows somebody reads, it only reaches the
+shops you happened to ring, and every repair it does is work done while a
+customer waits.</p>
+</blockquote>
+<h3 id="readme-limit-one--what-happens-to-the-four-rows-nobody-asked-about">Limit one — what happens to the four rows nobody asked about?</h3>
+<p>Covered just above. Five rows wrong, one read, four still wrong.</p>
+<p>In the week-long run this is the difference between the 3 divergent hot rows
+and the 13 divergent cold rows. Fixing-on-read attacks exactly the 3. It cannot
+touch the 13.</p>
+<h3 id="readme-limit-two--which-shop-does-the-call-actually-reach">Limit two — which shop does the call actually reach?</h3>
+<p>This is the one people do not expect.</p>
+<p>You keep three copies but you only ring two, because ringing two is what makes
+the system fast and available. Which two? Whichever two answer first. In
+practice that means the two that are healthy and nearby.</p>
+<p>Now think about which shop is stale. It is usually the one that has just come
+back from being sick. Which is to say, it is <em>the one least likely to be in the
+group you rang</em>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Priya's read at shop A</th>
+  <th>What the mechanism did</th>
+  <th>Divergence afterwards</th>
+  <th>Where to see it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Asks Meera (A) and Arjun (B)</td>
+  <td>compared two correct answers</td>
+  <td><strong>unchanged</strong></td>
+  <td>Scenario 2</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read that middle cell again. Both shops it rang were correct, so the answer was
+correct, and Priya went home happy. The mechanism designed to notice the
+problem never looked at the shop that had it.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> So lower the number of shops you ring to one. Faster, cheaper,
+fewer calls. What does fixing-on-read do now?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Nothing at all, ever.</strong> The read went to Omar's shop, was answered <strong>2.40</strong>
+when the true price was 9.00, and repaired nobody. That is Scenario 2 with the
+number of shops asked, <code>R</code>, set to 1.</p>
+<p>If you said &quot;it still fixes the row it read&quot;, you are assuming the answer can
+be checked. It cannot. There is nothing to check it against.</p>
+<p>The reason is worth saying precisely, because it is the seed of the whole lab.
+<strong>You cannot detect a disagreement with one copy.</strong> Repair is not something a
+shop can do by looking at its own list. It requires <em>comparison</em>, and
+comparison requires at least two. A single copy has no way to know it is
+wrong. From the inside, being stale looks exactly like being right.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-limit-three--who-pays-for-the-repair">Limit three — who pays for the repair?</h3>
+<p>Every repair on the read path is work done while somebody is waiting.</p>
+<p>Do it before answering and Priya's read gets slower. Do it after answering and
+the read that triggered the repair may still hand her the stale price.</p>
+<p>Neither is a disaster. But it means you cannot solve the problem by turning
+this dial up. Repairing hard on the read path degrades the very thing you built
+the copies for.</p>
+<h3 id="readme-what-do-the-three-limits-add-up-to">What do the three limits add up to?</h3>
+<p>Put them together and you get the deeper problem, the one this lab is actually
+about.</p>
+<blockquote>
+<p><strong>The rows most likely to be silently wrong are exactly the rows nobody is
+looking at. And any repair mechanism that lives on the read path is, by
+construction, blind to them.</strong></p>
+</blockquote>
+<p>That is a nasty shape. Your monitoring will look fine.</p>
+<p>The problem stays invisible until one of three days arrives. The day somebody
+runs a report. The day a row that was cold for a year suddenly becomes hot. Or
+the day you fail over to the copy that was wrong.</p>
+<h2 id="readme-5-what-would-a-real-repair-process-have-to-do">5. What would a real repair process have to do?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five requirements. It runs on a clock, it compares whole
+lists, and it visits the sick shop on purpose. It costs what the differences
+cost rather than what the data costs. And it ends in an answer that does not
+depend on the order things were repaired in.</p>
+</blockquote>
+<p>Say it in plain words first. Then we will go and build it.</p>
+<p>Asha needs a process that does five things.</p>
+<ol>
+<li><strong>Runs whether or not anyone reads the data.</strong> Its trigger is a schedule,
+not a customer.</li>
+<li><strong>Compares whole price lists, not single lines.</strong> It must be able to find a
+difference in a row nobody has named.</li>
+<li><strong>Reaches every shop, not a fast subset.</strong> It must go and look at the sick
+one specifically.</li>
+<li><strong>Costs in proportion to the differences, not to the data.</strong> If two copies
+holding 500 GB differ in three rows, finding those three rows must not cost
+500 GB of network. This requirement is the one that generates all the
+interesting engineering. Without it the whole lab would be one paragraph
+long.</li>
+<li><strong>Ends in a defined answer that does not depend on the order.</strong> When it finds
+Meera saying 4.00 and Omar saying 2.40, it needs a rule that both sides can
+apply and get the same result. And the result must not depend on which pair
+repaired first.</li>
+</ol>
+<p>Requirement 5 should look familiar. It is the <strong>join</strong> property from the
+<a href="../37-gossip-protocols/notes.html#readme">gossip-protocols</a> lab. A combining rule that gives the
+same answer no matter what order you apply it in. Here it arrives as a hard
+prerequisite rather than a nicety. Section 10 measures what happens when you
+break it.</p>
+<h2 id="readme-6-what-is-the-one-idea-that-makes-this-affordable">6. What is the one idea that makes this affordable?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Do not compare the lists. Compare one number that stands
+for each whole list. If the two numbers match you are finished. If they do
+not, cut each list in half and ask the same question about each half.</p>
+</blockquote>
+<p>Two sentences hold the whole invention. Here is the first, which is about
+<em>how</em>.</p>
+<blockquote>
+<p><strong>Compare summaries instead of data, one summary for the whole range. If the
+summaries match, you are done, and you have sent one number. If they do not,
+split the range in half and ask the same question about each half. Keep
+splitting until you have cornered the differences.</strong></p>
+</blockquote>
+<p>And here is the second, which is about <em>when</em> rather than how.</p>
+<blockquote>
+<p><strong>Run this on a schedule, in the background, between every pair of shops,
+independently of what anyone is reading.</strong></p>
+</blockquote>
+<p>That is it. That is the whole thing.</p>
+<p>The first sentence buys requirement 4, cost proportional to the differences.
+Matching halves are eliminated wholesale, without anybody looking inside them.
+The second sentence buys requirements 1, 2 and 3.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Meera's list and Omar's list are in perfect agreement. Nothing
+has gone wrong at all. Under the idea above, what does one comparison between
+them cost?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Two numbers on the wire, and a full read of both price lists off the shelf.</strong></p>
+<p>If you said &quot;nothing, because nothing was wrong&quot;, you have the network half
+right and the disk half badly wrong. Somebody had to read every line of both
+lists to work out the summary in the first place.</p>
+<p>| Repairing two shops that already agree | Figure | What that figure counts |
+|---|---|---|
+| Summaries compared | 2 | one per shop, the top of each pyramid |
+| Bytes on the wire | 64 | the two summaries and nothing else |
+| Rows read off the shelf | 32 | every line of both lists, to build the summaries |</p>
+<p>This gap between the network cost and the disk cost never closes, and section
+13 is where it starts costing money. Press <em>Compare and repair</em> on a freshly
+reset bench to watch it.</p>
+</details>
+
+</blockquote>
+<p>Everything in the rest of this lab is either a detail of making that idea work,
+or a failure caused by getting one of those details wrong. There are more of
+those than you would expect. One of them quietly brings deleted data back to
+life.</p>
+<h2 id="readme-7-what-are-all-of-these-things-called-now-that-you-have-met-them">7. What are all of these things called, now that you have met them?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every word below names something you have already watched
+happen. The name comes after the experience, not before it, so each one is
+tied to the section where you met it.</p>
+</blockquote>
+<h3 id="readme-why-entropy-and-not-repair-or-sync">Why &quot;entropy&quot;, and not &quot;repair&quot; or &quot;sync&quot;?</h3>
+<p>Entropy is the tendency of things left alone to become disordered.
+Anti-entropy is the work you do to push them back.</p>
+<p>In a replicated store, <strong>entropy</strong> is the accumulating difference between
+copies that should be identical. <strong>Anti-entropy</strong> is the family of background
+mechanisms that detect and remove that difference.</p>
+<p>The word was chosen deliberately. It comes from Demers and colleagues at Xerox
+PARC in 1987, the same paper that gave us gossip. The point they were making is
+that divergence is not an <em>event</em> that happens and is then over. It is a
+continuous pressure, like heat leaking out of a house.</p>
+<p>There is no state called &quot;repaired&quot; that you arrive at and stay in. There is
+only a pump you keep running. That is why the mechanism is a scheduled sweep
+and not an error handler. In the week-long run, entropy reached 16 divergent
+rows out of 64. One anti-entropy pass took it to 0. Next week it will be
+non-zero again.</p>
+<p>&quot;Eventual&quot; in <a href="../28-eventual-consistency/notes.html#readme">eventual-consistency</a> is exactly
+&quot;as soon as the anti-entropy pass gets to it&quot;.</p>
+<p>The disagreement itself has a name too, and it splits in two.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>What it means, in one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Entropy</strong></td>
+  <td>the accumulating difference between copies that should match</td>
+  <td>section 1</td>
+</tr>
+<tr>
+  <td><strong>Anti-entropy</strong></td>
+  <td>the background work that finds and removes it</td>
+  <td>section 1</td>
+</tr>
+<tr>
+  <td><strong>Divergence</strong> (or drift)</td>
+  <td>at least two copies hold different records for one row</td>
+  <td>Omar's croissant, section 2</td>
+</tr>
+<tr>
+  <td><strong>Stored divergence</strong></td>
+  <td>the copies hold different bytes</td>
+  <td>the simulator's second counter</td>
+</tr>
+<tr>
+  <td><strong>Visible divergence</strong></td>
+  <td>a customer would be told different things</td>
+  <td>the meter at the top of the page</td>
+</tr>
+</tbody>
+</table></div>
+<p>Those last two are not the same, and the gap between them matters. Two shops
+can hold a deletion marker and an absence. Those are different bytes and the
+same answer to a customer. Section 11.6 lives in exactly that gap.</p>
+<p>And here is what <code>R + W &gt; N</code> from
+<a href="../34-quorums-and-replication/notes.html#readme">quorums-and-replication</a> does <em>not</em> do for
+you. Quorum overlap makes a single read return a fresh value. It never removes
+the stale copy underneath.</p>
+<h3 id="readme-what-are-the-three-cures-called">What are the three cures called?</h3>
+<p><strong>Read repair</strong> is what Asha invented in section 3. While answering a question,
+fix what you notice. Precisely: during a read, the shop handling the call
+compares the answers it got back, and if they differ it writes the winning
+version back to the ones that were behind. Before answering, which is blocking,
+or after, which is asynchronous.</p>
+<p>The word &quot;read&quot; in the name is load-bearing. It distinguishes repair that is
+<em>triggered by</em> and <em>scoped to</em> a read from repair that runs on its own
+schedule. That distinction is exactly the three limits of section 4.</p>
+<p><strong>Hinted handoff</strong> is what Asha does when the phone is engaged. She writes the
+change on a sticky note addressed to Omar, and reads it out when he rings back.</p>
+<p>&quot;Hint&quot; rather than &quot;queued write&quot; is deliberate and load-bearing too. It is
+<em>advisory</em>. It may be dropped. It is not part of the write's durability
+guarantee. Systems that treat it as a guarantee have a bug, and section 10
+measures two distinct ways it silently fails.</p>
+<p>The note has a shelf life, called the <strong>hint window</strong>. Past it, the note is
+binned unread, on the grounds that a shop gone that long has too much to catch
+up on to do it one change at a time. Cassandra's default is 3 hours, set by
+<code>max_hint_window_in_ms</code>, and the simulator uses the same figure. Getting the
+window wrong does not lose data. It just shifts work from the cheap mechanism
+to the expensive one.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>What it means, in one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Read repair</strong></td>
+  <td>fix the copies a read touched, using what that read returned</td>
+  <td>section 3</td>
+</tr>
+<tr>
+  <td><strong>Hinted handoff</strong></td>
+  <td>park an undeliverable write and replay it when the target returns</td>
+  <td>Asha's sticky note, section 10</td>
+</tr>
+<tr>
+  <td><strong>Hint</strong></td>
+  <td>the parked write itself, advisory and droppable</td>
+  <td>section 10</td>
+</tr>
+<tr>
+  <td><strong>Hint window</strong></td>
+  <td>the maximum age of a hint before it is binned unread</td>
+  <td>section 10, and Cassandra's 3 hours</td>
+</tr>
+<tr>
+  <td><strong>Coordinator</strong></td>
+  <td>the shop handling a customer's call, which also holds the hints</td>
+  <td>section 11.3</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-is-the-machinery-called">What is the machinery called?</h3>
+<p><strong>Full sync</strong> is the honest first answer: ship every row and let both sides
+merge. Correct, and proportional to the data rather than to the differences.</p>
+<p>A <strong>Merkle tree</strong> is the pyramid of checksums from section 6. Each leaf is a
+hash of a contiguous slice of the price list. Each node above is a hash of its
+two children. Two shops compare <strong>root hashes</strong>. Equal roots mean the whole
+dataset matches. Unequal roots mean descend into the children and repeat,
+following only the branches that differ.</p>
+<p>It is named for Ralph Merkle, in 1979. The reason it needs its own name rather
+than being called &quot;checksums&quot; is the <em>tree</em> part. A flat checksum tells you
+whether you differ. Only the tree tells you <strong>where</strong>, and it does so at
+logarithmic cost. It is a binary search for disagreement.</p>
+<p>Dismissing a whole subtree because its two hashes matched is called <strong>pruning</strong>,
+and it is the entire saving.</p>
+<p>Now the part that costs you. A leaf does not cover one row. It covers a
+<em>bundle</em> of rows, a <strong>leaf range</strong>. So a single differing row makes its whole
+leaf mismatch, and repair transfers every row in that leaf. The wasted transfer
+is <strong>over-streaming</strong>.</p>
+<p>That word earns its place because in production it is the dominant cost of
+repair, and it has nothing to do with how much data is actually wrong. It is
+the reason repair can move a hundred gigabytes to fix a hundred rows.</p>
+<p>Finally, the job itself. A <strong>repair session</strong> is one pairwise
+comparison-and-reconcile over one key range: build the trees on each side,
+exchange and compare them, <strong>stream</strong> the mismatched ranges, apply the merge
+rule on both sides. In Cassandra you start it with <code>nodetool repair</code>. The
+tree-building half has its own name, <strong>validation compaction</strong>, because it
+reads every row in the range off disk.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>What it means, in one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Full sync</strong></td>
+  <td>repair by shipping every row; correct, and proportional to the data</td>
+  <td>section 10, v3</td>
+</tr>
+<tr>
+  <td><strong>Merkle tree</strong></td>
+  <td>a tree of hashes over ranges, letting two copies binary-search for their differences</td>
+  <td>section 6</td>
+</tr>
+<tr>
+  <td><strong>Root hash</strong></td>
+  <td>the top of that tree; equal roots mean the whole range matches</td>
+  <td>section 6</td>
+</tr>
+<tr>
+  <td><strong>Leaf range</strong></td>
+  <td>the contiguous slice of the price list one leaf hash covers</td>
+  <td>section 10, v6</td>
+</tr>
+<tr>
+  <td><strong>Pruning</strong></td>
+  <td>dismissing a whole subtree because its two hashes matched</td>
+  <td>the green boxes on the page</td>
+</tr>
+<tr>
+  <td><strong>Over-streaming</strong></td>
+  <td>moving a whole leaf range because one row in it differed</td>
+  <td>section 10, v6</td>
+</tr>
+</tbody>
+</table></div>
+<p>And three more for the job that carries it out.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>What it means, in one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Repair session</strong></td>
+  <td>one pairwise comparison and reconcile over one key range</td>
+  <td>section 10</td>
+</tr>
+<tr>
+  <td><strong>Validation compaction</strong></td>
+  <td>Cassandra's name for the full disk scan that builds the tree</td>
+  <td>the 32 rows in section 6</td>
+</tr>
+<tr>
+  <td><strong>Streaming</strong></td>
+  <td>moving the rows of mismatched ranges between copies</td>
+  <td>section 10, v5</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-are-the-words-for-a-deletion">What are the words for a deletion?</h3>
+<p>A <strong>tombstone</strong> is a headstone. Deleting an item leaves a marker saying &quot;this
+was deleted, at this time&quot;, rather than leaving nothing at all. The marker
+carries the deletion's timestamp, which makes the deletion <em>a fact that can be
+replicated</em> instead of an absence.</p>
+<p>That distinction closes a hole you cannot otherwise close. If deletion means
+absence, then repair seeing &quot;Meera has no row, Omar has a row&quot; cannot tell
+apart two completely different situations. Meera deleted it. Or Omar received a
+write Meera never got. The two demand opposite responses. The tombstone is what
+makes them distinguishable.</p>
+<p>Headstones are eventually cleared away. <code>gc_grace_seconds</code> is how long a
+tombstone is kept before compaction discards it. <strong>Resurrection</strong>, also called
+a <strong>zombie</strong>, is a deleted row that comes back because a copy that never saw
+the tombstone was repaired after the tombstone was purged.</p>
+<p>That setting converts a storage-reclamation knob into a hard operational
+deadline. <em>Every copy must be repaired at least once within
+<code>gc_grace_seconds</code>, or deleted data returns.</em> That single sentence is the most
+consequential thing anti-entropy imposes on the people who operate the cluster.
+Cassandra's default is 10 days, and it is 10 days because it is a repair
+deadline, not because tombstones are expensive to keep for 10 days.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>What it means, in one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Tombstone</strong></td>
+  <td>a deletion marker with a timestamp, making a delete a replicable fact</td>
+  <td>section 11.6</td>
+</tr>
+<tr>
+  <td><strong>gc_grace_seconds</strong></td>
+  <td>how long a tombstone survives before compaction discards it</td>
+  <td>section 11.6, and Cassandra's 10 days</td>
+</tr>
+<tr>
+  <td><strong>Resurrection</strong> (zombie)</td>
+  <td>a deleted row that returns after its tombstone was purged</td>
+  <td>section 11.6</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-is-the-word-for-deciding-who-wins">What is the word for deciding who wins?</h3>
+<p>When two copies disagree, something has to pick the answer. That something is
+the <strong>merge rule</strong>: a function combining two records into one.</p>
+<p>For the result to be independent of the order repairs happened in, the merge
+rule must be a <strong>join</strong>. Commutative, associative and idempotent.
+<strong>Last-write-wins</strong>, often shortened to <strong>LWW</strong>, means highest timestamp wins.
+That is a join. &quot;Take whatever arrived most recently&quot; is not.</p>
+<p>The reason this gets its own name here is to separate two things people
+confuse. Anti-entropy is <em>transport</em>. It finds differences and moves rows. The
+merge rule is <em>semantics</em>. It decides what the answer is. A perfect transport
+with a broken merge rule converges to nonsense, reliably and quickly.</p>
+<p>This is precisely the bug you shipped and caught in
+<a href="../37-gossip-protocols/notes.html#readme">gossip-protocols</a>, and precisely what
+<a href="../32-crdts/notes.html#readme">crdts</a> exists to guarantee by construction.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>What it means, in one line</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Merge rule</strong></td>
+  <td>the function deciding which of two conflicting records wins</td>
+  <td>section 10, v8</td>
+</tr>
+<tr>
+  <td><strong>Join</strong></td>
+  <td>a merge rule that is commutative, associative and idempotent</td>
+  <td>section 5, requirement 5</td>
+</tr>
+<tr>
+  <td><strong>Last-write-wins (LWW)</strong></td>
+  <td>the rule &quot;highest timestamp wins&quot;; a join, and often the wrong one</td>
+  <td>section 11.10</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-did-each-of-those-cost-in-numbers">What did each of those cost, in numbers?</h3>
+<p>Every word above was paid for by a run of the simulator. Here are those runs
+collected in one place, so the numbers sit next to what they mean rather than
+inside a sentence. The third column is the one that matters.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The cure</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+  <th>Where to see it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Read repair over a week</td>
+  <td>3 of 3 hot rows fixed</td>
+  <td>divergent rows customers read often</td>
+  <td>engine run 11</td>
+</tr>
+<tr>
+  <td>Read repair over a week</td>
+  <td>0 of 13 cold rows fixed</td>
+  <td>divergent rows nobody reads</td>
+  <td>engine run 11</td>
+</tr>
+<tr>
+  <td>Hints over a week</td>
+  <td>24 delivered</td>
+  <td>notes that reached Omar in time</td>
+  <td>engine run 11</td>
+</tr>
+<tr>
+  <td>Hints over a week</td>
+  <td>35 expired</td>
+  <td>notes binned unread past the window</td>
+  <td>engine run 11</td>
+</tr>
+<tr>
+  <td>Hints over a week</td>
+  <td>10 lost</td>
+  <td>notes destroyed when their shop restarted</td>
+  <td>engine run 11</td>
+</tr>
+</tbody>
+</table></div>
+<p>Fewer than a third of the notes ever did their job. Now the machinery.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The machinery</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+  <th>Where to see it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Merkle comparison, 1 row of 16 differing</td>
+  <td>18 hashes, 1 row streamed</td>
+  <td>comparisons made, and rows actually moved</td>
+  <td>Scenario 5</td>
+</tr>
+<tr>
+  <td>The same repair, as a full sync</td>
+  <td>16 rows each way</td>
+  <td>rows moved when you ship everything</td>
+  <td>Scenario 5</td>
+</tr>
+<tr>
+  <td>The two in bytes</td>
+  <td>976 against 6,400</td>
+  <td>bytes on the wire, tree against full sync</td>
+  <td>Scenario 5</td>
+</tr>
+<tr>
+  <td>Over-streaming, 1 row per leaf</td>
+  <td>1 row streamed</td>
+  <td>rows moved to fix one wrong row</td>
+  <td>Scenario 6</td>
+</tr>
+<tr>
+  <td>Over-streaming, 8 rows per leaf</td>
+  <td>8 rows streamed</td>
+  <td>the same one wrong row, eightfold waste</td>
+  <td>Scenario 6</td>
+</tr>
+</tbody>
+</table></div>
+<p>And the three that decide what the answer <em>means</em>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The decision</th>
+  <th>What happened</th>
+  <th>What it tells you</th>
+  <th>Where to see it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Delete with no tombstone</td>
+  <td>the item is back on sale</td>
+  <td>absence cannot be replicated</td>
+  <td>Scenario 7</td>
+</tr>
+<tr>
+  <td>Delete with a 6-hour grace</td>
+  <td>repaired at 2 hours it stays gone; at 8 hours it is back</td>
+  <td>the grace period is a deadline</td>
+  <td>Scenario 8</td>
+</tr>
+<tr>
+  <td>A merge rule that is not a join</td>
+  <td>one order gives 4.40 everywhere, another gives 8.50</td>
+  <td>convergence is not correctness</td>
+  <td>Scenario 9</td>
+</tr>
+</tbody>
+</table></div>
+<p>Both of those last two states are stable. Both are final. Only one of them is
+the price the customer was charged.</p>
+<h2 id="readme-8-what-does-the-stocktake-picture-get-right-and-where-does-it-lie">8. What does the stocktake picture get right, and where does it lie?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Anti-entropy is a stocktake. Dev and Ben walk the shelves
+with the stock book, comparing section totals rather than lines, and splitting
+only the sections that do not add up. Three things about that picture are
+lies, and each one is load-bearing.</p>
+</blockquote>
+<h3 id="readme-what-does-the-stocktake-get-right">What does the stocktake get right?</h3>
+<p>Once a month Dev and Ben close the shop early and walk the shelves with the
+stock book.</p>
+<p>They do not read every line of the book against every shelf. That would take
+all night. They work in sections. Count the total for the bread section.
+Compare it against the book's total for the bread section.</p>
+<p>If the totals match, the whole section is fine, and they move on without
+looking at a single individual line. If the totals disagree, they split the
+section and count the halves. Then they keep splitting until they find the line
+that is wrong.</p>
+<p>Everything important about anti-entropy is in that paragraph. It is scheduled.
+It is comparison-based. It summarises before it inspects. And its cost is
+driven by how many disagreements there are, rather than by how big the shop is.</p>
+<h3 id="readme-what-does-an-engineer-see-instead">What does an engineer see instead?</h3>
+<p>Two copies, X and Y, each holding a set of records over the same key range. A
+record is a key pointing at three things: a timestamp, a value, and whether it
+is deleted. Written compactly, that is
+<code>(key → {timestamp, value, deleted})</code>.</p>
+<p>Read the diagram top to bottom. It is one repair session from start to finish.</p>
+<pre class="mermaid">flowchart TD
+  S[&quot;Repair session starts for key range R&quot;] --&gt; BX[&quot;X reads every row in R off disk&lt;br/&gt;and builds a hash tree&quot;]
+  S --&gt; BY[&quot;Y reads every row in R off disk&lt;br/&gt;and builds a hash tree&quot;]
+  BX --&gt; C{&quot;root hashes equal?&quot;}
+  BY --&gt; C
+  C --&gt;|yes| D[&quot;Done. Two hashes on the wire.&lt;br/&gt;Nothing streamed.&quot;]
+  C --&gt;|no| E[&quot;Descend into both children&quot;]
+  E --&gt; F{&quot;child hashes equal?&quot;}
+  F --&gt;|yes| G[&quot;Prune: skip this whole subtree&lt;br/&gt;without looking inside it&quot;]
+  F --&gt;|&quot;no, and it is a leaf&quot;| H[&quot;Mark this leaf range as mismatched&quot;]
+  F --&gt;|&quot;no, not a leaf&quot;| E
+  H --&gt; I[&quot;Stream every row in every&lt;br/&gt;mismatched leaf, both directions&quot;]
+  I --&gt; J[&quot;Apply the merge rule per row&lt;br/&gt;on both replicas&quot;]
+  J --&gt; K[&quot;X and Y now hold identical records for R&quot;]
+</pre>
+<p>Two boxes in that diagram are the entire engineering content, and they pull in
+opposite directions.</p>
+<p>The <strong>prune</strong> box is why this is cheap. A matching subtree is dismissed
+wholesale, at the cost of one comparison, no matter how many rows are
+underneath it.</p>
+<p>The <strong>stream every row in every mismatched leaf</strong> box is why it is not as cheap
+as you think. The unit of transfer is the leaf, not the row.</p>
+<h3 id="readme-which-part-of-the-shop-is-which-part-of-the-store">Which part of the shop is which part of the store?</h3>
+<p>Read this table as a dictionary between Dev's stocktake and the machine.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Dev and Ben's stocktake</th>
+  <th>The replicated store</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The stock book and the shelves</td>
+  <td>Two copies, X and Y</td>
+</tr>
+<tr>
+  <td>One line in the book</td>
+  <td>One row: <code>key → {timestamp, value, deleted}</code></td>
+</tr>
+<tr>
+  <td>&quot;The bread section&quot;</td>
+  <td>A leaf range: a contiguous slice of the key space</td>
+</tr>
+<tr>
+  <td>The section total</td>
+  <td>A leaf hash</td>
+</tr>
+<tr>
+  <td>The grand total on the front page</td>
+  <td>The root hash</td>
+</tr>
+<tr>
+  <td>Splitting a section that does not add up</td>
+  <td>Descending into the children of a mismatched node</td>
+</tr>
+<tr>
+  <td>Closing early once a month</td>
+  <td>The repair schedule</td>
+</tr>
+<tr>
+  <td>Deciding which record to believe</td>
+  <td>The merge rule</td>
+</tr>
+<tr>
+  <td>A line crossed out in the book</td>
+  <td>A tombstone</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-the-story-lie-to-you">Where does the story lie to you?</h3>
+<p>Three places, and each one is load-bearing.</p>
+<p><strong>The first lie: a stocktake has an authority, and replication does not.</strong> The
+stock book is <em>right</em>. The shelf is <em>checked against it</em>.</p>
+<p>Between Meera's list and Omar's list there is no book. Neither copy is the
+master. Neither is more trustworthy. &quot;Repair&quot; does not mean &quot;restore the
+correct value&quot;. It means &quot;make both sides equal by applying an agreed rule&quot;.</p>
+<p>If that rule picks wrong, repair spreads the wrong value to the healthy shop
+with exactly the same enthusiasm it would have spread the right one. Section 11
+measures this happening.</p>
+<p><strong>The second lie: a stocktake happens when the shop is shut, and repair happens
+while you are trading.</strong> Rows are being written throughout. So the two trees are
+built from two slightly different moments in time, and differences appear that
+were never faults.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Two identical copies, one write landing mid-repair</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>With fine leaves, one row each</td>
+  <td>1 row streamed to fix 0</td>
+  <td>rows moved for a difference that was never a fault</td>
+</tr>
+<tr>
+  <td>With coarse leaves, eight rows each</td>
+  <td>8 rows streamed to fix 0</td>
+  <td>the same non-fault, eight times the traffic</td>
+</tr>
+</tbody>
+</table></div>
+<p>That is engine run 12, and section 17 says what an engine run is.</p>
+<p><strong>The third lie: in a stocktake a missing item means it is gone, and in a store
+a missing row is ambiguous.</strong> The shelf being empty and the book having no line
+for the item look identical. They mean opposite things: &quot;we deleted it&quot; against
+&quot;you never heard about it&quot;.</p>
+<p>This is the ambiguity the tombstone exists to remove. It is also the subject of
+the worst failure in this lab.</p>
+<h2 id="readme-9-can-you-make-the-divergence-meter-move-yourself">9. Can you make the divergence meter move yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Open the page, close Omar's shop, change a price, and watch
+a successful write leave a wrong number behind. Everything after this section
+makes more sense once you have seen the meter move.</p>
+</blockquote>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a>, or the published version at
+<strong><a href="https://claude.ai/code/artifact/f8ee9833-c3e8-4c29-9796-c2c68b8954b2" target="_blank" rel="noopener">https://claude.ai/code/artifact/f8ee9833-c3e8-4c29-9796-c2c68b8954b2</a></strong>. It
+runs the same engine that produced every number in this document.</p>
+<p>Four things are on the screen.</p>
+<p>The three shops A, B and C, each holding the sixteen-item price list. A
+<strong>divergence meter</strong> counting rows the shops disagree about. The controls to
+write, delete, read, close a shop, advance the clock and run a repair. And a
+Merkle panel showing both trees.</p>
+<p>That last panel lets you walk the comparison down one level at a time. It keeps
+a running count of hashes compared and rows streamed.</p>
+<p>If you press nothing else, press these three, in order.</p>
+<ol>
+<li><strong>Close C</strong>, then <strong>Set this price</strong> (croissant, 4.00). Watch the log report
+the change as <em>done</em> while the number at the top of the page goes to 1. That
+single screen is section 1 of this document.</li>
+<li><strong>Reopen C</strong>, then <strong>Compare and repair</strong> with A ↔ C selected. Watch fifteen
+of the sixteen ranges get pruned in green and one turn red, and read the five
+cost tiles.</li>
+<li>Scenario <strong>7 · The delete that came back</strong>, in the right-hand column. Predict
+first. The page makes you.</li>
+</ol>
+<h2 id="readme--checkpoint--can-you-say-why-fixing-on-read-is-not-enough">▸ Checkpoint — can you say why fixing-on-read is not enough?</h2>
+<p>You can now say what anti-entropy is for. The rows most likely to be wrong are
+the rows nobody reads, and repair that lives on the read path is blind to
+exactly those.</p>
+<p>You know the key idea. Compare summaries, split where they differ. And you have
+a vocabulary for the pieces, earned one at a time.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>replica</em>, <em>divergence</em> or <em>repair</em>,
+explain to a friend why Omar's shop can sell croissants at the wrong price for
+a year without anybody noticing.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;Head office only needs two of the three shops to confirm a price change
+before it calls the job done. So one shop can miss it. After that nobody rings
+that shop to check, because checking is not anybody's job. The only time
+anyone would notice is if a customer happened to ask that particular shop
+about that particular bun, and most buns nobody ever asks about.&quot;</p>
+</details>
+
+</blockquote>
+<p>What comes next is the mechanism itself, built the way it was actually
+invented. Start with the version a sensible engineer builds first, break it,
+and let each refinement be the scar of a specific failure.</p>
+<hr />
+<h1 id="readme-intermediate-model">INTERMEDIATE MODEL</h1>
+<h2 id="readme-10-how-would-you-build-it-one-failure-at-a-time">10. How would you build it, one failure at a time?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight attempts. Asha starts with a sticky note, and each
+version after that is the scar of one specific thing that went wrong with the
+version before it.</p>
+</blockquote>
+<p>Nobody designed this mechanism in one sitting. Each piece is a repair to the
+previous piece. So build it the way it was actually built.</p>
+<h3 id="readme-v1--why-not-just-leave-omar-a-note">v1 — Why not just leave Omar a note?</h3>
+<p>When Asha rings shop C and gets no answer, she writes the change on a sticky
+note addressed to Omar. When he rings back to say he is free, she reads the
+notes out.</p>
+<p>This is genuinely excellent, and it should be the first line of defence in any
+real system. It is nearly free, and it covers the overwhelmingly common case: a
+shop that was away for ninety seconds.</p>
+<p>Engineers call it <strong>hinted handoff</strong>, and the note is a <strong>hint</strong>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Three price changes while Omar is away</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+  <th>Where to see it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>He comes back one hour later</td>
+  <td>0 divergent</td>
+  <td>rows still wrong after the notes are read out</td>
+  <td>Scenario 3</td>
+</tr>
+</tbody>
+</table></div>
+<p>No repair job needed. No comparison done. No disk read.</p>
+<p>Now break it. There are two ways, and they fail differently.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Same three price changes, but Omar is away for four hours
+instead of one, and the notes are binned after three. What is the divergence
+when he comes back?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>3 rows divergent.</strong> Every one of the three changes is lost. The notes were
+binned at the three-hour mark, unread. That is the second half of Scenario 3.</p>
+<p>If you said &quot;one or two, because some notes survive&quot;, you are imagining that
+the window applies per note in a staggered way. It does not. All three notes
+were written at roughly the same moment, so all three expire together.</p>
+<p>The important part is not that the number is 3. It is that <em>nothing reported
+an error</em>. The writes succeeded. Omar reopened and started serving customers
+immediately, with three wrong prices, and no indication anywhere that he was
+carrying them.</p>
+</details>
+
+</blockquote>
+<p>The second way is nastier, because it does not even need an unusual duration.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Three changes taken by Meera's shop while Omar is away</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+  <th>Where to see it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Meera's shop restarts before Omar returns</td>
+  <td>3 divergent</td>
+  <td>rows lost with the notes that were sitting on it</td>
+  <td>Scenario 4</td>
+</tr>
+</tbody>
+</table></div>
+<p>That is an ordinary deploy, not an outage. And it is the structural problem
+with hints: they are held on one machine, and that machine is itself a machine
+that can fail.</p>
+<p>Over the week-long run, the notes did this.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Notes written over the week</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Delivered</td>
+  <td>24</td>
+  <td>notes that reached Omar in time</td>
+</tr>
+<tr>
+  <td>Expired</td>
+  <td>35</td>
+  <td>notes binned unread past the window</td>
+</tr>
+<tr>
+  <td>Lost</td>
+  <td>10</td>
+  <td>notes destroyed when their shop restarted</td>
+</tr>
+</tbody>
+</table></div>
+<p>Fewer than a third of the notes ever did their job.</p>
+<p><strong>What v1 teaches.</strong> Hinted handoff is an optimisation, not a guarantee. It
+reduces how much work the real repair mechanism has to do. It never removes the
+need for one.</p>
+<h3 id="readme-v2--why-not-fix-it-when-somebody-notices">v2 — Why not fix it when somebody notices?</h3>
+<p>This is read repair, from sections 3 and 4, in one line: real, cheap, and
+structurally blind to cold data.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Over the same week</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+  <th>Where to see it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Read repair alone, asking the 2 shops the read used</td>
+  <td>16 of 64 divergent</td>
+  <td>exactly the same as doing nothing at all</td>
+  <td>engine run 11</td>
+</tr>
+<tr>
+  <td>Read repair asking all 3 shops</td>
+  <td>13 of 64 divergent</td>
+  <td>3 hot rows fixed, 0 of the 13 cold ones</td>
+  <td>engine run 11</td>
+</tr>
+</tbody>
+</table></div>
+<p>The first row deserves a second look. Read repair alone changed nothing,
+because the reads went to the two healthy shops and never asked the sick one.</p>
+<p>The second row is what Cassandra's old <code>read_repair_chance</code> setting did. It
+digests all three copies rather than just the ones the read used.</p>
+<p>Layer the two cheap mechanisms together and the week goes from 16 divergent
+rows to <strong>8</strong>. Half the problem, for almost no cost.</p>
+<p>And then they stop, permanently. The remaining 8 are rows in a cold part of the
+catalogue that a shop missed while it was away for longer than the hint window.</p>
+<h3 id="readme-v3--why-not-just-send-everything">v3 — Why not just send everything?</h3>
+<p>The honest first answer to the remaining 8. On a schedule, each shop posts its
+entire price list to its neighbours, and each side merges.</p>
+<p>It is <em>correct</em>. It has none of the blind spots. It is also the reason the rest
+of this section exists.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>One of sixteen rows differing</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+  <th>Where to see it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Rows moved</td>
+  <td>32</td>
+  <td>16 in each direction, the whole list twice</td>
+  <td>Scenario 5</td>
+</tr>
+<tr>
+  <td>Bytes on the wire</td>
+  <td>6,400</td>
+  <td>the cost of moving them</td>
+  <td>Scenario 5</td>
+</tr>
+</tbody>
+</table></div>
+<p>Scale that honestly. A 500 GB set of copies, differing in three rows, moves a
+terabyte over the network to fix 600 bytes of data. Do that nightly and you
+have built a system whose repair traffic dwarfs its real traffic.</p>
+<h3 id="readme-v4--why-doesnt-one-checksum-for-the-whole-list-help">v4 — Why doesn't one checksum for the whole list help?</h3>
+<p>The obvious improvement: hash the entire range on both sides and compare the
+two numbers. That is 64 bytes on the wire.</p>
+<p>This fails in an interesting way. It answers the wrong question.</p>
+<p>It tells you <strong>whether</strong> you differ, with no information about <strong>where</strong>. So
+the only thing you can do with a mismatch is fall back to v3 and send
+everything anyway. And in a busy system the answer is essentially always &quot;yes,
+you differ&quot;. So v4 costs you one extra round trip and then does v3.</p>
+<p>That failure generates the real design. You do not need one summary. You need a
+<em>hierarchy</em> of summaries, so that a mismatch at the top can be localised by
+descending.</p>
+<h3 id="readme-v5--what-if-you-build-a-pyramid-of-checksums">v5 — What if you build a pyramid of checksums?</h3>
+<p>Hash each small slice of the price list. Then hash pairs of those hashes. Then
+pairs of those. You get a tree whose root covers everything, and that tree is
+the <strong>Merkle tree</strong>.</p>
+<p>Here are the sixteen items with one row, <code>macaron</code>, differing between Meera and
+Omar. It is drawn as a four-leaf tree so it fits on the page.</p>
+<p>Read it as a search, top to bottom. Green means the two hashes matched and the
+branch was pruned. Red means they differed and the comparison descended.</p>
+<pre class="mermaid">flowchart TD
+  R[&quot;ROOT&lt;br/&gt;A: 9c4f · C: 2b81 · differ&quot;]:::bad
+  R --&gt; L[&quot;items 1–8&lt;br/&gt;A: 44a1 · C: 44a1 · match&quot;]:::ok
+  R --&gt; Rr[&quot;items 9–16&lt;br/&gt;A: e07d · C: 5533 · differ&quot;]:::bad
+  L --&gt; L1[&quot;items 1–4 — never looked at&quot;]:::skip
+  L --&gt; L2[&quot;items 5–8 — never looked at&quot;]:::skip
+  Rr --&gt; R1[&quot;items 9–12&lt;br/&gt;A: 1f30 · C: 1f30 · match&quot;]:::ok
+  Rr --&gt; R2[&quot;items 13–16&lt;br/&gt;A: 88ca · C: 6d92 · differ&quot;]:::bad
+  R2 --&gt; S[&quot;stream items 13–16&lt;br/&gt;(tart, eclair, macaron, cookie)&quot;]:::stream
+  classDef ok fill:#dcefe5,stroke:#26714f,color:#14202a
+  classDef bad fill:#fbe0ea,stroke:#b3245e,color:#14202a
+  classDef skip fill:#eef1f3,stroke:#aab6bc,color:#5a6b78
+  classDef stream fill:#f7ecd4,stroke:#a8720e,color:#14202a
+</pre>
+<p>Eight of the sixteen items were eliminated by a single comparison at the second
+level. Neither shop read them, and neither shop sent them. That elimination is
+the whole trick.</p>
+<p>Here is what the trick is worth, with one row of sixteen differing. The last
+column says what you are buying.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Method</th>
+  <th>Hashes compared</th>
+  <th>Rows streamed</th>
+  <th>Bytes on the wire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Full sync (v3)</td>
+  <td>0</td>
+  <td>32</td>
+  <td>6,400</td>
+</tr>
+<tr>
+  <td>Merkle, 2 leaves (8 rows each)</td>
+  <td>6</td>
+  <td>16</td>
+  <td>3,392</td>
+</tr>
+<tr>
+  <td>Merkle, 4 leaves (4 rows each)</td>
+  <td>10</td>
+  <td>8</td>
+  <td>1,920</td>
+</tr>
+<tr>
+  <td>Merkle, 8 leaves (2 rows each)</td>
+  <td>14</td>
+  <td>4</td>
+  <td>1,248</td>
+</tr>
+<tr>
+  <td>Merkle, 16 leaves (1 row each)</td>
+  <td>18</td>
+  <td>2</td>
+  <td>976</td>
+</tr>
+</tbody>
+</table></div>
+<p>Now look at the hash column on its own: 6, 10, 14, 18. Those are depths 1, 2, 3
+and 4. In words, the cost of finding one difference is two comparisons at the
+top plus four for every level you descend. As a formula that is <code>2 + 4·depth</code>.</p>
+<p>And depth is <code>log₂(leaves)</code>. So the search cost grows with the <em>depth</em> of the
+tree, while the saving grows with the <em>size</em> of the data. That is the good
+news, and it is why every system in this space uses this structure.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> So is the Merkle tree always the cheaper choice? Same sixteen
+rows, but now suppose <em>all sixteen</em> differ, because Omar's shop was restored
+from a week-old backup. Merkle or full sync?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Full sync wins.</strong> Here is Scenario 5 repeated with more rows made to differ:
+close C, change <em>n</em> prices, reopen C, repair, using 16-leaf trees.</p>
+<p>| Rows differing | Hashes | Leaves mismatched | Rows streamed | Bytes |
+|---|---|---|---|---|
+| 0 | 2 | 0/16 | 0 | 64 |
+| 1 | 18 | 1/16 | 2 | 976 |
+| 2 | 18 | 2/16 | 4 | 1,376 |
+| 4 | 22 | 4/16 | 8 | 2,304 |
+| 8 | 34 | 8/16 | 16 | 4,288 |
+| 16 | 62 | 16/16 | 32 | <strong>8,384</strong> |</p>
+<p>That last figure is against full sync's 6,400. The tree is <em>worse</em>.</p>
+<p>If you said &quot;the tree, because it is always cheaper&quot;, you have absorbed the
+pruning story and missed its condition. When everything differs, the tree
+comparison finds nothing to prune. You pay for the entire tree <em>and then</em>
+stream everything anyway.</p>
+<p>The tree is a bet that copies are mostly similar. It is a very good bet almost
+all of the time. It is a losing bet in exactly the situation where you need
+repair most urgently: a copy rebuilt from a backup, or a shop that has been
+shut for a week.</p>
+<p>This is why real operators do not repair a long-dead node. They wipe it and
+<strong>bootstrap</strong> it, streaming the whole range from scratch. That is a deliberate
+choice of v3 over v5.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-v6--why-does-fixing-one-row-move-eight">v6 — Why does fixing one row move eight?</h3>
+<p>In the table above, the 16-leaf tree had one row per leaf. Real trees never do.</p>
+<p>A Cassandra Merkle tree has a bounded depth, 15 by default, so 32,768 leaves,
+covering a token range that may hold <em>millions</em> of rows. A leaf is not a row.
+It is a bucket of thousands of rows, and the unit of repair is the bucket.</p>
+<p>Watch what that does with one single differing row.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Rows per leaf</th>
+  <th>Rows streamed</th>
+  <th>To fix</th>
+  <th>Waste</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>1</td>
+  <td>1</td>
+  <td>1×</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>2</td>
+  <td>1</td>
+  <td>2×</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>4</td>
+  <td>1</td>
+  <td>4×</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>8</td>
+  <td>1</td>
+  <td>8×</td>
+</tr>
+</tbody>
+</table></div>
+<p>That is Scenario 6, and the waste factor is just &quot;rows per leaf&quot;.</p>
+<p>At production scale the arithmetic is ugly. With 32,768 leaves over a range
+holding 30 million rows, that is roughly 900 rows moved to fix one. And a leaf
+is contiguous in the key space, so they are 900 <em>large</em> rows if you happen to
+keep large rows together.</p>
+<p><strong>This is over-streaming, and it is the single biggest operational cost of
+anti-entropy in a real cluster.</strong></p>
+<p>The obvious response is to make the tree deeper. That runs into memory: the
+tree must be held in RAM while it is compared, and it doubles in size per
+level.</p>
+<p>The real fix arrived later and is a different mechanism entirely. ScyllaDB's
+row-level repair exchanges per-row checksums <em>within</em> a mismatched range,
+instead of streaming the range. It trades more small messages for far less
+data. Section 13 comes back to this.</p>
+<h3 id="readme-v7--what-if-the-two-lists-are-counted-at-different-moments">v7 — What if the two lists are counted at different moments?</h3>
+<p>The trees are built by reading rows off disk, which takes time, and the two
+shops do not finish at the same instant. Any write landing in between shows up
+as a difference that was never a fault.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Identical copies, one write between the two tree builds</th>
+  <th>Figure</th>
+  <th>What that figure counts</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Fine leaves, one row each</td>
+  <td>1 row streamed to fix 0</td>
+  <td>traffic caused by the clock, not by a fault</td>
+</tr>
+<tr>
+  <td>Coarse leaves, eight rows each</td>
+  <td>8 rows streamed to fix 0</td>
+  <td>the same non-fault, eight times over</td>
+</tr>
+</tbody>
+</table></div>
+<p>That is engine run 12. On a busy cluster this is not a rounding error. It is a
+constant background tax. It is why Cassandra can take a snapshot before
+validating, and why repairing during peak write load is a bad idea.</p>
+<h3 id="readme-v8--who-decides-which-price-wins">v8 — Who decides which price wins?</h3>
+<p>Everything so far is <em>transport</em>: finding differences and moving rows. It says
+nothing about what the answer should be.</p>
+<p>That is the merge rule, and it is a separate decision with separate
+consequences.</p>
+<p>The requirement, from section 5, is that repairing in a different order must
+not give a different answer. Here is what that looks like when it holds and
+when it does not.</p>
+<p>The starting state is the same every time. Meera and Arjun hold <code>tart = 8.50</code>.
+Omar holds the old <code>4.40</code>, because his shop was closed for the change. Now
+repair twice, in four different orders.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Repair order</th>
+  <th>Merge rule = last-write-wins</th>
+  <th>Merge rule = &quot;whoever received it, wins&quot;</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>A→C then B→C</td>
+  <td>8.50 everywhere</td>
+  <td>4.40 everywhere</td>
+</tr>
+<tr>
+  <td>B→C then A→C</td>
+  <td>8.50 everywhere</td>
+  <td>4.40 everywhere</td>
+</tr>
+<tr>
+  <td>C→A then C→B</td>
+  <td>8.50 everywhere</td>
+  <td><strong>8.50 everywhere</strong></td>
+</tr>
+<tr>
+  <td>C→B then C→A</td>
+  <td>8.50 everywhere</td>
+  <td><strong>8.50 everywhere</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>That is Scenario 9. The right-hand column converges. Quickly, stably, and to a
+value determined entirely by which machine happened to be on the receiving end
+of the last repair. Two of those four runs permanently charge customers a price
+nobody set.</p>
+<p>Note carefully what did <strong>not</strong> happen. It did not oscillate. It did not error.
+It did not fail to converge.</p>
+<p><strong>Convergence is not correctness.</strong> A broken merge rule gives you a system that
+agrees with itself perfectly and is wrong. That is far harder to notice than
+one that disagrees.</p>
+<p>This is the same failure you already made once, in
+<a href="../37-gossip-protocols/notes.html#readme">gossip-protocols</a>. Taking the max heartbeat and
+separately the worse status gave two permanently different states from forty
+orderings of five facts. Same bug, different mechanism: <strong>the merge rule must
+be a join.</strong></p>
+<h3 id="readme-so-why-is-the-finished-shape-three-layers-rather-than-one">So why is the finished shape three layers rather than one?</h3>
+<p>Because each layer is cheap where it applies and blind where it is not, and
+each one hands its blind spot to the next.</p>
+<p>Read the diagram top to bottom. It follows one write from the moment it arrives
+to the moment every copy holds it.</p>
+<pre class="mermaid">flowchart TD
+  W[&quot;a write&lt;br/&gt;arrives&quot;] --&gt; Q{&quot;did every shop&lt;br/&gt;get it?&quot;}
+  Q --&gt;|yes| OK[&quot;nothing to do&quot;]
+  Q --&gt;|&quot;no — a shop&lt;br/&gt;is unreachable&quot;| H[&quot;LAYER 1 — hinted handoff&lt;br/&gt;note parked on the coordinator&lt;br/&gt;&lt;i&gt;covers: seconds to hours&lt;/i&gt;&quot;]
+  H --&gt;|&quot;shop returns&lt;br/&gt;inside the window&quot;| OK
+  H --&gt;|&quot;window expired,&lt;br/&gt;or coordinator restarted&quot;| DRIFT[&quot;the row is now&lt;br/&gt;silently divergent&quot;]
+  DRIFT --&gt; RR[&quot;LAYER 2 — read repair&lt;br/&gt;fixed when someone reads it&lt;br/&gt;&lt;i&gt;covers: rows people read&lt;/i&gt;&quot;]
+  RR --&gt;|&quot;row is hot&quot;| OK
+  RR --&gt;|&quot;row is cold&quot;| AE[&quot;LAYER 3 — scheduled anti-entropy&lt;br/&gt;Merkle comparison between every pair&lt;br/&gt;&lt;i&gt;covers: everything else&lt;/i&gt;&quot;]
+  AE --&gt; OK
+  classDef l1 fill:#f7ecd4,stroke:#a8720e,color:#14202a
+  classDef l2 fill:#e8e2f6,stroke:#6b4fa8,color:#14202a
+  classDef l3 fill:#dcefe5,stroke:#26714f,color:#14202a
+  classDef bad fill:#fbe0ea,stroke:#b3245e,color:#14202a
+  class H l1
+  class RR l2
+  class AE l3
+  class DRIFT bad
+</pre>
+<p>The week-long run is that same picture in numbers. Each row adds one defence to
+the row above it.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Defence in place</th>
+  <th>Divergent rows, of 64</th>
+  <th>of the 8 rows people read</th>
+  <th>of the 56 rows nobody reads</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Nothing</td>
+  <td>16</td>
+  <td>3</td>
+  <td>13</td>
+</tr>
+<tr>
+  <td>Read repair, asking only the 2 shops the read used</td>
+  <td>16</td>
+  <td>3</td>
+  <td>13</td>
+</tr>
+<tr>
+  <td>Read repair, digesting all 3 shops</td>
+  <td>13</td>
+  <td>0</td>
+  <td>13</td>
+</tr>
+<tr>
+  <td>Hinted handoff only</td>
+  <td>10</td>
+  <td>2</td>
+  <td>8</td>
+</tr>
+<tr>
+  <td>Hinted handoff + read repair</td>
+  <td>8</td>
+  <td>0</td>
+  <td>8</td>
+</tr>
+<tr>
+  <td>…plus one scheduled Merkle repair pass</td>
+  <td><strong>0</strong></td>
+  <td>0</td>
+  <td>0</td>
+</tr>
+</tbody>
+</table></div>
+<p>That last row is the point of the lab.</p>
+<p>The two cheap layers halve the problem and then stop dead. The third layer is
+the only one that reaches zero. And it got there by streaming <strong>8 rows where a
+full sync would have moved 192</strong>, using 118 hashes.</p>
+<h2 id="readme--checkpoint--can-you-build-the-mechanism-from-memory">▸ Checkpoint — can you build the mechanism from memory?</h2>
+<p>You can now describe the whole thing. Three layers with complementary blind
+spots. A hash tree that turns &quot;find the differences&quot; into a logarithmic search.
+A leaf size that decides how much you over-send. And a merge rule that decides
+what the answer means.</p>
+<p>You have seen each refinement arrive as the fix to one specific measured
+failure.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>Merkle</em>, <em>hash</em> or <em>tree</em>, explain
+to Dev two things. Why comparing Meera's list against Omar's list costs almost
+nothing when they agree. And why it stops being cheap when they disagree
+everywhere.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;You start by comparing one number that stands for the whole list. If those
+match, you are finished, and you never looked at a single line. If they do not
+match, you split the list in two and compare a number for each half, and keep
+splitting only where the numbers disagree. So the work you do is the work of
+chasing the disagreements down. If every line disagrees, nothing can be
+skipped, and you end up doing all the splitting <em>and</em> sending the whole list
+anyway. That is worse than just posting the list in the first place.&quot;</p>
+</details>
+
+</blockquote>
+<p>Next: the failure modes in full, including the one where repair deletes nothing
+and still ruins your day.</p>
+<hr />
+<h1 id="readme-engineering-model">ENGINEERING MODEL</h1>
+<h2 id="readme-11-what-are-the-eleven-ways-it-still-goes-wrong">11. What are the eleven ways it still goes wrong?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eleven short stories about Asha, Omar and Dev. Three of
+them end with every copy in perfect agreement about a price nobody set, which
+is the worst outcome in the lab.</p>
+</blockquote>
+<p>Each failure below is one story: what somebody did, what came out, and why.
+After the eleven stories, three tables compare them. What survives, what is
+lost, and what you would actually see on a cluster.</p>
+<p>First, the menu. Every one of these is something you can go and do on the page.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>How to make it happen</th>
+  <th>Where to watch it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>11.1</td>
+  <td>Close C. Write <code>croissant = 4.00</code> with W=2</td>
+  <td>Scenario 1, or <em>Kill C</em> then <em>Write</em></td>
+</tr>
+<tr>
+  <td>11.2</td>
+  <td>Close C, write three rows, push the clock past the hint window, reopen C</td>
+  <td>Scenario 3</td>
+</tr>
+<tr>
+  <td>11.3</td>
+  <td>Close C, write three rows via A, restart A, then reopen C</td>
+  <td>Scenario 4</td>
+</tr>
+<tr>
+  <td>11.4</td>
+  <td>Any of 11.1 to 11.3, on a row that gets no read traffic</td>
+  <td>the week table at the end of section 10</td>
+</tr>
+<tr>
+  <td>11.5</td>
+  <td>Set R=1 and read the stale row from the stale shop</td>
+  <td>Scenario 2, third case</td>
+</tr>
+<tr>
+  <td>11.6</td>
+  <td>Close C, delete <code>eclair</code>, reopen C, repair A ↔ C</td>
+  <td>Scenario 7, then Scenario 8</td>
+</tr>
+<tr>
+  <td>11.7</td>
+  <td>One differing row, coarse leaves, then change the checksum-range setting</td>
+  <td>Scenario 6</td>
+</tr>
+<tr>
+  <td>11.8</td>
+  <td>Repair while writes are flowing</td>
+  <td>engine run 12; the page does not script it</td>
+</tr>
+<tr>
+  <td>11.9</td>
+  <td>Switch the merge rule to &quot;whoever received it wins&quot;, repair in two orders</td>
+  <td>Scenario 9</td>
+</tr>
+<tr>
+  <td>11.10</td>
+  <td>Give C a clock 2 hours fast, then have C and A both write</td>
+  <td>Scenario 10</td>
+</tr>
+<tr>
+  <td>11.11</td>
+  <td>Restore C from a week-old snapshot, then repair</td>
+  <td>section 10, v5</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-111-what-did-ashas-successful-write-leave-behind">11.1 What did Asha's successful write leave behind?</h3>
+<p>Omar's shop is closed. Asha writes <code>croissant = 4.00</code>, and her rule says two
+confirmations are enough.</p>
+<p>The write reports success, with two of the three shops storing it. The
+divergence meter goes to 1.</p>
+<p>Why: two copies is enough to call this durable, and that is a deliberate
+availability choice, not a fault. Hinted handoff parks a note, and if Omar
+comes back inside the window it is fixed for free.</p>
+<p>A read asking two shops still returns 4.00, so quorum overlap holds. A read
+asking only Omar's shop returns <strong>2.40</strong>.</p>
+<p>This is the base-rate event that everything else in the lab responds to.</p>
+<h3 id="readme-112-what-happens-when-the-note-is-binned">11.2 What happens when the note is binned?</h3>
+<p>Same setup, but the clock is pushed past the hint window, which is 3 hours by
+default. Then Omar reopens.</p>
+<p><strong>3 rows divergent</strong>, where a one-hour outage left 0.</p>
+<p>Why: notes older than the window are binned, on the grounds that a long-absent
+shop has too much backlog to replay change by change. Nothing happens
+automatically after that. This drift now waits for a scheduled repair.</p>
+<p>Omar's shop is a perfectly valid copy holding perfectly valid old data. What
+was lost is the cheap repair path, not any promise the quorum made.</p>
+<h3 id="readme-113-what-happens-when-the-shop-holding-the-notes-restarts">11.3 What happens when the shop holding the notes restarts?</h3>
+<p>Close Omar's shop. Write three rows through Meera's shop, so Meera is holding
+the notes. Now restart Meera's shop, which is an ordinary deploy. Then reopen
+Omar's.</p>
+<p><strong>3 rows divergent</strong>, with no outage longer than a few minutes anywhere.</p>
+<p>Why: notes are stored on whichever shop took the write. That shop is not
+special and not protected. A rolling deploy takes it out, and nothing replaces
+what it was holding.</p>
+<p>This is why hinted handoff is <em>never</em> counted as part of a durability or
+consistency guarantee. Over the week: 24 notes delivered, 35 expired, and 10
+lost with a restart.</p>
+<h3 id="readme-114-what-happens-to-the-row-nobody-reads">11.4 What happens to the row nobody reads?</h3>
+<p>Take any of the three failures above, and apply it to a row that gets no read
+traffic at all.</p>
+<p>With hinted handoff and read repair both switched on, the hot rows reach 0
+divergence and <strong>8 cold rows stay wrong indefinitely</strong>.</p>
+<p>Why: both cheap layers are triggered by activity. A write for one, a read for
+the other. A cold row has neither, so only a scheduled repair will ever touch
+it.</p>
+<p>Every guarantee that is stated per-operation still holds. What you have lost is
+any belief that &quot;the copies agree&quot; without a repair having run.</p>
+<p>This is the reason <code>nodetool repair</code> is on a cron. It is also why the damage
+surfaces at the worst possible moment: an analytics scan, a restore, a
+failover, or the day a dormant customer logs back in.</p>
+<h3 id="readme-115-what-can-a-read-from-one-shop-possibly-detect">11.5 What can a read from one shop possibly detect?</h3>
+<p>Set the number of shops asked to one. Read the stale row from the stale shop.</p>
+<p>The read answers <strong>2.40</strong> against a true price of 9.00, and repairs nobody.</p>
+<p>Why: repair requires comparison, and one response is not a comparison. There is
+nothing the system can do here.</p>
+<p>What you gained is real. This is the fastest read the system offers. What you
+lost is detection, entirely.</p>
+<p>Reading from one copy, which Cassandra calls <code>ONE</code>, is extremely common on
+latency-sensitive paths, and it is fine. Provided you understand that on those
+paths <em>all</em> of your convergence comes from layer 3, and none from layer 2.</p>
+<h3 id="readme-116-how-does-a-deleted-item-come-back-on-sale">11.6 How does a deleted item come back on sale?</h3>
+<p>The most consequential failure in this lab, so it gets the most room.</p>
+<p><strong>First version: no headstones.</strong> Close Omar's shop. Discontinue <code>eclair</code>,
+implemented as simply removing the line. Reopen Omar's shop. Repair Meera
+against Omar.</p>
+<p>Repair sees Meera with no row and Omar with a row. It cannot tell &quot;Meera
+deleted it&quot; from &quot;Omar got a write Meera missed&quot;. The only sensible default for
+&quot;one side has data the other lacks&quot; is to copy the data over.</p>
+<p>So <code>eclair</code> is back on sale at <strong>4.60</strong>, on every copy, permanently. The
+deletion is gone, and <strong>no error occurred at any point</strong>.</p>
+<p><strong>Second version: headstones, repaired promptly.</strong> Same thing, but a delete now
+writes a marker carrying its timestamp. Repair compares a tombstone at t=101
+against a live row at t=0, applies last-write-wins, and the tombstone wins.
+<code>eclair</code> stays gone.</p>
+<p>This is why tombstones exist. Not for bookkeeping, but because <strong>a deletion has
+to be a fact that can be replicated, and an absence cannot be replicated.</strong></p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Headstones are on. <code>eclair</code> was discontinued while Omar's shop
+was closed. It stays closed for longer than <code>gc_grace_seconds</code>, and during
+that time compaction runs on Meera's and Arjun's shops. Then Omar reopens and
+you repair. What does the customer see?</p>
+<details><summary>Reveal</summary>
+
+<p><strong><code>eclair</code> is back on sale at 4.60, on all three copies.</strong></p>
+<p>If you said &quot;it stays deleted, because tombstones fix this&quot;, you have the
+mechanism right and the clock wrong. The tombstone fixes it only while the
+tombstone still exists.</p>
+<p>| With a 6-hour grace | Outcome | What it tells you |
+|---|---|---|
+| Repair 2 hours after the delete | stays deleted | the marker was still there to win the comparison |
+| Repair 8 hours after the delete | back on sale | the marker was swept before it was ever used |</p>
+<p>That is Scenario 8. Here is the mechanism step by step, with real values.</p>
+<ol>
+<li><code>t=1</code> — Meera and Arjun write a tombstone for <code>eclair</code> with timestamp 1.
+Omar is closed and knows nothing.</li>
+<li><code>t=1..360</code> — the tombstone sits on both shops. Any repair in this window
+would carry it to Omar, and his live row at timestamp 0 would lose to it.</li>
+<li><code>t=480</code> — compaction runs. The tombstone is older than the 6-hour grace, so
+it is <strong>discarded</strong>. Meera and Arjun now have <em>no row at all</em> for <code>eclair</code>,
+byte for byte the same state as the first version above.</li>
+<li><code>t=481</code> — Omar reopens, still holding <code>eclair = 4.60 @ t=0</code>.</li>
+<li>Repair compares &quot;Meera: nothing&quot; against &quot;Omar: a live row&quot;. The tombstone
+that would have settled it no longer exists. The row is copied back.</li>
+</ol>
+<p>Nothing malfunctioned. Compaction did its job. Repair did its job. The merge
+rule did its job. The failure is entirely in the <em>scheduling</em>. The grace
+period ran out before the repair ran.</p>
+</details>
+
+</blockquote>
+<p>Why this one is special: deletion is the single operation where &quot;I have less
+data than you&quot; is the correct end state, and the marker proving it is
+deliberately temporary.</p>
+<p>Nothing automatic can save you. The system cannot detect a resurrection,
+because once the tombstone is purged there is no evidence the row was ever
+deleted.</p>
+<p>All three copies agree perfectly. What has been lost is correctness. This is
+the sharpest illustration in the lab that convergence and correctness are
+different properties, and that anti-entropy only delivers the first.</p>
+<p>In production this converts a storage setting into an operational deadline.</p>
+<blockquote>
+<p><strong>Every copy must be repaired at least once every <code>gc_grace_seconds</code>, or
+deleted data comes back.</strong></p>
+</blockquote>
+<p>Cassandra's default is 10 days for exactly this reason. The standard practice
+is to complete a full repair cycle well inside it, and a week is typical.</p>
+<p>Two mistakes are common. The first is lowering <code>gc_grace_seconds</code> to reduce
+tombstone-scan latency, without shortening the repair cycle to match. The
+second is letting repair fail silently for a fortnight on a cluster nobody is
+watching. The second one is more common.</p>
+<h3 id="readme-117-why-does-repair-move-so-much-more-than-it-fixes">11.7 Why does repair move so much more than it fixes?</h3>
+<p>One differing row, coarse leaves. Then run the same repair again with the
+checksum-range setting changed.</p>
+<p>Eight rows moved to fix one, an eightfold waste. At production tree sizes, that
+is hundreds of rows moved per real difference.</p>
+<p>Why: the leaf is the unit of transfer, and a leaf covers a range rather than a
+row. Your options are deeper trees, which are bounded by memory, sub-range
+repair, or a different mechanism entirely such as row-level repair.</p>
+<p>Correctness is untouched. Over-streaming sends redundant <em>correct</em> data. What
+you lose is network, disk and time.</p>
+<p>This is what makes repair the most disruptive routine job in a Cassandra
+cluster, and why teams throttle streaming and repair one sub-range at a time.</p>
+<h3 id="readme-118-why-does-repair-stream-data-when-nothing-is-wrong">11.8 Why does repair stream data when nothing is wrong?</h3>
+<p>Run a repair while writes are flowing.</p>
+<p><strong>1 row streamed to fix 0 real differences</strong> with fine leaves, and <strong>8 rows to
+fix 0</strong> with coarse ones.</p>
+<p>Why: the two trees are snapshots of two different instants. An in-flight write
+is a difference by construction. You can fix it with snapshot-based repair,
+validating against a frozen snapshot on both sides, or you can accept the tax.</p>
+<p>Nothing is harmed. The extra streaming is harmless data movement. What you lose
+is the assumption that &quot;repair streamed data&quot; means &quot;something was broken&quot;.</p>
+<p>On a busy cluster, repair metrics therefore always show non-zero streaming,
+which trains people to ignore them.</p>
+<h3 id="readme-119-what-happens-when-the-merge-rule-is-not-a-join">11.9 What happens when the merge rule is not a join?</h3>
+<p>Switch the merge rule to &quot;whoever received the row wins&quot;, and repair in two
+different orders.</p>
+<p>Two of the four orders leave every copy on <strong>4.40</strong>. The other two leave every
+copy on <strong>8.50</strong>. All four converge.</p>
+<p>Why: the rule is not commutative, so the result depends on repair order, and
+repair order is scheduling noise. The system cannot tell it has done this, so
+no response is possible.</p>
+<p>Convergence survives. Availability survives. Everything a dashboard measures
+survives. What is lost is the meaning of the data.</p>
+<p>This is the class of bug that <a href="../32-crdts/notes.html#readme">crdts</a> exists to make impossible.
+It is also the exact bug you hit and caught in
+<a href="../37-gossip-protocols/notes.html#readme">gossip-protocols</a>. Recognise the shape rather than the
+instance: <em>if two different orderings of the same facts can give two different
+answers, you do not have a merge rule, you have a race.</em></p>
+<h3 id="readme-1110-what-happens-when-last-write-wins-meets-a-clock-that-is-wrong">11.10 What happens when last-write-wins meets a clock that is wrong?</h3>
+<p>Give Omar's shop a clock two hours fast. Have Omar write <code>scone = 3.00</code>. Then
+have Meera write <code>scone = 3.50</code>, two minutes later.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Which price is on the shelves after repair, and at what moment
+was that decided?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Every copy keeps 3.00, and it was decided at write time.</strong></p>
+<p>If you said &quot;3.50, because it was written later&quot;, you are reading the
+timestamps as measurements. They are claims. Omar's clock said his write
+happened two hours in the future, so Meera's genuinely newer write looked
+two hours stale on arrival.</p>
+<p>If you said &quot;repair will sort it out&quot;, notice what repair actually does here.
+It takes the wrong value and propagates it <em>authoritatively</em> to every copy,
+cementing it.</p>
+<p>| The run | What every copy ends up holding | What it tells you |
+|---|---|---|
+| Omar writes 3.00 on a fast clock, Meera writes 3.50 two minutes later | 3.00 | the newer write was discarded on arrival, before any repair |
+| Meera writes 3.50 while Omar is closed, Omar reopens and writes 3.10 | 3.10 | repair spread the fast clock's answer to everybody |</p>
+</details>
+
+</blockquote>
+<p>That is Scenario 10. Why: last-write-wins means <em>highest timestamp wins</em>, and a
+timestamp is a claim, not a measurement. This is the merge rule working exactly
+as specified, so there is no response to make.</p>
+<p>Convergence survives. What is lost is the intuitive meaning of the word &quot;last&quot;.</p>
+<p>In production, clock skew of even a few hundred milliseconds silently loses
+writes under last-write-wins. This is the entire motivation for
+<a href="../31-hybrid-logical-clocks/notes.html#readme">hybrid-logical-clocks</a>, and for Cassandra's
+advice to supply client-side timestamps from a single source when ordering
+matters.</p>
+<h3 id="readme-1111-what-about-the-shop-restored-from-a-backup">11.11 What about the shop restored from a backup?</h3>
+<p>A bonus failure, and the one that inverts the whole design.</p>
+<p>Restore Omar's shop from a week-old snapshot, then repair.</p>
+<p>Essentially every leaf mismatches. The Merkle comparison finds nothing to
+prune, pays for the whole tree, and then streams everything anyway. At 16 of 16
+rows differing that is <strong>8,384 bytes against a full sync's 6,400</strong>. The tree is
+<em>worse</em>.</p>
+<p>So do not repair a badly-behind copy. Wipe it and bootstrap it, which is a
+deliberate choice of v3 over v5.</p>
+<p>In production the rule is a threshold, usually stated as a time. A node down
+longer than the hint window gets repaired. A node down longer than a few hours
+to a day gets replaced and re-streamed.</p>
+<h3 id="readme-what-survives-each-of-those-and-what-does-not">What survives each of those, and what does not?</h3>
+<p>Read this table as two columns of consequences. The middle column is what you
+can still promise a customer. The right column is what you can no longer
+promise.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Still true afterwards</th>
+  <th>No longer true</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>11.1</td>
+  <td>durability at the level configured: two copies exist, and a two-shop read returns 4.00</td>
+  <td>that all copies hold the same thing</td>
+</tr>
+<tr>
+  <td>11.2</td>
+  <td>everything the quorum promised; Omar's shop is valid and holds valid old data</td>
+  <td>the cheap repair path</td>
+</tr>
+<tr>
+  <td>11.3</td>
+  <td>durability: the writes are on Meera's and Arjun's shops</td>
+  <td>hinted handoff's coverage, silently</td>
+</tr>
+<tr>
+  <td>11.4</td>
+  <td>every guarantee that is stated per operation</td>
+  <td>any belief that the copies agree without a repair</td>
+</tr>
+<tr>
+  <td>11.5</td>
+  <td>availability and latency: the fastest read the system offers</td>
+  <td>detection, entirely</td>
+</tr>
+<tr>
+  <td>11.6</td>
+  <td>convergence: all three copies agree perfectly</td>
+  <td>correctness: the deleted item is on sale</td>
+</tr>
+<tr>
+  <td>11.7</td>
+  <td>correctness: over-streaming sends redundant <em>correct</em> data</td>
+  <td>network, disk and time; nothing else</td>
+</tr>
+<tr>
+  <td>11.8</td>
+  <td>everything: the extra streaming is harmless data movement</td>
+  <td>that streamed data means something was broken</td>
+</tr>
+<tr>
+  <td>11.9</td>
+  <td>convergence, availability, everything a dashboard measures</td>
+  <td>the meaning of the data</td>
+</tr>
+<tr>
+  <td>11.10</td>
+  <td>convergence</td>
+  <td>the intuitive meaning of &quot;last&quot;</td>
+</tr>
+<tr>
+  <td>11.11</td>
+  <td>correctness: the copy does get fixed</td>
+  <td>the cost model; the tree is now the expensive option</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-does-each-one-look-like-on-a-real-cluster">What does each one look like on a real cluster?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>What you would actually see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>11.1</td>
+  <td>Nothing. There is no metric that fires.</td>
+</tr>
+<tr>
+  <td>11.2</td>
+  <td><code>HintsNotStored</code> and dropped-hint counters climbing, and a repair that suddenly has real work to do. The window is not a safety setting; moving it only shifts work between layer 1 and layer 3.</td>
+</tr>
+<tr>
+  <td>11.3</td>
+  <td>The reason hinted handoff never appears in a durability or consistency guarantee.</td>
+</tr>
+<tr>
+  <td>11.4</td>
+  <td><code>nodetool repair</code> on a cron, and damage that surfaces during an analytics scan, a restore or a failover.</td>
+</tr>
+<tr>
+  <td>11.5</td>
+  <td>Latency-tuned paths reading at <code>ONE</code>, getting all their convergence from layer 3.</td>
+</tr>
+<tr>
+  <td>11.6</td>
+  <td>A repair deadline wearing a garbage-collection name, and the two common mistakes above.</td>
+</tr>
+<tr>
+  <td>11.7</td>
+  <td>The most disruptive routine job in the cluster; throttled streaming and sub-range repair.</td>
+</tr>
+<tr>
+  <td>11.8</td>
+  <td>Repair metrics that always show non-zero streaming, which trains people to ignore them.</td>
+</tr>
+<tr>
+  <td>11.9</td>
+  <td>A perfectly healthy dashboard over data that means nothing.</td>
+</tr>
+<tr>
+  <td>11.10</td>
+  <td>Clock skew of a few hundred milliseconds silently losing writes.</td>
+</tr>
+<tr>
+  <td>11.11</td>
+  <td>A threshold in the runbook: repair a short outage, replace a long one.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-has-a-finished-repair-actually-promised-you">12. What has a finished repair actually promised you?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One narrow sentence, resting on four things that must be
+true. Everything you might <em>hope</em> it promised is on the list of things it does
+not.</p>
+</blockquote>
+<h3 id="readme-what-is-the-guarantee-exactly">What is the guarantee, exactly?</h3>
+<blockquote>
+<p><strong>Suppose a repair session between copies X and Y completes over key range R.
+Suppose also that the merge rule is a join. Then at the moment that session
+completes, X and Y hold identical records for every key in R.</strong></p>
+</blockquote>
+<p>Extend that pairwise across all the copies and you have convergence for the
+whole set. That is the entire safety claim. It is worth noticing how narrow it
+is.</p>
+<h3 id="readme-what-must-be-true-underneath-it">What must be true underneath it?</h3>
+<p>Four invariants. The first is the one everything else in the lab descends from.</p>
+<ol>
+<li><strong>Comparison requires two.</strong> No copy can detect its own staleness. Omar
+cannot look at his own price list and tell that it is wrong.</li>
+<li><strong>A deletion must be representable.</strong> Absence is ambiguous. A tombstone makes
+deletion a positive fact with a timestamp. Any system where &quot;gone&quot; means &quot;no
+bytes&quot; will resurrect data under repair.</li>
+<li><strong>The merge rule must be a join.</strong> Commutative, associative, idempotent.
+Otherwise the final state depends on repair order, and repair order is
+scheduling noise.</li>
+<li><strong>The tombstone must outlive the slowest copy's repair interval.</strong> This is
+the <code>gc_grace</code> deadline. It is the only invariant in the list enforced by an
+operator rather than by code.</li>
+</ol>
+<h3 id="readme-what-is-explicitly-not-guaranteed">What is explicitly not guaranteed?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Dev has just finished a clean repair pass over every range.
+Two customers read the same row, one after the other. Can the second read see
+an older value than the first?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Yes.</strong> Repair makes the copies equal at the moment it completes. It says
+nothing about what happens after that moment, and it never claimed the copies
+would stay equal.</p>
+<p>If you said no, you have quietly upgraded &quot;the copies match right now&quot; into
+&quot;every reader sees one consistent story&quot;. That upgrade is the subject of
+<a href="../26-linearizability/notes.html#readme">linearizability</a>, and anti-entropy does not help with
+it at all.</p>
+</details>
+
+</blockquote>
+<p>Six things repair does not do.</p>
+<ul>
+<li><strong>No ordering.</strong> Anti-entropy makes copies <em>equal</em>. It says nothing about the
+order writes were applied in, and it never will. Ordering is a different
+problem with different machinery. See <a href="../40-raft/notes.html#readme">raft</a> and
+<a href="../39-paxos/notes.html#readme">paxos</a>.</li>
+<li><strong>No linearizability, and no help toward it.</strong> A read can still see a value
+that a later read does not. See <a href="../26-linearizability/notes.html#readme">linearizability</a>.</li>
+<li><strong>No recovery of lost updates.</strong> Under last-write-wins, the losing concurrent
+write is <em>gone</em>, and repair propagates the loss rather than repairing it.
+Recovering both needs version vectors and siblings, or a CRDT. See
+<a href="../34-quorums-and-replication/notes.html#readme">quorums-and-replication</a> and
+<a href="../32-crdts/notes.html#readme">crdts</a>.</li>
+<li><strong>No time bound.</strong> Repair is a <em>liveness</em> property. It happens eventually,
+where &quot;eventually&quot; is whatever your cron says. There is no bound on how stale
+a copy can be between passes, and the system will not tell you it is stale.</li>
+<li><strong>No protection against a write that reached zero copies.</strong> Anti-entropy
+reconciles what exists. It cannot invent a write nobody stored.</li>
+<li><strong>No correctness of the converged value.</strong> Sections 11.6, 11.9 and 11.10 each
+produce a cluster in perfect agreement about the wrong thing.</li>
+</ul>
+<h3 id="readme-what-did-it-cost">What did it cost?</h3>
+<p>Read this as a receipt. Every line on the left was paid for by the line on the
+right.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>You bought</th>
+  <th>You paid</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Convergence for cold data</td>
+  <td>A full disk scan of every range on every copy, every pass, called validation compaction</td>
+</tr>
+<tr>
+  <td>Network cost proportional to differences</td>
+  <td>Over-streaming: whole leaf ranges moved for single-row differences</td>
+</tr>
+<tr>
+  <td>Deletions that survive replication</td>
+  <td>Tombstones on disk, tombstone scans on reads, and a hard repair deadline</td>
+</tr>
+<tr>
+  <td>Order-independent results</td>
+  <td>The obligation to design the merge rule as a join, which for real business data usually means version vectors or CRDTs rather than last-write-wins</td>
+</tr>
+<tr>
+  <td>A repair you can schedule</td>
+  <td>A repair that competes for the same disk and network as your traffic</td>
+</tr>
+</tbody>
+</table></div>
+<p>The honest summary of the trade: <strong>anti-entropy converts an unbounded,
+invisible correctness problem into a bounded, visible operational cost.</strong></p>
+<p>That is a very good trade. It is not a free one. And the bill arrives as disk
+input and output and on-call pages, rather than as wrong answers.</p>
+<h2 id="readme--checkpoint--can-you-state-what-repair-guarantees-and-what-it-does-not">▸ Checkpoint — can you state what repair guarantees, and what it does not?</h2>
+<p>You can now state exactly what a completed repair promises, name the four
+invariants it rests on, and list the things it explicitly does not do. In
+particular, the three distinct ways it can leave you with copies in perfect
+agreement about a value that is wrong.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>convergence</em>, <em>join</em> or <em>invariant</em>,
+explain to Priya why every shop showing the same price is not the same thing
+as every shop showing the right price.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;The repair job's only job is to make the shops match each other. It has no
+way of knowing which price was the one head office actually set. It follows a
+rule for picking a winner, and if that rule picks the wrong line, it copies
+the wrong line to everybody, very efficiently. So all three shops now show one
+price, and it is a price nobody ever asked for. Nothing anywhere reports a
+problem, because from the machine's point of view the job succeeded.&quot;</p>
+</details>
+
+</blockquote>
+<p>Next: what any of this looks like on a real cluster at three in the morning.</p>
+<hr />
+<h1 id="readme-production-model">PRODUCTION MODEL</h1>
+<h2 id="readme-13-what-does-this-look-like-on-a-real-cluster-at-three-in-the-morning">13. What does this look like on a real cluster at three in the morning?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Dev's bakery becomes a Cassandra cluster, the sixteen items
+become a token range with millions of rows, and the stocktake becomes a cron
+job that competes with your traffic and can page you for a data-correctness
+problem you cannot see.</p>
+</blockquote>
+<h3 id="readme-how-does-a-bakery-become-a-cluster">How does a bakery become a cluster?</h3>
+<p>Take this lab's model one step at a time.</p>
+<p>Replace &quot;16 rows&quot; with a token range owned by a node. Replace &quot;shop A&quot; with a
+node holding several such ranges. Cassandra defaults to 16 virtual nodes per
+machine, so a single machine takes part in dozens of independent repair
+sessions.</p>
+<p>Replace &quot;repair Meera against Omar&quot; with <code>nodetool repair</code>, which runs a
+session per range per replica pair.</p>
+<p>The Merkle tree becomes a bounded-depth tree, 15 levels and 32,768 leaves, over
+a range that may hold tens of millions of rows. That is where over-streaming
+stops being a curiosity and becomes the dominant cost.</p>
+<h3 id="readme-who-does-this-in-the-real-world-and-how">Who does this in the real world, and how?</h3>
+<p>The three-layer structure is Dynamo's, from the 2007 paper, and it is the shape
+almost everyone adopted.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Cassandra</th>
+  <th>Riak</th>
+  <th>DynamoDB</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1 — during the write</td>
+  <td>Hinted handoff, 3h window (<code>max_hint_window_in_ms</code>)</td>
+  <td>Hinted handoff</td>
+  <td>Internal, not exposed</td>
+</tr>
+<tr>
+  <td>2 — during the read</td>
+  <td>Blocking read repair on the replicas the read touched (the probabilistic <code>read_repair_chance</code> that also digested the others was <strong>removed in 4.0</strong>)</td>
+  <td>Read repair</td>
+  <td>Internal</td>
+</tr>
+<tr>
+  <td>3 — on a schedule</td>
+  <td><code>nodetool repair</code> — full, incremental, or sub-range; commonly driven by Cassandra Reaper</td>
+  <td>Active anti-entropy (AAE) with <strong>persistent</strong> hash trees updated as writes land</td>
+  <td>Continuous background anti-entropy</td>
+</tr>
+</tbody>
+</table></div>
+<p>Riak's choice is worth pausing on, because it attacks the cost this lab
+measured back in section 6: the 32 rows read off the shelf even when nothing
+was wrong.</p>
+<p>Riak keeps its hash trees incrementally on write, and stores them on disk. So a
+repair does not need a full scan to build them. The trade is complexity, and
+the risk of the persisted tree itself drifting from the data. Riak ships an
+expiry that periodically rebuilds the trees from scratch for that reason.</p>
+<p>ScyllaDB went at the <em>other</em> cost, over-streaming, with <strong>row-level repair</strong>.
+Instead of streaming a whole mismatched range, the two replicas exchange
+per-row checksums within it, and transfer only genuinely differing rows. That
+is v6's problem solved by giving up the &quot;one hash per bucket&quot; simplification.</p>
+<h3 id="readme-which-systems-need-none-of-this">Which systems need none of this?</h3>
+<p>Kafka partitions and PostgreSQL streaming replicas do not run anti-entropy, and
+the reason is instructive.</p>
+<p>They have a single leader and an ordered log. So a follower's state is defined
+as &quot;the log up to offset N&quot;. A lagging follower is not <em>divergent</em>, it is
+<em>behind</em>, and catching up means replaying the log from its offset.</p>
+<p>Anti-entropy is the price of <strong>leaderless writes</strong>. Once any copy may accept a
+write, there is no log that defines the truth, and comparison is the only tool
+left.</p>
+<h3 id="readme-what-does-the-on-call-engineer-actually-see">What does the on-call engineer actually see?</h3>
+<p>Four pages, in rough order of how badly you want to be woken for them.</p>
+<ul>
+<li><strong>&quot;Repair has not completed on this keyspace for 9 days.&quot;</strong> Against a 10-day
+<code>gc_grace_seconds</code>, this is a data-correctness page, not a housekeeping
+ticket. The clock in section 11.6 is running.</li>
+<li><strong>&quot;Read 2,000 live rows and 91,000 tombstone cells.&quot;</strong> That is Cassandra's
+tombstone warning, and then its abort threshold. It usually means a workload
+that deletes heavily. The temptation is to cut <code>gc_grace_seconds</code>, and doing
+that without shortening the repair cycle to match is exactly how you buy
+section 11.6.</li>
+<li><strong>Latency spikes on a schedule.</strong> Validation compaction reads everything, and
+streaming writes everything. Repair competing with peak traffic looks like a
+mysterious recurring p99 cliff.</li>
+<li><strong>Repair that never finishes.</strong> A session stalls on one unreachable replica,
+and because repair is pairwise, the range stays unrepaired. Reaper exists
+largely to make this visible and resumable.</li>
+</ul>
+<h3 id="readme-what-do-you-tune-and-what-does-each-knob-do">What do you tune, and what does each knob do?</h3>
+<p>The third column is the one to read twice. Every one of these knobs has a trap.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Knob</th>
+  <th>Effect</th>
+  <th>The trap</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>max_hint_window_in_ms</code></td>
+  <td>How much layer 1 covers</td>
+  <td>Raising it does not improve safety; it just moves work off layer 3 for longer outages</td>
+</tr>
+<tr>
+  <td>Merkle tree depth</td>
+  <td>Over-streaming against memory</td>
+  <td>Deeper trees cost RAM per session, and sessions run concurrently</td>
+</tr>
+<tr>
+  <td>Repair cadence</td>
+  <td>The staleness window, and the <code>gc_grace</code> deadline</td>
+  <td>Must be strictly shorter than <code>gc_grace_seconds</code>, with slack for failed runs</td>
+</tr>
+<tr>
+  <td><code>gc_grace_seconds</code></td>
+  <td>How long tombstones live</td>
+  <td>It is a repair deadline wearing a garbage-collection name</td>
+</tr>
+<tr>
+  <td>Sub-range / incremental repair</td>
+  <td>Smaller, resumable sessions</td>
+  <td>Incremental repair keeps per-SSTable repaired state; its early implementations had well-documented problems, which is why many teams ran full sub-range repair for years</td>
+</tr>
+<tr>
+  <td>Streaming throughput limits</td>
+  <td>Repair's impact on live traffic</td>
+  <td>Throttle too hard and repair no longer finishes inside <code>gc_grace</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-has-this-lab-deliberately-left-out">What has this lab deliberately left out?</h3>
+<p>Six things, each of which is a lab of its own.</p>
+<ul>
+<li><strong>Token ranges and virtual nodes.</strong> Here every shop holds every row. Really,
+each node holds many ranges with different replica sets. See
+<a href="../35-consistent-hashing/notes.html#readme">consistent-hashing</a> and
+<a href="../36-partitioning-and-rebalancing/notes.html#readme">partitioning-and-rebalancing</a>.</li>
+<li><strong>Multi-datacentre repair</strong>, where the expensive question is which pairs you
+repair across a wide-area network, and how often.</li>
+<li><strong>Incremental repair state.</strong> Real clusters track which data has already been
+repaired, so passes get cheaper. This lab repairs everything every time.</li>
+<li><strong>Digest reads and speculative retry</strong>, the machinery that decides which
+copies a read actually contacts. Per section 11.5, that is what determines
+whether read repair sees anything at all.</li>
+<li><strong>Real hashing and real streaming costs.</strong> The simulator counts hashes and
+rows, not CPU cycles and bytes on a socket.</li>
+<li><strong>Sibling values and version vectors.</strong> The simulator's merge rule is
+last-write-wins, so that section 11.10 can be shown cleanly. A production
+store that cares about concurrent writes keeps both versions instead. That is
+<a href="../34-quorums-and-replication/notes.html#readme">quorums-and-replication</a> and
+<a href="../32-crdts/notes.html#readme">crdts</a>.</li>
+</ul>
+<h2 id="readme--checkpoint--could-you-run-this-on-a-cluster-you-own">▸ Checkpoint — could you run this on a cluster you own?</h2>
+<p>You can now map every piece of Asha's bakery onto a real cluster. You can name
+the three vendors' versions of each layer, and say which systems need none of
+it and why. And you can read the four pages an on-call engineer gets.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>anti-entropy</em>, <em>tombstone</em> or
+<em>repair</em>, explain to a product manager why &quot;the background job has not
+finished for nine days&quot; is a data-correctness problem and not a housekeeping
+chore.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;When we delete something, we do not erase it straight away. We leave a note
+saying it was deleted, so that any machine that was switched off at the time
+can be told about it later. Those notes are thrown away after ten days,
+because keeping them forever costs us. The background job is the thing that
+carries the notes to the machines that missed them. If it has not run for nine
+days, we are one day away from throwing away notes that were never delivered.
+When that happens, the deleted items come back, and nothing anywhere will tell
+us it happened.&quot;</p>
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-14-where-are-the-exercises">14. Where are the exercises?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, in <a href="notes.html#exercises"><code>EXERCISES.md</code></a>, with worked
+answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Do the middle three on the page
+rather than in your head.</p>
+</blockquote>
+<p>The rungs climb. Explain it back. Identify pieces on the simulator. Predict
+outcomes. Change a setting and say what breaks. Trace a repair by hand. Find a
+planted flaw in a described design. Extend a design to survive a failure it
+currently does not. And finally a production design prompt.</p>
+<p>Rungs 3 to 5 are all checkable on the visualization page, which is the point of
+having one. Do them there rather than in your head. The failures in this topic
+are the kind where your intuition is confidently wrong.</p>
+<h2 id="readme-15-where-does-this-sit-and-what-should-you-learn-next">15. Where does this sit, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three labs feed into this one and three lead out of it.
+Then there are four things that look like anti-entropy and are not, and
+telling them apart is most of the interview value.</p>
+</blockquote>
+<p>Read the map top to bottom. Everything above the highlighted box is a
+prerequisite you have already done.</p>
+<pre class="mermaid">flowchart TD
+  CH[&quot;consistent-hashing&lt;br/&gt;&lt;i&gt;which nodes are the replicas&lt;/i&gt;&quot;] --&gt; QR
+  QR[&quot;quorums-and-replication&lt;br/&gt;&lt;i&gt;creates the divergence, names the cure&lt;/i&gt;&quot;] --&gt; AE
+  EC[&quot;eventual-consistency&lt;br/&gt;&lt;i&gt;promises convergence&lt;/i&gt;&quot;] --&gt; AE
+  GP[&quot;gossip-protocols&lt;br/&gt;&lt;i&gt;the merge-must-be-a-join lesson&lt;/i&gt;&quot;] --&gt; AE
+  AE[&quot;&lt;b&gt;ANTI-ENTROPY&lt;/b&gt;&lt;br/&gt;read repair · hinted handoff · Merkle repair&quot;]
+  AE --&gt; CR[&quot;crdts&lt;br/&gt;&lt;i&gt;merge rules that cannot be wrong&lt;/i&gt;&quot;]
+  AE --&gt; HLC[&quot;hybrid-logical-clocks&lt;br/&gt;&lt;i&gt;timestamps you can trust for LWW&lt;/i&gt;&quot;]
+  AE --&gt; NEXT1[&quot;merkle-trees?&lt;br/&gt;&lt;i&gt;the structure on its own terms&lt;/i&gt;&quot;]
+  AE --&gt; NEXT2[&quot;compaction?&lt;br/&gt;&lt;i&gt;where tombstones actually die&lt;/i&gt;&quot;]
+  AE --&gt; NEXT3[&quot;dynamo-paper?&lt;br/&gt;&lt;i&gt;the source of the three-layer design&lt;/i&gt;&quot;]
+  classDef me fill:#dcefe5,stroke:#26714f,stroke-width:2px,color:#14202a
+  classDef todo fill:#f6f7f8,stroke:#aab6bc,stroke-dasharray:4 3,color:#5a6b78
+  class AE me
+  class NEXT1,NEXT2,NEXT3 todo
+</pre>
+<h3 id="readme-what-is-this-commonly-confused-with">What is this commonly confused with?</h3>
+<p>Five pairs, each separated by one sentence.</p>
+<ul>
+<li><strong>Anti-entropy against gossip.</strong> Gossip spreads <em>new</em> information to everyone
+quickly. Anti-entropy finds <em>old</em> information that failed to arrive. Same
+paper, same authors, opposite direction of travel: gossip is push,
+anti-entropy is compare.</li>
+<li><strong>Anti-entropy against quorum reads.</strong> A quorum read makes <em>this</em> answer fresh
+by overlapping sets. Anti-entropy makes <em>the copies</em> equal. <code>R + W &gt; N</code> does
+not remove a stale copy; it just avoids being fooled by one.</li>
+<li><strong>Anti-entropy against consensus.</strong> Consensus, in <a href="../40-raft/notes.html#readme">raft</a> and
+<a href="../39-paxos/notes.html#readme">paxos</a>, makes replicas agree on an <em>order</em> before anything is
+applied. Anti-entropy makes them agree on a <em>set</em> after the fact. Consensus
+prevents divergence; anti-entropy cleans it up.</li>
+<li><strong>Anti-entropy against replication lag catch-up.</strong> A Kafka or PostgreSQL
+follower catches up by replaying a log from an offset. That is not
+anti-entropy, because there is a leader and an authoritative order.
+Anti-entropy is what you need precisely when there is no such log.</li>
+<li><strong>Repair against bootstrap.</strong> Repair compares and fixes differences.
+Bootstrap streams a whole range from scratch. Past a certain amount of drift,
+bootstrap is cheaper, as section 11.11 shows.</li>
+</ul>
+<h3 id="readme-what-should-you-learn-next">What should you learn next?</h3>
+<p>In the order I would do it.</p>
+<div class="code"><pre><code>/learn merkle-trees        # the structure by itself: proofs, blockchains, git, IPFS
+/learn compaction          # LSM compaction, where tombstones are actually purged
+/learn dynamo-paper        # the 2007 paper this three-layer design comes from
+/learn vector-clocks       # the alternative to LWW that keeps concurrent writes
+</code></pre></div>
+<p>Of those, <code>compaction</code> is the one that most directly closes a gap this lab left
+open. Section 11.6 depends entirely on when compaction discards a tombstone,
+and this lab treats that as a button you press.</p>
+<h2 id="readme-16-glossary-what-does-each-word-mean-in-one-line">16. Glossary: what does each word mean, in one line?</h2>
+<p>In order of first appearance, grouped by what the word is for.</p>
+<p><strong>The problem.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Replica</strong></td>
+  <td>One of the N machines holding a copy of a row.</td>
+</tr>
+<tr>
+  <td><strong>Divergence (drift)</strong></td>
+  <td>Two replicas holding different records for the same key.</td>
+</tr>
+<tr>
+  <td><strong>Stored divergence</strong></td>
+  <td>The replicas hold different bytes.</td>
+</tr>
+<tr>
+  <td><strong>Visible divergence</strong></td>
+  <td>The replicas would give a customer different answers.</td>
+</tr>
+<tr>
+  <td><strong>Entropy</strong></td>
+  <td>The accumulating difference between replicas that should be identical.</td>
+</tr>
+<tr>
+  <td><strong>Anti-entropy</strong></td>
+  <td>The background work that finds and removes that difference.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The three cures.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Read repair</strong></td>
+  <td>Fixing the replicas a read touched, using the versions that read returned.</td>
+</tr>
+<tr>
+  <td><strong>Hinted handoff</strong></td>
+  <td>Parking an undeliverable write on the coordinator and replaying it when the target returns.</td>
+</tr>
+<tr>
+  <td><strong>Hint</strong></td>
+  <td>The parked write. Advisory: it may be dropped without notice.</td>
+</tr>
+<tr>
+  <td><strong>Hint window</strong></td>
+  <td>The maximum age of a hint before it is discarded unread (Cassandra: 3 hours).</td>
+</tr>
+<tr>
+  <td><strong>Coordinator</strong></td>
+  <td>The node handling a client request; here, also the node that holds hints.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Comparing without sending.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Full sync</strong></td>
+  <td>Repairing by shipping every row. Correct, and proportional to the data.</td>
+</tr>
+<tr>
+  <td><strong>Merkle tree</strong></td>
+  <td>A tree of hashes over ranges, letting two replicas binary-search for their differences.</td>
+</tr>
+<tr>
+  <td><strong>Root hash</strong></td>
+  <td>The top of that tree; equal roots mean the whole range matches.</td>
+</tr>
+<tr>
+  <td><strong>Leaf range</strong></td>
+  <td>The contiguous slice of key space one leaf hash covers.</td>
+</tr>
+<tr>
+  <td><strong>Pruning</strong></td>
+  <td>Dismissing a whole subtree because its two hashes matched.</td>
+</tr>
+<tr>
+  <td><strong>Over-streaming</strong></td>
+  <td>Transferring a whole leaf range because one row in it differed.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Doing the work.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Validation compaction</strong></td>
+  <td>Cassandra's name for the full disk scan that builds a Merkle tree.</td>
+</tr>
+<tr>
+  <td><strong>Streaming</strong></td>
+  <td>Moving the rows of mismatched ranges between replicas.</td>
+</tr>
+<tr>
+  <td><strong>Repair session</strong></td>
+  <td>One pairwise comparison-and-reconcile over one key range.</td>
+</tr>
+<tr>
+  <td><strong>Bootstrap</strong></td>
+  <td>Streaming an entire range to a node from scratch, instead of repairing it.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Deciding the answer.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Merge rule</strong></td>
+  <td>The function deciding which of two conflicting records wins.</td>
+</tr>
+<tr>
+  <td><strong>Join</strong></td>
+  <td>A merge rule that is commutative, associative and idempotent — so order does not matter.</td>
+</tr>
+<tr>
+  <td><strong>Last-write-wins (LWW)</strong></td>
+  <td>The merge rule &quot;highest timestamp wins&quot;. A join, and frequently the wrong one.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Deletion.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Tombstone</strong></td>
+  <td>A deletion marker with a timestamp, making a delete a replicable fact rather than an absence.</td>
+</tr>
+<tr>
+  <td><strong>gc_grace_seconds</strong></td>
+  <td>How long a tombstone survives before compaction discards it — in practice, a repair deadline.</td>
+</tr>
+<tr>
+  <td><strong>Resurrection (zombie)</strong></td>
+  <td>A deleted row that returns because a replica was repaired after its tombstone was purged.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The variants you will meet.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Sub-range repair</strong></td>
+  <td>Repairing one slice of a node's range at a time, to keep sessions small.</td>
+</tr>
+<tr>
+  <td><strong>Incremental repair</strong></td>
+  <td>Repairing only data not marked as already repaired.</td>
+</tr>
+<tr>
+  <td><strong>Row-level repair</strong></td>
+  <td>ScyllaDB's alternative: exchange per-row checksums inside a mismatched range instead of streaming it.</td>
+</tr>
+<tr>
+  <td><strong>Active anti-entropy (AAE)</strong></td>
+  <td>Riak's version, with hash trees kept up to date on write rather than rebuilt per repair.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-17-about-this-lab">17. About this lab</h2>
+<p>Everything in this section is about the lab itself rather than about
+anti-entropy. It is here so that it is not in your way earlier.</p>
+<h3 id="readme-what-is-in-the-folder">What is in the folder?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document: 16 sections plus this appendix</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>the interactive repair simulator, also published at <a href="https://claude.ai/code/artifact/f8ee9833-c3e8-4c29-9796-c2c68b8954b2" target="_blank" rel="noopener">https://claude.ai/code/artifact/f8ee9833-c3e8-4c29-9796-c2c68b8954b2</a></td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code>, <code>SOLUTIONS.md</code></td>
+  <td>eight rungs and their worked answers</td>
+</tr>
+</tbody>
+</table></div>
+<p>There is no code to run and nothing to install. The simulator engine, this
+teaching document and the exercises are the whole lab.</p>
+<h3 id="readme-what-is-the-table-of-contents">What is the table of contents?</h3>
+<p>Each section is a question. This is the reading plan, and the depth layer says
+how far in you are.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>The question it answers</th>
+  <th>Depth layer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><a href="#readme-1-what-part-of-the-system-goes-back-and-fixes-the-third-copy">What part of the system goes back and fixes the third copy?</a></td>
+  <td>Beginner</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><a href="#readme-2-why-does-omars-shop-sell-croissants-at-last-weeks-price-for-a-year">Why does Omar's shop sell croissants at last week's price for a year?</a></td>
+  <td>Beginner</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><a href="#readme-3-why-not-just-fix-it-when-a-customer-asks">Why not just fix it when a customer asks?</a></td>
+  <td>Beginner</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><a href="#readme-4-where-does-fixing-on-read-break">Where does fixing-on-read break?</a></td>
+  <td>Beginner</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td><a href="#readme-5-what-would-a-real-repair-process-have-to-do">What would a real repair process have to do?</a></td>
+  <td>Beginner</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><a href="#readme-6-what-is-the-one-idea-that-makes-this-affordable">What is the one idea that makes this affordable?</a></td>
+  <td>Beginner</td>
+</tr>
+<tr>
+  <td>7</td>
+  <td><a href="#readme-7-what-are-all-of-these-things-called-now-that-you-have-met-them">What are all of these things called, now that you have met them?</a></td>
+  <td>Beginner</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td><a href="#readme-8-what-does-the-stocktake-picture-get-right-and-where-does-it-lie">What does the stocktake picture get right, and where does it lie?</a></td>
+  <td>Beginner</td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><a href="#readme-9-can-you-make-the-divergence-meter-move-yourself">Can you make the divergence meter move yourself?</a></td>
+  <td>Beginner</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td><a href="#readme-10-how-would-you-build-it-one-failure-at-a-time">How would you build it, one failure at a time?</a></td>
+  <td>Intermediate</td>
+</tr>
+<tr>
+  <td>11</td>
+  <td><a href="#readme-11-what-are-the-eleven-ways-it-still-goes-wrong">What are the eleven ways it still goes wrong?</a></td>
+  <td>Engineering</td>
+</tr>
+<tr>
+  <td>12</td>
+  <td><a href="#readme-12-what-has-a-finished-repair-actually-promised-you">What has a finished repair actually promised you?</a></td>
+  <td>Engineering</td>
+</tr>
+<tr>
+  <td>13</td>
+  <td><a href="#readme-13-what-does-this-look-like-on-a-real-cluster-at-three-in-the-morning">What does this look like on a real cluster at three in the morning?</a></td>
+  <td>Production</td>
+</tr>
+<tr>
+  <td>14</td>
+  <td><a href="#readme-14-where-are-the-exercises">Where are the exercises?</a></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>15</td>
+  <td><a href="#readme-15-where-does-this-sit-and-what-should-you-learn-next">Where does this sit, and what should you learn next?</a></td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td><a href="#readme-16-glossary-what-does-each-word-mean-in-one-line">Glossary: what does each word mean, in one line?</a></td>
+  <td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p>The depth map in section 2 is the same plan in four rows, and each transition
+between layers has a checkpoint with a Say-it-back box.</p>
+<h3 id="readme-how-were-the-numbers-made">How were the numbers made?</h3>
+<p>Every number quoted in this document was produced by the simulator's engine,
+which is the same engine the visualization page runs. Nothing here was
+estimated.</p>
+<p>Scenarios 1 to 10 are buttons on that page, so you can reproduce those
+directly. Press the button and read the tiles.</p>
+<p>Engine runs 11 and 12 are longer runs of the same engine that the page does not
+script. They are labelled as such wherever they appear.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Label</th>
+  <th>What it is</th>
+  <th>Why the page cannot script it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Scenarios 1–10</td>
+  <td>the ten buttons in the right-hand column</td>
+  <td>it can; press them</td>
+</tr>
+<tr>
+  <td>Engine run 11</td>
+  <td>a 300-write week over a 64-row catalogue, with short blips and one five-hour outage</td>
+  <td>too long to run in the browser</td>
+</tr>
+<tr>
+  <td>Engine run 12</td>
+  <td>a repair with one write landing between the two tree builds</td>
+  <td>the controls do not expose mid-repair timing</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two figures in section 6 come from pressing <em>Compare and repair</em> on a freshly
+reset bench, with the two shops already in agreement.</p>
+<h3 id="readme-where-does-this-sit-among-your-other-labs">Where does this sit among your other labs?</h3>
+<p>Section 1 names the three labs that lead here and says what each one left out:
+<a href="../34-quorums-and-replication/notes.html#readme">quorums-and-replication</a>,
+<a href="../28-eventual-consistency/notes.html#readme">eventual-consistency</a> and
+<a href="../37-gossip-protocols/notes.html#readme">gossip-protocols</a>. Section 15 has the full map,
+including what to read next.</p>
+<p><em>Lab built 2026-08-30.</em></p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-anti-entropy--exercises">Anti-Entropy — Exercises</h1>
+<p>Eight rungs, easiest first. Everything here is pencil-and-paper or the simulator
+(<code>visualization.html</code>); nothing asks you to write code. Answers in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a> — attempt first, especially rungs 3 and 6, where being
+wrong is the point.</p>
+<p>Shorthand used throughout: <strong>A</strong>, <strong>B</strong>, <strong>C</strong> are the three shops (replicas); <strong>W</strong>
+is how many must confirm a write; <strong>R</strong> is how many are asked on a read.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> In your own words, in four sentences, with no jargon: why does a database that
+keeps three copies of everything need a background job at all? Someone who has never
+heard of replication should follow it.</p>
+<p><strong>1.2</strong> A colleague says: <em>&quot;We use quorum reads with R+W&gt;N, so our replicas stay in
+sync.&quot;</em> One sentence: what is wrong with that sentence, and what would you say
+instead?</p>
+<p><strong>1.3</strong> Why is the mechanism called <em>anti-entropy</em> rather than <em>repair</em> or <em>sync</em>?
+What does the name insist on that the other two words let you forget?</p>
+<p><strong>1.4</strong> Explain a Merkle tree to someone who has never seen one, using the stocktake
+picture from the lab, in three sentences, without the word &quot;hash&quot;.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open the simulator. Press <strong>Close C</strong>, then <strong>Set this price</strong> (croissant, 4.00), then
+<strong>Reopen C</strong>.</p>
+<p><strong>2.1</strong> Look at the verdict box at the top. What number does it show, and what exactly
+is that number counting? Is it counting the same thing as the &quot;rows the shops hold
+different records for&quot; figure? When are the two different?</p>
+<p><strong>2.2</strong> In shop C's list, which item is highlighted, and what colour? What does
+clicking it tell you that the shop card does not?</p>
+<p><strong>2.3</strong> Now press <strong>Compare and repair</strong> with A ↔ C selected and watch the descent.
+In the comparison panel: how many boxes are green, how many are red, and how many are
+faded out? What does a faded box mean about work the two shops did <em>not</em> do?</p>
+<p><strong>2.4</strong> Look at the five cost tiles. One of them does <em>not</em> get smaller when there is
+less to repair. Which one, and why does that matter for anyone running this system?</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Answer before you touch the simulator, then check.</p>
+<p><strong>3.1</strong> Settings: hints ON, window 180 minutes. You close C, change three prices,
+press <strong>+1 hour</strong>, then reopen C. How many rows are divergent? Now the same thing but
+with <strong>+4 hours</strong>. Why does the second number differ?</p>
+<p><strong>3.2</strong> Settings: hints ON. Close C. Change three prices. Now <strong>close A and reopen
+A</strong> — a ten-minute restart, well inside the hint window. Then reopen C. Predict the
+divergence, and say which mechanism failed and why.</p>
+<p><strong>3.3</strong> One item differs between A and C. Set the checksum setting to <em>2 ranges — 8
+items each</em> and repair. Predict the &quot;rows sent&quot; tile before pressing. Then set it to
+<em>16 ranges — 1 item each</em> and repeat. Predict both numbers, and the number of hashes
+in each case.</p>
+<p><strong>3.4</strong> Set R to 1 and leave read repair ON. Close C, change the price of a croissant,
+reopen C, then press <strong>A customer asks the price</strong> repeatedly, twenty times. Predict
+what happens to the divergence figure. Explain your answer in terms of what a read
+repair needs in order to do anything at all.</p>
+<p><strong>3.5</strong> Two shops are in perfect agreement and no writes are happening. Predict the
+five cost tiles for a repair between them. One of them will not be zero — which, and
+what is the real-world name for that cost?</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>Each of these changes one setting. For each: what breaks, why, and — name it
+explicitly — is the property lost a <em>safety</em> property (something bad happens) or a
+<em>liveness</em> property (something good stops happening)?</p>
+<p><strong>4.1</strong> Set the hint window to 0 minutes.</p>
+<p><strong>4.2</strong> Turn headstones OFF. Delete an item while C is closed, reopen C, repair.</p>
+<p><strong>4.3</strong> Set the merge rule to <em>whoever received it wins</em>. Create a divergence and
+repair the same three shops in two different orders (use <strong>Step back</strong> to return to
+the same starting point). What differs? Note carefully whether the system converges.</p>
+<p><strong>4.4</strong> Set shop C's clock 120 minutes fast. Have C set a price, then immediately have
+head office set a different price. What is on the shelves, and what is unusual about
+<em>when</em> the wrong outcome was decided?</p>
+<p><strong>4.5</strong> Set W to 1 and R to 1. Which of the three repair layers still does anything
+useful, and which have been switched off in all but name?</p>
+<hr />
+<h2 id="exercises-rung-5--trace">Rung 5 — Trace</h2>
+<p>Do these on paper, then check against the simulator.</p>
+<p><strong>5.1</strong> Starting state, all timestamps in minutes since opening:</p>
+<div class="code"><pre><code>A:  tart = 8.50 @ ts 40      B:  tart = 8.50 @ ts 40      C:  tart = 4.40 @ ts 0
+</code></pre></div>
+<p>Merge rule is newest-wins; the tree has 16 ranges, one item each. Trace a repair
+between A and C: write down the root comparison, every descent, every pruned branch,
+the leaf that mismatches, the rows transferred, and the final state of all three
+shops. Then state the divergence figure <em>before</em> and <em>after</em>, and say why it is not
+zero after a single pairwise repair in every possible starting state.</p>
+<p><strong>5.2</strong> Same starting state, but the tree has only 2 ranges of 8 items. Redo the
+trace. How many hashes, how many rows, and which rows were transferred despite being
+identical on both sides?</p>
+<p><strong>5.3</strong> Trace this one carefully; it is the zombie:</p>
+<div class="code"><pre><code>t=0    A, B, C all hold  eclair = 4.60 @ ts 0
+t=10   C closes
+t=11   eclair is discontinued. Headstones ON, grace = 360 minutes.
+t=500  headstones are cleared on A and B
+t=501  C reopens
+t=502  repair A ↔ C
+</code></pre></div>
+<p>Write out the record held by each shop at t=11, t=500, t=501 and t=502. At which
+single step did the outcome become inevitable, and what would have had to happen
+before that step to prevent it?</p>
+<p><strong>5.4</strong> A cluster is configured with <code>gc_grace_seconds</code> = 10 days and a repair cycle
+that takes 6 days when everything is healthy. Repair fails silently on one keyspace on
+day 1 and is noticed on day 12. Trace what may now be wrong with the data, and say
+what you would check first.</p>
+<hr />
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p>Each of these is a described design, not code. Find the planted mistake, construct a
+concrete run where it produces a wrong answer, and name the guarantee that breaks.</p>
+<p><strong>6.1</strong> <em>&quot;To save memory we compute one checksum per replica over the whole key range.
+If the two checksums differ we stream the entire range. It is simpler than a tree and
+uses a constant amount of memory.&quot;</em> — What is the actual behaviour of this design on a
+cluster taking continuous writes?</p>
+<p><strong>6.2</strong> <em>&quot;Our repair is one-directional to keep it simple: the replica with the higher
+node ID sends its rows to the lower one, which merges them in. Running it between
+every pair covers everything.&quot;</em> — Construct a three-replica run where a value is lost.</p>
+<p><strong>6.3</strong> <em>&quot;We do not need tombstones. Our repair marks a row as deleted if it is missing
+on a majority of replicas.&quot;</em> — Give a concrete sequence where this deletes live data,
+and a second where it resurrects deleted data.</p>
+<p><strong>6.4</strong> <em>&quot;We skip the hint window entirely and keep hints forever, so no write is ever
+lost.&quot;</em> — Give two distinct reasons this does not achieve what it claims, one about
+storage and one about correctness.</p>
+<p><strong>6.5</strong> <em>&quot;Our repair job builds the tree on replica X, then walks to replica Y and
+builds it there, then compares. If they match, we log 'clean'. Our dashboard shows
+clean runs 4% of the time, which we track as a data-quality metric.&quot;</em> — What is that
+4% actually measuring?</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>Design work on paper. There is no single right answer; there is a right set of
+concerns.</p>
+<p><strong>7.1</strong> A replica has been down for eleven days. <code>gc_grace_seconds</code> is 10 days. It is
+now healthy and about to rejoin the cluster. Write the runbook: what do you do, in
+what order, and what specifically must you <em>not</em> do? Justify each step by naming the
+failure it prevents.</p>
+<p><strong>7.2</strong> Over-streaming is costing you: a nightly repair moves 400 GB to fix an
+estimated few thousand rows. You cannot change the database. List every lever you
+have, and for each, what it costs you elsewhere.</p>
+<p><strong>7.3</strong> Your product needs deletes to be permanent within 24 hours for a compliance
+requirement, so somebody proposes setting <code>gc_grace_seconds</code> to 24 hours. Full repair
+currently takes 30 hours. Explain the collision to a product manager in plain
+language, then give two designs that satisfy the requirement, with their trade-offs.</p>
+<p><strong>7.4</strong> Design a monitoring scheme for anti-entropy on a cluster you operate. What
+would you alert on, at what threshold, and what would the page say? Include at least
+one alert for a failure that produces <em>no</em> symptoms until it is too late.</p>
+<p><strong>7.5</strong> Your merge rule is last-write-wins on client-supplied timestamps. One
+application server's clock drifts 4 seconds ahead for a week before anyone notices.
+Describe what is now wrong with your data, whether repair helps or hurts, and how you
+would find the damage.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1</strong> Design the storage layer for a product catalogue: 40 million items, three
+datacentres 80 ms apart, five replicas, heavy reads and modest writes, with prices
+that must never be silently wrong. Which parts of this lab's design survive as-is,
+which must change, and what exactly do you monitor? Be specific about the merge rule
+and justify it.</p>
+<p><strong>8.2</strong> You are designing a system where deletes are frequent — a message store where
+users delete 30% of what they send. Walk through how tombstones, <code>gc_grace_seconds</code>,
+repair cadence, and read latency interact here, and design a scheme that keeps all
+four acceptable. Say what you would give up.</p>
+<p><strong>8.3</strong> Design an anti-entropy mechanism for a system where each replica holds 2
+billion rows and a full disk scan takes 9 hours. You may not scan on every repair.
+What would you build, what state would you maintain, and how would that state itself
+be kept honest? (Riak's answer is one option; there are others.)</p>
+<p><strong>8.4</strong> Argue the other side: describe a real system where you would deliberately run
+<em>no</em> anti-entropy at all, and say precisely what property of that system makes it
+unnecessary — and what would have to change for the answer to flip.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-anti-entropy--solutions">Anti-Entropy — Solutions</h1>
+<p>Rungs 7 and 8 have no single right answer; what follows there is a worked discussion
+and the set of concerns a good answer covers.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Keeping three copies means one machine can die without losing anything. But a
+change only has to reach two of the three copies before the system calls it done —
+that is deliberate, because waiting for all three would mean one sick machine could
+stop the whole service. So the third copy is left holding the old value, and nothing
+in the ordinary business of writing and reading is responsible for going back to fix
+it. The background job exists because otherwise nobody ever does.</p>
+<p><strong>1.2</strong> R+W&gt;N guarantees that a <em>read</em> touches at least one replica holding the latest
+write; it says nothing about the replicas themselves. Better: <em>&quot;Quorum reads mean a
+read is not fooled by a stale copy. The stale copy is still there, and only repair
+removes it.&quot;</em></p>
+<p><strong>1.3</strong> Because &quot;repair&quot; and &quot;sync&quot; sound like things you finish. Anti-entropy names a
+continuous pressure — replicas drift apart as an ordinary consequence of the system
+working — so the mechanism is a pump you keep running, not an error handler you invoke
+when something breaks. There is no state called &quot;repaired&quot; that you arrive at and stay
+in.</p>
+<p><strong>1.4</strong> Instead of comparing every line of the price list, you compare one total for
+the whole list. If the totals agree, the lists are identical and you are finished
+after one comparison. If they disagree, you split the list in half, compare the two
+halves the same way, and keep splitting — so you only ever look inside the parts that
+actually disagree.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> The verdict number counts items where <em>a customer would be told different
+things</em> depending on which shop serves them. The other figure counts items where the
+shops hold <em>different records</em>. They differ when the difference is invisible to a
+customer — most importantly when one shop holds a deletion marker and another holds no
+row at all. Both mean &quot;not sold&quot;, so visible divergence is 0 — and that is exactly the
+state from which repair resurrects deleted data.</p>
+<p><strong>2.2</strong> <code>croissant</code>, highlighted in the drift colour on all three shop cards (the
+highlight marks the <em>item</em>, not the wrong shop — the shops disagree, and no copy is
+authoritative). Clicking it shows the timestamp on each shop's record, which is the
+thing the merge rule actually compares and which the card does not display.</p>
+<p><strong>2.3</strong> With a 16-range tree and one differing item: 4 green (pruned) boxes, 4 red
+(descended or streamed) boxes on the path down, and 22 faded. A faded box is a range
+whose parent's hashes matched, so neither shop read a single row inside it or sent
+anything about it. That pruning is the entire saving.</p>
+<p><strong>2.4</strong> <strong>Rows read off disk</strong> — always 32, whether one row differs or none do. It
+matters because it is the cost that does not respond to your data being healthy: a
+perfectly in-sync cluster still pays a full scan of every range on every replica for
+every repair pass. In Cassandra this is validation compaction, and it is why repair is
+scheduled for quiet hours.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> +1 hour → <strong>0 divergent</strong> (hints replayed). +4 hours → <strong>3 divergent</strong>. The
+hints were discarded at the 3-hour mark. The difference is not that more went wrong in
+the longer outage; it is that the cheap layer stopped covering it, and nothing
+reported that.</p>
+<p><strong>3.2</strong> <strong>3 divergent.</strong> Hinted handoff failed — not through timeout, but because
+hints are held on the single shop that took the write, and that shop restarted. Note
+the elapsed time was never the problem: no outage in this run exceeded ten minutes.</p>
+<p><strong>3.3</strong> 2 ranges: <strong>8 rows sent, 6 hashes</strong>. 16 ranges: <strong>1 row sent, 18 hashes</strong>.
+Deeper trees cost more comparisons and dramatically less transfer — and since a hash
+is 32 bytes and a row is 200, that is a good trade until the tree stops fitting in
+memory.</p>
+<p><strong>3.4</strong> Divergence stays at 1 forever. At R=1 the read has one response, and one
+response is not a comparison. Read repair does not need &quot;a read&quot; — it needs <em>two
+differing answers to the same question in the same request</em>. This is why a
+latency-tuned path reading at <code>ONE</code> gets no convergence from layer 2 at all.</p>
+<p><strong>3.5</strong> Hashes 2, rows sent 0, rows actually different 0, bytes 64 — and <strong>rows read
+off disk: 32</strong>. That is the full-scan cost, called validation compaction, and it is the
+part of repair that a healthy cluster cannot avoid paying.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1 Hint window 0.</strong> Every hint is discarded immediately, so layer 1 is off. Nothing
+becomes <em>wrong</em> — no bad value appears — but drift that used to be cleaned up in
+seconds now waits for a scheduled repair. <strong>Liveness lost, safety intact.</strong></p>
+<p><strong>4.2 Headstones off.</strong> Repair sees &quot;one side has a row, the other has nothing&quot; and
+copies the row. The deleted item is back on sale on every replica, permanently, with
+no error. <strong>Safety lost</strong> — the system produces a wrong answer, not a late one.</p>
+<p><strong>4.3 Merge rule = whoever received it wins.</strong> Both orders converge, quickly and
+stably, to <em>different</em> values. Note what did not happen: no oscillation, no error, no
+failure to converge. <strong>Safety lost</strong>, and lost in the hardest way to detect, because
+every health check reports a perfectly consistent cluster.</p>
+<p><strong>4.4 C's clock 120 minutes fast.</strong> The shelves show C's 3.00, and the genuinely later
+3.50 is gone. The unusual part is <em>when</em>: the wrong outcome was decided at write time,
+by each replica independently, on arrival — before any repair, any read, or any
+conflict. Repair then propagates it authoritatively. <strong>Safety lost</strong>, and the loss is
+in the write path, not the repair path.</p>
+<p><strong>4.5 W=1, R=1.</strong> Hinted handoff still works (the coordinator still notices
+unreachable replicas). Read repair is dead — R=1 gives it nothing to compare.
+Scheduled Merkle repair still works and is now doing essentially all of the
+convergence work; it is also now the <em>only</em> thing standing between you and permanent
+divergence, so its schedule has become a correctness parameter.</p>
+<hr />
+<h2 id="solutions-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1</strong> <code>tart</code> is item 13 of 16, so it falls in leaf index 12 of a 16-leaf tree.</p>
+<div class="code"><pre><code>level 0  root                      A: differs from C          → descend   (2 hashes)
+level 1  items 1–8                 equal                      → PRUNE (8 items never read)
+         items 9–16                differ                     → descend   (+4 hashes)
+level 2  items 9–12                equal                      → PRUNE (4 items never read)
+         items 13–16               differ                     → descend   (+4 hashes)
+level 3  items 13–14 (tart,eclair) differ                     → descend   (+4 hashes)
+         items 15–16               equal                      → PRUNE (2 items never read)
+level 4  tart                      differ                     → STREAM    (+4 hashes)
+         eclair                    equal                      → PRUNE (1 item never read)
+</code></pre></div>
+<p>Total <strong>18 hashes</strong>, <strong>1 row</strong> streamed in each direction, <strong>15 of 16 items never
+looked at</strong>. Merge: A's <code>8.50 @ ts 40</code> beats C's <code>4.40 @ ts 0</code>, so both become 8.50.</p>
+<p>Divergence before: 1. After: 0 — because B already held 8.50. <strong>It is not zero in
+general</strong> because a repair is <em>pairwise</em>: had B been the odd one out, repairing A ↔ C
+would have changed nothing at all. Convergence for the whole replica set needs every
+pair covered, which is why real repair runs a session per pair per range.</p>
+<p><strong>5.2</strong> Root differs (2 hashes); descend (4 hashes) → total <strong>6 hashes</strong>. The second
+leaf covers items 9–16, so <strong>8 rows</strong> are transferred each way, of which <strong>7 were
+already identical on both sides</strong>. That is the over-streaming: a 7-row tax on a 1-row
+problem, paid because the leaf, not the row, is the unit of transfer.</p>
+<p><strong>5.3</strong> The zombie trace:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Time</th>
+  <th>A</th>
+  <th>B</th>
+  <th>C</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>t=11</td>
+  <td>headstone @ ts 11</td>
+  <td>headstone @ ts 11</td>
+  <td><code>eclair = 4.60 @ ts 0</code> (closed, knows nothing)</td>
+</tr>
+<tr>
+  <td>t=500</td>
+  <td><em>no row at all</em></td>
+  <td><em>no row at all</em></td>
+  <td><code>eclair = 4.60 @ ts 0</code></td>
+</tr>
+<tr>
+  <td>t=501</td>
+  <td><em>no row at all</em></td>
+  <td><em>no row at all</em></td>
+  <td><code>eclair = 4.60 @ ts 0</code> (reopens, serving)</td>
+</tr>
+<tr>
+  <td>t=502</td>
+  <td><code>eclair = 4.60</code></td>
+  <td><em>no row</em></td>
+  <td><code>eclair = 4.60</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The outcome became inevitable at <strong>t=500, when the headstones were cleared</strong> — not at
+t=502 when repair ran. Up to t=499 a repair would have carried a live tombstone to C
+and settled it correctly. After the clear, the evidence that the item was ever deleted
+does not exist anywhere in the system, and no mechanism can recover it. What had to
+happen before t=500 is simply: <strong>a repair involving C.</strong> That is the whole of the
+<code>gc_grace_seconds</code> rule.</p>
+<p>Notice also that B ends up disagreeing with A and C — one pairwise repair does not
+converge the set, per 5.1.</p>
+<p><strong>5.4</strong> Deletes performed on days 1–2, whose tombstones were purged around day 11, may
+now exist as live rows on any replica that missed the original delete. The damage is
+bounded by: <em>deletes issued in the window</em> × <em>replicas that missed them</em>.</p>
+<p>The first thing to check is whether that keyspace does deletes at all — if it is
+append-only, there is no exposure and you can simply repair. If it does, the important
+thing is what <strong>not</strong> to do: <em>do not just run repair.</em> Running repair is the step that
+performs the resurrection. The safer sequence is to raise <code>gc_grace_seconds</code> first (so
+that any tombstones still alive are not purged mid-repair), establish which replicas
+were behind, and prefer rebuilding a badly-behind replica over repairing it. Then
+repair, then lower the grace back once the cycle is healthy again.</p>
+<hr />
+<h2 id="solutions-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p><strong>6.1</strong> A single checksum answers <em>whether</em> you differ, never <em>where</em>, so a mismatch
+leaves you no option but to stream everything. On a cluster taking continuous writes,
+two replicas essentially always differ by at least one in-flight row, so the answer is
+always &quot;differ&quot; and the design degenerates into a full sync <strong>plus</strong> an extra round
+trip and a full scan. It is strictly worse than just doing the full sync. The lesson:
+the tree is not there to detect differences — one hash detects them — it is there to
+<em>localise</em> them.</p>
+<p><strong>6.2</strong> One-directional repair. A holds <code>tart = 8.50 @ ts 40</code>; B and C hold
+<code>4.40 @ ts 0</code>. Rule: higher ID sends to lower.</p>
+<ul>
+<li>C → B: identical, nothing changes.</li>
+<li>C → A: A merges 4.40 into 8.50 and keeps 8.50.</li>
+<li>B → A: same.</li>
+</ul>
+<p>Final: <strong>A = 8.50, B = 4.40, C = 4.40</strong>, and no further repair will ever change that.
+Data flows only downhill, so a value that exists only on the highest-ID node can never
+leave it. A read at R=2 landing on B and C returns 4.40 — the newer write is invisible
+— and if A is later replaced, it is gone. <strong>Convergence is broken</strong>, permanently, by a
+design that looked like it merely halved the traffic.</p>
+<p><strong>6.3</strong> &quot;Deleted if missing on a majority&quot; replaces <em>what happened most recently</em> with
+<em>how many copies exist</em>, and those are different questions.</p>
+<ul>
+<li><strong>It deletes live data.</strong> Write a new row at W=1; it lands on A only. It is missing
+on B and C — a majority — so repair deletes it. A successfully acknowledged write is
+destroyed.</li>
+<li><strong>It resurrects deleted data.</strong> A row exists on all three. A delete is issued while
+B and C are unreachable and is accepted at W=1, so only A removes it. The row is now
+present on B and C — a majority — so repair copies it back to A.</li>
+</ul>
+<p>Both failures come from the same root: absence carries no timestamp, so counting
+absences cannot order events. A tombstone is exactly the fix, because it gives the
+deletion a timestamp and makes it comparable.</p>
+<p><strong>6.4</strong> Keeping hints forever. <strong>Storage:</strong> hints accumulate unboundedly on the
+coordinators during a long outage — and the moment the replica returns you replay a
+gigantic backlog write-by-write into a machine that has just started, which is a
+reliable way to knock it over again. This is precisely why the window exists.
+<strong>Correctness:</strong> it still does not achieve &quot;no write is ever lost&quot;, because hints die
+with the coordinator holding them, and because hints only cover writes the coordinator
+<em>accepted and could not deliver</em> — they do nothing about a replica that lost data
+locally (disk corruption, a restore from an old snapshot, an operator error). Hinted
+handoff is an optimisation. Making it more thorough does not make it a guarantee.</p>
+<p><strong>6.5</strong> The 4% is measuring <strong>how often no write landed between the two tree builds</strong> —
+that is, it is a measure of your write traffic and the gap between the two scans, not
+of your data quality. On a busy cluster it will approach 0% while the data is perfectly
+healthy. Tracking it as data quality means the dashboard gets worse exactly when the
+business gets busier, which is how a metric trains a team to ignore it.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1 Eleven days down, ten-day grace.</strong> The concerns a good runbook covers:</p>
+<ol>
+<li><strong>Do not repair it, and do not let it serve reads.</strong> Repairing is the operation that
+resurrects deleted data, because tombstones for anything deleted in the last eleven
+days have been purged on the healthy replicas. Letting it join and serve is how
+stale values reach customers.</li>
+<li><strong>Replace rather than repair.</strong> Wipe it and bootstrap it — stream the ranges from
+scratch. This is deliberately choosing full sync over Merkle, and it is also the
+cheaper choice: at that much divergence the tree comparison prunes nothing and costs
+<em>more</em> than sending everything (measured in the lab: 8,384 bytes against 6,400).</li>
+<li><strong>If you genuinely cannot rebuild it</strong>, raise <code>gc_grace_seconds</code> across the cluster
+first so no further tombstones are purged during the operation, then repair, then
+accept that anything deleted in the missed window may need reconciling at the
+application level. Restore the grace afterwards.</li>
+<li><strong>Afterwards, fix the thing that let a replica be down for eleven days</strong> without a
+page. That is the actual defect.</li>
+</ol>
+<p><strong>7.2 400 GB nightly to fix a few thousand rows.</strong> The levers, and their costs:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Lever</th>
+  <th>What it costs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Deeper Merkle trees (smaller leaves)</td>
+  <td>RAM per repair session, and sessions run concurrently</td>
+</tr>
+<tr>
+  <td>Sub-range repair</td>
+  <td>More sessions, more coordination, longer wall-clock</td>
+</tr>
+<tr>
+  <td>Repair more often</td>
+  <td>Less drift per pass, so less to stream — but more scans</td>
+</tr>
+<tr>
+  <td>Repair less often</td>
+  <td>Fewer scans, more drift per pass, and you approach the <code>gc_grace</code> deadline</td>
+</tr>
+<tr>
+  <td>Throttle streaming</td>
+  <td>Protects live traffic; risks repair not finishing inside <code>gc_grace</code></td>
+</tr>
+<tr>
+  <td>Move to a database with row-level repair (ScyllaDB)</td>
+  <td>A migration</td>
+</tr>
+<tr>
+  <td>Reduce data per range (more nodes / more vnodes)</td>
+  <td>Hardware, and rebalancing</td>
+</tr>
+</tbody>
+</table></div>
+<p>Also worth checking before tuning anything: whether the 400 GB is over-streaming at
+all, or whether the replicas genuinely are that far apart because something upstream is
+dropping writes.</p>
+<p><strong>7.3 24-hour compliance deletes vs a 30-hour repair.</strong> In plain language for a
+product manager: <em>&quot;Deleting a row does not erase it — it writes a note saying 'this was
+deleted'. Every copy of the data has to see that note before we are allowed to throw
+the note away. Right now it takes us 30 hours to make sure every copy has seen it. If
+we throw the note away after 24, some copies never learn about the deletion, and the
+next time the copies are compared the deleted record comes back — and it comes back
+looking completely legitimate.&quot;</em></p>
+<p>Two designs:</p>
+<ul>
+<li><strong>Make repair fit.</strong> Sub-range or incremental repair, more parallelism, more nodes —
+get the full cycle to, say, 8 hours, then set the grace to 24 with real margin. This
+keeps the model simple and costs operational work and hardware.</li>
+<li><strong>Stop relying on tombstone GC for the guarantee.</strong> Encrypt each user's data with a
+per-user key and delete the <em>key</em> on request. The rows may survive for weeks; they
+are unreadable within milliseconds. This satisfies most regulatory definitions of
+erasure, decouples compliance from repair scheduling entirely, and costs you a key
+management system and the ability to do anything with the data after deletion —
+including debugging.</li>
+</ul>
+<p>A third, narrower option: put the compliance-relevant data in its own table with its
+own much smaller repair scope, so only that slice has to meet the tight deadline.</p>
+<p><strong>7.4 Monitoring.</strong> The alert that matters most is the one with no symptoms:</p>
+<ul>
+<li><strong>&quot;Time since last successful repair completion, per keyspace, per replica.&quot;</strong> Page
+at 60% of <code>gc_grace_seconds</code>. This is a data-correctness alert, and it fires before
+anything is visibly wrong — which is the entire point, because after <code>gc_grace</code> the
+damage is unrecoverable and silent.</li>
+<li>Repair job failures and stalls (a session blocked on one unreachable replica leaves
+its range unrepaired while every other range looks healthy).</li>
+<li>Bytes streamed per repair pass, trended. A sudden jump means something upstream
+started dropping writes; a slow climb means your cadence is losing to your drift.</li>
+<li>Hint delivery vs expiry ratio. Rising expiries mean layer 1 has stopped covering your
+outage profile and layer 3 is quietly taking the load.</li>
+<li>Tombstone-per-read warnings, which are the early symptom of the pressure that tempts
+people to shorten <code>gc_grace_seconds</code> — the change that buys you 11.6.</li>
+</ul>
+<p><strong>7.5 A four-second clock drift under LWW.</strong> Every write from that server for a week
+carried a stamp four seconds in the future. Consequences: its writes beat genuinely
+later writes from every other server, and those later writes were discarded <em>on
+arrival</em>, with no error. Repair does not help — it <strong>hurts</strong>, because it takes the
+winning (wrong) value and propagates it authoritatively to every replica, converting a
+one-replica problem into a cluster-wide fact.</p>
+<p>Finding the damage is genuinely hard, because nothing is inconsistent afterwards — it
+is uniformly wrong. The realistic approach: identify the affected window and server,
+then look for rows whose current timestamp falls in that window while a <em>later</em>
+audit-log or event-stream entry exists for the same key. If you have no independent
+record of writes, you likely cannot recover the lost updates at all — which is the real
+argument for <a href="../31-hybrid-logical-clocks/notes.html#readme">hybrid-logical-clocks</a>, or for a merge rule
+that keeps concurrent versions instead of picking one.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 Product catalogue, 40M items, 3 DCs, RF=5.</strong> What survives from the lab: the
+three-layer structure, unchanged — hinted handoff, read repair, scheduled Merkle
+repair. What must change:</p>
+<ul>
+<li><strong>The merge rule.</strong> &quot;Prices must never be silently wrong&quot; and last-write-wins do not
+belong in the same system, for the reason in 7.5. Either use server-side timestamps
+from a single trusted source per key, or keep concurrent versions and resolve them
+in the application (the price a human last approved wins over an automated feed).
+Say which, and why, before anything else — it is the decision the rest hangs on.</li>
+<li><strong>Repair topology.</strong> Repairing all pairs across 80 ms WAN links is the expensive
+part. Repair frequently within each datacentre, less often across them, and be
+explicit that cross-DC drift therefore lives longer.</li>
+<li><strong>Quorum settings.</strong> Heavy reads and modest writes suit a high W and low R:
+<code>LOCAL_QUORUM</code> reads with W across DCs, so writes carry the coordination cost and
+reads stay fast.</li>
+<li><strong>Monitoring.</strong> Per 7.4, with the time-since-repair alert as the primary. Add a
+business-level check that does not depend on the storage layer at all: sample prices
+from each replica directly and compare them against the source of truth. That check
+catches every failure in this lab, including the ones where the cluster agrees with
+itself about the wrong number.</li>
+</ul>
+<p><strong>8.2 A message store with 30% deletes.</strong> The four things interact badly here.
+Tombstones accumulate; reads scan them and slow down; the temptation is to cut
+<code>gc_grace_seconds</code>; cutting it tightens the repair deadline; and repair is already
+expensive because there is a lot of data.</p>
+<p>A workable scheme: partition by conversation and time, so deletes cluster into whole
+partitions that can be dropped rather than tombstoned; use TTLs where the retention
+policy allows, so rows expire without a delete being issued at all; keep
+<code>gc_grace_seconds</code> at the default and instead invest in making repair reliably fast
+(sub-range, frequent, monitored); and accept slower reads on the small number of
+partitions that genuinely have heavy interleaved deletes. What you give up: some
+storage efficiency, and the ability to delete an arbitrary message cheaply — deletes
+become a design-time concern rather than a runtime one.</p>
+<p><strong>8.3 Two billion rows, a 9-hour scan.</strong> The scan is the thing to remove, so the
+mechanism has to maintain its tree <strong>incrementally as writes land</strong>, rather than
+building it per repair. That is Riak's active anti-entropy: a persistent hash tree,
+updated on every write, stored alongside the data.</p>
+<p>The state you now maintain is a second copy of the truth in summary form — and the
+hard question is how that state stays honest, because a bug or a crash that leaves the
+tree disagreeing with the data produces repairs that are confidently wrong in both
+directions. Riak's answer is an expiry: rebuild every tree from scratch periodically,
+so a corrupted tree has a bounded lifetime. So you have not removed the scan; you have
+moved it from <em>every repair</em> to <em>once per expiry period</em>, which is the actual win.</p>
+<p>An alternative worth naming: skip trees and repair by <em>recent-writes</em> — every replica
+keeps a log of what it wrote in the last N hours and exchanges that, falling back to a
+full comparison only occasionally. That covers the common case (drift caused by recent
+misses) very cheaply and does nothing about silent disk corruption, which is a
+different failure that trees do catch.</p>
+<p><strong>8.4 Where you would run none.</strong> A Kafka partition, or a PostgreSQL streaming
+replica. One leader, one ordered log; a follower's state is defined entirely as &quot;the
+log up to offset N&quot;. A lagging follower is not divergent, it is <em>behind</em>, and catching
+up means replaying from its offset — there is nothing to compare because the log
+already says what the truth is and in what order.</p>
+<p>What flips the answer: allowing any replica to accept a write. The moment writes are
+leaderless (or multi-leader, or accepted during a partition), there is no single log
+defining the truth, two replicas can hold unrelated histories, and comparison becomes
+the only tool left. <strong>Anti-entropy is the price of leaderless writes</strong> — which is also
+why it shows up in exactly the systems that chose availability over coordination, and
+in none of the ones that chose the other way.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../37-gossip-protocols/notes.html"><small>← Lab 37</small>gossip-protocols</a><a href="../39-paxos/notes.html" style="text-align:right"><small>Lab 39 →</small>paxos</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-what-part-of-the-system-goes-back-and-fixes-the-third-copy">1. What part of the system goes back and fixes the third copy?</a><a href="#readme-2-why-does-omars-shop-sell-croissants-at-last-weeks-price-for-a-year">2. Why does Omar&#x27;s shop sell croissants at last week&#x27;s price for a year?</a><a href="#readme-3-why-not-just-fix-it-when-a-customer-asks">3. Why not just fix it when a customer asks?</a><a href="#readme-4-where-does-fixing-on-read-break">4. Where does fixing-on-read break?</a><a href="#readme-5-what-would-a-real-repair-process-have-to-do">5. What would a real repair process have to do?</a><a href="#readme-6-what-is-the-one-idea-that-makes-this-affordable">6. What is the one idea that makes this affordable?</a><a href="#readme-7-what-are-all-of-these-things-called-now-that-you-have-met-them">7. What are all of these things called, now that you have met them?</a><a href="#readme-8-what-does-the-stocktake-picture-get-right-and-where-does-it-lie">8. What does the stocktake picture get right, and where does it lie?</a><a href="#readme-9-can-you-make-the-divergence-meter-move-yourself">9. Can you make the divergence meter move yourself?</a><a href="#readme--checkpoint--can-you-say-why-fixing-on-read-is-not-enough">▸ Checkpoint — can you say why fixing-on-read is not enough?</a><a href="#readme-10-how-would-you-build-it-one-failure-at-a-time">10. How would you build it, one failure at a time?</a><a href="#readme--checkpoint--can-you-build-the-mechanism-from-memory">▸ Checkpoint — can you build the mechanism from memory?</a><a href="#readme-11-what-are-the-eleven-ways-it-still-goes-wrong">11. What are the eleven ways it still goes wrong?</a><a href="#readme-12-what-has-a-finished-repair-actually-promised-you">12. What has a finished repair actually promised you?</a><a href="#readme--checkpoint--can-you-state-what-repair-guarantees-and-what-it-does-not">▸ Checkpoint — can you state what repair guarantees, and what it does not?</a><a href="#readme-13-what-does-this-look-like-on-a-real-cluster-at-three-in-the-morning">13. What does this look like on a real cluster at three in the morning?</a><a href="#readme--checkpoint--could-you-run-this-on-a-cluster-you-own">▸ Checkpoint — could you run this on a cluster you own?</a><a href="#readme-14-where-are-the-exercises">14. Where are the exercises?</a><a href="#readme-15-where-does-this-sit-and-what-should-you-learn-next">15. Where does this sit, and what should you learn next?</a><a href="#readme-16-glossary-what-does-each-word-mean-in-one-line">16. Glossary: what does each word mean, in one line?</a><a href="#readme-17-about-this-lab">17. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

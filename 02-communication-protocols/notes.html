@@ -1,0 +1,2727 @@
+<!doctype html>
+<html lang="en" data-hub-lab="02-communication-protocols">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>2. communication-protocols</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 2 of 71 · Stage 1</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 2 · The Ground Floor</p><article id="readme"><h1 id="readme-communication-protocols--how-systems-talk-and-how-to-choose">Communication Protocols — how systems talk, and how to choose</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Priya is building Tiffin, a food-delivery app, and five very
+different conversations have to work inside it. Asha asks for a menu and then
+watches her order move; Meera's kitchen screen lights up when an order lands;
+PayFlow reports that the card cleared; billing must hear every order while it
+is down. Every famous protocol name, from REST and gRPC to WebSocket and Kafka,
+is a ready-made answer to one of those five conversation shapes. You choose by
+asking five questions: who speaks first, one answer or many, one listener or
+many, whose code sits at each end, and must the answer come now. Pick wrong and
+the app is slow, expensive, or quietly loses orders in every train tunnel.</p>
+</blockquote>
+<p>The playground for this lab is <a href="visualization.html"><code>visualization.html</code></a>
+(double-click; it works offline). Three runnable experiments live in
+<code>experiments/</code>. Everything about how the lab was built, and where it sits among
+your other labs, is in <a href="#readme-19-about-this-lab">section 19</a> at the end.</p>
+<hr />
+<h1 id="readme-beginner-model">BEGINNER MODEL</h1>
+<h2 id="readme-1-why-are-there-ten-ways-to-make-an-api-call">1. Why are there ten ways to make an API call?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every protocol name you have heard moves bytes between
+programs. Each one exists because it fixes a specific pain the previous one
+caused. And the one you pick shapes your whole system, so it is worth getting
+right.</p>
+</blockquote>
+<p>Priya opens a system-design discussion and a parade of names walks past: REST,
+GraphQL, gRPC, WebSockets, SSE, webhooks, MQTT, Kafka… At some level they all do
+the same job. They move bytes between programs. So why do all of them exist?
+And why do interviewers and architects care so much which one she picks?</p>
+<p>Because the pick is <strong>structural</strong>. A protocol choice decides how her servers
+are deployed. It decides what her load balancers must support. It decides how
+clients handle failures, how much battery a phone burns, and how painful the
+next feature is. Choose polling where you needed push and you can 100× your
+server load. Choose WebSockets where a plain HTTP call would do and you buy
+months of reconnect-and-scale plumbing for nothing.</p>
+<p>A protocol is also not a function you refactor in an afternoon. It is a
+<strong>contract with other people's code</strong>: other teams, other companies, millions of
+installed apps. A wrong pick calcifies.</p>
+<p>The good news is that the parade is not ten random inventions. Each name is the
+answer to one specific pain that an earlier, simpler choice caused. By the end
+of this document you will look at any &quot;A needs to talk to B&quot; problem and derive
+the right protocol from five questions. Just as importantly, you will be able to
+say out loud when a fashionable protocol is the <em>wrong</em> answer.</p>
+<h2 id="readme-2-what-does-priyas-app-need-to-say-and-to-whom">2. What does Priya's app need to say, and to whom?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Forget computers for a minute. Tiffin has five
+conversations to hold, and they are five different shapes: a letter, a phone
+call, a radio broadcast, a doorbell, and a mailbox.</p>
+</blockquote>
+<p>Priya is building <strong>Tiffin</strong>, a food-delivery service. Ignore computers for a
+moment and just list who needs to tell what to whom.</p>
+<ol>
+<li><strong>Asha asks for the menu.</strong> Asha is a customer. She asks: &quot;What does Biryani
+House sell?&quot; Tiffin answers. One question, one answer, done. It is like
+sending a <strong>letter</strong> and getting a reply.</li>
+<li><strong>Asha watches her order.</strong> &quot;Is my food cooked yet? Has the rider picked it
+up? Where is Arjun the rider <em>right now</em>?&quot; The news changes every few
+seconds, and Tiffin knows first. Asha should not have to keep asking. It is
+like a <strong>phone call</strong> that stays open, where either side can speak.</li>
+<li><strong>Meera's kitchen screen shows new orders.</strong> Meera runs Biryani House. Her
+kitchen screen, and every other restaurant's screen, must light up the
+moment an order lands. One event, many listeners. It is like a <strong>radio
+broadcast</strong>: the station speaks once, and every tuned-in receiver hears it.</li>
+<li><strong>PayFlow confirms the payment.</strong> Tiffin uses an outside company, PayFlow,
+to charge cards. PayFlow finds out that the payment cleared <em>seconds later</em>,
+on its own schedule, and must tell Tiffin. Tiffin cannot keep a phone line
+open to a company it does not control. So PayFlow has to <strong>ring Tiffin's
+doorbell</strong>: come to Tiffin's address and announce the news.</li>
+<li><strong>The order flows through Tiffin's own kitchen of services.</strong> Inside Tiffin,
+the ordering system must tell billing, notifications, and analytics about
+every order. It must do that even if analytics is down for maintenance right
+now. It is like leaving a message <strong>in a mailbox</strong> the recipient empties when
+they are back.</li>
+</ol>
+<p>Five different <em>shapes</em> of conversation: ask-and-answer, open line, broadcast,
+doorbell, mailbox. Priya's question, and this whole lab's question, is this.
+<strong>How do computers hold each of these conversations, and what goes wrong when
+you use the wrong shape?</strong></p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Analytics is switched off for an hour of maintenance. During
+that hour Asha places an order. Which of the five shapes can still get the
+news to analytics once it wakes up, and which ones lose it for good?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Only the mailbox.</strong> A letter needs someone to read it. A phone call needs
+both ends awake. A radio broadcast is heard by whoever is tuned in at that
+second, and by nobody else, ever. A doorbell rung at an empty house is a
+doorbell wasted. The mailbox is the one shape where the message <em>waits</em>.</p>
+<p>If you said &quot;the radio, because analytics can listen to a recording&quot;, you
+have just invented the tape recorder that section 8 attaches to the radio.
+Plain radio has no memory. That difference is the whole reason two families
+of message systems exist, and section 10.9 splits them.</p>
+</details>
+
+</blockquote>
+<p>Nothing about networking is assumed here. All you need is to have written an
+app that called some API at some point. Here is how far the lab goes, and what
+you can do after each layer:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner</strong></td>
+  <td>1–9</td>
+  <td>name the five conversation shapes and the five axes, and say why &quot;just send bytes&quot; fails</td>
+</tr>
+<tr>
+  <td><strong>Intermediate</strong></td>
+  <td>10</td>
+  <td>say how each named protocol works on the wire, and which pain it was born from</td>
+</tr>
+<tr>
+  <td><strong>Engineering</strong></td>
+  <td>11–12</td>
+  <td>defend a protocol choice while someone keeps asking &quot;and what if that breaks?&quot;</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>13–15</td>
+  <td>run the proofs, walk the decision tree, and know what the on-call engineer watches</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-why-not-just-connect-and-send-the-data">3. Why not just connect and send the data?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The operating system gives every program a two-way pipe to
+another machine. Priya's first plan is to shout her own phrases down that
+pipe. It works. Then it breaks in four ways.</p>
+</blockquote>
+<p>Priya knows the operating system gives every program a primitive for talking
+over the network. You open a connection to another machine and <strong>write bytes</strong>
+into it. The other side <strong>reads bytes</strong> out. It is a two-way pipe. This
+primitive is called a <em>socket</em>. It is the one bit of jargon we need this early,
+because everything else in this lab is built on top of it.</p>
+<p>So here is the naive plan. Dev, who builds Tiffin's Android app, opens a
+connection to Priya's server and sends the text
+<code>GIVE ME THE MENU FOR BIRYANI HOUSE</code>. The server sends back the menu as text.
+Invent little phrases for each need. Done?</p>
+<p>It genuinely works. You will run exactly this in
+<code>experiments/Exp01HttpIsJustText.java</code>. And it is how everything worked in the
+early days. But watch it break.</p>
+<h2 id="readme-4-what-breaks-when-you-just-send-bytes">4. What breaks when you just send bytes?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The pipe does not say where one message ends. Nobody else
+speaks Priya's invented phrases. Every conversation shape has to be rebuilt by
+hand. And nobody wrote down what happens when the line drops.</p>
+</blockquote>
+<h3 id="readme-problem-1-where-does-one-message-end">Problem 1: where does one message end?</h3>
+<p>A socket is a <em>stream of bytes</em>, not a sequence of messages. Suppose the server
+sends Asha the menu (500 bytes) and then a &quot;restaurant is closing soon&quot; notice
+(80 bytes). Dev's app might read 580 bytes in one gulp. Or 90 bytes, then 490.
+The network chops and merges freely.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Priya's server writes two JSON objects back-to-back into the
+socket: <code>{&quot;menu&quot;: [...]}</code> then <code>{&quot;notice&quot;: &quot;closing soon&quot;}</code>. The app does one
+read. What does it get?</p>
+<details><summary>Reveal</summary>
+
+<p>Very possibly both blobs glued together: <code>{&quot;menu&quot;:[...]}{&quot;notice&quot;:...}</code>. That
+is not valid JSON, and it crashes a naive parser. Or the app gets the first
+blob <em>plus half</em> of the second.</p>
+<p>If you said &quot;one object per read, obviously&quot;, you are assuming the pipe keeps
+your parcels apart. It does not. The reliable-delivery service under the byte
+pipe is called TCP (it gets its proper introduction in section 7). TCP
+guarantees the bytes arrive <strong>in order and uncorrupted</strong>. It says nothing
+about <em>where your message boundaries are</em>.</p>
+<p>Every protocol in this lab must solve this <strong>framing</strong> problem somehow: a
+length prefix, a delimiter line, or a &quot;close the connection when done&quot; rule.
+Experiment 01 shows this live.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-problem-2-who-else-speaks-priyas-language">Problem 2: who else speaks Priya's language?</h3>
+<p>Priya invented <code>GIVE ME THE MENU</code>. Dev's Android app team must now implement
+it. So must PayFlow, the payment company. So must the caching proxy her cloud
+provider runs, the load balancer, the monitoring tools… none of which have ever
+heard of it. Every piece of the world's network infrastructure speaks
+<em>standard</em> protocols: caches, proxies, firewalls, browsers, test tools. A
+private language means rebuilding all of that yourself.</p>
+<h3 id="readme-problem-3-who-builds-the-broadcast-the-doorbell-and-the-mailbox">Problem 3: who builds the broadcast, the doorbell, and the mailbox?</h3>
+<p>Broadcast a new order to 5,000 kitchen screens like Meera's? Deliver a message
+to a service that is currently down? Notify an outside company behind its own
+firewall? Raw sockets give you none of this. You would hand-build subscription
+lists, retry queues, and authentication.</p>
+<h3 id="readme-problem-4-what-happens-when-the-line-drops-mid-order">Problem 4: what happens when the line drops mid-order?</h3>
+<p>Asha's connection drops halfway through placing an order. Did the order go
+through? Can the app safely re-send? Who may speak first? A protocol is
+precisely an answer sheet for these questions. Priya has not written one.</p>
+<p>Here is the deeper discovery. &quot;How do two computers talk&quot; is really <strong>two
+separate problems</strong>. Getting bytes across reliably is the easy, solved part.
+Agreeing on <em>what the bytes mean and how the conversation flows</em> is the real
+work. That is what all those protocol names are competing to solve.</p>
+<h2 id="readme-5-what-does-priya-actually-need">5. What does Priya actually need?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A shared, standard rulebook for each of the five shapes.
+It must say where messages end, what they mean, which shape it serves, and
+what happens when things go wrong.</p>
+</blockquote>
+<p>What Priya actually needs is a <strong>shared, standard set of conversation rules</strong>
+for each conversation shape from section 2, such that:</p>
+<ol>
+<li><strong>Framing.</strong> Both sides always know where a message starts and ends.</li>
+<li><strong>Meaning.</strong> Requests, replies, success and failure are expressed the same
+way by everyone. Then strangers' code, and their infrastructure, can join the
+conversation.</li>
+<li><strong>Shape fit.</strong> Ask/answer, open line, broadcast, doorbell, and mailbox each
+get rules designed for that shape, not hacked onto the wrong one.</li>
+<li><strong>Failure rules.</strong> Every protocol states what happens on a dropped
+connection, a repeated message, a slow consumer.</li>
+</ol>
+<p>Keep this list. Every protocol below is graded against it.</p>
+<h2 id="readme-6-what-is-the-key-idea">6. What is the key idea?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Protocols stack in layers. Above the byte-delivery layer,
+every protocol is a reusable answer to one conversation shape, and five
+questions tell you which one you need.</p>
+</blockquote>
+<blockquote>
+<p><strong>Protocols are layered, and above the transport layer every protocol is just
+a reusable answer to one conversation shape.</strong> You choose one not by fashion
+but by five questions. <em>Who starts the conversation? One answer or a stream?
+One listener or many? Do both ends live in your company? Must the answer come
+back right now, or later?</em></p>
+</blockquote>
+<p>Everything with a name is a point in that small design space: HTTP, GraphQL,
+gRPC, WebSocket, SSE, webhook, MQTT. Once you can place a protocol on those five
+axes, you can derive when to use it and when it will hurt, without memorizing
+anything.</p>
+<h2 id="readme-7-what-are-the-words-engineers-use-for-what-just-happened">7. What are the words engineers use for what just happened?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You have already met every idea in this section. Now each
+one gets its proper name, in the order Priya bumped into it.</p>
+</blockquote>
+<p>Walk back through Priya's naive attempt and name each thing as she trips over
+it. Every term also lands in the glossary, section 18.</p>
+<h3 id="readme-what-is-a-protocol-really">What is a protocol, really?</h3>
+<p>Priya's answer sheet from Problem 4 has a name. A <strong>protocol</strong> is the agreed
+rules of a conversation: who speaks first, what the phrases mean, how it ends.
+More precisely, it is a specification of message formats and exchange rules
+that two independent implementations can follow and still interoperate.</p>
+<p>Why does the word exist? To separate the <strong>agreement</strong> from any one program
+that implements it. <code>curl</code>, Chrome, and a Java service all &quot;speak HTTP&quot; because
+the rules live in a document (an RFC), not in code. For example, HTTP says a
+request line looks like <code>GET /menu HTTP/1.1</code>.</p>
+<h3 id="readme-what-carries-the-bytes-before-they-mean-anything">What carries the bytes before they mean anything?</h3>
+<p>Under Priya's pipe is a delivery service that moves bytes between machines
+before any meaning is attached. Engineers call it the <strong>transport</strong>, and the
+operating system provides it. It comes in two flavours.</p>
+<p><strong>TCP</strong> gives a reliable, ordered byte stream. Lost pieces are re-sent and order
+is restored. <strong>UDP</strong> sends independent packets with no delivery or ordering
+promise, but also no setup delay and no retransmission stalls. Why two? Because
+reliability costs time, and some conversations would rather lose a syllable
+than pause. A video call is one. HTTP runs on TCP; live game traffic and DNS
+lookups run on UDP.</p>
+<p>TCP is what made the naive plan in section 4 &quot;genuinely work&quot;. And framing is
+the part TCP explicitly does <em>not</em> do.</p>
+<h3 id="readme-what-is-the-plug-the-program-speaks-into">What is the plug the program speaks into?</h3>
+<p>The <strong>socket</strong> is the plug. Technically it is the operating system's endpoint
+object for one network connection. You <code>write()</code> bytes in, and the peer
+<code>read()</code>s them out. Programs need a handle for &quot;this one conversation&quot; that is
+distinct from the machine, because one server holds thousands of sockets at
+once. Experiment 01 opens a socket to port 8000 and types HTTP into it by hand.</p>
+<p>One warning. &quot;WebSocket&quot; is a different, higher-level thing (section 10.6) that
+merely borrowed the word.</p>
+<h3 id="readme-what-is-the-shape-half-the-internet-assumes">What is the shape half the internet assumes?</h3>
+<p>Asha's menu question is <strong>request/response</strong>: ask once, get one answer,
+conversation over. The client starts the exchange; the server never speaks
+unprompted. Naming this shape lets us say precisely what push protocols change.
+On the wire it looks like <code>GET /menu</code> going out and <code>200 OK</code> plus a body coming
+back.</p>
+<h3 id="readme-why-does-the-number-of-questions-matter-more-than-their-size">Why does the number of questions matter more than their size?</h3>
+<p>Every exchange costs one trip there and one trip back. That is a <strong>round trip</strong>
+(<strong>RTT</strong>): network latency times two, paid <em>per exchange</em> regardless of how
+small the messages are. Within one data centre a round trip is about 1 ms. From
+Asha's phone to a server it is 50–300 ms. So the number of round trips, not the
+number of bytes, usually decides how slow an app feels.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Situation</th>
+  <th>Round trip</th>
+  <th>Sequential calls</th>
+  <th>Time spent commuting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Inside one data centre</td>
+  <td>~1 ms</td>
+  <td>4</td>
+  <td>~4 ms, nobody notices</td>
+</tr>
+<tr>
+  <td>Asha's phone, good signal</td>
+  <td>200 ms</td>
+  <td>4</td>
+  <td>800 ms before the screen can draw</td>
+</tr>
+</tbody>
+</table></div>
+<p>This single number explains why GraphQL and HTTP/2 exist (section 10).</p>
+<h3 id="readme-does-the-news-come-to-you-or-do-you-go-and-get-it">Does the news come to you, or do you go and get it?</h3>
+<p>Asha's order screen can keep asking &quot;anything new?&quot; That is <strong>pull</strong>. Or Tiffin
+can speak on an existing channel the moment there is news. That is <strong>push</strong>.
+Technically the question is whether the server can initiate delivery on an
+existing channel, or the client must poll with fresh requests. This is axis
+number one of the key idea, and the axis most often gotten wrong. Real-time
+features built on pull are the classic scaling accident. Order status via
+polling is pull; via WebSocket it is push.</p>
+<h3 id="readme-how-do-objects-become-bytes">How do objects become bytes?</h3>
+<p>Turning in-memory objects into bytes and back is <strong>serialization</strong>. JSON is one
+encoding (human-readable text). Protocol Buffers is another (compact binary,
+schema-driven). This is separate from the protocol: the same HTTP call can carry
+JSON, XML, or binary. Envelope and letter are independent choices.</p>
+<h3 id="readme-the-smaller-words-in-three-maps-back-to-the-story">The smaller words, in three maps back to the story</h3>
+<p>Each row says where the thing happened.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Plumbing word</th>
+  <th>In plain words</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>socket</td>
+  <td>the plug one conversation speaks into</td>
+  <td>Priya's pipe, section 3</td>
+</tr>
+<tr>
+  <td>transport</td>
+  <td>the byte-delivery layer beneath meaning</td>
+  <td>under the pipe, this section</td>
+</tr>
+<tr>
+  <td>TCP</td>
+  <td>the reliable, ordered flavour of transport</td>
+  <td>what made section 4 &quot;work&quot;</td>
+</tr>
+<tr>
+  <td>UDP</td>
+  <td>the fast, no-promises flavour</td>
+  <td>the video call above; section 10.10</td>
+</tr>
+<tr>
+  <td>protocol</td>
+  <td>the shared rulebook, independent of any program</td>
+  <td>Problem 4's answer sheet</td>
+</tr>
+<tr>
+  <td>serialization</td>
+  <td>objects to bytes and back</td>
+  <td>the JSON blobs in section 4</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Conversation word</th>
+  <th>In plain words</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>request/response</td>
+  <td>ask once, one answer, done</td>
+  <td>Asha's menu, section 2</td>
+</tr>
+<tr>
+  <td>round trip (RTT)</td>
+  <td>one there-and-back, paid per exchange</td>
+  <td>the commuting table above</td>
+</tr>
+<tr>
+  <td>push / pull</td>
+  <td>news comes to you / you keep asking</td>
+  <td>Asha's order screen, section 2</td>
+</tr>
+<tr>
+  <td>client / server</td>
+  <td>the side that initiates / the side that answers</td>
+  <td>Dev's app / Priya's server</td>
+</tr>
+<tr>
+  <td>handshake</td>
+  <td>the opening exchange that sets a connection's rules</td>
+  <td>section 10.6's Upgrade</td>
+</tr>
+<tr>
+  <td>idempotent</td>
+  <td>safe to repeat: twice has the same effect as once</td>
+  <td><a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a></td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Message word</th>
+  <th>In plain words</th>
+  <th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>API</td>
+  <td>the surface a program exposes for others to call; a protocol is how you reach it</td>
+  <td>Tiffin's menu API</td>
+</tr>
+<tr>
+  <td>endpoint</td>
+  <td>one addressable operation</td>
+  <td><code>GET /restaurants/42/menu</code></td>
+</tr>
+<tr>
+  <td>header</td>
+  <td>a labelled metadata line travelling with a message</td>
+  <td><code>Content-Type: application/json</code></td>
+</tr>
+<tr>
+  <td>payload / body</td>
+  <td>the actual data inside the protocol envelope</td>
+  <td>the menu JSON</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-which-two-pictures-should-you-carry-and-where-do-they-lie">8. Which two pictures should you carry, and where do they lie?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Carry the five human conversation shapes for intuition and
+five precise axes for decisions. Then learn the four places the human picture
+lies to you, because that is where the bugs live.</p>
+</blockquote>
+<h3 id="readme-the-simple-picture-five-human-conversations">The simple picture: five human conversations</h3>
+<p>This is the one you carry around. Every protocol is one of five shapes.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Human picture</th>
+  <th>Shape</th>
+  <th>Protocols that implement it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Letter</strong> with a reply</td>
+  <td>ask → answer, then silence</td>
+  <td>HTTP (REST, GraphQL, and unary gRPC ride on it)</td>
+</tr>
+<tr>
+  <td><strong>Phone call</strong> held open</td>
+  <td>either side speaks anytime</td>
+  <td>WebSocket, gRPC bidirectional streaming</td>
+</tr>
+<tr>
+  <td><strong>Radio / newsletter</strong></td>
+  <td>one sender, many subscribed listeners</td>
+  <td>SSE to browsers; MQTT, Kafka behind the scenes</td>
+</tr>
+<tr>
+  <td><strong>Doorbell</strong></td>
+  <td>outsider shows up at <em>your</em> address with news</td>
+  <td>Webhook</td>
+</tr>
+<tr>
+  <td><strong>Mailbox</strong></td>
+  <td>leave a message; recipient empties it later, even if away now</td>
+  <td>Message queue (RabbitMQ, SQS, Kafka)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-the-engineers-picture-five-axes">The engineer's picture: five axes</h3>
+<p>This is the precise one. A protocol is a position on five axes. Read the middle
+column as the question you ask about any conversation.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Axis</th>
+  <th>The question</th>
+  <th>The two ends</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>①</td>
+  <td>initiation</td>
+  <td>who starts it?</td>
+  <td>pull vs push</td>
+</tr>
+<tr>
+  <td>②</td>
+  <td>cardinality</td>
+  <td>how many answers, how many listeners?</td>
+  <td>one answer vs a stream; one listener vs many</td>
+</tr>
+<tr>
+  <td>③</td>
+  <td>connection lifetime</td>
+  <td>does the line outlive one exchange?</td>
+  <td>per-request vs persistent</td>
+</tr>
+<tr>
+  <td>④</td>
+  <td>encoding</td>
+  <td>what do the bytes look like?</td>
+  <td>text vs binary; free-form vs schema-checked</td>
+</tr>
+<tr>
+  <td>⑤</td>
+  <td>coupling</td>
+  <td>must both ends be alive at the same moment?</td>
+  <td>synchronous (answer now) vs asynchronous (answer later, receiver may be down)</td>
+</tr>
+</tbody>
+</table></div>
+<p>Section 10 places every named protocol on these axes. The playground lets you
+watch each position behave.</p>
+<h3 id="readme-how-do-the-two-pictures-line-up">How do the two pictures line up?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Shape</th>
+  <th>Initiation</th>
+  <th>Cardinality</th>
+  <th>Connection</th>
+  <th>Coupling</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Letter</td>
+  <td>pull</td>
+  <td>one answer</td>
+  <td>per-request</td>
+  <td>synchronous</td>
+</tr>
+<tr>
+  <td>Phone call</td>
+  <td>push and pull</td>
+  <td>streams both ways</td>
+  <td>persistent</td>
+  <td>synchronous</td>
+</tr>
+<tr>
+  <td>Radio</td>
+  <td>push</td>
+  <td>one to many</td>
+  <td>persistent</td>
+  <td>live: both tuned in</td>
+</tr>
+<tr>
+  <td>Doorbell</td>
+  <td>push, across trust boundaries</td>
+  <td>one event, one address</td>
+  <td>per-request</td>
+  <td>synchronous at the door</td>
+</tr>
+<tr>
+  <td>Mailbox</td>
+  <td>sender drops it, receiver collects</td>
+  <td>one worker, or many groups</td>
+  <td>persistent to the broker</td>
+  <td>asynchronous</td>
+</tr>
+</tbody>
+</table></div>
+<p>The mailbox is the only shape where the receiver may be <em>dead</em> during sending.
+That is why it alone survives a downed consumer, which is exactly what the
+Predict in section 2 asked.</p>
+<h3 id="readme-where-the-story-lies-to-you">Where the story lies to you</h3>
+<p>Read this part twice. It is where bugs live.</p>
+<p><strong>Letters never get lost silently in the postal picture; requests do.</strong> When an
+HTTP call times out, you cannot know whether the server did the work. A real
+letter-writer would eventually get a &quot;return to sender&quot;. Networks just go
+quiet. This is why <em>idempotency</em>, not hope, is the real safety mechanism
+(section 12).</p>
+<p><strong>A phone call, once connected, stays connected. A WebSocket does not.</strong> Real
+connections die every few minutes on mobile networks. The &quot;open line&quot; is
+actually &quot;open line, plus automatic redial, plus a plan for what was missed
+while redialing&quot;. Teams that take the phone-call picture literally ship chat
+apps that drop messages on every train tunnel (section 11).</p>
+<p><strong>Radio listeners who miss a broadcast miss it forever. Kafka listeners do
+not.</strong> Log-based queues keep history and let a listener rewind. The radio
+picture is right for <em>live</em> fan-out (SSE, MQTT fire-and-forget) and wrong for
+replayable streams. You saw the replayable kind in
+<a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>.</p>
+<p><strong>A doorbell ring is heard at most once; webhooks arrive at least once.</strong>
+Payment providers like PayFlow <em>retry</em> until you acknowledge. So the same
+doorbell can ring five times for one event, sometimes out of order (section 11).</p>
+<h2 id="readme-9-where-can-you-watch-the-shapes-move">9. Where can you watch the shapes move?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Open the playground, run Asha's &quot;order status&quot; scenario
+under each protocol, and watch the counters. Polling wastes almost every
+request; push inverts the numbers.</p>
+</blockquote>
+<p>Open <strong><a href="visualization.html"><code>visualization.html</code></a></strong> (double-click; fully
+offline). It animates a client lane and a server lane. It lets you run the same
+&quot;order status&quot; scenario under each protocol: polling, long polling, SSE,
+WebSocket, webhook, and queue.</p>
+<p>What to look at, in order:</p>
+<ol>
+<li><strong>Run &quot;Polling&quot; first</strong> and watch the counters: requests fired versus events
+actually delivered. The waste is the point.</li>
+<li><strong>Run &quot;WebSocket&quot;</strong> on the same scenario. The counters invert.</li>
+<li>Each scenario opens with a <strong>predict question</strong>. Commit to an answer before
+pressing run. The log then tells you, in full sentences, what happened and
+why.</li>
+<li>Use the <strong>latency and event-frequency sliders</strong>. The protocols reorder
+themselves as the numbers change. That reordering <em>is</em> the decision skill.</li>
+</ol>
+<p>The diagrams in section 10 use the same left-client / right-server layout as
+the playground, so both build one spatial picture.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-beginner-model">✅ Checkpoint: end of the beginner model</h3>
+<p>You now hold the beginner model. You can name the five conversation shapes,
+the five axes, and say why &quot;just send bytes&quot; fails.</p>
+<p><strong>Say it back.</strong> Without using the words <em>protocol</em>, <em>socket</em> or <em>framing</em>,
+explain to Meera why Dev's first version of the app sometimes crashed just as
+Biryani House was about to close.</p>
+<details><summary>A good answer sounds like</summary>
+"The pipe between the app and Tiffin's server does not keep messages apart.
+When the server sent the menu and the closing notice one after the other, the
+app sometimes read them as one lump, or read only half of the notice. It had
+no way to know where the menu stopped, so it tried to make sense of garbage."
+</details>
+
+<p>Next: how each real protocol actually works on the wire, in the order history
+invented them. Each one was born from the previous one's specific pain.</p>
+</blockquote>
+<hr />
+<h1 id="readme-intermediate-model">INTERMEDIATE MODEL</h1>
+<h2 id="readme-10-how-does-each-protocol-actually-work-and-what-pain-made-it">10. How does each protocol actually work, and what pain made it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Read this section as one continuous story. Each protocol
+exists because the one before it hurt Priya somewhere specific. For each you
+get the real wire bytes, where it shines, and when <em>not</em> to use it.</p>
+</blockquote>
+<p>The &quot;when not&quot; part is what interviews and architecture reviews actually probe,
+so it gets as much space as the &quot;how&quot;.</p>
+<h3 id="readme-101-raw-tcp-sockets-what-is-the-floor-everything-stands-on">10.1 Raw TCP sockets: what is the floor everything stands on?</h3>
+<p>This is Priya's naive plan from section 3, taken seriously. The operating system
+gives you the reliable byte pipe. You define everything else: framing, meaning,
+failure rules. Framing is typically a length prefix (&quot;next message is 512
+bytes&quot;) or a delimiter (a newline).</p>
+<p>Where is raw TCP genuinely used? Database wire protocols: Postgres, MySQL and
+Redis each speak a custom TCP protocol, and that is what a &quot;database driver&quot;
+implements. Game servers. Exchange trading feeds. In every one of those cases a
+team controls both ends, needs every microsecond and every byte, and is willing
+to write and version its own protocol spec.</p>
+<p>When should Priya not use it? Almost always. She would rebuild framing, auth,
+encryption, proxying, and tooling that HTTP gives her free. And no third party
+could talk to Tiffin without her custom library. Raw TCP is the <em>last</em> resort,
+not the pro move.</p>
+<p><strong>Run <code>experiments/Exp01HttpIsJustText.java</code> now.</strong> It talks raw TCP to a real
+HTTP server, so you can see with your own eyes that everything below is &quot;just
+text over a socket&quot;, plus discipline.</p>
+<h3 id="readme-102-http-how-did-the-letter-get-standardized-and-why-did-it-win">10.2 HTTP: how did the letter get standardized, and why did it win?</h3>
+<p>Asha's letter, written in a format everyone agrees on. One request, one
+response, in a rigidly framed text format. This is <em>literally</em> what travels
+over the socket when Dev's app asks for a menu:</p>
+<div class="code"><pre><code>GET /restaurants/42/menu HTTP/1.1
+Host: api.tiffin.com
+Accept: application/json
+                                          ← blank line = &quot;headers done&quot; (framing!)
+</code></pre></div>
+<div class="code"><pre><code>HTTP/1.1 200 OK
+Content-Type: application/json
+Content-Length: 57                        ← framing: exactly 57 body bytes follow
+Cache-Control: max-age=300
+
+{&quot;restaurant&quot;: &quot;Biryani House&quot;, &quot;items&quot;: [{&quot;dosa&quot;: 120}]}
+</code></pre></div>
+<p>Check it against the list in section 5. Framing is answered by
+<code>Content-Length</code> and the blank line. Shared meaning comes from <strong>verbs</strong> and
+<strong>status codes</strong>, in the table below. Failure rules come along too: &quot;GET is
+idempotent, so anything in the middle may retry it.&quot;</p>
+<div class="table"><table><thead>
+<tr>
+  <th>HTTP word</th>
+  <th>What it means</th>
+  <th>Examples</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>verb</td>
+  <td>the action</td>
+  <td>GET reads, POST creates, PUT replaces, DELETE removes</td>
+</tr>
+<tr>
+  <td>2xx status</td>
+  <td>success</td>
+  <td><code>200 OK</code></td>
+</tr>
+<tr>
+  <td>3xx status</td>
+  <td>go somewhere else</td>
+  <td>redirect</td>
+</tr>
+<tr>
+  <td>4xx status</td>
+  <td><em>your</em> mistake</td>
+  <td>wrong URL, bad request</td>
+</tr>
+<tr>
+  <td>5xx status</td>
+  <td>the <em>server's</em> mistake</td>
+  <td>crashed handler</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why did HTTP conquer the world? Because those shared semantics let
+<em>infrastructure</em> join the conversation. A CDN can cache any <code>GET</code> that carries
+<code>Cache-Control</code> without understanding Priya's business. A proxy can retry
+idempotent requests. A browser, a load balancer, <code>curl</code>, and your monitoring
+all speak it. This network effect, not technical elegance, is why &quot;when in
+doubt, HTTP&quot; is the correct default.</p>
+<p>The versions tell a pain-driven story of their own. HTTP/1.1 handles one
+request at a time per connection. So browsers open about 6 parallel connections
+and still queue. Engineers call that <strong>head-of-line blocking</strong> at the request
+level. <strong>HTTP/2</strong> (2015) multiplexes many concurrent streams over one TCP
+connection in binary frames, and compresses headers.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> HTTP/2 puts 6 streams on one TCP connection. One packet
+belonging to <em>stream 3</em> is lost in transit. What happens to streams 1, 2, and
+4 to 6?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>They all stall.</strong> TCP promises <em>in-order</em> delivery of the whole byte
+stream. Until the lost packet is re-sent, TCP refuses to hand <em>any</em> later
+bytes to the application, even bytes belonging to unrelated streams.
+Head-of-line blocking moved down a layer, from HTTP into TCP itself.</p>
+<p>If you said &quot;only stream 3 waits&quot;, you were describing what HTTP/2 <em>wanted</em>.
+On TCP that is unfixable, which is why <strong>HTTP/3</strong> abandons TCP entirely. It
+runs on <strong>QUIC</strong>, a transport built on UDP that keeps streams independent (a
+lost packet stalls only its own stream) and merges the TCP and TLS handshakes
+into one round trip. Google, YouTube, Facebook and Cloudflare serve most
+traffic this way today.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-103-rest-why-is-it-a-discipline-and-not-a-protocol">10.3 REST: why is it a discipline and not a protocol?</h3>
+<p>REST is a <em>style</em> for using HTTP, not a new protocol. Model your domain as
+<strong>resources</strong> with URLs. Manipulate them with the standard verbs. Keep the
+server <strong>stateless</strong>, meaning each request is self-contained. That last rule is
+what lets any of 50 identical servers answer any request, which is what makes
+horizontal scaling trivial. Tiffin's API in this style:</p>
+<div class="code"><pre><code>GET    /restaurants/42          → read one
+GET    /restaurants?city=pune   → list/filter
+POST   /orders                  → create (body: the new order)
+PATCH  /orders/97               → partial update
+DELETE /orders/97               → cancel
+</code></pre></div>
+<p>Reach for REST for public and partner APIs (Stripe, GitHub, Twilio, the entire
+API economy), for anything third parties integrate with, for browser and mobile
+backends of ordinary CRUD shape, and for anything that benefits from HTTP
+caching. It is boring, universal, and debuggable with <code>curl</code>. It is the right
+default.</p>
+<p>Where would Priya be wrong to pick it?</p>
+<ul>
+<li><strong>Real-time push.</strong> REST has no way for the server to speak first. Period.</li>
+<li><strong>Screens that aggregate many resources.</strong> This is the pain that births
+GraphQL, next.</li>
+<li><strong>High-volume internal service-to-service traffic.</strong> JSON parsing and
+untyped contracts get expensive. That pain births gRPC (section 10.5).</li>
+<li>Also know <strong>SOAP</strong>, the 2000s XML predecessor with rigid contracts and heavy
+tooling. It survives in banking and enterprise integrations. You read it; you
+do not choose it for new work.</li>
+</ul>
+<h3 id="readme-104-graphql-what-pain-in-rest-gave-birth-to-it">10.4 GraphQL: what pain in REST gave birth to it?</h3>
+<p>Tiffin's app home screen needs four things: Asha's profile, her active order,
+that order's restaurant, and Arjun's location.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> As clean REST that is <code>GET /me</code>, <code>GET /orders/active</code>,
+<code>GET /restaurants/42</code>, <code>GET /riders/7</code>. Calls 2 to 4 depend on call 1's
+response, so they cannot all run in parallel. On a phone with a 200 ms round
+trip, how long until the screen renders? And what fraction of the returned
+fields does the screen actually display?</p>
+<details><summary>Reveal</summary>
+
+<p>Two sequential rounds minimum, and likely three, before rendering. Screens
+typically use well under half the fields returned.</p>
+<p>| Rounds | Time before the screen can draw | What it means |
+|---|---|---|
+| 2 | ≈400 ms | the best case, with calls 2 to 4 in parallel |
+| 3 | ≈600 ms | the likely case, when one of them depends on another |</p>
+<p>If you said &quot;200 ms, it's one screen&quot;, you counted screens, not round trips.
+Engineers have names for both halves of this pain. <strong>Over-fetching</strong>: full
+objects arrive when you needed 3 fields. <strong>Under-fetching</strong>: no single
+endpoint had everything, forcing the extra calls. Facebook's mobile team hit
+exactly this wall in 2012. Their fix became GraphQL, open-sourced in 2015.
+<code>experiments/Exp02RoundTrips.java</code> measures this, and the chatty version
+loses by roughly the predicted margin.</p>
+</details>
+
+</blockquote>
+<p>How does it work? One endpoint (<code>POST /graphql</code>). The <em>client</em> sends a typed
+query describing exactly the shape it wants, and the server resolves it in one
+round trip:</p>
+<div class="code"><pre><code class="language-graphql">query HomeScreen {
+  me { name }
+  activeOrder {
+    status
+    restaurant { name }
+    rider { location { lat lng } }
+  }
+}
+</code></pre></div>
+<p>The response is JSON mirroring the query, nothing more. A schema (types,
+fields) is the contract. Clients discover it by introspection, and tooling such
+as auto-complete and type-checked clients falls out of that.</p>
+<p>Reach for GraphQL when mobile or web apps aggregate many resources per screen.
+Reach for it when <strong>many different frontends with different data needs</strong> share
+one backend. That is the killer case: iOS, Android, web, watch, each querying
+its own shape, while the backend team ships nothing. Reach for it in public APIs
+serving diverse integrators (GitHub's v4 API, Shopify).</p>
+<p>Where would Priya be wrong to pick it? This list wins interviews.</p>
+<ul>
+<li><strong>Server-to-server internal calls.</strong> Services need fixed, known shapes.
+GraphQL's flexibility is dead weight there, and gRPC is faster and typed
+(section 10.5).</li>
+<li><strong>Simple CRUD with one client.</strong> You pay the complexity tax (schema,
+resolvers, query-cost limiting) for flexibility nobody uses.</li>
+<li><strong>HTTP-cache-friendly content.</strong> Everything is <code>POST</code> to one URL, so CDNs and
+browser caches, which key on <code>GET</code> plus URL, go blind. Client-side caches like
+Apollo's exist, but you <em>rebuild</em> caching rather than inherit it.</li>
+<li><strong>Naive resolvers hide N+1 catastrophes.</strong> <code>orders { rider { name } }</code> can
+fire one database query per order. You must add batching (DataLoader). And
+because clients compose arbitrary queries, a public GraphQL API needs <strong>query
+depth and cost limits</strong>. Otherwise one hostile query,
+<code>{ orders { items { restaurant { orders ... }}}}</code>, is a denial of service
+(section 11).</li>
+<li><strong>File uploads and binary.</strong> Bolted on and awkward. Plain HTTP does it
+natively.</li>
+</ul>
+<h3 id="readme-105-grpc-why-was-json-over-http11-too-slow-inside-the-walls">10.5 gRPC: why was JSON over HTTP/1.1 too slow inside the walls?</h3>
+<p>Inside Tiffin, the <code>orders</code> service calls the <code>pricing</code> service maybe 5,000
+times per second. Costs that do not matter on a public API become the bill.
+JSON is verbose to ship and CPU-heavy to parse. Nothing checks that <code>pricing</code>
+did not rename a field until production. Every call re-pays HTTP/1.1's
+one-at-a-time connection handling.</p>
+<p>gRPC (Google, 2015, grown from their internal &quot;Stubby&quot;) is three decisions
+welded together.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Decision</th>
+  <th>What it gives you</th>
+  <th>Why it matters inside the walls</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Protocol Buffers</strong> for encoding</td>
+  <td>you write a schema; a compiler generates client and server code in any language</td>
+  <td>the wire format is compact binary using field <em>numbers</em>, not names: typically 3–10× smaller than JSON and far cheaper to parse. Renaming a field incompatibly now breaks the <em>build</em>, not prod</td>
+</tr>
+<tr>
+  <td><strong>HTTP/2</strong> transport</td>
+  <td>multiplexed, persistent connections</td>
+  <td>no more one-at-a-time</td>
+</tr>
+<tr>
+  <td><strong>Streaming</strong> as a first-class citizen</td>
+  <td>four call shapes: unary (request/response), server-streaming, client-streaming, bidirectional</td>
+  <td>Arjun's location can flow as a stream, not a series of calls</td>
+</tr>
+</tbody>
+</table></div>
+<div class="code"><pre><code class="language-protobuf">service Pricing {
+  rpc Quote (QuoteRequest) returns (QuoteReply);            // unary
+  rpc WatchSurge (Area) returns (stream SurgeUpdate);       // server-streaming
+}
+message QuoteRequest { int64 restaurant_id = 1; repeated int64 item_ids = 2; }
+</code></pre></div>
+<p>Calling it feels like a local function call: <code>stub.Quote(req)</code>. That is the
+&quot;RPC&quot; (remote procedure call) philosophy: hide the network behind a function.
+Contrast REST's philosophy, which is to <em>expose</em> the network's semantics. Keep
+both in your head. The hidden network still fails (section 11).</p>
+<p>Reach for gRPC for internal microservice meshes (Netflix, Uber, Dropbox and
+Spotify run thousands of gRPC services). Reach for it in polyglot shops, where
+the schema generates consistent clients in Java, Go, Python and more. Reach for
+it for low-latency streaming between services, and for mobile-to-backend links
+where you control both ends. It also powers etcd's and CockroachDB's client
+protocols; you met etcd in the <a href="../39-paxos/notes.html#readme">paxos</a> lab's production notes.</p>
+<p>Where would Priya be wrong to pick it?</p>
+<ul>
+<li><strong>Browsers.</strong> Browser JavaScript cannot speak raw gRPC, because it has no
+control over HTTP/2 frames. You need a translation proxy (grpc-web or
+Envoy). For browser-facing APIs, use REST or GraphQL.</li>
+<li><strong>Public third-party APIs.</strong> Integrators expect <code>curl</code>-able JSON they can
+poke in a terminal. Handing them a <code>.proto</code> file and a codegen step is
+friction. Stripe exposes REST, not gRPC, on purpose.</li>
+<li><strong>The debuggability tax.</strong> Binary payloads mean you need <code>grpcurl</code> and
+reflection where <code>curl</code> and eyeballs used to do.</li>
+<li><strong>Anywhere humans read the payloads.</strong> Config, webhooks, logs.</li>
+</ul>
+<h3 id="readme-106-websocket-what-if-the-server-needs-to-speak-first">10.6 WebSocket: what if the server needs to speak first?</h3>
+<p>Asha's order tracking under pure HTTP means Dev's app asks every 2 seconds.
+&quot;Status?&quot; &quot;Same.&quot; &quot;Status?&quot; &quot;Same.&quot; Engineers call this <strong>polling</strong>.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> 10,000 customers like Asha are polling every 2 s, and an
+order's status changes about every 60 s. (a) How many requests per second hit
+the server? (b) What fraction return nothing new? (c) What is the worst-case
+staleness of the screen?</p>
+<details><summary>Reveal</summary>
+
+<p>| Question | Answer | What it means |
+|---|---|---|
+| (a) load | 5,000 req/s | every one paying full HTTP, auth and database cost |
+| (b) waste | ~97% carry no news | thousands of requests per second of pure waste |
+| (c) staleness | up to the full 2 s interval | Asha's screen can be 2 s behind |</p>
+<p>If you said &quot;tighten the interval to fix (c)&quot;, notice that (a) and (b) get
+worse. Loosen it and (c) gets worse. Polling has no good setting.
+<code>experiments/Exp03PollVsPush.java</code> measures this trade directly.</p>
+<p>The stopgap era used <strong>long polling</strong>. The server <em>holds</em> the request open
+until news arrives, then the client immediately re-asks. That gives
+real-time-ish latency, but it still costs one full HTTP cycle per event and a
+held-open request per client. A bridge, not a destination.</p>
+</details>
+
+</blockquote>
+<p>How does a WebSocket work? It starts life as an HTTP request that asks to
+<em>change protocols</em>:</p>
+<div class="code"><pre><code>GET /live HTTP/1.1
+Host: api.tiffin.com
+Upgrade: websocket                 ← &quot;let&#x27;s stop doing HTTP on this connection&quot;
+Connection: Upgrade
+Sec-WebSocket-Key: dGhlIHNhbXBsZQ==
+
+HTTP/1.1 101 Switching Protocols   ← server agrees
+</code></pre></div>
+<p>After the <code>101</code>, the connection is no longer HTTP. It is a persistent, cheap,
+<strong>two-way message pipe</strong> with framing handled for you. Either side may write at
+any time, until someone closes it. The handshake trick is why WebSockets
+traverse firewalls and reuse port 443 like ordinary web traffic.</p>
+<p>Reach for it for anything both <strong>real-time and two-way</strong>: chat (Slack),
+collaborative editing (Figma, Google Docs), multiplayer games, live trading
+UIs, and ride-hailing driver-to-dispatch links like Arjun's.</p>
+<p>Where would Priya be wrong to pick it?</p>
+<ul>
+<li><strong>One-way flows.</strong> If the client only listens, SSE (next) does it with none
+of the following costs.</li>
+<li><strong>You inherit a distributed-state problem.</strong> Each open socket lives on <em>one</em>
+server. So load balancers must be connection-aware. Deploys and restarts drop
+every connection. Pushing to Asha means <em>finding which server holds her
+socket</em>, which is where Redis pub/sub or a message bus between your own
+servers comes in. And HTTP middleware no longer applies: caching, retries,
+auth-per-request. You re-invent request IDs, acks, and heartbeats inside your
+own message format.</li>
+<li><strong>The reconnect burden is yours.</strong> Mobile connections die constantly. Every
+client needs redial-with-backoff <em>plus</em> &quot;what did I miss?&quot; recovery (section
+11). This is the phone-call lie from section 8, turned into a work item.</li>
+<li><strong>Occasional updates.</strong> Status that changes every few minutes does not earn
+a persistent connection. Poll politely, or use SSE.</li>
+</ul>
+<h3 id="readme-107-sse-what-is-the-one-way-push-you-probably-want">10.7 SSE: what is the one-way push you probably want?</h3>
+<p>Server-Sent Events. Dev's app makes a <em>normal</em> HTTP GET. The server simply
+<strong>never finishes the response</strong>, trickling events as text lines whenever it has
+news about Asha's order:</p>
+<div class="code"><pre><code>GET /orders/97/events            ← ordinary HTTP request
+
+HTTP/1.1 200 OK
+Content-Type: text/event-stream  ← &quot;this response never ends&quot;
+
+data: {&quot;status&quot;: &quot;COOKING&quot;}
+
+data: {&quot;status&quot;: &quot;PICKED_UP&quot;}
+                                  ← blank line = event boundary (framing again!)
+id: 42
+data: {&quot;status&quot;: &quot;DELIVERED&quot;}
+</code></pre></div>
+<p>Because it <em>is</em> HTTP, everything HTTP-shaped still works: same auth, same load
+balancers, plain-text debugging. Browsers have it built in (<code>EventSource</code>) with
+<strong>automatic reconnection</strong>. On reconnect the client sends <code>Last-Event-ID: 42</code>,
+and the server can replay what was missed. The &quot;what did I miss?&quot; problem that
+WebSockets make you hand-build is half-solved in the protocol.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Asha's train enters a tunnel for forty seconds. Her order goes
+from COOKING to PICKED_UP to DELIVERED while she is underground. Compare two
+versions of the app, one on WebSocket and one on SSE. When the signal comes
+back, what does each one have to do to show her all three transitions?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>The SSE version does almost nothing.</strong> The browser's <code>EventSource</code>
+reconnects on its own and sends <code>Last-Event-ID</code> with the last event it saw.
+Tiffin's server replays everything after it. <strong>The WebSocket version has to
+do all of that in Dev's code</strong>: notice the death, redial with backoff, then
+ask &quot;what did I miss?&quot; in a format he invented himself.</p>
+<p>If you said &quot;TCP re-sends the missed data&quot;, remember that TCP only
+retransmits <em>inside one connection</em>. The tunnel killed the connection. Nothing
+below the application knows what Asha last saw. Section 11.2 walks the
+WebSocket version step by step, and the playground's two &quot;Train tunnel&quot;
+scenarios run both.</p>
+</details>
+
+</blockquote>
+<p>Reach for SSE for live one-way feeds: dashboards, notifications, sports scores,
+order tracking. And for the example you use daily: <strong>LLM token streaming</strong>.
+ChatGPT and the Claude API stream responses as SSE. The client asks once (a
+POST), and tokens trickle back as events. Under HTTP/1.1, browsers capped
+connections at about 6 per domain, which throttled SSE-heavy pages. HTTP/2
+multiplexing erased that.</p>
+<p>Where would Priya be wrong to pick it? When the client needs to <em>send</em>
+frequently (that is WebSocket territory). For binary data (SSE is text-only).
+For non-browser consumers she fully controls, where gRPC server-streaming is the
+typed equivalent inside the walls.</p>
+<h3 id="readme-108-webhooks-how-does-the-doorbell-work-across-company-walls">10.8 Webhooks: how does the doorbell work across company walls?</h3>
+<p>Back to shape 4 from section 2. PayFlow learns that Asha's card cleared 3 s
+after checkout. Tiffin cannot hold sockets open to every partner, and PayFlow
+will not let thousands of merchants poll its API every second.</p>
+<p>The answer is an inversion. <strong>Tiffin gives PayFlow a URL</strong>, and PayFlow makes
+an ordinary HTTP POST <em>to Tiffin</em> when the event happens. The consumer becomes
+the server:</p>
+<div class="code"><pre><code>POST /callbacks/payflow HTTP/1.1        ← PayFlow calling Tiffin
+PayFlow-Signature: t=1724832000,v1=5257a8ee...   ← HMAC: proves sender + content
+Content-Type: application/json
+
+{&quot;event&quot;: &quot;payment.succeeded&quot;, &quot;order_id&quot;: 97, &quot;amount&quot;: 45000}
+</code></pre></div>
+<p>Tiffin answers <code>200 OK</code> quickly: acknowledge now, process asynchronously, do the
+real work off a queue. If no timely 2xx comes back, PayFlow <strong>retries with
+backoff</strong>, often for days. This is exactly how Stripe payment events, GitHub
+push events, and Twilio message-status callbacks work.</p>
+<p>Reach for webhooks for cross-organization event delivery where the consumer can
+host a public HTTPS endpoint. It is the standard answer for &quot;SaaS tells its
+customers something happened&quot;.</p>
+<p>Where would Priya be wrong to pick it? For consumers behind firewalls or NAT,
+or on devices, because they cannot host an endpoint (flip to polling, SSE, or
+MQTT). For high-frequency streams, because per-event HTTP calls do not amortize
+(hand out a stream or a queue instead). And never naively. Retries mean
+<strong>duplicates and reordering</strong> are contractual, so an endpoint that is not
+idempotent <em>will</em> double-ship an order (section 11). And an unverified
+signature means anyone who finds your URL can fake &quot;payment succeeded&quot;.</p>
+<h3 id="readme-109-message-queues-and-event-streams-how-does-the-mailbox-work">10.9 Message queues and event streams: how does the mailbox work?</h3>
+<p>Shape 5 from section 2. Ordering must tell billing, notifications, and
+analytics. With any <em>synchronous</em> protocol above, if analytics is down, either
+checkout fails with it or the event is simply gone. Synchronous protocols
+require both ends alive at the same moment. Sometimes that is the wrong
+requirement altogether.</p>
+<p>Insert a <strong>broker</strong>: a server whose only job is holding messages. Producers
+publish to it and move on. Consumers take messages out on their own schedule.
+The broker retries until a consumer <strong>acknowledges</strong>. You know this pattern's
+guarantees cold from <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>. Delivery
+is <strong>at-least-once</strong>, so consumers must be idempotent.</p>
+<p>There are two families, plus one small protocol that deserves its own line.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Family</th>
+  <th>The message is…</th>
+  <th>Who consumes it</th>
+  <th>The human picture</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Task queues</strong> (RabbitMQ with the AMQP protocol; SQS)</td>
+  <td>a job</td>
+  <td><em>one</em> worker; deleted when acked</td>
+  <td>the mailbox, exactly</td>
+</tr>
+<tr>
+  <td><strong>Event logs</strong> (Kafka)</td>
+  <td>a fact appended to a durable, ordered log</td>
+  <td>many independent consumer groups, each at its own pace, able to <strong>rewind</strong></td>
+  <td>the radio with a tape recorder from section 8</td>
+</tr>
+<tr>
+  <td><strong>MQTT</strong></td>
+  <td>a tiny binary pub/sub message</td>
+  <td>topic subscribers over IoT and flaky mobile links</td>
+  <td>a radio for devices on a SIM card</td>
+</tr>
+</tbody>
+</table></div>
+<p>Kafka's rewindable log is the natural carrier for
+<a href="../50-event-sourcing/notes.html#readme">event-sourcing</a> and <a href="../51-cqrs/notes.html#readme">cqrs</a> event feeds.</p>
+<p>MQTT is built for <strong>IoT and flaky mobile links</strong>. It has topic subscriptions,
+three delivery-guarantee levels (QoS 0, 1 and 2), &quot;last will&quot; messages that
+announce a device's death, and headers measured in <em>bytes</em>, because a sensor on
+a SIM card pays per byte. Smart meters and vehicle telemetry use it. Facebook
+Messenger famously used MQTT on mobile for battery-cheap push.</p>
+<p>Reach for a queue to decouple services in time (the consumer may be down), to
+absorb bursts (the queue soaks up a spike the consumer drains later), for
+fan-out to many internal consumers, and for background jobs.</p>
+<p>Where would Priya be wrong to pick it? When the caller needs the answer <em>in
+this request</em>. A price quote is RPC territory; a queue adds a broker hop and an
+ops burden for negative value. When request/response is faked over two queues
+with correlation IDs and timeout logic, because she has rebuilt RPC, badly. And
+in tiny systems, where a broker is one more thing to run, monitor, and upgrade.</p>
+<h3 id="readme-1010-udp-quic-webrtc-when-is-losing-a-packet-better-than-waiting">10.10 UDP, QUIC, WebRTC: when is losing a packet better than waiting?</h3>
+<p>Some conversations tolerate loss but not delay. In a video call, a re-sent
+50 ms-old audio packet is <em>worse</em> than silence. TCP's retransmission stalls
+(the reveal in section 10.2) are exactly wrong there. So latency-critical media
+runs on <strong>UDP</strong> and handles loss at the application layer.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Who</th>
+  <th>How it copes with loss</th>
+  <th>Why not TCP</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>WebRTC</strong> (browser-to-browser audio, video and data: Meet, Discord voice)</td>
+  <td>jitter buffers and codecs that survive gaps</td>
+  <td>a late syllable is worse than a missing one</td>
+</tr>
+<tr>
+  <td>most competitive multiplayer games</td>
+  <td>custom UDP state sync; a lost position update is superseded by the next one anyway</td>
+  <td>waiting for a re-send freezes the game</td>
+</tr>
+<tr>
+  <td>DNS</td>
+  <td>one tiny question, one tiny answer</td>
+  <td>a TCP handshake would triple the cost</td>
+</tr>
+<tr>
+  <td><strong>QUIC</strong> (section 10.2)</td>
+  <td>UDP's foundation with reliability rebuilt per stream</td>
+  <td>TCP's promises without TCP's head-of-line stall</td>
+</tr>
+</tbody>
+</table></div>
+<p>Where would Priya be wrong to pick it? Anything needing ordered completeness:
+payments, APIs. She would re-implement TCP herself, poorly.</p>
+<h3 id="readme-the-catalogue-side-by-side">The catalogue side by side</h3>
+<p>The same facts, in two tables, so you can compare down the columns. First the
+letter family, then the push and mailbox family.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Protocol</th>
+  <th>Shape</th>
+  <th>Born from</th>
+  <th>Reach for it when</th>
+  <th>Keep away when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Raw TCP</td>
+  <td>any, hand-built</td>
+  <td>the floor</td>
+  <td>you own both ends and need every byte</td>
+  <td>almost always; last resort</td>
+</tr>
+<tr>
+  <td>HTTP / REST</td>
+  <td>letter</td>
+  <td>the naive plan's four problems</td>
+  <td>public, partner, CRUD, cacheable</td>
+  <td>push, aggregation screens, hot internal paths</td>
+</tr>
+<tr>
+  <td>GraphQL</td>
+  <td>letter, client-shaped</td>
+  <td>REST's round trips and over-fetching</td>
+  <td>many frontends, diverse integrators</td>
+  <td>internal calls, one-client CRUD, caching, uploads</td>
+</tr>
+<tr>
+  <td>gRPC</td>
+  <td>letter or phone call, typed</td>
+  <td>JSON's cost inside the walls</td>
+  <td>internal meshes, polyglot, streams</td>
+  <td>browsers, public APIs, human-read payloads</td>
+</tr>
+<tr>
+  <td>SOAP</td>
+  <td>letter, 2000s style</td>
+  <td>rigid enterprise contracts</td>
+  <td>you read it in banking</td>
+  <td>new work</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Protocol</th>
+  <th>Shape</th>
+  <th>Born from</th>
+  <th>Reach for it when</th>
+  <th>Keep away when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>WebSocket</td>
+  <td>phone call</td>
+  <td>&quot;the server can never speak first&quot;</td>
+  <td>real-time <em>and</em> two-way</td>
+  <td>one-way, occasional, reconnect-shy teams</td>
+</tr>
+<tr>
+  <td>SSE</td>
+  <td>radio to browsers</td>
+  <td>polling's waste, one-way case</td>
+  <td>dashboards, tracking, token streams</td>
+  <td>client sends often, binary</td>
+</tr>
+<tr>
+  <td>Webhook</td>
+  <td>doorbell</td>
+  <td>partners cannot hold sockets or poll</td>
+  <td>SaaS-to-customer events</td>
+  <td>firewalled consumers, high frequency</td>
+</tr>
+<tr>
+  <td>Queue / log / MQTT</td>
+  <td>mailbox, tape recorder</td>
+  <td>&quot;both ends must be alive&quot;</td>
+  <td>decoupling, bursts, fan-out, devices</td>
+  <td>answer needed now, tiny systems</td>
+</tr>
+<tr>
+  <td>UDP / QUIC / WebRTC</td>
+  <td>live media</td>
+  <td>TCP's retransmission stall</td>
+  <td>loss OK, delay not</td>
+  <td>anything needing completeness</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-intermediate-model">✅ Checkpoint: end of the intermediate model</h3>
+<p>You now hold the intermediate model: every major protocol, the pain that
+birthed it, and its wire format.</p>
+<p><strong>Say it back.</strong> Without using the words <em>push</em>, <em>pull</em> or <em>polling</em>, tell
+Asha why her order screen used to be both slow and wasteful at the same
+time, and what changed.</p>
+<details><summary>A good answer sounds like</summary>
+"Her phone used to ask 'anything new?' every two seconds, and almost every
+answer was 'no'. Each ask cost a full request for nothing, and news could
+still sit for two seconds before the next ask. Now the phone opens one line
+and stays quiet. Tiffin speaks the moment there is news, so the screen is
+fresher and the server does almost no work."
+</details>
+
+<p>What you cannot yet do is defend a choice under failure conditions. That is
+the engineering layer.</p>
+</blockquote>
+<hr />
+<h1 id="readme-engineering-model">ENGINEERING MODEL</h1>
+<h2 id="readme-11-what-breaks-and-what-does-each-protocol-do-about-it">11. What breaks, and what does each protocol do about it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six things go wrong for Tiffin. Each one is a short
+story: what happened, what you would see, why, and which guarantee survived.
+The playground's chaos controls run three of them live.</p>
+</blockquote>
+<p>The four requirements from section 5 get real here. The playground's <strong>chaos
+controls</strong> (&quot;Cut the connection&quot;, and the server-down and endpoint-down
+scenarios) run scenarios 1, 2 and 4 live.</p>
+<h3 id="readme-111-what-happens-when-the-post-times-out">11.1 What happens when the POST times out?</h3>
+<p>This one hits every synchronous protocol. Asha taps &quot;place order&quot;. Dev's app
+sends the request and the connection dies before the response comes back. To
+watch it, press the playground's &quot;Cut the connection&quot; control while a reply is
+in flight.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> The request timed out. Which of these is true? (a) Tiffin
+never received the order. (b) Tiffin placed the order and only the reply
+died. (c) You cannot tell.</p>
+<details><summary>Reveal</summary>
+
+<p><strong>(c), and that is the whole problem.</strong> One round trip carries both the
+action and its confirmation. When the trip is cut, the client <em>cannot
+distinguish</em> &quot;server never got it&quot; from &quot;server did it; reply died&quot;.</p>
+<p>If you said (a), &quot;a timeout means it failed&quot;, you are the reason Asha gets
+charged twice. The obvious response is to retry. But a blind retry of
+<code>POST /orders</code> double-orders.</p>
+</details>
+
+</blockquote>
+<p>The fix works on REST, GraphQL and gRPC alike. The client sends an
+<strong>idempotency key</strong>: a client-generated unique ID. The server stores the key
+together with the result, and on a repeat it replays the stored result instead
+of doing the work again. Stripe's API works exactly this way.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Piece</th>
+  <th>In words</th>
+  <th>On the wire</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the key</td>
+  <td>a unique ID the client makes up <em>before</em> the first attempt</td>
+  <td><code>Idempotency-Key: a91f…</code></td>
+</tr>
+<tr>
+  <td>the store</td>
+  <td>server remembers key → result</td>
+  <td>a row per key</td>
+</tr>
+<tr>
+  <td>the replay</td>
+  <td>same key again, same stored answer, no second order</td>
+  <td>identical response</td>
+</tr>
+</tbody>
+</table></div>
+<p>What did the protocol keep? At-least-once <em>attempt</em>. What must you add
+yourself? Exactly-once <em>effect</em>. It is the same medicine as the consumer side of
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>, and this problem follows you
+across every protocol in this lab.</p>
+<h3 id="readme-112-what-happens-when-the-websocket-dies-on-a-moving-train">11.2 What happens when the WebSocket dies on a moving train?</h3>
+<p>Asha is on a train, watching Arjun's location move on a WebSocket. The train
+enters a tunnel. In the playground, run WebSocket and press &quot;Cut the
+connection (train tunnel)&quot; mid-stream.</p>
+<p>What happens? Arjun's location updates silently stop. Neither side is told
+promptly. TCP death is <em>discovered</em>, not announced. So both ends need
+<strong>heartbeats</strong> (ping/pong) to notice within seconds.</p>
+<p>Then Dev's client must <strong>reconnect with exponential backoff plus jitter</strong>. Why
+jitter? Because 10k clients redialing simultaneously after a server restart is
+a self-inflicted DDoS. Engineers call that the <em>thundering herd</em>. Then the
+client must <strong>resynchronize</strong>: either re-fetch full state (&quot;where is Arjun
+<em>now</em>?&quot;) or replay from a last-seen sequence number.</p>
+<p>What did the protocol keep? Nothing. WebSocket gives you a pipe, not delivery
+semantics. The recovery story is application code. This is the single most
+under-estimated cost of choosing WebSockets. SSE's built-in <code>Last-Event-ID</code>
+reconnect is precisely this lesson, pre-baked for the one-way case.</p>
+<h3 id="readme-113-what-happens-when-a-graphql-query-is-hostile-or-merely-naive">11.3 What happens when a GraphQL query is hostile, or merely naive?</h3>
+<p>Someone sends a deeply nested query against Tiffin's unprotected resolvers.
+One request fans out to thousands of database queries (N+1 at each level), or
+an exponentially exploding join. One client request, whole-backend outage.</p>
+<p>Why? The protocol's core feature, that the <em>client</em> composes the query, is also
+its attack surface. REST's fixed endpoints made cost predictable per endpoint.
+GraphQL removes that ceiling.</p>
+<p>The production response is DataLoader-style batching, query depth limits, cost
+analysis before execution, and persisted-queries-only for public APIs. What was
+traded? Server-controlled cost was exchanged for client flexibility. You must
+claw it back explicitly.</p>
+<h3 id="readme-114-what-happens-when-the-webhook-endpoint-is-down-for-five-minutes">11.4 What happens when the webhook endpoint is down for five minutes?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> PayFlow POSTs <code>payment.succeeded</code> for Asha's order. Tiffin is
+mid-deploy and returns 503 for 5 minutes. Is the event lost? What arrives
+later, and in what order relative to a <code>refund.issued</code> fired 1 minute after
+it?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Not lost.</strong> No 2xx means the provider queues the event and retries with
+backoff (Stripe: up to about 3 days). But when Tiffin recovers, the retried
+<code>payment.succeeded</code> may arrive <em>after</em> the fresher <code>refund.issued</code>. Retries
+destroy ordering, and overlapping retries also produce duplicates.</p>
+<p>If you said &quot;lost, the server was down&quot;, you forgot that PayFlow keeps a
+mailbox on <em>its</em> side. If you said &quot;they arrive in the order they happened&quot;,
+you trusted the doorbell to remember the sequence. It does not.</p>
+<p>So a correct webhook consumer does four things. (a) It verifies the
+signature. (b) It acks 2xx immediately and processes asynchronously. (c) It
+dedupes by event ID. (d) It never trusts arrival order: either it uses the
+event's own timestamp or sequence, or it treats the webhook as a <em>hint</em> and
+re-fetches current truth from the provider's API (&quot;trust but verify&quot;).</p>
+<p>Kept: at-least-once delivery. Never promised: exactly-once, in-order.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-115-what-happens-when-the-consumer-is-slow">11.5 What happens when the consumer is slow?</h3>
+<p>Meera's kitchen dashboard consumes 10 events/s from a server producing
+1,000/s. Streams and queues both meet this.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> After one second, 990 events have arrived faster than
+Meera's screen can draw them. Where are they?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Somebody is holding them, and you did not choose who.</strong> There are only
+three places the difference can go: unbounded server-side buffering (memory
+death), dropping (data loss), or <strong>backpressure</strong> (telling the producer to
+slow down).</p>
+<p>If you said &quot;the network slows the producer automatically&quot;, that is true for
+raw TCP and only raw TCP. The table below says where each protocol lands.</p>
+</details>
+
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>Protocol</th>
+  <th>Where the difference goes</th>
+  <th>What you notice</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>raw TCP</td>
+  <td>backpressure is built in: the window mechanism; a full receiver stalls the sender</td>
+  <td>the sender blocks</td>
+</tr>
+<tr>
+  <td>WebSocket</td>
+  <td>inherits TCP's backpressure</td>
+  <td>your <em>application</em> rarely notices a full send-buffer until memory grows</td>
+</tr>
+<tr>
+  <td>gRPC streaming</td>
+  <td>exposes per-stream flow control</td>
+  <td>you can act on it</td>
+</tr>
+<tr>
+  <td>Kafka</td>
+  <td>sidesteps it: the log persists to disk and slow consumers simply lag, visibly</td>
+  <td><em>consumer lag</em>, the same &quot;how far behind is the read model?&quot; metric from <a href="../51-cqrs/notes.html#readme">cqrs</a></td>
+</tr>
+</tbody>
+</table></div>
+<p>The insight about guarantees: &quot;the mailbox never fills&quot; is an illusion. Every
+real mailbox has a size, and you must choose who suffers.</p>
+<h3 id="readme-116-what-happens-when-the-network-partitions">11.6 What happens when the network partitions?</h3>
+<p>From <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>: the link between Dev's app and Tiffin's
+servers tears, for all of them at once.</p>
+<p>Synchronous protocols (REST, GraphQL, gRPC, WebSocket) all fail <em>visibly</em>, with
+errors and timeouts. Recovery is retry plus idempotency (11.1). Asynchronous
+messaging fails <em>invisibly</em>. Producers keep publishing happily. Consumers just
+fall behind. The queue absorbs the partition.</p>
+<p>That is the async superpower and its trap in one. Nothing errors, so only
+<strong>lag monitoring</strong> tells you something is wrong. Webhooks sit between: the
+<em>provider</em> eats the partition via its retry queue.</p>
+<h3 id="readme-the-six-failures-side-by-side">The six failures side by side</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>What broke for Tiffin</th>
+  <th>Where to watch</th>
+  <th>The protocol kept</th>
+  <th>You must add</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>11.1</td>
+  <td>Asha's order POST timed out</td>
+  <td>&quot;Cut the connection&quot; mid-reply</td>
+  <td>at-least-once <em>attempt</em></td>
+  <td>idempotency key → exactly-once <em>effect</em></td>
+</tr>
+<tr>
+  <td>11.2</td>
+  <td>WebSocket died in a tunnel</td>
+  <td>&quot;Cut the connection (train tunnel)&quot; during WebSocket</td>
+  <td>nothing: a pipe, not delivery</td>
+  <td>heartbeats, backoff + jitter, resync</td>
+</tr>
+<tr>
+  <td>11.3</td>
+  <td>a hostile GraphQL query</td>
+  <td>not in the playground</td>
+  <td>client flexibility</td>
+  <td>batching, depth and cost limits, persisted queries</td>
+</tr>
+<tr>
+  <td>11.4</td>
+  <td>PayFlow's endpoint at Tiffin returned 503</td>
+  <td>&quot;Your endpoint goes down (webhook)&quot;</td>
+  <td>at-least-once delivery</td>
+  <td>signature check, fast ack, dedupe by event ID, ignore arrival order</td>
+</tr>
+<tr>
+  <td>11.5</td>
+  <td>Meera's screen fell 990 events/s behind</td>
+  <td>&quot;Consumer takes a nap (queue)&quot;</td>
+  <td>depends on the protocol (table above)</td>
+  <td>a decision about who suffers</td>
+</tr>
+<tr>
+  <td>11.6</td>
+  <td>the network partitioned</td>
+  <td>any scenario, server down</td>
+  <td>sync: visible errors; async: nothing</td>
+  <td>lag monitoring</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-can-you-honestly-promise">12. What can you honestly promise?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> No protocol delivers exactly once. Ordering only holds
+inside one connection. Someone has to notice failures, and every choice
+traded something away. Two laws hold across all of them.</p>
+</blockquote>
+<p>Pull the threads together. For any protocol choice, be able to fill this
+ledger.</p>
+<h3 id="readme-is-delivery-guaranteed">Is delivery guaranteed?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Family</th>
+  <th>The honest answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Synchronous protocols (REST, GraphQL, gRPC, WebSocket)</td>
+  <td>no; you learn of failure and must retry</td>
+</tr>
+<tr>
+  <td>Queues and webhooks</td>
+  <td>at-least-once; duplicates are contractual</td>
+</tr>
+<tr>
+  <td>Anything over a network</td>
+  <td>exactly-once <em>delivery</em> is physically impossible over a lossy network; exactly-once <em>effect</em> is achievable, and only via idempotency at the receiver</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> A vendor's brochure promises &quot;exactly-once delivery&quot;. Is that
+possible, and if it works, how must it be working?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Not as delivery. Only as effect.</strong> Over a network that can lose the reply,
+the sender can never know whether the last message landed, so it must resend,
+so the receiver may see it twice. The only way &quot;exactly once&quot; can be true is
+that the receiver recognises the repeat and ignores it. That is idempotency
+at the receiver, wearing a brand name.</p>
+<p>If you said &quot;Kafka has an exactly-once mode&quot;, look at how it does it: the
+producer numbers its messages and the broker drops any number it has already
+seen. Same trick, inside the pipeline.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-is-ordering-guaranteed">Is ordering guaranteed?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Where</th>
+  <th>The honest answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Within one TCP connection or stream</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>Across reconnects, retries, parallel requests, webhook redeliveries</td>
+  <td><strong>no</strong>; sequence numbers or versioning are your job</td>
+</tr>
+<tr>
+  <td>Kafka</td>
+  <td>per-partition only</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-who-notices-failure">Who notices failure?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Style</th>
+  <th>Who notices, and when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Synchronous</td>
+  <td>the caller, immediately (timeout)</td>
+</tr>
+<tr>
+  <td>Asynchronous</td>
+  <td>nobody, until lag or dead-letter-queue monitoring fires</td>
+</tr>
+<tr>
+  <td>Persistent connections</td>
+  <td>nobody, until heartbeats notice</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-was-traded">What was traded?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Protocol</th>
+  <th>Gave up</th>
+  <th>Got</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>REST</td>
+  <td>flexibility</td>
+  <td>universality</td>
+</tr>
+<tr>
+  <td>GraphQL</td>
+  <td>server cost-control</td>
+  <td>client flexibility</td>
+</tr>
+<tr>
+  <td>gRPC</td>
+  <td>human debuggability</td>
+  <td>speed and types</td>
+</tr>
+<tr>
+  <td>WebSocket</td>
+  <td>HTTP's middleware and statelessness</td>
+  <td>bidirectional latency</td>
+</tr>
+<tr>
+  <td>Queues</td>
+  <td>immediacy of answers</td>
+  <td>decoupling in time</td>
+</tr>
+<tr>
+  <td>UDP</td>
+  <td>reliability</td>
+  <td>a latency floor</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-the-two-laws-that-hold-for-every-protocol">The two laws that hold for every protocol</h3>
+<ol>
+<li><strong>Timeout, retry and idempotency are one atom.</strong> A retry without a timeout
+never fires. A timeout without a retry just fails harder. A retry without
+idempotency corrupts data. Every production protocol stack implements all
+three, or it is wrong.</li>
+<li><strong>Any persistent connection is distributed state.</strong> The moment a connection
+outlives one request, some server <em>holds</em> something for a specific client,
+and you own its lifecycle: discovery, failover, resync. Stateless
+request/response is what you give up, knowingly or not.</li>
+</ol>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-engineering-model">✅ Checkpoint: end of the engineering model</h3>
+<p>You can now defend a protocol choice under failure questioning.</p>
+<p><strong>Say it back.</strong> Priya's checkout call timed out. In two sentences, say what
+she knows about Asha's order and what her code must do next.</p>
+<details><summary>A good answer sounds like</summary>
+"She knows nothing: the order might never have arrived, or it might be placed
+and only the reply died. So she retries with the same key she attached the
+first time, and the server, seeing that key again, returns the answer it
+already stored instead of placing a second order."
+</details>
+
+<p>Next: proof by running code, then the production layer, meaning what real
+companies actually deploy.</p>
+</blockquote>
+<hr />
+<h1 id="readme-production-model">PRODUCTION MODEL</h1>
+<h2 id="readme-13-which-lines-in-the-code-matter">13. Which lines in the code matter?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three single-file Java programs, no build tool. Each one
+proves one fact the whole lab rests on: HTTP is text, round trips dominate,
+and polling pays twice.</p>
+</blockquote>
+<p>Three single-file, JDK-only Java programs live in <code>experiments/</code>. No build
+tool, no dependencies. Run each with <code>java experiments/Exp0N*.java</code>. Each
+proves one load-bearing fact.</p>
+<p><strong><code>Exp01HttpIsJustText.java</code></strong> starts a real HTTP server, then talks to it with
+a <strong>raw socket</strong>, printing every byte in both directions. The load-bearing
+lines are the hand-typed request string (HTTP is text you could type) and the
+demo that one <code>read()</code> is <em>not</em> one message. That is section 4's framing
+problem, live. The program parses <code>Content-Length</code> to know where the message
+ends, exactly as every HTTP library on earth does.</p>
+<p><strong><code>Exp02RoundTrips.java</code></strong> runs one server with an artificial 30 ms network
+latency. It fetches Tiffin's home screen as 4 dependent REST calls versus 1
+aggregated call. The load-bearing line is the wall-clock ratio.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Version</th>
+  <th>Time the run showed</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>4 dependent calls</td>
+  <td>~135 ms</td>
+  <td>four commutes at 30 ms each, plus work</td>
+</tr>
+<tr>
+  <td>1 aggregated call</td>
+  <td>~34 ms</td>
+  <td>one commute</td>
+</tr>
+<tr>
+  <td>ratio</td>
+  <td>~4×</td>
+  <td><em>round trips, not bytes,</em> dominate: section 10.4's justification for GraphQL, in numbers</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong><code>Exp03PollVsPush.java</code></strong> fires one event at a random moment. A poller (every
+1 s) races an SSE stream to detect it. The load-bearing output is requests
+spent versus detection latency. Polling pays <em>both</em> costs; push pays neither.
+That is section 10.6's justification for WebSocket and SSE, in numbers. The
+SSE client is a raw socket reading <code>data:</code> lines, so you also <em>see</em> section
+10.7's wire format for real.</p>
+<h2 id="readme-14-what-should-you-predict-before-each-experiment">14. What should you predict before each experiment?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Guess first, run second, then read the epilogue each
+program prints. Then break things in the playground.</p>
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Predict before running</th>
+  <th>Command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Two responses sent back-to-back: how many <code>read()</code> calls see them?</td>
+  <td><code>java experiments/Exp01HttpIsJustText.java</code></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>4 dependent calls at 30 ms RTT vs 1 call: your guess at the ratio?</td>
+  <td><code>java experiments/Exp02RoundTrips.java</code></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Poll every 1 s: average detection delay? Requests wasted?</td>
+  <td><code>java experiments/Exp03PollVsPush.java</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>All three print a <code>WHAT YOU JUST SAW</code> epilogue tying the numbers back to the
+sections above. Then open <code>visualization.html</code> and run the chaos scenarios:
+section 11.2's dropped WebSocket, and section 11.4's downed webhook endpoint.
+Predict, run, read the verdict.</p>
+<h2 id="readme-15-what-do-real-systems-actually-deploy">15. What do real systems actually deploy?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Walk the five questions as a decision tree, then check
+your answers against what Stripe, Netflix, Slack and the rest publicly run.
+Then learn what the on-call engineer watches for each family.</p>
+</blockquote>
+<h3 id="readme-the-decision-procedure-the-five-questions-operationalized">The decision procedure: the five questions, operationalized</h3>
+<p>Start at the top with Priya's question, &quot;who needs to talk?&quot;, and follow the
+branches.</p>
+<pre class="mermaid">flowchart TD
+    A[Who needs to talk?] --&gt; B{Third parties /&lt;br&gt;public API?}
+    B -- yes --&gt; C{Diverse clients composing&lt;br&gt;their own data shapes?}
+    C -- no --&gt; REST[REST + JSON&lt;br&gt;boring and right]
+    C -- yes --&gt; GQL[GraphQL&lt;br&gt;+ cost limits]
+    B -- no: internal --&gt; D{Need an answer&lt;br&gt;right now?}
+    D -- no --&gt; Q[Queue / event log&lt;br&gt;Kafka · RabbitMQ · SQS]
+    D -- yes --&gt; E{Server must push?}
+    E -- no --&gt; G[gRPC internal&lt;br&gt;REST if humans debug it]
+    E -- yes --&gt; F{Two-way traffic?}
+    F -- no --&gt; SSE[SSE&lt;br&gt;gRPC stream if internal]
+    F -- yes --&gt; WS[WebSocket]
+    A --&gt; H{SaaS notifying&lt;br&gt;customer systems?} -- yes --&gt; WH[Webhooks&lt;br&gt;+ signatures + retries]
+    A --&gt; I{Live media / game state,&lt;br&gt;loss OK, delay not?} -- yes --&gt; U[UDP · WebRTC · QUIC]
+</pre>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Stripe employs excellent engineers and knows gRPC well. Why
+does its public API speak REST and not gRPC?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Because its callers are strangers.</strong> Integrators expect <code>curl</code>-able JSON
+they can poke at in a terminal. A <code>.proto</code> file and a codegen step are
+friction for every one of thousands of merchants. Stripe exposes REST on
+purpose (section 10.5), and sends events out with webhooks.</p>
+<p>If you said &quot;gRPC is slower over the public internet&quot;, that is not it. gRPC
+is fast anywhere. The decision is about whose code sits at the other end,
+which is axis ④ and the &quot;third parties?&quot; branch above.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-who-runs-what-and-why">Who runs what, and why?</h3>
+<p>All of these are publicly documented; check them against the companies' own
+engineering blogs.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Who</th>
+  <th>Runs what</th>
+  <th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Stripe / GitHub / Twilio</strong></td>
+  <td>REST for the public API, plus <strong>webhooks</strong> for events out. GitHub <em>additionally</em> offers GraphQL (v4)</td>
+  <td>curl-able, cacheable, stable for strangers; GraphQL for integrators with diverse shapes. This trio <em>is</em> the standard SaaS posture: REST in, webhooks out</td>
+</tr>
+<tr>
+  <td><strong>Netflix / Uber / Spotify</strong></td>
+  <td>gRPC (or similar RPC) between internal microservices; REST or GraphQL only at the public edge</td>
+  <td>Uber's driver apps stream location over persistent connections; Netflix's edge speaks HTTP to your TV and gRPC behind it</td>
+</tr>
+<tr>
+  <td><strong>Slack / Figma / trading platforms</strong></td>
+  <td>WebSockets for live two-way UI, with exactly section 11.2's machinery (heartbeats, backoff + jitter, resync-on-reconnect)</td>
+  <td>plus a pub/sub bus behind the socket tier, so any server can reach any user's connection</td>
+</tr>
+<tr>
+  <td><strong>OpenAI / Anthropic APIs</strong></td>
+  <td>SSE for token streaming</td>
+  <td>one-way, HTTP-native, proxy-friendly: the protocol lesson hiding in your daily tools</td>
+</tr>
+<tr>
+  <td><strong>Facebook</strong></td>
+  <td>invented GraphQL; used MQTT in Messenger</td>
+  <td>GraphQL for section 10.4's pain; MQTT for battery-cheap mobile push</td>
+</tr>
+<tr>
+  <td><strong>Google / Cloudflare / Meta edges</strong></td>
+  <td>HTTP/3 over QUIC to browsers</td>
+  <td>no head-of-line stall, one handshake</td>
+</tr>
+<tr>
+  <td><strong>Every event-driven backend you have studied</strong> (<a href="../51-cqrs/notes.html#readme">cqrs</a>, <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>, <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>)</td>
+  <td>Kafka or a broker as the internal event backbone</td>
+  <td>the mailbox, at company scale</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-does-the-on-call-engineer-actually-watch">What does the on-call engineer actually watch?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Family</th>
+  <th>What the on-call watches</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>REST / GraphQL / gRPC</td>
+  <td>p99 latency, error rates by status or code, retry storms</td>
+</tr>
+<tr>
+  <td>WebSocket / SSE</td>
+  <td>concurrent-connection count (a <em>capacity</em> dimension HTTP never had: connections, not requests per second), reconnect-rate spikes (deploys!), message delivery lag. Deploys need connection draining</td>
+</tr>
+<tr>
+  <td>Webhooks</td>
+  <td>delivery success rate, retry-queue depth, consumer endpoint p99 (slow consumers back up <em>your</em> retry queue), signature failures (someone is probing)</td>
+</tr>
+<tr>
+  <td>Queues</td>
+  <td>consumer lag (the metric), DLQ depth, broker disk</td>
+</tr>
+<tr>
+  <td>Everything</td>
+  <td>timeout budgets end to end. A 30 s client timeout in front of a 60 s downstream timeout is a lie someone will debug at 3 a.m.</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-did-this-lab-intentionally-leave-out">What did this lab intentionally leave out?</h3>
+<p>Each of these is real, and each is a rabbit hole: TLS and security details
+beyond signatures; service meshes (Envoy and Istio moving retries and timeouts
+out of app code); API gateways; schema-evolution discipline for protobuf and
+GraphQL; OpenAPI codegen closing half of gRPC's type-safety gap on REST; AMQP
+wire details; gRPC deadlines and cancellation propagation; HTTP caching depth
+(<code>ETag</code> and conditional requests); WebTransport (the QUIC-era successor
+candidate to WebSockets).</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-production-model">✅ Checkpoint: end of the production model</h3>
+<p>You can walk the decision tree, name who runs what, and say what each
+family's on-call dashboard shows.</p>
+<p><strong>Say it back.</strong> PayFlow, Meera's kitchen screen, and the billing service
+each ended up with a different protocol. In one sentence each, say why the
+other shapes would have been wrong.</p>
+<details><summary>A good answer sounds like</summary>
+"PayFlow lives outside Tiffin, so it needs a doorbell it can ring at Tiffin's
+address, not an open line Tiffin cannot hold open to a stranger. Meera's
+screen only listens, so a one-way stream over ordinary HTTP is enough, and it
+reconnects by itself. Billing may be down when an order lands, so only the
+mailbox keeps the message until it is back."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-16-where-are-the-exercises">16. Where are the exercises?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, from explaining it back to designing all of
+Tiffin's protocols. Try each before reading the answer.</p>
+</blockquote>
+<p>See <a href="notes.html#exercises"><code>EXERCISES.md</code></a>: eight rungs from &quot;explain it back&quot; to
+&quot;design Tiffin's full protocol architecture&quot;. Attempt each before opening
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<h2 id="readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Everything with a name sits on TCP or UDP, and most of it
+sits on HTTP. Six pairs of names get confused; here is the one sentence that
+separates each pair, and five labs to type next.</p>
+</blockquote>
+<p>Read the map top to bottom: the transport floor, then what stands on it.</p>
+<pre class="mermaid">flowchart TD
+    subgraph floor[Transport floor]
+      TCP[TCP] --- UDP[UDP] --- QUIC[QUIC]
+    end
+    TCP --&gt; HTTP[HTTP/1.1→2→3]
+    HTTP --&gt; REST --&gt; GQL[GraphQL]
+    HTTP --&gt; WH[Webhooks]
+    HTTP --&gt; SSE
+    HTTP --&gt;|Upgrade| WS[WebSocket]
+    HTTP --&gt; HTTP2[HTTP/2] --&gt; GRPC[gRPC]
+    UDP --&gt; RTC[WebRTC]
+    TCP --&gt; MQ[AMQP · MQTT · Kafka]
+    MQ -.-&gt; OB[transactional-outbox ✓]
+    MQ -.-&gt; ES[event-sourcing ✓]
+    style OB stroke-dasharray: 5 5
+    style ES stroke-dasharray: 5 5
+</pre>
+<h3 id="readme-which-pairs-get-confused-and-what-separates-them">Which pairs get confused, and what separates them?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Pair</th>
+  <th>The one-sentence split</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>WebSocket vs socket</td>
+  <td>a socket is the OS byte-pipe primitive; a WebSocket is a message protocol layered on it via an HTTP handshake</td>
+</tr>
+<tr>
+  <td>REST vs HTTP</td>
+  <td>HTTP is the protocol; REST is a discipline for using it</td>
+</tr>
+<tr>
+  <td>gRPC vs GraphQL</td>
+  <td>near-opposite tools that sound alike: gRPC is fixed typed functions for <em>internal</em> speed; GraphQL is client-composed queries for <em>frontend</em> flexibility</td>
+</tr>
+<tr>
+  <td>SSE vs long polling</td>
+  <td>long polling re-issues a request per event; SSE keeps one response open for many events</td>
+</tr>
+<tr>
+  <td>Webhook vs WebSocket</td>
+  <td>a webhook is a per-event HTTP call <em>to you</em> (server to server, no standing connection); a WebSocket is a standing two-way pipe</td>
+</tr>
+<tr>
+  <td>Kafka vs RabbitMQ</td>
+  <td>a replayable shared log vs a delete-on-ack task mailbox</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-should-you-learn-next">What should you learn next?</h3>
+<p>Ready to type:</p>
+<ul>
+<li><code>/learn io-multiplexing</code>: how one server <em>holds</em> 100k WebSockets (epoll,
+event loops; also queued from
+<a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a>).</li>
+<li><code>/learn kafka</code>: the event log's internals: partitions, consumer groups,
+exactly-once.</li>
+<li><code>/learn http-caching</code>: the deepest unused superpower of the REST choice.</li>
+<li><code>/learn api-versioning</code>: evolving every contract in this lab without
+breaking clients.</li>
+<li><code>/learn tls</code>: what the <code>s</code> in every URL above actually does.</li>
+</ul>
+<h2 id="readme-18-glossary-where-was-each-word-earned">18. Glossary: where was each word earned?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every term in the lab, one line each, in order of
+appearance, with the section where Priya first bumped into it.</p>
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>socket</td>
+  <td>OS endpoint for one network conversation; write bytes in, peer reads them out</td>
+  <td>3, 7</td>
+</tr>
+<tr>
+  <td>framing</td>
+  <td>knowing where one message ends and the next begins in a byte stream</td>
+  <td>4</td>
+</tr>
+<tr>
+  <td>protocol</td>
+  <td>the shared rulebook of a conversation, independent of any implementation</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>TCP</td>
+  <td>transport giving a reliable, ordered byte stream (retransmits, reorders)</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>UDP</td>
+  <td>transport sending independent packets: no delivery/order promise, no stalls</td>
+  <td>7, 10.10</td>
+</tr>
+<tr>
+  <td>transport</td>
+  <td>the byte-delivery layer (TCP/UDP) beneath meaning</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>request/response</td>
+  <td>client asks, server answers, done; server never speaks first</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>round trip (RTT)</td>
+  <td>out-and-back time, paid per exchange; dominates perceived latency</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>push / pull</td>
+  <td>server initiates delivery vs client keeps asking</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>serialization</td>
+  <td>objects ↔ bytes (JSON, Protocol Buffers)</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>API / client / server / header / endpoint / payload / handshake</td>
+  <td>see the three small tables in section 7</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>idempotent</td>
+  <td>repeating the action changes nothing after the first time</td>
+  <td>7, 11.1</td>
+</tr>
+<tr>
+  <td>verb / status code</td>
+  <td>HTTP's shared action names (GET/POST…) and outcome numbers (2xx/4xx/5xx)</td>
+  <td>10.2</td>
+</tr>
+<tr>
+  <td>head-of-line blocking</td>
+  <td>one stalled item holding up unrelated items behind it</td>
+  <td>10.2</td>
+</tr>
+<tr>
+  <td>HTTP/2, HTTP/3, QUIC</td>
+  <td>multiplexed HTTP on TCP; HTTP rebuilt on QUIC (UDP) to un-stall streams</td>
+  <td>10.2</td>
+</tr>
+<tr>
+  <td>REST</td>
+  <td>resource-oriented, stateless discipline for HTTP APIs</td>
+  <td>10.3</td>
+</tr>
+<tr>
+  <td>stateless</td>
+  <td>each request self-contained; any server can answer it</td>
+  <td>10.3</td>
+</tr>
+<tr>
+  <td>SOAP</td>
+  <td>2000s XML RPC predecessor; enterprise legacy</td>
+  <td>10.3</td>
+</tr>
+<tr>
+  <td>over-/under-fetching</td>
+  <td>getting unneeded fields / needing extra calls: REST's mobile pain</td>
+  <td>10.4</td>
+</tr>
+<tr>
+  <td>GraphQL</td>
+  <td>client-composed typed queries, one round trip, one endpoint</td>
+  <td>10.4</td>
+</tr>
+<tr>
+  <td>schema / introspection</td>
+  <td>the typed contract; clients querying the contract itself</td>
+  <td>10.4</td>
+</tr>
+<tr>
+  <td>N+1</td>
+  <td>one query per list item: the resolver catastrophe pattern</td>
+  <td>10.4, 11.3</td>
+</tr>
+<tr>
+  <td>RPC</td>
+  <td>making a network call look like a function call</td>
+  <td>10.5</td>
+</tr>
+<tr>
+  <td>gRPC</td>
+  <td>protobuf + HTTP/2 + streaming RPC for internal services</td>
+  <td>10.5</td>
+</tr>
+<tr>
+  <td>Protocol Buffers</td>
+  <td>compact binary schema-driven serialization with codegen</td>
+  <td>10.5</td>
+</tr>
+<tr>
+  <td>unary / streaming</td>
+  <td>one-shot RPC vs message streams (server-, client-, bidirectional)</td>
+  <td>10.5</td>
+</tr>
+<tr>
+  <td>polling / long polling</td>
+  <td>ask repeatedly / server holds the ask open until news</td>
+  <td>10.6</td>
+</tr>
+<tr>
+  <td>WebSocket</td>
+  <td>persistent two-way message pipe born from an HTTP Upgrade</td>
+  <td>10.6</td>
+</tr>
+<tr>
+  <td>Upgrade / 101</td>
+  <td>the handshake that switches a connection off HTTP</td>
+  <td>10.6</td>
+</tr>
+<tr>
+  <td>SSE</td>
+  <td>never-ending HTTP response carrying one-way <code>data:</code> events</td>
+  <td>10.7</td>
+</tr>
+<tr>
+  <td>EventSource / Last-Event-ID</td>
+  <td>browser SSE client; resume marker for replay on reconnect</td>
+  <td>10.7</td>
+</tr>
+<tr>
+  <td>webhook</td>
+  <td>provider POSTs to <em>your</em> URL when an event happens</td>
+  <td>10.8</td>
+</tr>
+<tr>
+  <td>HMAC signature</td>
+  <td>proof a webhook came from the provider, unaltered</td>
+  <td>10.8</td>
+</tr>
+<tr>
+  <td>broker / producer / consumer</td>
+  <td>the mailbox server and its two sides</td>
+  <td>10.9</td>
+</tr>
+<tr>
+  <td>acknowledge (ack)</td>
+  <td>consumer's &quot;safe to delete/advance&quot; signal</td>
+  <td>10.9</td>
+</tr>
+<tr>
+  <td>at-least-once / exactly-once effect</td>
+  <td>delivery may duplicate; idempotency makes effects single</td>
+  <td>10.9, 12</td>
+</tr>
+<tr>
+  <td>AMQP / MQTT</td>
+  <td>broker protocol (RabbitMQ) / featherweight IoT pub/sub</td>
+  <td>10.9</td>
+</tr>
+<tr>
+  <td>QoS 0/1/2</td>
+  <td>MQTT's delivery-guarantee dial</td>
+  <td>10.9</td>
+</tr>
+<tr>
+  <td>event log (Kafka)</td>
+  <td>durable, ordered, replayable stream; consumers track offsets</td>
+  <td>10.9</td>
+</tr>
+<tr>
+  <td>consumer lag</td>
+  <td>how far behind a consumer is: async's health metric</td>
+  <td>11.5</td>
+</tr>
+<tr>
+  <td>WebRTC</td>
+  <td>UDP-based browser media/data, loss-tolerant, latency-first</td>
+  <td>10.10</td>
+</tr>
+<tr>
+  <td>idempotency key</td>
+  <td>client-chosen ID letting a server dedupe retried writes</td>
+  <td>11.1</td>
+</tr>
+<tr>
+  <td>heartbeat / ping-pong</td>
+  <td>periodic proof a silent connection is alive</td>
+  <td>11.2</td>
+</tr>
+<tr>
+  <td>exponential backoff + jitter</td>
+  <td>retry spacing that avoids the thundering herd</td>
+  <td>11.2</td>
+</tr>
+<tr>
+  <td>thundering herd</td>
+  <td>everyone retrying at once, finishing the server off</td>
+  <td>11.2</td>
+</tr>
+<tr>
+  <td>backpressure</td>
+  <td>slowing the producer when the consumer cannot keep up</td>
+  <td>11.5</td>
+</tr>
+<tr>
+  <td>DLQ (dead-letter queue)</td>
+  <td>where messages go after repeated processing failure</td>
+  <td>12, 15</td>
+</tr>
+<tr>
+  <td>connection draining</td>
+  <td>letting connections finish before a deploy kills them</td>
+  <td>15</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<p>What kind of lab is this, and how were its numbers made?</p>
+<h3 id="readme-what-kind-of-lab-is-it">What kind of lab is it?</h3>
+<p>A survey / decision-skill lab, like <a href="../04-database-landscape/notes.html#readme">database-landscape</a>.
+There is no single algorithm to implement. The skill being trained is
+<em>conversation-pattern reasoning</em>: looking at two systems that need to talk and
+knowing which protocol fits, which ones will quietly hurt you, and why.</p>
+<h3 id="readme-what-is-in-the-folder">What is in the folder?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document: the full story, the catalogue, the decision rules</td>
+</tr>
+<tr>
+  <td><code>experiments/</code></td>
+  <td>runnable proofs (plain JDK single-file Java, no build tool) of the three facts everything else rests on</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>interactive protocol playground with predict-then-run scenarios</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code> / <code>SOLUTIONS.md</code></td>
+  <td>eight rungs and their answers</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-labs-does-it-build-on">Which labs does it build on?</h3>
+<ul>
+<li><a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> and <a href="../47-saga/notes.html#readme">saga</a>:
+message queues and at-least-once delivery reappear here as one of the
+protocol choices.</li>
+<li><a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>: networks partition, and every protocol above
+has a story about what happens then (section 11.6).</li>
+</ul>
+<h3 id="readme-how-were-the-numbers-made">How were the numbers made?</h3>
+<p>The layer map is: <strong>beginner model</strong> (sections 1–9), <strong>intermediate model</strong>
+(section 10), <strong>engineering model</strong> (sections 11–12), <strong>production model</strong>
+(sections 13–15). Zero networking knowledge is assumed at the start.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Number</th>
+  <th>Where it came from</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>~135 ms vs ~34 ms, ratio ~4× (section 13)</td>
+  <td>measured by <code>Exp02RoundTrips.java</code> on the machine the lab was written on, with a simulated 30 ms latency; treat the milliseconds as one representative run and the ratio as the durable finding</td>
+</tr>
+<tr>
+  <td>requests spent vs detection latency (section 13)</td>
+  <td>measured by <code>Exp03PollVsPush.java</code>; the event fires at a random moment, so each run differs</td>
+</tr>
+<tr>
+  <td>5,000 req/s, ~97% waste, 2 s staleness (section 10.6)</td>
+  <td>arithmetic from the stated 10,000 clients, 2 s interval and 60 s change rate, not a measurement</td>
+</tr>
+<tr>
+  <td>≈400 ms and ≈600 ms (section 10.4)</td>
+  <td>arithmetic from a 200 ms round trip, verified in shape by experiment 2</td>
+</tr>
+<tr>
+  <td>&quot;who runs what&quot; (section 15)</td>
+  <td>the companies' public engineering blogs; verify against them</td>
+</tr>
+<tr>
+  <td>Stripe's ~3-day webhook retry window (section 11.4)</td>
+  <td>Stripe's public documentation, order of magnitude</td>
+</tr>
+</tbody>
+</table></div>
+<p>The playground's millisecond values are modelled, not captured. Its chaos
+controls are named &quot;Cut the connection (train tunnel)&quot; and &quot;Make news happen
+right now&quot;, plus the scenario &quot;Your endpoint goes down (webhook)&quot;. An earlier
+draft of this document called the first of those &quot;Lost reply&quot; and &quot;Drop
+connection&quot;; the names above are the ones on the buttons.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--communication-protocols">Exercises — communication protocols</h1>
+<p>Climb in order; each rung uses the previous. Attempt before opening
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Rungs 3–7 use the experiments and
+<code>visualization.html</code>; rungs 7–8 are design discussions.</p>
+<h2 id="exercises-rung-1--explain-no-notation-allowed">Rung 1 — Explain (no notation allowed)</h2>
+<p>1a. In plain words a non-engineer would follow: why do polling-based &quot;live&quot;
+features waste money AND feel slow at the same time — and what do push
+protocols change?</p>
+<p>1b. Explain why &quot;just open a TCP socket and send JSON&quot; is not a protocol yet.
+Name the four things that are still missing (§4–§5 if stuck — but try first).</p>
+<p>1c. A colleague says &quot;GraphQL is the modern replacement for REST.&quot; Correct
+them in three sentences.</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>2a. Open <code>visualization.html</code>, pick <strong>Webhook</strong>, press Play. Which lane is
+your system? Who initiates every message? What do the red dots on the bottom
+lane represent, and what does a green ring on the top lane mean?</p>
+<p>2b. In experiment 01's Part 1 output, point to: (i) the framing device in the
+<em>request</em>, (ii) the framing device in the <em>response</em>, (iii) the line that lets
+infrastructure (not just your app) understand the outcome.</p>
+<p>2c. Place each on the five axes (initiation / cardinality / connection
+lifetime / encoding / sync-async): SSE, gRPC unary call, Kafka topic.</p>
+<h2 id="exercises-rung-3--predict-then-run">Rung 3 — Predict, then run</h2>
+<p>3a. <code>experiments/Exp02RoundTrips.java</code> simulates 30 ms latency. Predict the two
+timings and the ratio <strong>before</strong> running. Then edit <code>SIMULATED_RTT</code> to 0.200
+(mobile). Predict again, run again. What changed, what didn't?</p>
+<p>3b. In the visualization, set &quot;news happens every&quot; to <strong>10 s</strong> and run
+<strong>Polling</strong> for ~30 s. Predict first: which counter grows fastest, and what
+will &quot;asks with no news&quot; divided by &quot;client asks&quot; roughly be?</p>
+<p>3c. Run scenario <strong>&quot;Train tunnel (WebSocket)&quot;</strong>, but predict <em>both</em> counters
+before: &quot;reached screen&quot; and &quot;lost forever&quot;. Then run <strong>&quot;Train tunnel, again
+(SSE)&quot;</strong> and explain the difference in one sentence naming the exact protocol
+feature responsible.</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>4a. In <code>experiments/Exp03PollVsPush.java</code>, change <code>POLL_INTERVAL</code> to <code>0.1</code>.
+Predict: what happens to detection latency, and what happens to request
+count? Which production resource did you just spend to buy that latency?
+Now set it to <code>5.0</code> and answer the same. State the general law this
+demonstrates (one sentence).</p>
+<p>4b. In experiment 01 Part 2, change <code>GULP_BYTES</code> from <code>120</code> to <code>4096</code>. Do the
+two responses now arrive &quot;one per read&quot;? Run it. Is that behavior <em>guaranteed</em>,
+or a coincidence of small local messages? Why does this distinction produce
+bugs that only appear in production?</p>
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p>5a. Extend <code>experiments/Exp03PollVsPush.java</code> with a <strong>long-polling</strong> client
+and endpoint (<code>/status-wait</code> that holds the request until the event fires or
+8 s pass) and add it to the race. It should approach SSE's detection latency
+while still being plain request/response. Verify: its detection latency ≈
+SSE's, its request count ≈ 1–2.</p>
+<p>5b. In experiment 01, replace the <code>Content-Length</code> parser with one that
+handles a response with no <code>Content-Length</code> and <code>Connection: close</code> (read
+until the socket closes). Both framing rules are real HTTP — name the third
+one this lab mentioned but didn't implement (hint: SSE).</p>
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p>6a. A teammate ships this webhook endpoint:</p>
+<div class="code"><pre><code class="language-java">@PostMapping(&quot;/callbacks/payflow&quot;)
+ResponseEntity&lt;Void&gt; payflowCallback(@RequestBody String body) {
+    Event event = mapper.readValue(body, Event.class);  // 1
+    if (event.type().equals(&quot;payment.succeeded&quot;)) {     // 2
+        markOrderPaid(event.orderId());                 // 3
+        shipOrder(event.orderId());                     // 4  (takes ~45 s: talks to 3 services)
+    }
+    return ResponseEntity.ok().build();                 // 5
+}
+</code></pre></div>
+<p>Orders occasionally ship twice, and PayFlow's dashboard shows Tiffin's
+endpoint as &quot;degraded, frequent timeouts.&quot; Find <strong>three</strong> distinct protocol-
+level bugs (line numbers), explain the mechanism of each, and fix the design.</p>
+<p>6b. In the visualization, run <strong>WebSocket</strong> with &quot;news every 2 s&quot;, press
+&quot;Cut the connection&quot;, and watch the log. A junior engineer concludes &quot;the
+protocol is broken — it dropped our data.&quot; What is the correct statement of
+whose responsibility the loss is, and what two mechanisms would a production
+client add?</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>7a. Design the reconnect story for Tiffin's order-tracking screen (SSE
+today): the phone sleeps for 3 minutes, reconnects. Requirements: no missed
+transition ever shown out of order, no full-history re-send, server keeps
+≤ 100 events per order. Specify: what the client stores, what it sends on
+reconnect, what the server does in the two cases (history still covers the
+gap / history was truncated).</p>
+<p>7b. Tiffin's checkout POST sometimes times out at 10 s, and support tickets
+show occasional double-charged customers. Using §11.1's machinery, write the
+exact client behavior and server behavior (including what is stored, keyed by
+what, for how long) that makes retrying always safe.</p>
+<h2 id="exercises-rung-8--design-production-scale">Rung 8 — Design (production scale)</h2>
+<p>Tiffin has grown: 2M customers, 40k restaurants, 60k riders, a partner API
+for grocery chains, and a data team. Design the full protocol architecture:</p>
+<ul>
+<li>customer app: browse/search, order placement, live order tracking</li>
+<li>rider app: GPS upstream every 3 s over flaky mobile networks, dispatch
+offers downstream that must be answerable in ≤ 8 s</li>
+<li>restaurant dashboard (browser): new orders appear ≤ 2 s after placement</li>
+<li>partner grocery chains: get order events into <em>their</em> systems</li>
+<li>internal: order-service ↔ pricing-service (5k req/s), plus every order
+event reaching billing, notifications, analytics</li>
+<li>data team: wants every state transition, replayable</li>
+</ul>
+<p>For each edge: pick the protocol, name the runner-up, and state the failure
+mode that most influenced the pick, plus the one metric you'd put on the
+on-call dashboard for it.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<p>Attempt <a href="notes.html#exercises"><code>EXERCISES.md</code></a> first. Rungs 7–8 are worked
+discussions, not single correct answers.</p>
+<h2 id="solutions-rung-1">Rung 1</h2>
+<p><strong>1a.</strong> Polling means asking &quot;anything new?&quot; on a fixed clock. Between asks,
+news just sits there — so the user sees stale data (feels slow). And most
+asks find nothing — but each one still costs a full request: connection,
+authentication, a database check (wastes money). Push flips it: the user's
+device keeps one open channel, and the server speaks only when there <em>is</em>
+news. You pay once for the channel instead of repeatedly for empty answers,
+and news travels the moment it exists.</p>
+<p><strong>1b.</strong> Missing: (1) <strong>framing</strong> — the receiver can't tell where one message
+ends (TCP is a byte stream); (2) <strong>shared meaning</strong> — nobody else's code or
+infrastructure understands your invented phrases; (3) <strong>conversation shapes</strong>
+— broadcast, mailbox, doorbell all have to be hand-built; (4) <strong>failure
+rules</strong> — nothing says what a dropped connection implies or what may be
+safely retried.</p>
+<p><strong>1c.</strong> GraphQL solves one specific REST pain — many round trips and
+over-fetching when diverse frontends aggregate data — not REST in general.
+For public APIs, third-party integrators, and cacheable resources, REST
+remains the better fit (curl-able, CDN-cacheable, per-endpoint cost
+control). They coexist in the same company: GitHub ships both.</p>
+<h2 id="solutions-rung-2">Rung 2</h2>
+<p><strong>2a.</strong> Your system is the <strong>top</strong> lane — in webhook mode you are the
+<em>receiver</em> of calls, i.e. the server, even though you're the &quot;customer&quot; of
+PayFlow. The <strong>provider (bottom)</strong> initiates every data message; your only
+messages are 2xx acknowledgements. Red dots on the bottom lane = events
+occurring at the provider (news you don't know yet). Green ring on top =
+the moment that event was accepted by your endpoint.</p>
+<p><strong>2b.</strong> (i) The blank line (<code>\r\n\r\n</code>) ending the request's headers.
+(ii) <code>Content-Length: 75</code> — exactly 75 body bytes follow. (iii) the status
+line <code>HTTP/1.1 200 OK</code> — a cache, proxy, or monitor knows the outcome
+without understanding the body.</p>
+<p><strong>2c.</strong></p>
+<ul>
+<li>SSE: client-initiated then server-push · one→one, stream of many events ·
+persistent (one never-ending response) · text · synchronous (both alive).</li>
+<li>gRPC unary: pull · one→one, single answer · persistent HTTP/2 connection
+<em>reused</em> across calls, but the call itself is per-request · binary,
+schema-checked · synchronous.</li>
+<li>Kafka topic: push into broker, consumers pull at their own pace · one→many
+(consumer groups) · persistent broker connections · binary · asynchronous
+— the only one of the three where the consumer may be down while the
+producer sends.</li>
+</ul>
+<h2 id="solutions-rung-3">Rung 3</h2>
+<p><strong>3a.</strong> At 30 ms: ~4×30=120+ ms vs ~30+ ms — measured ~135 ms vs ~34 ms,
+ratio ≈ <strong>4×</strong>. At 200 ms: measured ~825 ms vs ~206 ms — the <strong>ratio stays
+~4×</strong> (it's the call count), but the absolute gap grows from ~100 ms to
+~620 ms. Lesson: chattiness is a <em>latency multiplier</em>, so it hurts in
+proportion to how far away your users are.</p>
+<p><strong>3b.</strong> &quot;Client asks&quot; grows fastest (one every 2 s regardless of news);
+wasted/total ≈ 4/5 = <strong>~80%</strong> (one useful poll per 10 s window of five).</p>
+<p><strong>3c.</strong> WebSocket: &quot;lost forever&quot; equals the events that fired during the
+gap (and any mid-flight when it died); SSE: zero lost, all delivered late.
+The responsible feature: SSE's <strong><code>Last-Event-ID</code> reconnect replay</strong> — the
+client tells the server the last event it saw, and the server re-sends
+everything after it; WebSocket has no equivalent, so recovery is app code.</p>
+<h2 id="solutions-rung-4">Rung 4</h2>
+<p><strong>4a.</strong> At 0.1 s: detection latency drops to ~70 ms average (measured
+45–105 ms), and request count grows ~10× — from 4–5 to ~35–41 — so you
+bought latency with server capacity (and phone battery). At 5 s: requests
+drop to 2, latency balloons to ~2 s average (measured 1.0–2.6 s). The law:
+<strong>polling trades staleness against waste on one dial; no setting removes
+both</strong> — removing both requires changing who initiates (push).</p>
+<p><strong>4b.</strong> Probably yes, one response per read (measured: 183 bytes, then
+134 bytes — exactly one response each) — but it is a <strong>coincidence</strong>:
+both responses are small, the server wrote them separately, and loopback
+rarely fragments. Nothing in TCP guarantees it; under load, across real
+networks, with larger bodies, the boundaries move. That's why framing bugs
+pass every local test and explode in production — the classic &quot;works on my
+machine&quot; with a protocol-shaped cause.</p>
+<h2 id="solutions-rung-5">Rung 5</h2>
+<p><strong>5a.</strong> Sketch of the endpoint and client:</p>
+<div class="code"><pre><code class="language-java">// server, a third context alongside /status and /events:
+server.createContext(&quot;/status-wait&quot;, exchange -&gt; {
+    exchange.getRequestBody().readAllBytes();
+    boolean fired = EVENT.await(8, TimeUnit.SECONDS);   // HOLD the request (long poll)
+    byte[] body = (&quot;{\&quot;status\&quot;: \&quot;&quot; + (fired ? &quot;DELIVERED&quot; : &quot;COOKING&quot;) + &quot;\&quot;}&quot;)
+            .getBytes(StandardCharsets.UTF_8);
+    // ... send 200 + Content-Length + body as in /status
+});
+
+// client:
+static void longPoller() throws Exception {
+    HttpClient client = HttpClient.newHttpClient();
+    int requests = 0;
+    while (true) {
+        requests++;
+        HttpRequest req = HttpRequest.newBuilder(
+                URI.create(&quot;http://127.0.0.1:&quot; + port + &quot;/status-wait&quot;)).GET().build();
+        if (client.send(req, HttpResponse.BodyHandlers.ofString()).body().contains(&quot;DELIVERED&quot;)) {
+            LP_RESULT.put(&quot;latency&quot;, (System.nanoTime() - eventFiredAt) / 1e9);
+            LP_RESULT.put(&quot;requests&quot;, requests);
+            return;
+        }
+    }
+}
+</code></pre></div>
+<p>Expected: latency within a few ms of SSE (the request is already parked at
+the server when the event fires), requests 1–2 (one per 8 s hold window).
+Measured: <strong>1 request, ~1 ms</strong> — against SSE's ~0.3 ms and the 1 s poller's
+~750 ms over 5 requests.</p>
+<p><strong>5b.</strong> The third framing rule: a <strong>delimiter</strong> — SSE ends each event with a
+blank line (<code>\n\n</code>); header blocks end with <code>\r\n\r\n</code>. (HTTP also has a
+fourth, chunked transfer encoding — length-prefixed pieces — if you found
+that, better still.)</p>
+<h2 id="solutions-rung-6">Rung 6</h2>
+<p><strong>6a.</strong></p>
+<ol>
+<li><strong>Line 5 reached only after line 4 — the ack is ~45 s late.</strong> Webhook
+providers time out in seconds; a timeout = &quot;not delivered&quot; = retry. Every
+delivery looks failed, hence &quot;degraded&quot;. Fix: <strong>ack first, work later</strong> —
+validate, enqueue, return 200 in milliseconds (the queue from §10.9 is
+exactly the right tool downstream of a webhook).</li>
+<li><strong>No idempotency (lines 3–4).</strong> Since retries are contractual, the same
+event arrives more than once — and each arrival ships the order again.
+Fix: dedupe on the provider's event ID (store processed IDs; skip
+repeats), and make <code>ship_order</code> refuse an already-shipped order
+(state-machine guard), since &quot;at-least-once + non-idempotent = double
+effect&quot; (§11.4, §12).</li>
+<li><strong>No signature verification (line 1).</strong> Anyone who discovers the URL can
+POST <code>payment.succeeded</code> and get free food shipped. Fix: verify the HMAC
+signature header against the shared secret before parsing anything.
+(Bonus 4th: trusting arrival order — a retried <code>payment.succeeded</code> can
+arrive after <code>payment.refunded</code>; re-fetch current truth or compare event
+timestamps before acting.)</li>
+</ol>
+<p><strong>6b.</strong> Correct statement: <em>the protocol never promised delivery</em> — WebSocket
+is a pipe with framing, not a delivery contract; loss during disconnection is
+the application's to handle by design. Production clients add (1) heartbeats</p>
+<ul>
+<li>reconnect with exponential backoff and jitter, and (2) resynchronization —
+sequence-numbered messages with a &quot;give me everything after N&quot; request on
+reconnect (or a full state re-fetch if N is too old).</li>
+</ul>
+<h2 id="solutions-rung-7-worked-discussion">Rung 7 (worked discussion)</h2>
+<p><strong>7a.</strong> Client stores the <strong>last applied event's sequence number</strong> per order
+(monotonic, assigned by the server: 1, 2, 3…). On reconnect it sends it —
+with SSE this is literally <code>Last-Event-ID: 17</code>. Server case A (history
+covers it): replay events 18…now, in order, then continue live — the client
+buffers live events that race the replay and applies strictly by sequence
+number, which is what guarantees no out-of-order display. Server case B
+(truncated, i.e. gap &gt; 100 events): send a <strong>snapshot</strong> (current full order
+state + current sequence number) instead of a replay; client replaces its
+state wholesale and resumes from there. Note this is the
+snapshot-vs-replay design straight from <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>,
+reappearing at the protocol layer — same problem, same solution.</p>
+<p><strong>7b.</strong> Client: generate a UUID <strong>before</strong> the first attempt; send it as
+<code>Idempotency-Key</code> on the attempt <em>and every retry</em> (same key!); retry on
+timeout with backoff, max ~3 attempts, then surface &quot;we're checking your
+order&quot; and reconcile via GET. Server: atomically (unique constraint) record
+the key with the request's outcome <em>in the same transaction as the order
+insert</em>; on a duplicate key, return the stored response without re-executing;
+retain keys ≥ 24 h (Stripe's order of magnitude). Result: any number of
+retries produces exactly one charge and identical responses — the §12 atom
+(timeout + retry + idempotency) fully assembled.</p>
+<h2 id="solutions-rung-8-worked-discussion--defensible-not-unique">Rung 8 (worked discussion — defensible, not unique)</h2>
+<ul>
+<li><strong>Browse/search/order placement (app → backend): REST over HTTP/2-3</strong>, with
+idempotency keys on order placement. Runner-up: GraphQL — adopt it if the
+home screen's aggregation pain (exp 02) shows up across many client types.
+Deciding failure mode: timed-out POST double-ordering (§11.1). Metric: p99
+latency + duplicate-key hit rate (a rising hit rate = users retrying =
+something upstream is slow).</li>
+<li><strong>Order tracking (backend → app): SSE</strong>, sequence numbers per order,
+snapshot fallback (7a). Runner-up: WebSocket — only if the client later
+needs high-frequency upstream too. Deciding failure mode: train-tunnel
+reconnect; SSE's replay is free. Metric: reconnect rate + replay-gap size.</li>
+<li><strong>Rider app: MQTT</strong> (QoS 1 upstream GPS, downstream dispatch offers on a
+per-rider topic), designed for flaky links and battery; last-will detects
+dead riders. Runner-up: WebSocket with app-level acks. Deciding failure
+mode: 60k mostly-idle flaky connections. Metric: undelivered-offer rate
+(offers expiring unanswered) and rider disconnect churn.</li>
+<li><strong>Restaurant dashboard (browser): SSE</strong> (one-way, browser-native,
+reconnect built in; 2 s budget is easy). Runner-up: WebSocket if order
+accept/reject flows get chatty enough to justify it (they're fine as plain
+POSTs). Metric: event delivery lag p99.</li>
+<li><strong>Partner grocery chains: webhooks</strong> (signed, event IDs for dedupe,
+documented retry schedule) + a <strong>GET events feed</strong> as the reconciliation
+path for partners who were down past retry expiry. Runner-up: partner
+pulls from the feed alone (simpler for you, worse freshness). Deciding
+failure mode: partner endpoint down (§11.4). Metric: delivery success
+rate + retry-queue depth per partner.</li>
+<li><strong>order ↔ pricing (5k req/s, needs answer now): gRPC</strong> unary; typed
+contract, cheap encoding, deadline propagation. Runner-up: REST+JSON if
+the team values curl-debuggability over the CPU/latency win. Metric: p99
+with per-call deadlines; deadline-exceeded rate.</li>
+<li><strong>Order events → billing/notifications/analytics/data team: Kafka</strong>, fed
+via the <strong>transactional outbox</strong> (never dual-write, as you learned);
+consumers idempotent; data team replays from offset 0. Runner-up:
+RabbitMQ if replay weren't required — but the data team's &quot;replayable&quot;
+requirement decides it. Metric: consumer lag per group, DLQ depth.</li>
+</ul>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../01-networking-for-developers/notes.html"><small>← Lab 1</small>networking-for-developers</a><a href="../03-io-multiplexing/notes.html" style="text-align:right"><small>Lab 3 →</small>io-multiplexing</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-are-there-ten-ways-to-make-an-api-call">1. Why are there ten ways to make an API call?</a><a href="#readme-2-what-does-priyas-app-need-to-say-and-to-whom">2. What does Priya&#x27;s app need to say, and to whom?</a><a href="#readme-3-why-not-just-connect-and-send-the-data">3. Why not just connect and send the data?</a><a href="#readme-4-what-breaks-when-you-just-send-bytes">4. What breaks when you just send bytes?</a><a href="#readme-5-what-does-priya-actually-need">5. What does Priya actually need?</a><a href="#readme-6-what-is-the-key-idea">6. What is the key idea?</a><a href="#readme-7-what-are-the-words-engineers-use-for-what-just-happened">7. What are the words engineers use for what just happened?</a><a href="#readme-8-which-two-pictures-should-you-carry-and-where-do-they-lie">8. Which two pictures should you carry, and where do they lie?</a><a href="#readme-9-where-can-you-watch-the-shapes-move">9. Where can you watch the shapes move?</a><a href="#readme-10-how-does-each-protocol-actually-work-and-what-pain-made-it">10. How does each protocol actually work, and what pain made it?</a><a href="#readme-11-what-breaks-and-what-does-each-protocol-do-about-it">11. What breaks, and what does each protocol do about it?</a><a href="#readme-12-what-can-you-honestly-promise">12. What can you honestly promise?</a><a href="#readme-13-which-lines-in-the-code-matter">13. Which lines in the code matter?</a><a href="#readme-14-what-should-you-predict-before-each-experiment">14. What should you predict before each experiment?</a><a href="#readme-15-what-do-real-systems-actually-deploy">15. What do real systems actually deploy?</a><a href="#readme-16-where-are-the-exercises">16. Where are the exercises?</a><a href="#readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</a><a href="#readme-18-glossary-where-was-each-word-earned">18. Glossary: where was each word earned?</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

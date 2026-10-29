@@ -1,0 +1,1255 @@
+<!doctype html>
+<html lang="en" data-hub-lab="49-idempotency">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>49. idempotency</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 49 of 71 · Stage 6</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 49 · Work That Spans Services</p><article id="readme"><h1 id="readme-idempotency--one-effect-no-matter-how-many-tries">Idempotency — one effect, no matter how many tries</h1>
+<blockquote>
+<p><strong>Lab contents:</strong> this document · <a href="visualization.html"><code>visualization.html</code></a>
+(interactive: &quot;The Second Tap&quot;) · <a href="notes.html#exercises"><code>EXERCISES.md</code></a> ·
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. No runnable code — the mechanism is
+demonstrated by hand-worked traces here and by the visualization's simulator.</p>
+</blockquote>
+<p>You have met the <em>slogan</em> of this lab many times: eight prior labs end some
+chapter with &quot;…and therefore consumers must be idempotent.&quot; The
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> lab said it about events, the
+<a href="../01-networking-for-developers/notes.html#readme">networking</a> lab measured <em>why</em> (TCP delivers
+bytes to kernels, never outcomes), <a href="../40-raft/notes.html#readme">raft</a> said it about client
+retries of uncommitted entries, and <a href="../43-distributed-locking/notes.html#readme">distributed-locking</a>
+left &quot;idempotency keys&quot; as the explicitly-unfinished half of its honest corner
+(box G). This lab opens the slogan up. Being idempotent is not a checkbox — it
+is a small protocol with three parts that each fail in a specific, measurable
+way when done naively, and one part that no amount of cleverness removes.</p>
+<hr />
+<h2 id="readme-depth-map">Depth map</h2>
+<blockquote>
+<p><strong>BEGINNER MODEL</strong> (§1–§9): why duplicates are mandatory, why guessing
+doesn't work, and the key idea of naming intentions.
+<strong>INTERMEDIATE MODEL</strong> (§10): the mechanism, built four times, each version
+broken by a trace you can watch.
+<strong>ENGINEERING MODEL</strong> (§11–§12): the full failure catalogue and the exact
+statement of what is and is not guaranteed.
+<strong>PRODUCTION MODEL</strong> (§13): Stripe, Kafka, SQS, HTTP semantics, Spring
+shapes, and what to put on a dashboard.</p>
+</blockquote>
+<hr />
+<h2 id="readme-1-why--the-duplicate-is-not-a-bug-it-is-the-price-of-reliability">1. WHY — the duplicate is not a bug, it is the price of reliability</h2>
+<p>When your code sends a request and no answer comes back, there are two
+worlds you cannot tell apart: <em>the request never arrived</em> (safe to resend) and
+<em>the request was processed and only the answer was lost</em> (resending repeats
+it). The <a href="../01-networking-for-developers/notes.html#readme">networking lab</a> measured this
+directly: a timeout elapsing at ≈ your configured limit is the fingerprint of
+silence, and silence carries no information about what the other side did.</p>
+<p>So any client that wants reliability <strong>must retry</strong> — the
+<a href="../02-communication-protocols/notes.html#readme">communication-protocols</a> lab called
+timeout + retry + idempotency &quot;one atom&quot; for exactly this reason. And every
+retry is, from the server's point of view, possibly a brand-new request.
+If nobody solves this, the failure mode is not exotic: it is a customer
+charged twice, an email sent three times, a shipment dispatched again. The
+retry that makes the system reliable is the same act that makes it wrong.</p>
+<h2 id="readme-2-problem--asha-taps-pay-twice">2. PROBLEM — Asha taps Pay twice</h2>
+<p>Asha is buying a ₹2,000 concert ticket in the PayEasy app. She taps <strong>Pay</strong>.
+The app sends <code>POST /payments {amount: 2000, concert: &quot;indie-night&quot;}</code> to the
+PayEasy server. The server charges her card at the bank, saves an order, and
+sends back &quot;success&quot; — but that reply is lost in a tunnel between two cell
+towers. Asha's app shows a spinner for ten seconds, then: <em>&quot;Something went
+wrong. Try again.&quot;</em> She taps <strong>Pay</strong> again.</p>
+<p>The server now receives a second <code>POST /payments {amount: 2000, concert: &quot;indie-night&quot;}</code>. Look at it from the server's chair: this request is
+byte-for-byte a legitimate purchase. There is no field in it that says &quot;I am
+attempt two of an earlier intention.&quot; The server does the only thing it can:
+charges her again. Asha is out ₹4,000, and <em>no component misbehaved</em> — the
+network lost one packet, and everything else worked exactly as designed.</p>
+<p>Two observations that shape everything downstream:</p>
+<ul>
+<li><strong>The duplicate is indistinguishable from a new order by content alone.</strong>
+Maybe Asha genuinely wants two tickets — friends exist. The bytes are
+identical either way.</li>
+<li><strong>Only Asha's phone knows</strong> that the two sends are one intention. The
+knowledge lives at the client, at the moment of the first send.</li>
+</ul>
+<h2 id="readme-3-naive-solution--check-before-charging">3. NAIVE SOLUTION — check before charging</h2>
+<p>The reasonable first fix: before charging, look for evidence you already did.</p>
+<div class="code"><pre><code class="language-sql">-- illustrative, to read, not to run
+SELECT id FROM orders
+ WHERE customer = &#x27;asha&#x27; AND concert = &#x27;indie-night&#x27;
+   AND created_at &gt; now() - interval &#x27;2 minutes&#x27;;
+-- none found? → charge the card, INSERT the order
+</code></pre></div>
+<p>If a recent matching order exists, skip the charge and return it. This is
+<strong>deduplication by guessing</strong>: infer &quot;same intention&quot; from similar content
+close together in time.</p>
+<h2 id="readme-4-failure--three-ways-one-deeper-problem">4. FAILURE — three ways, one deeper problem</h2>
+<p><strong>🔮 Predict:</strong> Asha's app auto-retries after 3 seconds, and her first request
+was merely <em>slow</em>, not lost. Both requests are now inside the server, 3 ms
+apart, both at the <code>SELECT</code>. What happens?</p>
+<details><summary>Reveal</summary>
+
+<p>Both <code>SELECT</code>s run before either <code>INSERT</code> — both see &quot;no recent order&quot; — both
+charge. This is the <strong>check-then-act gap</strong>, and you have already watched it
+kill a design once: the <a href="../43-distributed-locking/notes.html#readme">distributed-locking</a> lab
+measured the defensive pre-write check dying in its own gap. Checking harder,
+sooner, or twice does not help; between any check and the act it guards, the
+world can move.</p>
+</details>
+
+<p>Walked through concretely, the naive check fails three independent ways:</p>
+<ol>
+<li><strong>Concurrent duplicates</strong> (the trace above): two requests interleave
+check-before-act. Frequency in real systems: double-taps and aggressive
+client retry policies make this the <em>common</em> case, not the rare one.</li>
+<li><strong>The guess is wrong in both directions.</strong> False positive: Asha really
+does want two tickets, bought 40 seconds apart — the check silently
+swallows a real order. False negative: Asha's retry went through a
+different code path that changed a field (the app re-priced the cart to
+₹1,900) — the content no longer matches and the duplicate sails through.</li>
+<li><strong>Crash between charge and record.</strong> The server charges the bank, then
+dies before the <code>INSERT</code>. The retry's <code>SELECT</code> finds nothing — the
+evidence the check depends on is exactly what the crash destroyed.</li>
+</ol>
+<p>The deeper problem all three point at: <strong>the server is trying to reconstruct
+intent from content, but intent is not in the content.</strong> The fix cannot be a
+better guess. The intent has to be <em>named</em>, by the party that has it, at the
+moment it exists — and acting on that name has to be atomic with checking it.</p>
+<h2 id="readme-5-the-real-requirement">5. THE REAL REQUIREMENT</h2>
+<p>For one intention, any number of physical requests must result in:</p>
+<ol>
+<li><strong>At most one effect.</strong> The card is charged once, no matter how many
+copies of the request arrive, in whatever order, however interleaved.</li>
+<li><strong>Every attempt learns the one outcome.</strong> Asha's second tap must get back
+<em>the receipt from the first charge</em> — not an error, not a fresh charge.
+(A dedup layer that swallows duplicates but answers &quot;duplicate!&quot; leaves
+the client no better off; it still doesn't know what happened.)</li>
+</ol>
+<p>The <a href="../71-google-docs-system-design/notes.html#readme">google-docs lab</a> met requirement 2 in
+miniature: the server there kept a per-client edit number and <strong>re-sent the
+original confirmation</strong> for a duplicate edit — it called that &quot;an idempotency
+key in its smallest form.&quot; This lab is that mechanism grown to full size.</p>
+<h2 id="readme-6-key-idea">6. KEY IDEA</h2>
+<blockquote>
+<p><strong>The client mints a unique name for the intention — before the first
+send — and attaches the same name to every retry. The server makes claiming
+the name atomic with doing the work, stores the outcome under the name, and
+answers every later arrival of the name from the stored outcome.</strong></p>
+</blockquote>
+<p>That is the whole invention. Naming moves the &quot;is this a duplicate?&quot; question
+from <em>guessing about content</em> to <em>equality of an identifier</em> — a question
+with a crisp answer. Atomic claiming closes the check-then-act gap by making
+the check and the act one indivisible event. Storing the outcome satisfies
+requirement 2.</p>
+<h2 id="readme-7-terminology--the-professional-vocabulary">7. TERMINOLOGY — the professional vocabulary</h2>
+<p>Now that you have felt the problem, the standard words for its parts:</p>
+<p><strong>Idempotent</strong> — <em>plain:</em> doing it again changes nothing. <em>Precise:</em> in
+mathematics, <code>f(f(x)) = f(x)</code> — applying the function to its own output is a
+no-op (<code>abs(abs(-3)) = abs(-3)</code>). <em>Why the term exists:</em> it isolates the one
+property that makes retries safe, separate from other niceties like
+commutativity. <em>In distributed systems the usage shifts subtly:</em> we rarely
+feed an output back in; we mean <em>processing the same request twice leaves the
+system in the state one processing leaves it in</em>. <code>SET x = 5</code> is idempotent;
+<code>INCREMENT x</code> is not. You met the mathematical version as one of the three
+CRDT laws (<a href="../32-crdts/notes.html#readme">crdts</a>: merge must be commutative, associative,
+idempotent — where sum-merge instead of max-merge read 11 where the truth
+was 2, purely from re-delivery).</p>
+<p><strong>Natural idempotency</strong> — <em>plain:</em> some operations are idempotent for free,
+by their own algebra. <code>SET x=5</code>, <code>DELETE row 7</code>, <code>PUT /users/42 {...}</code>
+(full replacement), a CRDT max-merge. <em>Why it matters:</em> if you can shape an
+operation to be naturally idempotent, you need none of this lab's machinery
+for the duplicate problem. <em>The limit:</em> &quot;charge ₹2,000&quot; has no natural
+idempotent shape — the effect is a <em>new</em> thing in the world each time. Those
+operations need the key.</p>
+<p><strong>Idempotency key</strong> — <em>plain:</em> the name the client gives the intention.
+<em>Precise:</em> a client-generated unique identifier (in practice a UUID, e.g.
+<code>ck_7f3a9d10</code>), minted once per intention, attached verbatim to every retry
+of it, and used by the server as the identity of the operation. <em>Why it
+exists:</em> it carries the client's knowledge (&quot;these sends are one intention&quot;)
+across the network to the party that must act on it. <em>Connection:</em> the
+<code>offer id</code> in <a href="../70-uber-system-design/notes.html#readme">uber-system-design</a> and the per-client
+edit number in google-docs were both this.</p>
+<p><strong>Deduplication (dedup)</strong> — <em>plain:</em> discarding copies. <em>Precise:</em> detecting
+that an arriving item's identity has been seen and suppressing re-processing.
+<em>Distinction the term is coined for:</em> dedup is the detect-and-suppress half
+only; idempotent <em>processing</em> also includes answering with the original
+outcome and surviving crashes mid-work. Every idempotency-key design contains
+a dedup step; a dedup step alone is not the design.</p>
+<p><strong>Request fingerprint</strong> — <em>plain:</em> a checksum of what the request asked for.
+<em>Precise:</em> a hash of the significant request content (e.g.
+<code>sha256(method + path + body) = 9d1f…</code>) stored beside the key. <em>Why it
+exists:</em> to catch the client bug of reusing a key for a <em>different</em> request —
+same key + different fingerprint is a contract violation and must be refused,
+never executed (you'll see it as a 422 in §10).</p>
+<p><strong>Response replay</strong> — <em>plain:</em> answering a retry with the saved original
+answer. <em>Precise:</em> the stored serialized response (status + body) returned
+for any arrival of an already-settled key, without re-executing anything.</p>
+<p><strong>Delivery guarantees</strong> — the three phrases you have used for many labs, now
+pinned down. <strong>At-most-once:</strong> send, never retry — duplicates impossible,
+loss possible. <strong>At-least-once:</strong> retry until acknowledged — loss impossible
+(eventually), duplicates guaranteed possible. <strong>Exactly-once delivery:</strong>
+impossible over a lossy network — this is the two-generals result wearing
+delivery clothes; no acknowledgement protocol can make the sender and
+receiver certain simultaneously. <em>The industry's honest phrasing:</em>
+<strong>exactly-once processing</strong> (or &quot;effectively once&quot;) = at-least-once delivery
+composed with idempotent processing, so the <em>effect</em> count is one even though
+the <em>arrival</em> count isn't. When a vendor says &quot;exactly-once&quot;, this is what
+the truthful ones mean.</p>
+<p>Minor terms defined at first use later: <em>claim, settled, dedup window,
+recovery point, re-drive, reaper</em>.</p>
+<h2 id="readme-8-mental-models">8. MENTAL MODELS</h2>
+<p><strong>The simple model: the numbered form and the filing teller.</strong> A bank branch
+handles transfer requests on paper forms. Each pad prints a unique serial
+number on every form. The teller keeps a filing cabinet ordered by serial.
+Procedure: when a form arrives, look up its serial. Never seen → file the
+form, do the transfer, staple the receipt to the filed form. Seen →
+<strong>photocopy the stapled receipt and hand it over; do not touch the money.</strong>
+A customer who wants a <em>second</em> transfer fills a fresh form — fresh serial.
+A customer who scribbles new amounts on a photocopied old form is turned away
+at the window: forms are immutable once numbered.</p>
+<p><strong>The engineering model:</strong> a <code>idempotency_keys</code> table in the <em>same database
+as the business data</em>, one row per key, carrying a tiny state machine:</p>
+<pre class="mermaid">stateDiagram-v2
+    direction LR
+    [*] --&gt; RUNNING : atomic claim\n(INSERT, unique key)
+    RUNNING --&gt; SUCCEEDED : effect done,\nresponse stored
+    RUNNING --&gt; FAILED : effect refused,\nerror stored
+    SUCCEEDED --&gt; SUCCEEDED : duplicate → replay
+    FAILED --&gt; FAILED : duplicate → replay
+    RUNNING --&gt; RUNNING : duplicate → 409 retry-later
+</pre>
+<p>with columns <code>key, fingerprint, state, response, created_at</code> and one hard
+rule: <strong>the transition into the table (the claim) and the business effect
+must be atomic</strong> — or provably recoverable when they cannot be (§10).</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Simple model</th>
+  <th>Engineering model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the printed serial number</td>
+  <td>the idempotency key (client-minted UUID)</td>
+</tr>
+<tr>
+  <td>the form's written content</td>
+  <td>the request body</td>
+</tr>
+<tr>
+  <td>comparing the form to the filed one</td>
+  <td>fingerprint check</td>
+</tr>
+<tr>
+  <td>the filing cabinet</td>
+  <td>the <code>idempotency_keys</code> table</td>
+</tr>
+<tr>
+  <td>filing the form</td>
+  <td>the atomic claim (INSERT, unique constraint)</td>
+</tr>
+<tr>
+  <td>doing the transfer</td>
+  <td>the business effect</td>
+</tr>
+<tr>
+  <td>stapling the receipt</td>
+  <td>storing the response</td>
+</tr>
+<tr>
+  <td>photocopying the receipt</td>
+  <td>response replay</td>
+</tr>
+<tr>
+  <td>&quot;come back later, teller busy with that serial&quot;</td>
+  <td>409 on a RUNNING key</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the analogy breaks</strong> — four places, each one a real design problem
+the teller never has:</p>
+<ol>
+<li><strong>One teller, no races.</strong> A single human serializes everything. Real
+servers process duplicates <em>concurrently</em>; the atomic claim exists
+precisely because two threads can hold the &quot;same form&quot; at once.</li>
+<li><strong>The teller doesn't die mid-transfer.</strong> If she did, a filed form with no
+stapled receipt would sit in the cabinet forever — and that is exactly
+the stuck-<code>RUNNING</code> state §11 deals with via reapers and re-drive.</li>
+<li><strong>Paper serials can't collide; client UUIDs can be misused.</strong> The teller
+trusts the pad. The server must <em>verify</em> the client kept its side of the
+contract — hence the fingerprint.</li>
+<li><strong>The cabinet is infinite.</strong> Real key tables are purged (Stripe: 24
+hours), and the purge creates a reopened hole: a retry arriving after its
+key was purged is a new intention as far as the server can tell (§11.7).</li>
+</ol>
+<h2 id="readme-9-visualization--the-second-tap">9. VISUALIZATION — &quot;The Second Tap&quot;</h2>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a> (also published as an
+artifact: <a href="https://claude.ai/code/artifact/b63fab62-7d79-4256-95b3-e05ac7f53598" target="_blank" rel="noopener">https://claude.ai/code/artifact/b63fab62-7d79-4256-95b3-e05ac7f53598</a>). It puts Asha's phone, the PayEasy server
+(key table + orders visible), and the bank on one stage, with the messages in
+flight between them. You choose the server's protection design —
+<strong>A:</strong> none, <strong>B:</strong> check-then-act, <strong>C:</strong> atomic claim in one transaction,
+<strong>D:</strong> claim-first with replay and a keyed bank call — and then make the
+world misbehave: drop the response, double-tap, crash the server at a chosen
+step, re-drive stuck keys. A verdict banner keeps score of the only number
+that matters: <em>how many times Asha was charged.</em> Six predict-then-run
+scenarios walk the same ladder as §10; run scenario 1 before reading on, and
+each later scenario when the text points at it.</p>
+<p>The doc and the page share one spatial layout (client left, server middle,
+bank right) and one color language (key states: amber <code>RUNNING</code>, green
+<code>SUCCEEDED</code>, red duplicates/charges).</p>
+<h2 id="readme-10-the-mechanism--built-four-times">10. THE MECHANISM — built four times</h2>
+<p>We now build the server's payment handler the way a good engineer actually
+would: simplest thing first, then fix what a trace breaks. Versions are
+named v1–v4; the visualization's designs B/C/D are v1/v2/v4.</p>
+<h3 id="readme-v1--dedup-check-the-naive-solution-formalized">v1 — dedup check (the naive solution, formalized)</h3>
+<p>Keep a <code>seen_keys</code> set. On arrival: if key present → return &quot;duplicate&quot;;
+else do the work, then add the key.</p>
+<p>You already watched this die in §4, but now with the key the trace is
+sharper, because the <em>guessing</em> failures (2a/2b) are gone — content no
+longer matters — and what remains is pure atomicity:</p>
+<div class="code"><pre><code>t=0ms   request A (key ck_7f3a) arrives, thread T1
+t=3ms   request B (key ck_7f3a) arrives, thread T2   ← auto-retry
+t=4ms   T1: ck_7f3a in seen_keys?  no
+t=5ms   T2: ck_7f3a in seen_keys?  no                ← the gap
+t=6ms   T1: charge bank ₹2,000                        (charge #1)
+t=9ms   T2: charge bank ₹2,000                        (charge #2)
+t=10ms  T1: add ck_7f3a
+t=11ms  T2: add ck_7f3a                               (no-op, too late)
+</code></pre></div>
+<p>Also unfixed: crash after the charge, before the <code>add</code> — the retry finds a
+clean set. <strong>Run visualization scenario 2</strong> to watch both.</p>
+<h3 id="readme-v2--atomic-claim-insert-first-unique-constraint-arbitrates">v2 — atomic claim: INSERT first, unique constraint arbitrates</h3>
+<p>Flip the order and let the database be the referee:</p>
+<div class="code"><pre><code class="language-sql">-- illustrative shape; one local transaction
+BEGIN;
+INSERT INTO idempotency_keys (key, fingerprint, state)
+     VALUES (&#x27;ck_7f3a&#x27;, &#x27;9d1f…&#x27;, &#x27;RUNNING&#x27;);   -- UNIQUE(key) ← the claim
+-- do the business work (all local writes)
+UPDATE accounts SET balance = balance - 2000 WHERE id = &#x27;asha&#x27;;
+INSERT INTO orders VALUES (...);
+UPDATE idempotency_keys SET state = &#x27;SUCCEEDED&#x27;, response = &#x27;{&quot;order&quot;:184}&#x27;
+     WHERE key = &#x27;ck_7f3a&#x27;;
+COMMIT;
+</code></pre></div>
+<p>The duplicate's <code>INSERT</code> of the same key hits the <strong>unique constraint</strong>. The
+database's uniqueness arbitration is precisely an atomic
+check-and-act — there is no instant between &quot;is it there?&quot; and &quot;now it is&quot;
+in which a second inserter can slip. This is the
+<a href="../08-isolation-levels/notes.html#readme">isolation-levels</a> lab's &quot;a constraint beats an
+isolation level&quot; doing its finest work, and structurally it is the
+<strong>seventh costume of the one primitive</strong> the
+<a href="../10-optimistic-vs-pessimistic-locking/notes.html#readme">optimistic-vs-pessimistic-locking</a>
+lab kept meeting: a conditional write, here <code>INSERT … WHERE nothing wears this name yet</code>. (Costumes one through six: expected-version, <code>WATCH</code>,
+<code>If-Match</code>, <code>@Version</code>, incarnation number, fencing check.)</p>
+<p>Concurrency plays out cleanly (this is Postgres/H2 behavior for a unique
+index; flagged as vendor-verified behavior, not run in this lab): the
+duplicate's <code>INSERT</code> <em>blocks</em> until the first transaction resolves, then
+raises a unique violation; the handler catches it, reads the settled row,
+and <strong>replays the stored response</strong>. And a crash anywhere before <code>COMMIT</code>
+rolls back <em>everything including the claim</em> — the retry finds a clean table
+and re-executes from scratch, correctly, because none of the effect survived
+either. Claim, effect, and outcome share one commit point.</p>
+<p><strong>Checkpoint — intermediate model reached.</strong> You can now build a fully
+correct idempotent consumer for any effect that lives entirely in one
+database: this exact shape — a <code>processed_messages</code> table written in the
+same transaction as the effect — is the honest implementation of &quot;consumers
+must be idempotent&quot; that the <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>
+and <a href="../51-cqrs/notes.html#readme">cqrs</a> labs required, and for many real systems it is the
+whole answer. <strong>Run visualization scenario 3</strong> (design C, local effect,
+crash mid-work) and watch the rollback save it. What the next layer adds:
+the effect that <em>leaves</em> the database.</p>
+<p><strong>🔮 Predict:</strong> PayEasy's charge is not a local <code>UPDATE</code> — it is an HTTPS
+call to the bank. Can the call go inside the v2 transaction? What exactly
+goes wrong if you try?</p>
+<details><summary>Reveal</summary>
+
+<p>Two separate disasters. (1) <em>Holding a transaction across a network call</em> —
+the &quot;lunch problem&quot; the optimistic-locking lab measured: your locks and your
+connection are held hostage to the bank's tail latency. Bad, but survivable.
+(2) The fatal one: <strong><code>ROLLBACK</code> cannot unsend a network request.</strong> If the
+charge succeeds at the bank and the server then crashes before <code>COMMIT</code>, the
+rollback erases the claim, the order, the stored response — every trace that
+anything happened — but the money moved. The retry finds a virgin key table
+and charges again. The atomicity that saved v2 was only ever atomicity of
+<em>local</em> writes.</p>
+</details>
+
+<h3 id="readme-v3--v2-plus-an-external-call-the-dual-write-problem-returns">v3 — v2 plus an external call: the dual-write problem returns</h3>
+<p>Put the bank call between the claim and the commit and trace the crash
+windows with real values:</p>
+<div class="code"><pre><code>step 1  BEGIN; INSERT ck_7f3a RUNNING          (uncommitted)
+step 2  call bank: charge ₹2,000  →  bank says OK, charge exists   ← REAL
+step 3  INSERT order #184                       (uncommitted)
+step 4  UPDATE ck_7f3a → SUCCEEDED + response   (uncommitted)
+step 5  COMMIT
+</code></pre></div>
+<p>Crash after step 2, before step 5: the bank charged (step 2 is in the
+world), the rollback erased steps 1/3/4 (they were only in the database's
+uncommitted buffers). Retry with <code>ck_7f3a</code> → no row → full re-execution →
+<strong>second charge</strong>. <strong>Run visualization scenario 4.</strong></p>
+<p>Recognize the shape: <em>a durable local write and an external side effect that
+must happen together, with a crash possible between them</em> — this is the
+<strong>dual-write problem</strong> from the transactional-outbox lab, returned one hop
+down the stack. The outbox solved it for &quot;save data + publish event.&quot; We
+need its cousin for &quot;record intention + call bank.&quot;</p>
+<h3 id="readme-v4--claim-first-in-its-own-transaction-recurse-the-key-downstream">v4 — claim first, in its own transaction; recurse the key downstream</h3>
+<p>The outbox's move was: make the durable write happen <em>first</em>, alone, then do
+the unreliable thing, then record the outcome. Apply it here:</p>
+<div class="code"><pre><code>txn 1   INSERT ck_7f3a (state RUNNING, fingerprint 9d1f…); COMMIT
+        ── the claim is now durable, crash-proof evidence of intent ──
+step 2  call bank: charge ₹2,000, passing bank_key = ck_7f3a-charge
+step 3  txn 2: INSERT order #184;
+               UPDATE ck_7f3a → SUCCEEDED + response; COMMIT
+step 4  send response to Asha
+</code></pre></div>
+<p>Now walk every arrival and every crash:</p>
+<ul>
+<li><strong>Duplicate after step 3</strong> → key is <code>SUCCEEDED</code> → replay the response.
+Requirement 2 satisfied; zero re-execution.</li>
+<li><strong>Duplicate between txn 1 and step 3</strong> (first request still working) →
+key is <code>RUNNING</code> → answer <strong>409 Conflict, retry later</strong>. Why not make the
+duplicate <em>wait</em> for the outcome? Because holding the duplicate holds a
+connection and a thread for an unbounded time — the lunch problem again,
+now on the request path. A quick refusal with &quot;in progress&quot; is cheaper for
+everyone; the client's next retry will hit <code>SUCCEEDED</code> and get the replay.</li>
+<li><strong>Same key, different fingerprint</strong> (the app re-priced the cart to ₹1,900
+but reused <code>ck_7f3a</code>) → <strong>422 Unprocessable</strong>, and <em>nothing executes</em>.
+This is a client bug by definition — one name, two intentions — and the
+server must refuse rather than guess which intention is real. <strong>Scenario 6.</strong></li>
+<li><strong>Crash after txn 1, before step 2</strong> → key stuck <code>RUNNING</code>, bank never
+called, Asha's retries bounce off 409 forever. Safety intact (zero
+charges), <strong>liveness lost</strong>. The fix is a <strong>reaper</strong> (the same job-shape
+as the optimistic-locking lab's crashed-worker reaper): a background
+process that finds <code>RUNNING</code> rows older than a threshold and <strong>re-drives</strong>
+them — re-executes from where the evidence says they stopped.</li>
+<li><strong>Crash after step 2, before txn 2</strong> — the crux. Key stuck <code>RUNNING</code>,
+<em>and the bank charged</em>. What may the reaper do? It cannot know whether
+step 2 happened (that's the two-worlds problem from §1, now the server's
+own problem — the doubt has moved, not died). If the reaper re-drives by
+blindly re-calling the bank: second charge.</li>
+</ul>
+<p><strong>The move that resolves the crux — and the lab's central insight:</strong> look at
+step 2 again. The re-driven bank call passes the <em>same</em> <code>bank_key</code> as the
+original attempt. If the bank itself implements idempotency keys, the
+re-drive's charge call is a <em>duplicate by name</em> at the bank, the bank
+replays its stored &quot;OK, charge c_991&quot; response, and the reaper learns the
+truth of step 2 retroactively — then completes txn 2 as if the crash never
+happened. <strong>Run scenario 5</strong> and watch the re-drive land on one charge.</p>
+<blockquote>
+<p><strong>Idempotency is not a middleware you bolt onto your edge; it is a
+per-hop contract that must recurse until it reaches a hop that can answer
+duplicates by name.</strong> Your server is the bank's client, exactly as Asha's
+phone is yours. Each hop's retry-doubt is absorbed by the next hop's key
+table. The doubt only <em>dies</em> at a hop that can atomically claim-and-act
+(v2's single database, at the bottom of the chain).</p>
+</blockquote>
+<p>And when the bottom hop offers no key — sending an email, calling a dumb
+legacy API? Then the doubt has nowhere to die, and you are in the
+<a href="../43-distributed-locking/notes.html#readme">distributed-locking</a> lab's box G, whose honest
+answer this lab can now complete: at-most-once <em>or</em> at-least-once (pick
+which failure you prefer per operation — a duplicate marketing email is
+fine, dedup-best-effort; a duplicate payout is not, so hold it), plus
+<strong>reconciliation</strong> — a periodic job comparing your ledger with theirs — and
+a <em>measured</em> residual duplicate rate instead of a pretended zero.</p>
+<p>For effects with <strong>multiple</strong> external steps (charge card → reserve seat →
+issue ticket), the same claim row grows a <code>recovery_point</code> column — after
+each completed step, a small transaction advances it (<code>charged</code> →
+<code>seat_reserved</code> → …) so a re-drive <em>resumes</em> instead of restarting, and each
+step's own external call carries its own derived key. That is the full
+Stripe-described architecture (§13), and it is v4 applied per-step; no new
+idea is needed.</p>
+<h2 id="readme-11-failure-scenarios--the-catalogue">11. FAILURE SCENARIOS — the catalogue</h2>
+<p>Each entry: how to create it → where to watch → what/why → the response →
+guarantees kept/lost → production handling. Design v4 assumed except where
+said.</p>
+<ol>
+<li><strong>Lost response, later retry</strong> (the founding case). Create: drop the
+response in the viz; tap again. Watch: scenario 1 vs the same actions on
+design D. The retry hits <code>SUCCEEDED</code> → replay. Kept: both requirements.
+Lost: nothing. Production: this is the <em>routine</em> path — Stripe-style APIs
+serve replays constantly; it should be a counter on a dashboard, not an
+alert.</li>
+<li><strong>Concurrent duplicate</strong> (double-tap / aggressive retry timer). Create:
+viz &quot;double-tap&quot;. The claim's unique constraint arbitrates; loser gets
+409 (v4) or blocks-then-replays (v2). Kept: at-most-one effect. Lost:
+the duplicate waits one extra client-retry round for its answer.
+Production: 409 + <code>Retry-After</code>; clients treat 409-on-idempotent-POST as
+&quot;poll again,&quot; never as failure.</li>
+<li><strong>Crash after claim, before effect.</strong> Stuck <code>RUNNING</code>; all retries 409.
+Kept: safety (0 charges). Lost: liveness for this key until the reaper
+re-drives. Production: <strong>oldest-RUNNING-age is the alarm to have</strong> (the
+twin of causal-consistency's oldest-blocked-dependency alarm); re-drive
+is safe <em>because</em> downstream is keyed.</li>
+<li><strong>Crash after external effect, before recording</strong> (the crux). Bank
+charged; server has only <code>RUNNING</code>. Without a keyed bank: irreducible
+doubt — re-drive risks double-charge, not re-driving strands Asha.
+With a keyed bank: re-drive replays at the bank, truth recovered,
+exactly-one restored. Kept (keyed): everything, eventually. Lost:
+latency until re-drive. Production: this window is why serious payment
+APIs <em>require</em> their callers to send keys — the provider is protecting
+you from your own crashes.</li>
+<li><strong>Same key, different body.</strong> 422, nothing executes, fingerprint
+mismatch counter increments. Kept: the key's meaning. Lost: nothing —
+but the client team has a bug to fix; a rising mismatch rate is a
+client-regression detector.</li>
+<li><strong>Key store separate from the data store</strong> (keys in Redis &quot;for speed&quot;,
+orders in Postgres). Create: viz design C/D with the key table set to
+&quot;separate, volatile&quot; — or just reason it: claim in Redis and effect in
+Postgres are <em>two</em> durable systems again — the dual-write problem
+rebuilt at the exact spot it was solved, plus Redis restart-from-empty
+silently forgets every claim (the quorums lab's &quot;rebuilt-empty replica
+satisfies the quorum&quot; trap, wearing a cache costume). Response:
+<strong>the key row lives in the same database, same transaction, as the
+effect it guards</strong> — or, across services, in the store at the bottom of
+the recursion. Production: this is the single most common real-world
+implementation error; Redis-backed dedup is acceptable only as a
+<em>best-effort accelerator</em> in front of a durable claim, never as the claim.</li>
+<li><strong>Retry after key expiry</strong> (the dedup window). Stripe purges at 24 h;
+SQS FIFO deduplicates within <strong>5 minutes</strong> only. A retry arriving after
+the purge is, to the server, a new intention → executed. Kept: nothing,
+by design — the window IS the guarantee's boundary, an explicit SLA.
+Production: pick retention ≫ any legitimate retry horizon (client
+timeout × max attempts, plus queue redelivery delays, plus a margin);
+emit a metric for keys arriving &quot;shortly after purge&quot; if you can; and
+make clients stop retrying long before the window closes.</li>
+<li><strong>The client mints a fresh key per retry</strong> (the client-side bug that
+defeats everything). The server is helpless — two names, two intentions,
+two charges, all <em>correct by contract</em>. Response: none available
+server-side; the contract's client half is: <strong>mint at intention time
+(button render, not button press), persist the key with the pending
+intention (so an app restart retries with the same key), reuse verbatim
+until a terminal outcome</strong>. Production: SDKs generate and persist the
+key for you; UI double-submit guards are the shallow cousin of this rule.</li>
+</ol>
+<p>Cross-cutting: notice which failures are <em>safety</em> (2, 4, 6, 8 threaten a
+second charge) and which are <em>liveness</em> (3, and the 409 waits). The design
+consistently spends liveness to buy safety — the same trade Raft made — and
+every liveness hole is patched by a background process (reaper) rather than
+by weakening the claim.</p>
+<h2 id="readme-12-correctness--what-is-guaranteed-what-is-not-what-it-cost">12. CORRECTNESS — what is guaranteed, what is not, what it cost</h2>
+<p><strong>Guaranteed</strong> (v4, with every external hop keyed, within retention):</p>
+<ul>
+<li><strong>Per key, at most one effect-lineage.</strong> However many arrivals, whatever
+interleaving: at most one charge reaches the world. The mechanism is the
+claim's atomicity (unique constraint) plus the recursion absorbing crash
+doubt.</li>
+<li><strong>Every attempt eventually learns the one outcome</strong> (replay), once the
+key settles; <code>RUNNING</code> gaps are bounded by the reaper period.</li>
+<li>Together: <strong>effectively-exactly-once</strong> — at-least-once arrivals, exactly
+one effect, observed by all attempts.</li>
+</ul>
+<p><strong>Explicitly NOT guaranteed:</strong></p>
+<ul>
+<li><strong>Exactly-once <em>delivery</em>.</strong> Impossible; the design never tries. Arrivals
+are many; effects are one. (Two-generals, as in §7.)</li>
+<li><strong>Anything across different keys.</strong> Two keys are two intentions <em>by
+definition</em>. If Asha's phone mints fresh keys per tap (failure 8), or two
+services independently decide to charge her, the key table sees two
+legitimate operations. Business-level duplicate detection (velocity
+rules, &quot;you already bought this — continue?&quot;) is a separate, heuristic
+layer — it is §3's guessing, redeemed by being advisory instead of
+load-bearing.</li>
+<li><strong>Freshness of a replayed response.</strong> The replay is a <em>snapshot of the
+outcome</em>, not current state: if the order was refunded an hour ago, a
+late retry of the original key still replays &quot;order #184 confirmed.&quot; That
+is correct — the retry asks &quot;what became of intention ck_7f3a?&quot;, not
+&quot;what is true now?&quot; — but it surprises people; state queries belong on
+<code>GET</code>, not on replays. (Kinship: the stale-read-as-non-event from
+<a href="../27-linearizability-vs-serializability/notes.html#readme">linearizability-vs-serializability</a>.)</li>
+<li><strong>Protection against reordering or interleaving of <em>different</em>
+operations.</strong> Idempotency answers &quot;is this the same intention again?&quot; and
+nothing else. A stale <code>SET x=5</code> replayed after a newer <code>SET x=7</code> is
+perfectly idempotent and still wrong — that is a <em>versioning</em> problem
+(expected-version, <a href="../31-hybrid-logical-clocks/notes.html#readme">hlc</a> stamps), and a
+<em>concurrency</em> problem (optimistic locking) — three orthogonal defenses
+that production systems stack. Compare fencing
+(<a href="../43-distributed-locking/notes.html#readme">distributed-locking</a>): a fencing token refuses
+<strong>stale</strong> writers (an ordering identity), an idempotency key refuses
+<strong>duplicate</strong> writers (a sameness identity). Both are conditional writes
+at the resource; neither implies the other.</li>
+</ul>
+<p><strong>What was traded away:</strong> a durable write <em>before</em> the work and another
+after (latency + storage on every request, duplicate or not); a 409 path
+every client must implement; a reaper and its re-drive logic; retention
+management; and — the expensive one — <strong>the requirement that every
+participant cooperates</strong>: the client's key discipline, every hop's key
+table, down to a bottom that can claim atomically. A single non-cooperating
+hop reopens the doubt (and gets the box-G treatment: reconcile + measure).</p>
+<p><strong>The one-sentence relationships</strong> (commonly-confused corner):</p>
+<ul>
+<li><em>Idempotency vs dedup:</em> dedup suppresses copies; idempotency also
+answers them and survives crashing mid-copy.</li>
+<li><em>Idempotency vs fencing:</em> duplicate-refusal vs stale-refusal.</li>
+<li><em>Idempotency vs optimistic locking:</em> same-intention-twice vs
+two-intentions-colliding; the claim INSERT is the same conditional-write
+primitive both use.</li>
+<li><em>Idempotency vs natural idempotency:</em> the protocol manufactures for
+&quot;charge ₹2,000&quot; what <code>SET x=5</code> has by algebra.</li>
+<li><em>Exactly-once delivery vs exactly-once processing:</em> impossible vs
+purchasable (this lab is the purchase).</li>
+</ul>
+<h2 id="readme-13-production">13. PRODUCTION</h2>
+<p><strong>The chain from toy to real:</strong> §10's v4 → Stripe's published architecture →
+your Spring service → the dashboard.</p>
+<p><strong>Stripe</strong> (the canonical public design; from their API docs and
+engineering blog — read them, you now have every concept they use):
+<code>Idempotency-Key</code> request header; keys stored with a fingerprint of the
+request; concurrent duplicate → 409 <code>idempotency_key_in_use</code>; settled
+duplicate → replayed response flagged <code>Idempotent-Replayed: true</code>; keys
+purged after <strong>24 h</strong>; different-body reuse → 422. Their engineering
+write-up (Brandur Leach, &quot;Implementing Stripe-like Idempotency Keys&quot;)
+describes exactly §10 v4 grown up: the key row as a state machine advanced
+by <strong>atomic phases</strong> (local transactions), <strong>recovery points</strong> between
+foreign-state mutations, each outbound call keyed, and a reaper
+(&quot;completer&quot;) that re-drives stuck keys. That article is this lab's
+reading-list centerpiece.</p>
+<p><strong>The IETF draft</strong> <code>draft-ietf-httpapi-idempotency-key-header</code> standardizes
+the header name and the 409/422 semantics — worth knowing it exists (status:
+draft; check before citing it in an API spec).</p>
+<p><strong>HTTP method semantics</strong> — the spec-level layer above all of this:
+RFC 9110 declares GET/HEAD/PUT/DELETE <strong>idempotent by contract</strong> and POST
+not. Infrastructure <em>acts on this</em>: proxies, retry middlewares, and SDKs
+auto-retry idempotent methods and refuse to auto-retry POST. Two duties
+follow: never implement a non-idempotent handler behind an
+idempotent-by-contract method (a <code>DELETE</code> that decrements a counter invites
+infrastructure to corrupt you), and give POSTs that need retry safety an
+idempotency key, which is precisely the header's job. (PUT's idempotency is
+<em>natural</em> — full replacement — which is why &quot;just use PUT with a
+client-chosen id&quot; is a legitimate lightweight alternative for
+<em>creation</em>: <code>PUT /orders/ck_7f3a</code> makes the key the resource name.)</p>
+<p><strong>Kafka</strong> — two distinct features, often blurred: the <strong>idempotent
+producer</strong> (<code>enable.idempotence=true</code>, default since 3.0) gives each
+producer a PID and a per-partition sequence number, and brokers drop
+already-seen sequences — dedup for the <em>producer→broker hop only</em>, within a
+producer session; structurally it is google-docs' per-client edit number at
+scale. <strong>Transactions/EOS</strong> extend this with commit markers and
+<code>read_committed</code> consumers (the Percolator shape you met in
+<a href="../46-distributed-transactions/notes.html#readme">distributed-transactions</a>). Neither does
+anything for your <em>consumer's</em> side effects — &quot;exactly-once&quot; ends at the
+topic. Your consumer's effect is exactly-once only if you apply this lab:
+commit the effect and the consumed offset <strong>in the same local transaction</strong>
+(offsets stored in <em>your</em> database, not Kafka's), which is v2 verbatim with
+the offset as the key.</p>
+<p><strong>SQS FIFO</strong>: <code>MessageDeduplicationId</code>, hard <strong>5-minute</strong> dedup window —
+failure 7 as a product spec. <strong>DynamoDB</strong>: conditional
+<code>PutItem</code> (<code>attribute_not_exists(pk)</code>) is the claim primitive without a
+relational database. <strong>Idempotent consumers in Spring</strong> — the shape you'd
+actually write (illustrative, to read):</p>
+<div class="code"><pre><code class="language-java">@Transactional  // one local transaction = v2&#x27;s single commit point
+public void handle(OrderEvent evt) {
+    try {
+        jdbc.update(&quot;INSERT INTO processed_messages(id) VALUES (?)&quot;,
+                    evt.messageId());          // the claim; UNIQUE(id)
+    } catch (DuplicateKeyException dup) {
+        return;                                 // settled → nothing to do
+    }
+    applyBusinessEffect(evt);                   // local writes only
+}
+</code></pre></div>
+<p>and the edge-API version is v4: a filter/interceptor owning the key table,
+claim-first, replay, 409, fingerprint — or an off-the-shelf one; verify any
+library actually does <em>atomic claim + replay + fingerprint</em>, not just a
+Redis <code>SETNX</code> (failure 6 in a box).</p>
+<p><strong>What the on-call engineer watches:</strong> replay rate (routine; a spike means
+a client retry storm or a broken network path), 409 rate (concurrency
+pressure), <strong>oldest-RUNNING age</strong> (the page-worthy alarm: reaper down or
+re-drive failing), fingerprint-mismatch rate (a client released a bug),
+key-table size and purge lag, reconciliation deltas for box-G hops (the
+measured residual). Incident smell worth keeping: &quot;duplicate charges&quot; with
+a <em>healthy</em> key table almost always means failure 8 (client minting fresh
+keys) — check the keys on the two charges <em>first</em>; if they differ, the bug
+is in the app, not your layer.</p>
+<p><strong>What this lab intentionally omits</strong> (and where the real world handles it):
+multi-region key storage (a key table must be authoritative where the
+traffic lands; active-active regions turn the claim into a linearizability
+problem — Stripe pins an idempotent request family to a region);
+key-table sharding (by key hash — consistent-hashing's job); response-size
+limits and streaming responses (replay stores a bounded summary); security
+(keys are per-API-credential — tenant A must not replay tenant B's key;
+keys must be unguessable if the response is sensitive); stream-processor
+exactly-once (Flink's checkpoint-based two-phase sinks — a different
+mechanism for the same contract); and the business-heuristic advisory layer
+(§12) that catches cross-key duplicates.</p>
+<h2 id="readme-14-exercises">14. EXERCISES</h2>
+<p>Eight rungs in <a href="notes.html#exercises"><code>EXERCISES.md</code></a> — explain, identify (in the
+visualization), predict, modify, trace, spot-the-flaw, handle-failure,
+design — answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Rung 6 plants three
+subtly-broken designs from this doc's ladder; rung 8 is a payments-grade
+design prompt (3 services, one unkeyable hop).</p>
+<h2 id="readme-15-knowledge-map--next-steps">15. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">flowchart TD
+    subgraph prerequisites
+        NET[networking:\nsilence carries no info]
+        OUT[transactional-outbox:\ndual-write problem]
+        OPT[optimistic locking:\nconditional writes]
+        ISO[isolation-levels:\nconstraint beats level]
+    end
+    IDEM[**idempotency**\nname the intention,\nclaim atomically,\nreplay the outcome]
+    NET --&gt; IDEM
+    OUT --&gt; IDEM
+    OPT --&gt; IDEM
+    ISO --&gt; IDEM
+    subgraph confused with
+        DEDUP[dedup: suppress only]
+        FENCE[fencing: refuses stale,\nnot duplicate]
+        NATID[natural idempotency:\nalgebra, not protocol]
+    end
+    IDEM -.one sentence apart.- DEDUP
+    IDEM -.one sentence apart.- FENCE
+    IDEM -.one sentence apart.- NATID
+    subgraph used by
+        STRIPE[Stripe API]
+        KAFKA[Kafka EOS]
+        SQS[SQS FIFO]
+        SAGA[saga steps +\noutbox consumers]
+    end
+    IDEM --&gt; STRIPE &amp; KAFKA &amp; SQS &amp; SAGA
+    IDEM --&gt; NEXTQ[/learn kafka/]
+    IDEM --&gt; NEXTF[/learn flp-impossibility/]
+    IDEM --&gt; NEXTC[/learn change-data-capture/]
+</pre>
+<p>This concept <strong>completes</strong> slogans left open by: transactional-outbox, cqrs,
+saga, raft, quorums-and-replication (&quot;failed writes are never rolled back ⇒
+writes must be idempotent&quot; — now you know what that costs), whatsapp/uber/
+google-docs (at-least-once + idempotent receiver), communication-protocols
+(the retry atom), networking (why the doubt is physical), and
+distributed-locking (box G's &quot;idempotency keys&quot; entry, now a mechanism).</p>
+<p>Suggested next: <code>/learn kafka</code> (the idempotent producer and EOS in their
+native habitat — most-referenced unlearned concept in your map),
+<code>/learn change-data-capture</code> (the other half of outbox plumbing),
+<code>/learn flp-impossibility</code> (the theory floor under &quot;you cannot know&quot;).</p>
+<blockquote>
+<p><strong>Follow-up completed 2026-09-01: <a href="../54-idempotent-consumer/notes.html#readme"><code>idempotent-consumer</code></a>.</strong>
+This lab's protocol assumes a <em>caller</em> — someone who mints the key and waits
+for the replayed response. Take the caller away and put a broker in its place
+and two of the three parts lose their owner. The sibling lab covers what is
+left: where a message's identity comes from when nobody hands you one, why
+deduplicating on the Kafka offset defeats exactly the sources that produce
+duplicates, and the obligation this lab treated as a sizing question —
+<em>how long the claim must be remembered</em> — turning out to be bounded by human
+operational behaviour rather than by anything in your code.</p>
+</blockquote>
+<h2 id="readme-16-glossary-in-order-of-appearance">16. GLOSSARY (in order of appearance)</h2>
+<ul>
+<li><strong>idempotent</strong> — processing the same request again leaves the state the
+first processing left it in; math: f(f(x)) = f(x).</li>
+<li><strong>at-least-once</strong> — retry until acknowledged; duplicates possible, loss
+not (eventually).</li>
+<li><strong>at-most-once</strong> — never retry; loss possible, duplicates not.</li>
+<li><strong>exactly-once delivery</strong> — impossible over a lossy network (two-generals).</li>
+<li><strong>exactly-once processing / effectively once</strong> — at-least-once arrivals +
+idempotent processing = one effect, observed by all attempts.</li>
+<li><strong>check-then-act gap</strong> — the instant between a guard's check and its
+action, in which the world can move; kills v1.</li>
+<li><strong>deduplication</strong> — detecting and suppressing already-seen items; the
+detect half of idempotent processing.</li>
+<li><strong>idempotency key</strong> — client-minted unique name for one intention, reused
+verbatim on every retry.</li>
+<li><strong>natural idempotency</strong> — idempotent by the operation's own algebra
+(SET, DELETE, full PUT, CRDT merge); needs no key machinery.</li>
+<li><strong>request fingerprint</strong> — hash of request content stored with the key;
+catches key-reuse-with-different-body (→ 422).</li>
+<li><strong>response replay</strong> — answering a settled key's duplicate with the stored
+original response.</li>
+<li><strong>claim</strong> — the atomic INSERT of the key row (unique constraint) that
+makes this arrival the one executor.</li>
+<li><strong>settled</strong> — a key in a terminal state (SUCCEEDED/FAILED), safe to replay.</li>
+<li><strong>RUNNING</strong> — claimed, outcome not yet recorded; duplicates get 409.</li>
+<li><strong>409 / 422</strong> — in-progress duplicate / same-key-different-fingerprint
+refusals.</li>
+<li><strong>dual-write problem</strong> — two durable systems that must change together
+with a crash possible between (outbox lab); returns in v3 and failure 6.</li>
+<li><strong>recovery point</strong> — per-key marker of the last completed step of a
+multi-step effect, so re-drive resumes instead of restarting.</li>
+<li><strong>re-drive</strong> — re-executing a stuck RUNNING key from its evidence, safe
+only because downstream hops are keyed.</li>
+<li><strong>reaper</strong> — background process that finds and re-drives stale RUNNING
+keys.</li>
+<li><strong>dedup window / retention</strong> — how long claims are kept; beyond it a
+retry is a new intention by design (Stripe 24 h, SQS 5 min).</li>
+<li><strong>fencing token vs idempotency key</strong> — refuses stale writers vs refuses
+duplicate writers; orthogonal conditional writes.</li>
+<li><strong>reconciliation</strong> — periodic ledger comparison against an unkeyable hop;
+turns pretended-zero duplicates into a measured residual.</li>
+<li><strong>idempotent producer (Kafka)</strong> — PID + per-partition sequence numbers;
+dedup on the producer→broker hop only.</li>
+<li><strong>Idempotency-Key header</strong> — the HTTP carrier of the key (Stripe; IETF
+httpapi draft).</li>
+</ul>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-idempotency--exercises">Idempotency — exercises</h1>
+<p>All pencil-and-paper or visualization work; nothing to code. Attempt each
+before opening <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. &quot;The viz&quot; =
+<a href="visualization.html"><code>visualization.html</code></a>; designs A–D are §10's
+v-nothing/v1/v2/v4.</p>
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p>1.1 In your own words, no jargon: why is a client that never retries
+unreliable, and why is a client that retries dangerous? What single piece of
+knowledge does the idempotency key move from the client to the server?</p>
+<p>1.2 A colleague says: &quot;We deduplicate requests, so we're idempotent.&quot;
+Explain the two things a dedup check alone does not give you (one is about
+the answer the caller gets, one is about crashes).</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open the viz, design <strong>D</strong>, run scenario 1 to the end, then answer from the
+screen alone:</p>
+<p>2.1 Which row in the server's key table is the claim, and what state is it
+in when the verdict turns green?</p>
+<p>2.2 When Asha's retry is answered, which component did the answer come
+from — the bank, the orders table, or the key table? How can you tell from
+the event log?</p>
+<p>2.3 Find the request fingerprint on screen. What two inputs produced it?</p>
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>3.1 Design <strong>B</strong> (check-then-act). Asha double-taps: two requests with key
+<code>ck_1</code> arrive 1 step apart. Predict the final charge count and <em>the exact
+step</em> at which the outcome became inevitable. Check with scenario 2.</p>
+<p>3.2 Design <strong>C</strong> (atomic claim, single transaction), effect set to
+<strong>external bank call</strong>. The server crashes after the bank confirms but
+before commit. Predict: what does the key table contain after the crash,
+and what does Asha's retry do? Check with scenario 4.</p>
+<p>3.3 Design <strong>D</strong>. Same crash as 3.2. Predict what the reaper's re-drive
+does at the bank, and the final charge count. Check with scenario 5.</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>4.1 In design <strong>D</strong>, suppose duplicates arriving on a RUNNING key <em>wait</em>
+for the outcome instead of getting 409. Which property improves, which
+resource is newly at risk, and which prior lab's measured failure does the
+waiting version reenact?</p>
+<p>4.2 Change the client so it mints the idempotency key when the Pay button
+is <em>pressed</em> instead of when the payment screen is <em>rendered</em>. Construct
+the user story where this one-line change causes a double charge.</p>
+<p>4.3 Shorten key retention from 24 hours to 60 seconds. Name a concrete,
+realistic client behavior (numbers: timeouts, attempt counts, redelivery
+delays) that now produces a duplicate charge that 24 h would have absorbed.</p>
+<h2 id="exercises-rung-5--trace">Rung 5 — Trace</h2>
+<p>Design <strong>D</strong> semantics, by hand. Starting state: empty key table, empty
+orders, empty bank ledger. Events, in order:</p>
+<div class="code"><pre><code>e1  request (key ck_9, fp aa11, amount 2000) arrives
+e2  server commits claim txn
+e3  server calls bank (bank_key ck_9-charge); bank charges, replies OK c_501
+e4  SERVER CRASHES
+e5  request (key ck_9, fp aa11) arrives again           ← Asha&#x27;s retry
+e6  server restarts
+e7  request (key ck_9, fp bb22, amount 1900) arrives    ← app re-priced, reused key!
+e8  reaper runs (threshold exceeded), re-drives ck_9
+e9  request (key ck_9, fp aa11) arrives again
+</code></pre></div>
+<p>For each event write: key-table row(s) after it, bank ledger, and the HTTP
+response (if any) sent to the client. Then state the final charge count and
+which event was answered &quot;incorrectly&quot; from the <em>user's</em> point of view even
+though the server followed the contract.</p>
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p>Each design below contains one planted mistake. For each: construct a
+concrete run (named requests, interleaved steps) where it produces a wrong
+outcome, and name the violated guarantee.</p>
+<p>6.1 <em>&quot;We INSERT the key row with a unique constraint — atomic claim, done
+right — then do the local business writes. For speed, the claim INSERT uses
+its own small transaction that commits immediately, and the business writes
+follow in a second transaction.&quot;</em> (Effect is 100% local database writes.)</p>
+<p>6.2 <em>&quot;Keys live in Redis: <code>SET key outcome NX EX 86400</code>. On duplicate we
+return the cached outcome. The order writes go to Postgres. Redis is
+configured with appendonly no — it's just dedup data.&quot;</em></p>
+<p>6.3 <em>&quot;To keep the table small we store the key row only on success. Failed
+attempts store nothing, so the client can simply retry a failure with the
+same key.&quot;</em> (Effect includes the external bank call; &quot;failed&quot; is judged by
+the server's own handler catching any exception.)</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>The bottom hop strikes back: your payout service must call a partner bank
+whose API has <strong>no idempotency support</strong> — a bare <code>POST /transfer</code> that
+moves money every time it is called. You cannot change the partner.</p>
+<p>Design, on paper, the safest achievable payout pipeline: what your claim
+row looks like, when you call the partner relative to your transactions,
+what the reaper is and is not allowed to do with a stuck RUNNING payout,
+what the reconciliation job compares, and what number you put on a
+dashboard as the honest residual. State explicitly which requirement from
+§5 you are giving up and which failure (over-pay or under-pay/late-pay) you
+chose to prefer, and why that is the right preference for payouts.</p>
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p>Ticket checkout at production scale: <code>POST /checkout</code> must (a) charge the
+card via Stripe, (b) reserve a seat in your seats database, (c) email the
+ticket via a legacy SMTP relay (no dedup of any kind), at ~500 checkouts/s,
+clients are flaky mobile apps, and finance requires provable
+at-most-one-charge per checkout.</p>
+<p>Produce: the key flow end to end (who mints what, which hops carry which
+derived keys); the key-table schema including recovery points and the step
+order (justify which of charge/reserve comes first); the concurrent-
+duplicate and crash-at-every-step behavior; retention choices per store;
+the box-G treatment for the email hop; and the five dashboard metrics with
+the one you page on. Close with the two failure modes your design still
+permits, stated honestly.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-idempotency--solutions">Idempotency — solutions</h1>
+<h2 id="solutions-rung-1">Rung 1</h2>
+<p><strong>1.1</strong> A client that never retries loses work every time the network eats a
+message — and silence tells it nothing, so it cannot even know <em>which</em> work
+was lost. A client that retries turns every lost <em>answer</em> into a possible
+duplicate <em>request</em>, because the server cannot tell &quot;attempt two of one
+intention&quot; from &quot;a second intention&quot; by looking at the bytes. The key moves
+exactly one piece of knowledge: <strong>&quot;these sends are the same intention&quot;</strong> —
+knowledge that exists only at the client, at the moment of the first send,
+and nowhere else in the system.</p>
+<p><strong>1.2</strong> (a) <em>The answer:</em> a dedup layer that says &quot;duplicate, discarded&quot;
+leaves the caller still ignorant of the outcome — the caller retried
+precisely because it doesn't know what happened; only replaying the stored
+original response answers the question actually being asked. (b) <em>Crashes:</em>
+dedup marks &quot;seen&quot; either before the work (crash after marking → the retry
+is suppressed and the work never happens) or after it (crash between work
+and marking → the retry re-executes). Only a claim that is atomic with the
+work — or recoverable evidence plus keyed downstream hops — survives both.</p>
+<h2 id="solutions-rung-2">Rung 2</h2>
+<p><strong>2.1</strong> The <code>ck_1</code> row; state <code>SUCCEEDED</code> (green) with the stored response
+beside it. <strong>2.2</strong> The key table — the log says the retry was answered by
+replay without contacting the bank or touching orders; no new bank/order
+activity appears at that step. <strong>2.3</strong> The request body (amount + item) —
+the fingerprint shown is a hash over the request content; the two requests
+with identical bodies show identical fingerprints.</p>
+<h2 id="solutions-rung-3">Rung 3</h2>
+<p><strong>3.1</strong> 2 charges. Inevitable at the moment the <em>second</em> request's check
+completes while the first has not yet recorded — from then on both threads
+are committed to charging; everything after is bookkeeping. The gap is
+between check and act, so the fatal step is the second check, not either
+charge.</p>
+<p><strong>3.2</strong> The key table is <strong>empty</strong> — the claim was uncommitted, so the
+crash rolled it back; the bank ledger has 1 charge. The retry finds no
+row, claims fresh, and charges again → 2 charges. The rollback destroyed
+the evidence but not the effect.</p>
+<p><strong>3.3</strong> The claim row survived (committed first), state RUNNING. The
+re-drive re-calls the bank <em>with the same bank-side key</em>; the bank
+recognizes it and <strong>replays</strong> its earlier &quot;OK c_501&quot; instead of charging;
+the server completes the outcome transaction. Final: 1 charge.</p>
+<h2 id="solutions-rung-4">Rung 4</h2>
+<p><strong>4.1</strong> Improves: the duplicate's client gets its answer in one round trip
+(better latency for that caller, no 409 handling needed). Newly at risk:
+server threads/connections — every waiting duplicate holds one for the full
+duration of the original work, unbounded if the bank is slow. This reenacts
+the optimistic-locking lab's <strong>lunch problem</strong>: one slow actor converting
+its delay into everyone's resource starvation. (With bounded pools, a burst
+of duplicates on a slow key can occupy the whole pool — the networking
+lab's green-dashboard death.)</p>
+<p><strong>4.2</strong> Asha taps Pay → request sent with key <code>ck_a</code> → response lost → app
+shows &quot;Try again&quot; → she taps Pay again → <em>the press mints a fresh key</em>
+<code>ck_b</code> → server sees two intentions → two charges, all correct by contract.
+Minting at render time makes both taps of the same screen carry the same
+key; a fresh key is minted only when a <em>new</em> payment screen (new intention)
+is shown.</p>
+<p><strong>4.3</strong> Example: client timeout 30 s, 5 attempts with exponential backoff
+(30 s, 60 s, 120 s, 240 s…) — attempt 4 arrives ~3.5 minutes after attempt</p>
+<ol>
+<li>Or: the request rode a queue that redelivers after a 2-minute visibility
+timeout. With 60 s retention the key was purged before the late attempt
+arrives → treated as new → executed again. 24 h absorbs any sane retry
+horizon. Retention must exceed (max attempts × max backoff + redelivery
+delays) with a wide margin.</li>
+</ol>
+<h2 id="solutions-rung-5">Rung 5</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>after</th>
+  <th>key table (<code>ck_9</code>)</th>
+  <th>bank</th>
+  <th>response sent</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>e1</td>
+  <td>— (arriving)</td>
+  <td>—</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>e2</td>
+  <td>RUNNING, fp aa11</td>
+  <td>—</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>e3</td>
+  <td>RUNNING, fp aa11</td>
+  <td>c_501 ₹2,000</td>
+  <td>— (crash imminent)</td>
+</tr>
+<tr>
+  <td>e4</td>
+  <td>RUNNING, fp aa11 (durable)</td>
+  <td>c_501</td>
+  <td>none — connection died</td>
+</tr>
+<tr>
+  <td>e5</td>
+  <td>RUNNING, fp aa11</td>
+  <td>c_501</td>
+  <td><strong>409 in progress, retry later</strong></td>
+</tr>
+<tr>
+  <td>e6</td>
+  <td>unchanged</td>
+  <td>c_501</td>
+  <td>—</td>
+</tr>
+<tr>
+  <td>e7</td>
+  <td>RUNNING, fp aa11</td>
+  <td>c_501</td>
+  <td><strong>422 fingerprint mismatch</strong> (fp bb22 ≠ aa11; nothing executes)</td>
+</tr>
+<tr>
+  <td>e8</td>
+  <td><strong>SUCCEEDED</strong>, response stored (re-drive: bank replays c_501; outcome txn commits)</td>
+  <td>c_501 (still 1)</td>
+  <td>— (reaper has no client to answer)</td>
+</tr>
+<tr>
+  <td>e9</td>
+  <td>SUCCEEDED</td>
+  <td>c_501</td>
+  <td><strong>200 replay</strong> of the stored response</td>
+</tr>
+</tbody>
+</table></div>
+<p>Final charge count: <strong>1</strong>. The &quot;incorrect-feeling&quot; answer is <strong>e7</strong>: the
+user changed the cart to ₹1,900 and got an error — but the server is right;
+<code>ck_9</code> names the ₹2,000 intention, which was in fact executed. The app's
+bug is reusing a key across intentions; the 422 is the contract catching it
+before money moves twice.</p>
+<h2 id="solutions-rung-6">Rung 6</h2>
+<p><strong>6.1 Claim committed separately from the local effect.</strong> Run: request A
+claims <code>ck_1</code> (txn 1 commits), starts business writes, <strong>crashes</strong> before
+txn 2. Retry arrives: claim exists → treated as duplicate → 409 forever /
+replay of nothing; the effect never happened and never will. The guarantee
+violated is §5's requirement 2 — an attempt never learns a real outcome —
+and re-driving is now mandatory <em>even for a purely local effect</em>, which the
+single-transaction v2 got for free. Splitting the claim from a local effect
+buys nothing and reintroduces the stuck state; claim-first is only for
+effects that <em>cannot</em> share the transaction.</p>
+<p><strong>6.2 Redis claim, Postgres effect</strong> — failure 6 embodied, two runs:
+(a) claim in Redis succeeds, server crashes before Postgres commit → retry
+is suppressed by Redis and replays a stored &quot;outcome&quot; for work that never
+happened (requirement 2 violated). (b) Redis restarts (<code>appendonly no</code> →
+empty): every settled key is forgotten; any late retry re-executes → double
+charge (requirement 1 violated). The claim was in a different durable
+domain than the effect: the dual-write problem rebuilt at the point of its
+own solution.</p>
+<p><strong>6.3 Success-only key rows.</strong> The handler judges &quot;failed&quot; by catching an
+exception — but the networking lab's lesson applies to the <em>bank call
+inside</em> the handler: a timeout is not &quot;did not happen.&quot; Run: bank call
+times out at 30 s (bank actually charged, reply lost) → handler throws →
+stores nothing → client retries with the same key → no row → full
+re-execution → <strong>second charge</strong>. Violated: at-most-one-effect, in exactly
+the case the mechanism exists for. Failures must settle as FAILED rows
+(replayable, like Stripe) — and an <em>ambiguous</em> failure (timeout) must not
+settle at all until resolved via the keyed downstream or reconciliation;
+it stays RUNNING for the reaper.</p>
+<h2 id="solutions-rung-7-worked-design-discussion">Rung 7 (worked design discussion)</h2>
+<ul>
+<li><strong>Claim row:</strong> <code>payout_id (key), fingerprint, state (RUNNING/SENT_UNCONFIRMED/CONFIRMED/HELD), partner_ref?, created_at</code> — in
+the payouts database, same store as the ledger.</li>
+<li><strong>Ordering:</strong> commit the claim (RUNNING) first; then the partner call;
+then commit outcome. Immediately before the call, advance state to
+<code>SENT_UNCONFIRMED</code> in its own small committed transaction — so the
+evidence distinguishes &quot;never called&quot; from &quot;called, outcome unknown.&quot;</li>
+<li><strong>Reaper rules:</strong> a stuck <code>RUNNING</code> (crash before the call) is provably
+unsent → safe to re-drive the call. A stuck <code>SENT_UNCONFIRMED</code> is the
+irreducible doubt → the reaper must <strong>not</strong> re-call (that risks
+double-pay); it parks the payout as <code>HELD</code> for reconciliation. This is
+the at-most-once choice.</li>
+<li><strong>Reconciliation:</strong> compare partner statements/reports against
+<code>SENT_UNCONFIRMED</code>/<code>HELD</code> and the ledger, keyed by amount + account +
+your reference in the transfer narration (the closest thing to a key you
+can smuggle in). Matches promote to CONFIRMED; misses release the HELD
+payout for a fresh, <em>human-approved</em> send.</li>
+<li><strong>Dashboard residual:</strong> count and age of HELD payouts, plus
+reconciliation mismatch count — the honest number that replaces
+pretended exactly-once.</li>
+<li><strong>What's given up:</strong> §5 requirement 1 is kept <em>by sacrificing liveness</em>
+(payouts can stall in HELD awaiting reconciliation) — for payouts,
+under-pay-late is a support ticket and an apology; over-pay is money
+gone to clawback. At-most-once per hop + reconciliation is the correct
+preference. (A marketing-email hop would choose the opposite:
+at-least-once, duplicates shrugged off.)</li>
+</ul>
+<h2 id="solutions-rung-8-worked-design-discussion">Rung 8 (worked design discussion)</h2>
+<ul>
+<li><strong>Keys:</strong> app mints <code>checkout_key</code> at checkout-screen render, persists it
+locally with the pending intention, reuses across retries and app
+restarts. Server derives per-step keys: <code>&lt;key&gt;-charge</code> → Stripe's
+<code>Idempotency-Key</code>; <code>&lt;key&gt;-seat</code> → the seat reservation (internal, but
+keyed so the step is re-drivable); email gets no key (none exists).</li>
+<li><strong>Schema:</strong> <code>idempotency_keys(key, fingerprint, state, recovery_point ∈ {started, seat_reserved, charged, emailed}, response, created_at)</code> in
+the orders database.</li>
+<li><strong>Step order — reserve seat before charging.</strong> Both orders can be made
+correct (both steps are keyed and re-drivable), so choose by <em>cost of the
+interrupted state</em>: seat-then-charge leaves a seat held for a customer
+whose card then fails — release it (cheap, internal, a compensation in
+the saga-lab sense). Charge-then-seat can take money for a sold-out seat
+→ refund (slow, visible, finance-touching). Reserve with a TTL hold
+(uber-lab offer/lease shape), charge, then confirm the hold.</li>
+<li><strong>Concurrency/crash:</strong> duplicate on RUNNING → 409 + Retry-After;
+duplicate on settled → replay with <code>Idempotent-Replayed: true</code>; wrong
+fingerprint → 422. Crash anywhere → reaper re-drives from
+<code>recovery_point</code>: seat hold re-asserted by key (idempotent re-reserve),
+Stripe re-called with the same derived key (Stripe replays), email step —
+see below. Every recovery-point advance is its own small committed
+transaction.</li>
+<li><strong>Retention:</strong> key table 24–48 h (≫ any retry horizon; matches Stripe's
+window so your replay horizon isn't longer than your downstream's);
+Stripe's own 24 h noted as a dependency. Seat holds: minutes (TTL).</li>
+<li><strong>Email (box G):</strong> choose at-least-once — a duplicate ticket email is
+harmless, a missing one is a support call. Record <code>emailed</code> <em>after</em> the
+SMTP accept; a crash between send and record re-sends on re-drive.
+Best-effort dedup accelerator (Redis SETNX on <code>&lt;key&gt;-email</code>, short TTL)
+cuts routine duplicates without being trusted. Residual duplicate-email
+rate is measured, not denied.</li>
+<li><strong>Metrics:</strong> replay rate; 409 rate; <strong>oldest-RUNNING age (the page)</strong>;
+fingerprint-mismatch rate; Stripe-replay-on-re-drive count (how often
+crashes actually bit); plus reconciliation delta of Stripe charges vs
+local orders.</li>
+<li><strong>Honest residual failure modes:</strong> (1) duplicate emails (chosen);
+(2) cross-key duplicates — a user who abandons checkout, re-opens a fresh
+checkout screen, and buys again holds two legitimate keys; only the
+advisory heuristic layer (&quot;you already have a ticket — continue?&quot;) can
+catch that, and it is a guess by design.</li>
+</ul>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../48-transactional-outbox/notes.html"><small>← Lab 48</small>transactional-outbox</a><a href="../50-event-sourcing/notes.html" style="text-align:right"><small>Lab 50 →</small>event-sourcing</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-depth-map">Depth map</a><a href="#readme-1-why--the-duplicate-is-not-a-bug-it-is-the-price-of-reliability">1. WHY — the duplicate is not a bug, it is the price of reliability</a><a href="#readme-2-problem--asha-taps-pay-twice">2. PROBLEM — Asha taps Pay twice</a><a href="#readme-3-naive-solution--check-before-charging">3. NAIVE SOLUTION — check before charging</a><a href="#readme-4-failure--three-ways-one-deeper-problem">4. FAILURE — three ways, one deeper problem</a><a href="#readme-5-the-real-requirement">5. THE REAL REQUIREMENT</a><a href="#readme-6-key-idea">6. KEY IDEA</a><a href="#readme-7-terminology--the-professional-vocabulary">7. TERMINOLOGY — the professional vocabulary</a><a href="#readme-8-mental-models">8. MENTAL MODELS</a><a href="#readme-9-visualization--the-second-tap">9. VISUALIZATION — &quot;The Second Tap&quot;</a><a href="#readme-10-the-mechanism--built-four-times">10. THE MECHANISM — built four times</a><a href="#readme-11-failure-scenarios--the-catalogue">11. FAILURE SCENARIOS — the catalogue</a><a href="#readme-12-correctness--what-is-guaranteed-what-is-not-what-it-cost">12. CORRECTNESS — what is guaranteed, what is not, what it cost</a><a href="#readme-13-production">13. PRODUCTION</a><a href="#readme-14-exercises">14. EXERCISES</a><a href="#readme-15-knowledge-map--next-steps">15. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-16-glossary-in-order-of-appearance">16. GLOSSARY (in order of appearance)</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

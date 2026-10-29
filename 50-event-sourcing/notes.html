@@ -1,0 +1,649 @@
+<!doctype html>
+<html lang="en" data-hub-lab="50-event-sourcing">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>50. event-sourcing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 50 of 71 · Stage 6</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 50 · Work That Spans Services</p><article id="readme"><h1 id="readme-event-sourcing--a-learning-lab">Event Sourcing — a learning lab</h1>
+<p><em>Audience: a backend engineer who has never met this pattern. By the end you
+should reason about replay, optimistic concurrency, snapshots, and schema
+evolution fluently — and know when NOT to event-source. Completes the
+event-driven family: <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> (events
+leave a service reliably), <a href="../51-cqrs/notes.html#readme">cqrs</a> (events feed read models),
+<a href="../47-saga/notes.html#readme">saga</a> (events coordinate services). All quoted output is real,
+from <code>java -cp ../lib/h2.jar EsLab.java</code>.</em></p>
+<p><strong>Lab contents</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>This document</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>Interactive: scrub an account through time; race two tellers; correct a mistake</td>
+</tr>
+<tr>
+  <td><code>EsLab.java</code></td>
+  <td>A bank whose ONLY database is an append-only event log (H2). Narrated demo: <code>java -cp ../lib/h2.jar EsLab.java</code></td>
+</tr>
+<tr>
+  <td><code>EsTest.java</code></td>
+  <td>12 scenario tests: <code>java -cp ../lib/h2.jar EsTest.java</code></td>
+</tr>
+<tr>
+  <td><code>BrokenEs.java</code></td>
+  <td>The planted bug for exercise D1</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code> / <code>SOLUTIONS.md</code></td>
+  <td>Predict / modify / debug, answers separate</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-1-why-does-this-exist">1. WHY does this exist?</h2>
+<p>Every ordinary database answers &quot;what is true <em>now</em>?&quot; and destroys, with
+each UPDATE, the evidence of how it got there. Yet whole industries run on
+the <em>how</em>: banks are audited on every movement, disputes hinge on what was
+known when, debugging means &quot;what sequence of things produced this state?&quot;.
+Event sourcing exists for systems where the history is not a byproduct of
+the data — it <strong>is</strong> the data.</p>
+<h2 id="readme-2-the-problem-as-a-story">2. THE PROBLEM, as a story</h2>
+<p>Ask a bank teller your balance. Does she look up a &quot;balance box&quot; holding one
+number that gets scribbled over all day? Never — she'd have no answer when
+you dispute it (&quot;why is it 20? it was 70 yesterday!&quot;). Real banks have kept
+the answer for five centuries: a <strong>passbook</strong> — a list of every deposit and
+withdrawal, in order, in ink. Your balance isn't <em>stored</em> anywhere; it's
+what you get by <em>adding up the book</em>. The book explains itself: any past
+balance, any dispute, any audit — just read up to that line. And nobody,
+ever, erases a line: a wrong entry is fixed by writing a <em>correcting</em> entry
+below it, so the book also remembers that the mistake happened.</p>
+<p>Most software stores the balance box and throws away the passbook.</p>
+<h2 id="readme-3-the-naive-solution">3. THE NAIVE SOLUTION</h2>
+<p>Store current state (<code>accounts.balance = 70</code>), and when history is needed,
+bolt it on: an <code>audit_log</code> table written &quot;as well&quot;, updated-at columns,
+maybe database triggers copying old rows to a <code>_history</code> table.</p>
+<h2 id="readme-4-why-that-fails">4. WHY THAT FAILS</h2>
+<ul>
+<li><strong>The log is a second-class copy, and copies drift.</strong> Every write path
+must remember to write the log too; the one that forgets (a bulk script,
+a hotfix, a new endpoint) leaves history that disagrees with state — and
+since state is authoritative, the log quietly becomes fiction. (The
+<a href="../48-transactional-outbox/notes.html#readme">outbox lab</a> is entirely about one instance of
+this dual-write disease.)</li>
+<li><strong>It can't answer the past.</strong> <code>balance=70</code> plus a partial log cannot
+reliably reconstruct &quot;what was the balance when the fraud check ran?&quot;
+The information was destroyed by UPDATE, and the log records what someone
+<em>chose</em> to record, not what happened.</li>
+<li><strong>Lost updates.</strong> Two processes read balance 70, both subtract 50, both
+write back — last writer wins, money invented. Guarding this needs row
+locks or version columns — machinery the naive design bolts on late.</li>
+<li><strong>New questions have no past.</strong> &quot;How many users added an item then
+removed it?&quot; — the events were never kept; the answer starts existing
+only from the day you begin recording it.</li>
+</ul>
+<h2 id="readme-5-the-key-idea">5. THE KEY IDEA</h2>
+<p><strong>Store the passbook, compute the box.</strong> Persist every change as an
+immutable, append-only event; make <em>that</em> the only source of truth; derive
+current state — any state, at any point in time — by replaying events. What
+was the bolt-on (the log) becomes the foundation; what was the foundation
+(current state) becomes a disposable computation.</p>
+<h2 id="readme-6-terminology">6. TERMINOLOGY</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain-English meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Event</strong></td>
+  <td>An immutable past-tense fact: <code>MoneyDeposited{amount: 100}</code>. Never edited, never deleted.</td>
+</tr>
+<tr>
+  <td><strong>Event store</strong></td>
+  <td>The database of events: append and read, no UPDATE, no DELETE.</td>
+</tr>
+<tr>
+  <td><strong>Stream</strong></td>
+  <td>One entity's events in order (<code>account-7</code>), each numbered by <strong>version</strong> 1,2,3…</td>
+</tr>
+<tr>
+  <td><strong>Aggregate</strong></td>
+  <td>The entity that guards its own rules (an account). Exists in memory only, rebuilt by replay.</td>
+</tr>
+<tr>
+  <td><strong>Replay / fold</strong></td>
+  <td>Rebuilding state by applying events in order: <code>state = fold(apply, events)</code>.</td>
+</tr>
+<tr>
+  <td><strong><code>apply</code></strong></td>
+  <td>How one event changes state. Pure, and <strong>total</strong> — it must accept every recorded event, because they already happened.</td>
+</tr>
+<tr>
+  <td><strong><code>decide</code></strong></td>
+  <td>Command → new events (or rejection). ALL validation lives here, against replayed state.</td>
+</tr>
+<tr>
+  <td><strong>Expected version / optimistic concurrency</strong></td>
+  <td>Append succeeds only if the stream is still at the version you loaded — the whole write-concurrency story.</td>
+</tr>
+<tr>
+  <td><strong>Compensating event</strong></td>
+  <td>The correcting entry: a new fact that undoes an earlier one's <em>effect</em> while keeping both on record.</td>
+</tr>
+<tr>
+  <td><strong>Snapshot</strong></td>
+  <td>A cached fold at version N, so loading replays only events after N. Pure optimization.</td>
+</tr>
+<tr>
+  <td><strong>Upcasting</strong></td>
+  <td>Upgrading old-schema events in memory, on read — history is never migrated.</td>
+</tr>
+<tr>
+  <td><strong>Projection</strong></td>
+  <td>A read model folded from events (the <a href="../51-cqrs/notes.html#readme">cqrs</a> lab's entire subject).</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-7-the-mental-model">7. THE MENTAL MODEL</h2>
+<blockquote>
+<p><strong>Git for your business data.</strong> An aggregate is a file; events are
+commits; current state is the checked-out working copy — derivable,
+disposable, never the truth. Time travel is checkout of an old commit;
+a snapshot is a shallow clone; expected-version append is push being
+rejected because someone pushed first — and the fix is the same: pull
+(reload), re-apply your intent (re-decide), push again. You never edit a
+committed line; you commit a revert.</p>
+</blockquote>
+<pre class="mermaid">flowchart LR
+    C[&quot;command: withdraw 50&quot;] --&gt; D[&quot;decide()&lt;br/&gt;(rules, vs replayed state)&quot;]
+    S[(&quot;event store&lt;br/&gt;account-7: e1 e2 e3&quot;)] --&gt;|&quot;replay&quot;| A[&quot;Account&lt;br/&gt;balance=70, version=3&quot;]
+    A --&gt; D
+    D --&gt;|&quot;MoneyWithdrawn(50)&quot;| AP[&quot;append(expected_version=3)&quot;]
+    AP --&gt;|&quot;ok → v4&quot;| S
+    AP -.-&gt;|&quot;conflict: stream moved&quot;| C
+</pre>
+<h2 id="readme-8-see-it-move">8. SEE IT MOVE</h2>
+<ul>
+<li><strong>Interactive page</strong> — <code>visualization.html</code> (published copy:
+<a href="https://claude.ai/code/artifact/b7e6a2f2-0460-4247-9537-a412cf3dd217" target="_blank" rel="noopener">https://claude.ai/code/artifact/b7e6a2f2-0460-4247-9537-a412cf3dd217</a>): an account's stream as a filmstrip you scrub through —
+drag to any version and watch the balance recompute; race two tellers;
+post a wrong deposit and correct it; drop a snapshot and see the replay
+cost fall. Stories narrate each scene.</li>
+<li><strong>The demo</strong> — <code>java -cp ../lib/h2.jar EsLab.java</code>, scenes 1–7, real output quoted below.</li>
+</ul>
+<h2 id="readme-9-the-actual-mechanism">9. THE ACTUAL MECHANISM</h2>
+<p>The universal write path — load → decide → append-if-unchanged:</p>
+<ol>
+<li><strong>Load = replay.</strong> <code>Account.load(store, &quot;7&quot;)</code> reads stream <code>account-7</code>
+and folds: <code>AccountOpened → MoneyDeposited(100) → MoneyWithdrawn(30)</code>
+gives <code>balance=70.0, version=3</code>. Demo scene 1's output:
+<code>balance = 70.0 (computed by replaying 3 events; no balance column exists)</code>.</li>
+<li><strong>Decide.</strong> <code>decideWithdraw(50)</code> checks the rules against that replayed
+state and returns <em>proposed events</em> — it mutates nothing.</li>
+<li><strong>Append with <code>expected_version=3</code>.</strong> The store checks the stream is
+still at 3 (here: a <code>UNIQUE(stream, version)</code> constraint enforced in a
+transaction — in real stores, a conditional append). Still 3 → events
+become versions 4, 5, …; moved → <code>ConcurrencyConflict</code>.</li>
+<li><strong>On conflict: reload, RE-decide, retry.</strong> Not &quot;retry the append&quot; —
+re-run the <em>decision</em> against the fresh state (why this distinction is
+money: §10b).</li>
+<li><strong>Reads</strong> of &quot;current state&quot; in a pure design are replays too; at scale
+they're served by projections (<a href="../51-cqrs/notes.html#readme">cqrs</a>) and bounded by
+snapshots (scene 6: a 256-event stream cold-loads by replaying 256,
+snapshot-loads by replaying 56 — identical result, <code>270.0 == 270.0</code>).</li>
+</ol>
+<p>And the one rule that keeps replay sound forever: <strong><code>apply</code> validates
+nothing</strong> — it must accept every event that was ever legally recorded, even
+ones today's rules would refuse (test:
+<code>unknown_event_types_are_tolerated_on_replay</code>; exercise M2 makes you break
+this and watch history become unreadable).</p>
+<h2 id="readme-10-failure-scenarios">10. FAILURE SCENARIOS</h2>
+<p><strong>(a) Lost update, prevented.</strong> Demo scene 4, real output: two tellers load
+version 3 (balance 70). Teller 1 withdraws 50 → OK. Teller 2's append:
+<code>REJECTED — account-7: you loaded version 3, but it is now 4</code>.</p>
+<p><strong>(b) The retry that must re-decide.</strong> Teller 2 retries <em>properly</em> (reload
+→ re-decide): the fresh balance is 20, so withdrawing 40 is now refused —
+<code>insufficient funds: balance 20.0, requested 40.0</code>. The conflict wasn't an
+inconvenience; it was the system handing you a chance to re-check the rules
+against reality. Retrying by force instead — same events, newer version —
+is the planted bug in <code>BrokenEs.java</code>: both withdrawals &quot;succeed&quot; and the
+balance lands at <strong>-30.0</strong> with the overdraft rule never consulted.</p>
+<p><strong>(c) The wrong fact.</strong> A 500 deposit hits the wrong account. There is no
+UPDATE or DELETE to reach for — the fix is a <code>DepositReversed</code> compensating
+event (scene 5): balance restored, and the audit trail keeps <em>both</em> facts,
+exactly like the teller's correcting line in ink.</p>
+<p><strong>(d) Unbounded replay.</strong> A 10-year account has a million events; loading
+it per-command at O(history) eventually hurts. Snapshots cap it (scene 6);
+they are pure cache — delete every snapshot and nothing is lost but time.</p>
+<p><strong>(e) Old events meet new code.</strong> 2019's <code>MoneyDeposited</code> had no <code>channel</code>
+field. Never migrate the store; upcast on read (scene 7: a v1 event reads
+back with <code>channel: 'branch'</code> — the historically-correct default). The
+contract: events are forever, so every version ever written must stay
+readable.</p>
+<p><strong>(f) The GDPR collision.</strong> &quot;Right to erasure&quot; vs &quot;we never delete&quot; is a
+real legal conflict. Standard answers: keep personal data OUT of events
+(store references), or <strong>crypto-shredding</strong> — encrypt personal fields with
+a per-person key and delete the key to erase (exercise M3).</p>
+<h2 id="readme-11-correctness">11. CORRECTNESS</h2>
+<p><strong>Guaranteed:</strong> complete, ordered, tamper-evident history per stream —
+audit is a property, not a feature; any past state reconstructible
+(<code>asOfVersion</code>, test <code>state_can_be_reconstructed_as_of_any_past_version</code>);
+no lost updates within a stream (conditional append); rejected commands
+leave no trace; snapshots never change answers (test
+<code>snapshot_state_equals_full_replay</code>).</p>
+<p><strong>NOT guaranteed:</strong> cross-stream (cross-aggregate) invariants — expected
+version guards ONE stream; &quot;transfer 50 between accounts atomically&quot; needs
+a <a href="../47-saga/notes.html#readme">saga</a> or a process manager, not a bigger transaction; current
+state served from projections is eventually consistent (the <a href="../51-cqrs/notes.html#readme">cqrs</a>
+window); storage is monotonically growing by design.</p>
+<p><strong>Traded away:</strong> the ability to read state with one indexed SELECT and to
+forget anything cheaply. You pay with replay/snapshot machinery, upcasting
+discipline, and event-model design skill (events must be <em>facts</em>, not
+&quot;row changed&quot; diffs) — which is why event-source the subsystems where
+history is the asset, not the whole system.</p>
+<h2 id="readme-12-the-code">12. THE CODE</h2>
+<p><code>EsLab.java</code>, top to bottom: <code>EventStore</code> (append-if-at-version, read with
+upcasting, snapshots), <code>upcast</code>, <code>Account</code> (immutable record; <code>apply</code> = pure
+fold step; <code>decide*</code> = rules), <code>handle</code> (the load→decide→append→retry
+loop), <code>maybeSnapshot</code>. ~500 lines; every concept in §9–§10 is a named
+thing you can point at.</p>
+<h2 id="readme-13-run-the-experiments">13. RUN THE EXPERIMENTS</h2>
+<div class="code"><pre><code class="language-bash">java -cp ../lib/h2.jar EsLab.java     # scenes 1–7, narrated
+java -cp ../lib/h2.jar EsTest.java    # 12 scenario tests
+java -cp ../lib/h2.jar BrokenEs.java  # the -30.0 balance (exercise D1)
+</code></pre></div>
+<p>Then break things: set <code>SNAPSHOT_EVERY = 5</code> and watch load costs; append a
+<code>SomeFutureEventType</code> by hand and replay; make <code>apply</code> throw on overdraft
+and re-run the tests (M2 tells you what you'll see).</p>
+<h2 id="readme-14-from-this-lab-to-production">14. FROM THIS LAB TO PRODUCTION</h2>
+<ul>
+<li><strong>Stores</strong>: purpose-built — EventStoreDB (streams, expected version,
+subscriptions native), Axon Server; or Postgres with an <code>events</code> table
+exactly like this lab's (very common, entirely respectable); Kafka alone
+is a feed, not an event store — per-stream conditional append is the
+missing piece.</li>
+<li><strong>Serving reads</strong>: subscriptions push events to <a href="../51-cqrs/notes.html#readme">cqrs</a>
+projections; &quot;current state&quot; queries hit those, not replays.</li>
+<li><strong>Publishing</strong>: the event store doubles as the outbox — downstream
+consumers tail the global sequence, so the
+<a href="../48-transactional-outbox/notes.html#readme">dual-write problem</a> never exists here.</li>
+<li><strong>Ops reality</strong>: snapshot policies per aggregate size; upcaster suites
+with contract tests over <em>recorded</em> history; blue/green projection
+rebuilds; storage lifecycle (archive cold streams, never mutate).</li>
+<li><strong>Where it earns its keep</strong>: ledgers, payments, trading, inventory,
+insurance claims, anything auditors visit. Where it doesn't: CRUD with no
+history requirement — the passbook of a shopping-cart-sessions table is
+landfill.</li>
+</ul>
+<h2 id="readme-15-exercises">15. EXERCISES</h2>
+<p><a href="notes.html#exercises"><code>EXERCISES.md</code></a> — predict a replay, break <code>apply</code>, shred a
+key, and hunt the -30.0. Answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<h2 id="readme-16-related-concepts">16. RELATED CONCEPTS</h2>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>Event sourcing</th>
+  <th>CRUD + audit log</th>
+  <th>Change data capture</th>
+  <th>Bitemporal tables</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Source of truth</td>
+  <td>the events</td>
+  <td>current rows</td>
+  <td>current rows (log derived)</td>
+  <td>rows with validity intervals</td>
+</tr>
+<tr>
+  <td>History complete?</td>
+  <td>by construction</td>
+  <td>only what code remembered</td>
+  <td>physical changes, not intent</td>
+  <td>valid/known times, not causes</td>
+</tr>
+<tr>
+  <td>Past state</td>
+  <td>replay to any version</td>
+  <td>usually unrecoverable</td>
+  <td>replayable from log start</td>
+  <td>query by timestamp</td>
+</tr>
+<tr>
+  <td>Concurrency</td>
+  <td>expected-version append</td>
+  <td>row locks / version column</td>
+  <td>n/a</td>
+  <td>row locks</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Versus its own family</strong>: event sourcing decides what the <em>truth</em> is;
+<a href="../51-cqrs/notes.html#readme">cqrs</a> decides how to <em>query</em> it (they compose: ES is unqueryable
+without projections); the <a href="../48-transactional-outbox/notes.html#readme">outbox</a> exists for
+systems whose truth is still state — ES makes it redundant; a
+<a href="../47-saga/notes.html#readme">saga</a> coordinates <em>across</em> streams where expected-version cannot
+reach.</p>
+<h2 id="readme-17-next-steps">17. NEXT STEPS</h2>
+<pre class="mermaid">flowchart TD
+    OB[&quot;transactional-outbox ✓&quot;] --&gt; CQ[&quot;cqrs ✓&quot;]
+    CQ --&gt; ES[&quot;event-sourcing (this lab)&quot;]
+    ES --&gt; SG[&quot;saga ✓ — cross-stream workflows&quot;]
+    ES --&gt; K[&quot;/learn kafka — the feed at production scale&quot;]
+    ES --&gt; DDD[&quot;/learn ddd-aggregates — how to draw stream boundaries&quot;]
+    ES --&gt; BT[&quot;/learn bitemporal-modeling — when &#x27;known at&#x27; matters too&quot;]
+</pre>
+<p><em>Read next from the source: Greg Young's &quot;Versioning in an Event Sourced
+System&quot; (free book — §10e as a whole discipline), the EventStoreDB docs, and
+Fowler's &quot;Event Sourcing&quot; bliki entry.</em></p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises">Exercises</h1>
+<p><strong>Predict</strong>, <strong>modify</strong>, <strong>debug</strong> — in that order of difficulty. Write your
+answers down before running anything; answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<hr />
+<h2 id="exercises-predict">Predict</h2>
+<p><strong>P1 — read a stream like a teller reads a passbook.</strong>
+Stream <code>account-7</code> contains exactly:</p>
+<div class="code"><pre><code>v1 AccountOpened{owner: priya}
+v2 MoneyDeposited{amount: 100}
+v3 MoneyWithdrawn{amount: 30}
+v4 MoneyDeposited{amount: 40, channel: wire}
+v5 DepositReversed{amount: 40}
+v6 ComplianceNoteAttached{note: routine check}   &lt;- no code handles this type
+</code></pre></div>
+<p>Predict: (a) <code>balance</code> and <code>version</code> after a full load; (b) the balance
+<code>asOfVersion = 4</code>; (c) does the unknown v6 event crash the replay, and what
+does it do to <code>version</code>? Check:</p>
+<div class="code"><pre><code class="language-bash">cat &gt; P1.java &lt;&lt;&#x27;JAVA&#x27;
+import java.util.List;
+
+public class P1 {
+    public static void main(String[] args) {
+        try (var s = new EsLab.EventStore()) {
+            s.append(&quot;account-7&quot;, 0, List.of(new EsLab.Event(&quot;AccountOpened&quot;, EsLab.payload(&quot;owner&quot;, &quot;priya&quot;))));
+            s.append(&quot;account-7&quot;, 1, List.of(new EsLab.Event(&quot;MoneyDeposited&quot;, EsLab.payload(&quot;amount&quot;, 100.0, &quot;channel&quot;, &quot;app&quot;))));
+            s.append(&quot;account-7&quot;, 2, List.of(new EsLab.Event(&quot;MoneyWithdrawn&quot;, EsLab.payload(&quot;amount&quot;, 30.0, &quot;channel&quot;, &quot;app&quot;))));
+            s.append(&quot;account-7&quot;, 3, List.of(new EsLab.Event(&quot;MoneyDeposited&quot;, EsLab.payload(&quot;amount&quot;, 40.0, &quot;channel&quot;, &quot;wire&quot;))));
+            s.append(&quot;account-7&quot;, 4, List.of(new EsLab.Event(&quot;DepositReversed&quot;, EsLab.payload(&quot;amount&quot;, 40.0))));
+            s.append(&quot;account-7&quot;, 5, List.of(new EsLab.Event(&quot;ComplianceNoteAttached&quot;, EsLab.payload(&quot;note&quot;, &quot;routine check&quot;))));
+            var a = EsLab.Account.load(s, &quot;7&quot;);
+            System.out.println(&quot;full: &quot; + a.account().balance() + &quot; &quot; + a.account().version() + &quot; replayed &quot; + a.replayed());
+            System.out.println(&quot;as_of 4: &quot; + EsLab.Account.load(s, &quot;7&quot;, /* useSnapshot */ false, /* asOfVersion */ 4).account().balance());
+        }
+    }
+}
+JAVA
+java -cp ../lib/h2.jar P1.java &amp;&amp; rm P1.java
+</code></pre></div>
+<p><strong>P2 — snapshots are cache, prove it to yourself.</strong>
+A stream has 131 events; a snapshot exists at version ~100. Predict: how
+many events does <code>useSnapshot = true</code> replay? Now the snapshot row is
+deleted — what changes about (a) the loaded state, (b) the load cost? Which
+test in <code>EsTest.java</code> already pins each half of your answer?</p>
+<hr />
+<h2 id="exercises-modify">Modify</h2>
+<p><strong>M1 — remove the last line of defense.</strong>
+Delete <code>UNIQUE (stream, version)</code> from the events table. Every test still
+passes (run them!). So what was the constraint for? Describe the exact
+interleaving of two <em>processes</em> (not threads in this lab — real concurrent
+writers on a shared Postgres) where the Python-level version check passes
+for both, and only the constraint stands between you and two events with
+the same version. What is that failure called?</p>
+<p><strong>M2 — make <code>apply</code> opinionated, watch history break.</strong>
+Change <code>Account.apply</code> to throw an <code>IllegalArgumentException</code> on event types it doesn't
+recognize (&quot;defensive programming!&quot;). Run the tests. Which one fails, and
+what does it represent in real life? Then answer the deeper version: if
+<code>apply</code> instead enforced <em>today's</em> business rule (say &quot;balance may never
+exceed 10,000&quot;) — what class of previously-legal history becomes
+unreadable, and what is the iron rule about where validation may live?</p>
+<p><strong>M3 — the right to be forgotten (design exercise).</strong>
+<code>AccountOpened{owner: &quot;priya&quot;}</code> is personal data in an immutable log.
+Sketch crypto-shredding for this lab: what would you encrypt, what key
+granularity, where do keys live, what happens on erasure request, and what
+does a post-shred replay produce? One subtle question to answer explicitly:
+does <code>apply</code> need to change to survive replaying a shredded stream?</p>
+<hr />
+<h2 id="exercises-debug">Debug</h2>
+<p><strong>D1 — the bank that never says no twice.</strong>
+<code>java -cp ../lib/h2.jar BrokenEs.java</code>: two withdrawals of 50 from a balance
+of 70 both &quot;succeed&quot;; the balance prints <strong>-30.0</strong>. Read
+<code>handleWithMoreDetermination</code> and explain the exact sequence — what did
+it reuse that it must not have? Which test in <code>EsTest.java</code> pins the correct
+behavior? State the fix in one sentence, and the general law about what a
+<code>ConcurrencyConflict</code> is actually telling you.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<h2 id="solutions-p1--a-700-version-6--b-1100--c-no-crash-version-still-advances">P1 — (a) 70.0, version 6 · (b) 110.0 · (c) no crash; version still advances</h2>
+<p>(a) Fold: 0 → +100 → -30 → +40 → -40 → (no-op) = <strong>70.0</strong>, six events so
+<strong>version 6</strong> (the unknown event still counts — it happened). (b) As of v4
+the reversal hasn't happened: 100-30+40 = <strong>110.0</strong>. (c) <code>apply</code>'s fallback
+branch tolerates unknown types and only bumps the version — replay is
+<em>total</em>: it must survive every fact ever recorded, including types added by
+future (or auditing) code it never heard of.</p>
+<h2 id="solutions-p2--31-state-identical-cost-back-to-131">P2 — ~31; state identical; cost back to 131</h2>
+<p>Snapshot at 100 + tail 31 = replay ~31 events. Delete the snapshot: (a) the
+state is bit-for-bit the same — pinned by <code>snapshot_state_equals_full_replay</code>;
+(b) the load replays all 131 — the difference
+<code>snapshot_load_replays_only_the_tail</code> measures. Snapshots are <em>pure</em> cache:
+they can be deleted, rebuilt, or wrong-versioned away with zero data loss.
+Anything you can't delete without losing information does not belong in a
+snapshot.</p>
+<h2 id="solutions-m1--the-toctou-window-a-lost-update">M1 — the TOCTOU window; a lost update</h2>
+<p>The lab's check is SELECT-max-version <em>then</em> INSERT. Within this
+single-connection lab, that's race-free. With two real processes on a
+shared database: P1 SELECTs (version 3), P2 SELECTs (version 3), P1 INSERTs
+v4 and commits, P2 INSERTs v4 and commits — both checks passed at the time
+they ran (a time-of-check/time-of-use race). Now the stream has two
+version-4 events: replay order between them is undefined and one writer's
+decision was made against state that no longer existed — a <strong>lost update</strong>,
+the exact disease expected-version exists to cure. <code>UNIQUE(stream,version)</code>
+makes the database itself refuse the second insert regardless of
+application-level races. Production stores either rely on precisely such a
+constraint or serialize appends per stream internally.</p>
+<h2 id="solutions-m2--unknown_event_types_are_tolerated_on_replay-fails-apply-must-be-total">M2 — <code>unknown_event_types_are_tolerated_on_replay</code> fails; apply must be total</h2>
+<p>The failing test represents <em>your own future</em>: any event type added after
+today makes yesterday's deployed replayer crash on tomorrow's history —
+and auditing/compliance events written by other components do this
+routinely. The deeper version: if <code>apply</code> enforces today's 10,000 cap, then
+any account that <em>legally</em> held 15,000 back when the cap was 50,000 can no
+longer be loaded — history that was valid when written becomes unreadable
+retroactively. The iron rule: <strong><code>decide</code> validates (against today's rules,
+before the fact); <code>apply</code> records (whatever the rules were, after the
+fact).</strong> Rules change; facts don't.</p>
+<h2 id="solutions-m3--crypto-shredding-sketch">M3 — crypto-shredding sketch</h2>
+<p>Encrypt the <em>personal fields</em> of event payloads (<code>owner</code>), not whole
+events, with a per-person (or per-stream) data key; store keys in a
+separate key table/KMS keyed by subject id; event payloads hold ciphertext.
+On erasure request: delete the key — every copy of the history (backups
+included!) instantly becomes unreadable ciphertext for those fields, while
+versions, amounts, and structure survive for accounting. Post-shred replay
+produces a fully valid account whose owner reads as &quot;(erased)&quot;/undecryptable.
+And yes, <code>apply</code> (or the read path) must change: decryption failure must be
+handled as a <em>normal outcome</em> — a total <code>apply</code> treats &quot;key gone&quot; as
+&quot;field redacted&quot;, never as an error. (The alternative discipline: never put
+personal data in events at all — store a subject id and keep PII in a
+mutable store; then event sourcing's immutability and GDPR never meet.)</p>
+<h2 id="solutions-d1--it-reused-the-decision-conflicts-demand-re-deciding-not-re-sending">D1 — it reused the DECISION; conflicts demand re-deciding, not re-sending</h2>
+<p>Sequence: the broken handler loads at version 2 (balance 70) and computes
+<code>MoneyWithdrawn(50)</code> once. Teller 1 lands v3 (balance 20). The broken
+append conflicts — correct so far — but the &quot;retry&quot; only refreshes the
+<em>version number</em> and re-sends the <strong>same event</strong>, decided against a world
+where the balance was 70. The store, asked &quot;is the stream at 3?&quot;, truthfully
+answers yes, and appends. No rule ran; balance -30.</p>
+<p>The pinning test: <code>retry_re_decides_and_the_invariant_holds_against_fresh_state</code>
+— its two assertions (a rejection, and balance 20.0) are exactly what the bug
+violates.</p>
+<p>But be precise about <em>when</em> it violates them, because a careless swap will
+mislead you. Dropping the broken handler into that test verbatim still
+<strong>passes</strong>: the test expresses its command as a lambda evaluated after the
+conflicting write, so the broken handler happens to load fresh state and
+re-decide by accident. The bug fires only when the decision is genuinely
+<strong>stale</strong> — computed before the conflicting write — which is the interleaving
+<code>BrokenEs.java</code>'s <code>main</code> deliberately arranges. Run that and you get
+<code>ACCEPTED | balance -20.0</code> where the test demands rejection at 20.0.</p>
+<p>This is worth more than the bug itself: a concurrency bug that a
+single-threaded test cannot reach is the normal case, not a curiosity. The
+suite never exercises the conflict-retry branch at all, which is why the bug
+survives a green run. Fix in one sentence: on conflict, <strong>reload
+the aggregate and re-run <code>decide</code> against the fresh state</strong> (exactly what
+<code>EsLab.handle</code> does). The law: a <code>ConcurrencyConflict</code> is not an error to
+be retried away — it is the store telling you <em>&quot;the world you decided in no
+longer exists; decide again.&quot;</em></p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../49-idempotency/notes.html"><small>← Lab 49</small>idempotency</a><a href="../51-cqrs/notes.html" style="text-align:right"><small>Lab 51 →</small>cqrs</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-exist">1. WHY does this exist?</a><a href="#readme-2-the-problem-as-a-story">2. THE PROBLEM, as a story</a><a href="#readme-3-the-naive-solution">3. THE NAIVE SOLUTION</a><a href="#readme-4-why-that-fails">4. WHY THAT FAILS</a><a href="#readme-5-the-key-idea">5. THE KEY IDEA</a><a href="#readme-6-terminology">6. TERMINOLOGY</a><a href="#readme-7-the-mental-model">7. THE MENTAL MODEL</a><a href="#readme-8-see-it-move">8. SEE IT MOVE</a><a href="#readme-9-the-actual-mechanism">9. THE ACTUAL MECHANISM</a><a href="#readme-10-failure-scenarios">10. FAILURE SCENARIOS</a><a href="#readme-11-correctness">11. CORRECTNESS</a><a href="#readme-12-the-code">12. THE CODE</a><a href="#readme-13-run-the-experiments">13. RUN THE EXPERIMENTS</a><a href="#readme-14-from-this-lab-to-production">14. FROM THIS LAB TO PRODUCTION</a><a href="#readme-15-exercises">15. EXERCISES</a><a href="#readme-16-related-concepts">16. RELATED CONCEPTS</a><a href="#readme-17-next-steps">17. NEXT STEPS</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

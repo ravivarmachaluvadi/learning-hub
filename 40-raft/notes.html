@@ -1,0 +1,3287 @@
+<!doctype html>
+<html lang="en" data-hub-lab="40-raft">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>40. raft</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 40 of 71 · Stage 5</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 40 · Copies and Agreement</p><article id="readme"><h1 id="readme-raft--how-five-people-keep-one-order-book">Raft — how five people keep one order book</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Ana, Ben, Cara, Dev and Eve run a pizza shop, and each
+keeps an order book. All five books must say the same orders in the same
+numbered slots, even though people vanish mid-shift and shouts across the
+kitchen get lost. Raft's trick is to put one person in charge for a numbered
+stretch of time, let only that person write, and call an order &quot;settled&quot; the
+moment most of the five have copied it down. The only people allowed to take
+charge next are those whose book already holds everything that was settled,
+which is why a settled order can never be lost. Every rule in Raft that looks
+odd is a scar from one specific way a simpler version of the shop broke.</p>
+</blockquote>
+<p>The interactive version is <a href="https://claude.ai/code/artifact/9e9cab79-30ef-4665-b9e5-6dec2dcab932" target="_blank" rel="noopener">The Raft Log Grid</a>,
+also saved as <a href="visualization.html"><code>visualization.html</code></a>. How to run the Java,
+where this lab sits among your other labs, and how the numbers were made are
+all in <a href="#readme-19-about-this-lab">section 19</a> at the end.</p>
+<hr />
+<h1 id="readme-beginner-model">BEGINNER MODEL</h1>
+<h2 id="readme-1-why-does-this-thing-exist">1. Why does this thing exist?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Anything important is kept on more than one machine,
+because one machine dies. But copies can disagree about what happened and in
+what order, and nothing rings an alarm when they do.</p>
+</blockquote>
+<p>Anything important lives on more than one machine. Why? Because one machine
+dies. The moment you have copies, you have a new problem, and it is much
+nastier than losing a machine. <strong>The copies can disagree about what happened,
+and about what happened first.</strong></p>
+<p>Here is the shape of it. A balance of £100 has two changes in flight: &quot;add
+£50&quot; and &quot;take 20%&quot;. Apply them in one order and you get £120. Apply them the
+other way and you get £130. Now imagine two copies of your database apply them
+in different orders. Both copies are internally consistent. Both look healthy.
+And they disagree by £10 forever. Nothing crashes. No alarm fires. You discover
+it when a customer does.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Order the changes were applied</th>
+  <th>Balance</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>add £50, then take 20%</td>
+  <td>£120</td>
+  <td>one copy's honest answer</td>
+</tr>
+<tr>
+  <td>take 20%, then add £50</td>
+  <td>£130</td>
+  <td>the other copy's honest answer</td>
+</tr>
+<tr>
+  <td>each copy picked a different order</td>
+  <td>a £10 gap, forever</td>
+  <td>neither copy is &quot;wrong&quot; on its own; the <em>group</em> is</td>
+</tr>
+</tbody>
+</table></div>
+<p>Raft exists so that a group of machines can agree, permanently, on <strong>one
+ordered list of changes</strong>. It keeps that agreement while machines crash and
+restart. It keeps it while the network loses, delays, duplicates and reorders
+messages. Every system that has to keep exactly one answer has one of these
+underneath it: which node owns which shard, who holds the lock, what the
+current config is, where the leader lives.</p>
+<h2 id="readme-2-what-is-the-problem-the-pizza-shop">2. What is the problem? The pizza shop</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five people take phone orders and each keeps an order
+book. All five books must end up with the same orders in the same numbered
+slots, even though people leave without warning and shouts get lost.</p>
+</blockquote>
+<p>A pizza shop takes orders by phone. Five people work there: <strong>Ana, Ben, Cara,
+Dev and Eve</strong>. Each keeps their own order book. Every book has to end up with
+the same orders written in the same numbered slots. Why so strict? Because the
+orders refer to each other.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Slot</th>
+  <th>What is written</th>
+  <th>Why the order matters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>&quot;table 4 wants a margherita&quot;</td>
+  <td>the pizza everything else is about</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>&quot;table 4 — make that extra cheese&quot;</td>
+  <td>changes slot 1</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>&quot;table 4 — cancel&quot;</td>
+  <td>undoes slots 1 and 2</td>
+</tr>
+</tbody>
+</table></div>
+<p>Apply those in a different order and you either deliver a pizza nobody wanted
+or throw away one someone is waiting for.</p>
+<p>The awkward parts:</p>
+<ul>
+<li><strong>People leave without warning.</strong> Ana's shift ends. Ben's phone dies
+mid-call.</li>
+<li><strong>Nobody can see anyone else's book.</strong> They can only shout messages across
+a noisy kitchen. Shouts get lost, arrive late, or arrive twice.</li>
+<li><strong>You cannot wait for everyone.</strong> Suppose the rule is &quot;write it down only
+when all five have confirmed&quot;. Then one person in the walk-in freezer stops
+the shop.</li>
+</ul>
+<p>The job: get all five books to hold the same orders in the same slots,
+forever, even though people vanish mid-sentence.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Why is &quot;just have everyone write down whatever they hear&quot;
+not good enough?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Because two phones can ring at the same time.</strong> Ana hears &quot;margherita&quot; and
+Cara hears &quot;pepperoni&quot;, and both write into slot 1. Neither did anything
+wrong. Their books now differ at slot 1 and at every slot after it. And there
+is no rule anywhere that says which one was &quot;really&quot; first. In a system with
+no shared clock there is no such thing as <em>really first</em>.</p>
+<p>If you said &quot;whoever picked up the phone first wins&quot;, ask: first by whose
+watch? Ana's kitchen clock and Cara's phone clock disagree, and nobody can
+prove which one rang first.</p>
+</details>
+
+</blockquote>
+<p>Here is how far the lab goes, and what you can do after each layer:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Beginner</strong></td>
+  <td>1–9</td>
+  <td>tell the shop story, and say why &quot;a majority has it&quot; is the moment a write becomes real</td>
+</tr>
+<tr>
+  <td><strong>Intermediate</strong></td>
+  <td>10</td>
+  <td>walk an election and a write message by message, and name the disaster behind each of the four odd rules</td>
+</tr>
+<tr>
+  <td><strong>Engineering</strong></td>
+  <td>11–14</td>
+  <td>say which promise bends under each failure, point at the line of code that holds the rest up, and prove it by running something</td>
+</tr>
+<tr>
+  <td><strong>Production</strong></td>
+  <td>15</td>
+  <td>say what etcd adds to this toy, and what the on-call engineer watches</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-why-not-just-have-everyone-write-down-what-they-hear">3. Why not just have everyone write down what they hear?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The obvious design has no coordination at all. Whoever
+answers the phone writes the order in the next free slot and shouts it. It is
+simple and fast, and it is about to break.</p>
+</blockquote>
+<p>The naive solution, and the one that needs no rules: whoever answers the phone
+writes the order in the next free slot and shouts it to the other four. The
+other four copy it into the same slot.</p>
+<p>It is simple. It needs no coordination. It is fast, because nobody waits for
+anybody. This is not a stupid design. So what is wrong with it?</p>
+<h2 id="readme-4-what-goes-wrong-when-two-phones-ring-at-once">4. What goes wrong when two phones ring at once?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two people fill slot 1 with different orders at the same
+moment. Now every later slot means different things in different books. And
+the obvious patch, &quot;ask first&quot;, fails too.</p>
+</blockquote>
+<p>Ana takes &quot;margherita&quot; and writes it in slot 1. At the same moment Cara takes
+&quot;pepperoni&quot; and writes it in slot 1. Each shouts. Ben hears Ana first and
+writes margherita. Dev hears Cara first and writes pepperoni.</p>
+<p>Now the shop has two different slot 1s and no way to pick. Worse, everything
+after slot 1 is built on top of a slot that means different things to
+different people. &quot;Table 4, extra cheese&quot; in slot 2 modifies a <em>different
+pizza</em> depending on whose book you read.</p>
+<p>Here is the shop one second after the two phones rang. Read the last column:
+it is what each person honestly believes.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Book</th>
+  <th>Slot 1</th>
+  <th>What that person believes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Ana</td>
+  <td>margherita</td>
+  <td>table 4 gets a margherita</td>
+</tr>
+<tr>
+  <td>Cara</td>
+  <td>pepperoni</td>
+  <td>table 4 gets a pepperoni</td>
+</tr>
+<tr>
+  <td>Ben</td>
+  <td>margherita</td>
+  <td>Ana's shout arrived first</td>
+</tr>
+<tr>
+  <td>Dev</td>
+  <td>pepperoni</td>
+  <td>Cara's shout arrived first</td>
+</tr>
+<tr>
+  <td>Eve</td>
+  <td>whichever shout arrived first</td>
+  <td>a coin toss</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>The obvious patch: before writing, ask the other four &quot;is
+slot 1 free?&quot; and only write if they all say yes. Does that fix it?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>No, and it fails in two ways at once.</strong> If Ana and Cara ask at the same
+moment, both can hear &quot;free&quot; from everyone, and both write. And if two people
+are away, you never get four answers. So the shop stops even though three
+perfectly good people are standing there.</p>
+<p>If you said &quot;well, it fixes the first problem at least&quot;, look again. Asking
+is just another shout. Two questions can cross in the air exactly like the two
+orders did.</p>
+</details>
+
+</blockquote>
+<p><strong>The deeper problem this failure reveals.</strong> This is not really about <em>who
+writes slot 1</em>. A group with no shared clock has no notion of &quot;first&quot;. And any
+rule that needs everyone to answer is hostage to its slowest member. You
+cannot patch your way out. You need a rule that <em>manufactures</em> an ordering,
+and that only ever needs <em>most</em> of the group.</p>
+<h2 id="readme-5-what-do-we-actually-need">5. What do we actually need?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five plain promises. One order per slot, the same order
+everywhere, keep working with two people missing, catch up automatically,
+and refuse rather than guess.</p>
+</blockquote>
+<p>Say it in plain words, because everything after this is the pursuit of exactly
+these five sentences. This is the real requirement:</p>
+<ol>
+<li><strong>One order per slot, forever.</strong> Once anyone has been told &quot;slot 3 is
+settled&quot;, no book may ever hold anything else at slot 3.</li>
+<li><strong>Same order everywhere.</strong> Any two books that both have slot 3 filled in
+agree on slots 1 and 2 as well.</li>
+<li><strong>A minority can be away.</strong> The shop keeps working with two of five people
+missing.</li>
+<li><strong>Coming back is automatic.</strong> Someone who returns after an hour catches up
+with no human involved.</li>
+<li><strong>Being wrong is never allowed; being stuck is allowed.</strong> If too many
+people are away, the shop must <em>refuse</em> orders rather than guess.</li>
+</ol>
+<p>Point 5 is the trade, and it is worth stopping on. You already met it in the
+<a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a> lab as the CP corner. When the group is
+split, the side that cannot reach a majority refuses to answer instead of
+answering possibly-wrong. Raft is that choice made concrete. Ana would rather
+send a customer away than promise a pizza the shop might not agree on.</p>
+<h2 id="readme-6-what-is-the-key-idea">6. What is the key idea?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Put one person in charge for a while. Only they write. An
+order is settled when most people have copied it. And you may only take
+charge next if your book is already as complete as most people's.</p>
+</blockquote>
+<p>Here is the invention, in four sentences:</p>
+<blockquote>
+<p><strong>Elect one person to be in charge for a while. Only that person writes
+into the books, so slots have exactly one meaning. An order counts as
+settled the moment <em>most</em> people have copied it down. And you are only
+allowed to become the next person in charge if your book is at least as
+complete as most people's.</strong></p>
+</blockquote>
+<p>That is the whole of Raft. Every remaining page is either an explanation of
+one of those sentences, or a repair to a version of one of them that broke.</p>
+<p>The last sentence is the clever one and the easiest to skip past. Hold onto
+it: <em>being in charge is a privilege you have to qualify for by already knowing
+everything that was settled.</em> Eve cannot take over the shop just because she
+shouted loudest. She has to show that her book is as complete as most
+people's first.</p>
+<h2 id="readme-7-which-words-do-you-need-now">7. Which words do you need now?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every Raft word is a thing in the shop you have already
+seen: the book, its slots, the shift, the person in charge, &quot;most of us&quot;,
+and &quot;settled&quot;. Here each one is earned in the story, then collected in two
+small tables.</p>
+</blockquote>
+<p>You have met two of these ideas before, in other labs. The rest are new. This
+is the lab's terminology, but each word arrives the same way: the thing in the
+shop first, then a plain sentence, then the engineer's name for it.</p>
+<h3 id="readme-the-order-book-its-lines-and-the-line-numbers">The order book, its lines, and the line numbers</h3>
+<p>Ana's order book is a numbered list of changes. Engineers call the whole book
+the <strong>log</strong>. One line in it is an <strong>entry</strong>: a command plus the shift it was
+written in. The line number is its <strong>index</strong>, counting from 1. The log is
+append-only: you write at the end, never in the middle.</p>
+<p>Why a separate word for the book, rather than &quot;the pizzas&quot;? To separate the
+<em>record of changes</em> from the <em>result of applying them</em>. Two servers may hold
+the same log and be part-way through applying it. The log is the truth; the
+result is a replay of the log. This is exactly the event stream from
+<a href="../50-event-sourcing/notes.html#readme"><code>event-sourcing</code></a>: an immutable append-only sequence
+folded into current state. Raft is that idea with the <em>replication</em> problem
+solved.</p>
+<p>Here is Ana's book at one moment, in the shop's words and in the code's
+notation. Read the &quot;in words&quot; column first.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Ana's book</th>
+  <th>In the code</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>slot 1: margherita, written in shift 1</td>
+  <td><code>margherita@t1</code></td>
+  <td>index 1 holds <code>margherita</code>, created while term 1 was in force</td>
+</tr>
+<tr>
+  <td>slot 2: extra cheese, written in shift 1</td>
+  <td><code>extracheese@t1</code></td>
+  <td>index 2 holds <code>extracheese</code>, created while term 1 was in force</td>
+</tr>
+<tr>
+  <td>slot 3: cancel, written in shift 2</td>
+  <td><code>cancel@t2</code></td>
+  <td>index 3 holds <code>cancel</code>, created in term 2</td>
+</tr>
+<tr>
+  <td>the whole book</td>
+  <td><code>[margherita@t1, extracheese@t1, cancel@t2]</code></td>
+  <td>Ana's log, oldest entry first</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-the-pizzas-what-the-book-is-instructions-for">The pizzas: what the book is instructions <em>for</em></h3>
+<p>The book is not the pizzas. The book is a list of instructions; the pizzas are
+what you get by following it. Engineers call the thing that follows the
+instructions the <strong>state machine</strong>. It is a deterministic program fed the
+committed entries in order. Same log, same starting point, same result, on
+every server.</p>
+<p>This is why Raft is formally a <strong>replicated state machine</strong> protocol. It does
+not replicate <em>data</em>. It replicates <em>the sequence of changes</em>, and each server
+derives its own copy. Why bother with the distinction? It makes the
+correctness argument tiny. If the state machine is deterministic, then
+agreeing on the log is <em>sufficient</em>. You never have to compare the resulting
+states at all.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The log</th>
+  <th>Applied to</th>
+  <th>Result on every server</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>[set x=1, set y=2, set x=3]</code></td>
+  <td>an empty map</td>
+  <td><code>{x:3, y:2}</code>, always</td>
+</tr>
+</tbody>
+</table></div>
+<p>That is the fold in <a href="../50-event-sourcing/notes.html#readme"><code>event-sourcing</code></a>. Identical idea.
+Raft supplies the part that lab assumed: getting every replica the same
+stream.</p>
+<h3 id="readme-the-shift-whose-turn-is-it-to-be-in-charge">The shift: &quot;whose turn is it to be in charge?&quot;</h3>
+<p>The shop runs in shifts. Each shift has a number, and at most one person is in
+charge during it. Engineers call a shift a <strong>term</strong>. A term is a whole number
+that only ever goes up. Every attempt to become leader starts a new term.
+Every message carries the sender's term. And <strong>a bigger term always wins</strong>:
+any server that sees one immediately becomes a follower and adopts it.</p>
+<p>Watch Cara do it. Cara is on term 3 and receives a message stamped term 5.
+She does not argue. She does not check anything else. She sets her term to 5
+and becomes a follower.</p>
+<p>Why does the word exist? Because a term is a logical clock that costs one
+integer. Distributed systems cannot order events by wall clock. But they <em>can</em>
+order them by &quot;which leadership attempt was this part of&quot;. Term comparison
+replaces time comparison everywhere in Raft.</p>
+<p>You met the same job in <a href="../39-paxos/notes.html#readme"><code>paxos</code></a> as the <strong>proposal number</strong>: a
+total order over attempts. Raft spends it on <em>shifts</em> rather than on
+individual values. That is why one term covers thousands of writes.</p>
+<h3 id="readme-the-three-things-a-person-can-be">The three things a person can be</h3>
+<p>At any moment each of the five is one of three things.</p>
+<ul>
+<li>A <strong>follower</strong> is the default. Followers answer messages and never start
+anything.</li>
+<li>The <strong>leader</strong> is the only server that accepts client writes.</li>
+<li>A <strong>candidate</strong> is a follower that got bored of waiting and is asking for
+votes.</li>
+</ul>
+<p>Dev has heard nothing for 200 ms. He becomes a candidate for term 4 and asks
+the other four to vote for him.</p>
+<p>Why three states and not two? The middle state exists so that &quot;I am trying to
+be leader&quot; is a real, visible condition with its own rules. It is not a
+half-finished leader. A candidate has no authority at all.</p>
+<h3 id="readme-most-of-us">&quot;Most of us&quot;</h3>
+<p>More than half: 3 of 5, 2 of 3, 4 of 7. Engineers call it a <strong>majority</strong>, or a
+<strong>quorum</strong>. You already know why this number. The
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> lab is entirely
+about one fact: <strong>any two majorities must share at least one member</strong>. That
+overlap is the load-bearing fact in Raft too, and it is used twice. Once so
+two people cannot both win the same term. Once so a new leader cannot be
+missing a settled entry.</p>
+<p>That lab drew a distinction, and it matters here. <em>A consensus quorum
+decides; a read/write quorum merely intersects.</em> Raft's majority is the first
+kind. The read/write formula from that lab is not what is happening here.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Formula</th>
+  <th>In words</th>
+  <th>Is this Raft?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>R+W&gt;N</code></td>
+  <td>a read set and a write set large enough that they must overlap</td>
+  <td>no; it only guarantees two sets touch</td>
+</tr>
+<tr>
+  <td>majority vote</td>
+  <td>more than half agree, so any two such groups share a member</td>
+  <td>yes; a majority <em>decides</em></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-settled-and-you-can-say-so-out-loud">&quot;Settled, and you can say so out loud&quot;</h3>
+<p>An order is settled once enough people have written it down that it can never
+be undone. Engineers say the entry is <strong>committed</strong>. Precisely: an entry is
+committed once the leader has stored it on a majority <strong>and</strong> the entry was
+created in the leader's own current term.</p>
+<p>Why a word for this? To name the exact boundary between &quot;in the leader's
+book&quot; and &quot;safe to tell the customer&quot;. Before it, the entry can legally
+vanish. After it, no future leader may remove it. Almost every real Raft bug
+lives at this line.</p>
+<p>Each server keeps one number for how far the settled region reaches. In words:
+the highest index it knows is committed. In the code it is the <strong>commit
+index</strong>, <code>commitIndex</code>. Read the table row by row.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The leader's book</th>
+  <th>Its commit index</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>[a, b, c]</code></td>
+  <td><code>commitIndex = 2</code></td>
+  <td><em>a and b can never change; c might still disappear</em></td>
+</tr>
+</tbody>
+</table></div>
+<p>Where does the second half of the rule, &quot;created in the leader's own term&quot;,
+come from? Stage 10.4. It is the least obvious rule in Raft, and it exists
+because of one specific disaster.</p>
+<h3 id="readme-is-anyone-in-charge">&quot;Is anyone in charge?&quot;</h3>
+<p>How does Ben know Ana is still there? She keeps shouting &quot;still here!&quot;. If Ben
+hears nothing for a while, he assumes she is gone and asks to take over.</p>
+<p>The wait is the <strong>election timeout</strong>: how long a follower waits, hearing
+nothing, before declaring itself a candidate. It is randomised per server, per
+attempt. The shout is the <strong>heartbeat</strong>: an empty write the leader sends on a
+fixed interval, purely so followers keep resetting their timers.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Setting</th>
+  <th>This lab</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>election timeout</td>
+  <td>150–300 ticks</td>
+  <td>a fresh random wait, picked every time the timer resets</td>
+</tr>
+<tr>
+  <td>heartbeat</td>
+  <td>every 50 ticks</td>
+  <td>an empty &quot;still here&quot; from the leader</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why do these exist? They are Raft's entire failure detector. There is no
+health check, no monitor, no separate protocol. <em>Silence is the failure
+signal</em>, and the heartbeat is how a living leader keeps proving it is alive.</p>
+<h3 id="readme-the-only-two-things-raft-ever-says">The only two things Raft ever says</h3>
+<p>Across the whole shop only two kinds of shout exist: &quot;can I take over?&quot; and
+&quot;write this down&quot;. Engineers call them two remote calls, each with a reply.
+<code>RequestVote</code> runs elections. <code>AppendEntries</code> does everything else:
+replicating entries, repairing a wrong log, telling followers what is
+committed, and, with an empty entry list, the heartbeat. That is the entire
+protocol surface.</p>
+<h3 id="readme-the-words-mapped-back-to-the-shop">The words, mapped back to the shop</h3>
+<p>Two small tables, split by theme. The last column says where in this lab you
+watch each one happen.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Thing</th>
+  <th>In the shop</th>
+  <th>Engineers say</th>
+  <th>Where it happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>log, entry, index</td>
+  <td>the order book, one line in it, its slot number</td>
+  <td><code>log</code>, entry, index</td>
+  <td>section 2; repaired in stage 10.5</td>
+</tr>
+<tr>
+  <td>state machine</td>
+  <td>the pizzas the book is instructions for</td>
+  <td>replicated state machine</td>
+  <td>section 12, State Machine Safety</td>
+</tr>
+<tr>
+  <td>term</td>
+  <td>the numbered shift</td>
+  <td><code>currentTerm</code></td>
+  <td>stage 10.1, elections</td>
+</tr>
+<tr>
+  <td>committed</td>
+  <td>settled; safe to tell the customer</td>
+  <td><code>commitIndex</code></td>
+  <td>stage 10.4, the own-term rule</td>
+</tr>
+<tr>
+  <td>election timeout</td>
+  <td>how long you wait before asking to take over</td>
+  <td>150–300 ticks</td>
+  <td>stage 10.1, split votes</td>
+</tr>
+<tr>
+  <td>heartbeat</td>
+  <td>&quot;still here!&quot; every few seconds</td>
+  <td>empty <code>AppendEntries</code></td>
+  <td>scenario 11.9</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Person or message</th>
+  <th>In the shop</th>
+  <th>Engineers say</th>
+  <th>Where it happens</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>follower</td>
+  <td>copies what the person in charge shouts</td>
+  <td>follower</td>
+  <td>every section from here on</td>
+</tr>
+<tr>
+  <td>leader</td>
+  <td>the one person in charge this shift</td>
+  <td>leader</td>
+  <td>stage 10.2, replication</td>
+</tr>
+<tr>
+  <td>candidate</td>
+  <td>someone asking &quot;can I take over?&quot;</td>
+  <td>candidate</td>
+  <td>stage 10.1</td>
+</tr>
+<tr>
+  <td>majority</td>
+  <td>most of us: 3 of 5</td>
+  <td>quorum</td>
+  <td>stage 10.3, the overlap argument</td>
+</tr>
+<tr>
+  <td>&quot;can I take over?&quot;</td>
+  <td>asking for votes</td>
+  <td><code>RequestVote</code></td>
+  <td>stage 10.3</td>
+</tr>
+<tr>
+  <td>&quot;write this down&quot;</td>
+  <td>shouting an order</td>
+  <td><code>AppendEntries</code></td>
+  <td>stage 10.2</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-what-are-the-two-pictures-to-keep-in-your-head">8. What are the two pictures to keep in your head?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Carry the pizza shop for intuition, and one state
+diagram plus one page of numbers for precision. Then learn the four places
+the shop lies to you.</p>
+</blockquote>
+<p>These are the two mental models. The first you carry around; the second is
+what the code does.</p>
+<h3 id="readme-the-simple-picture-the-pizza-shop">The simple picture: the pizza shop</h3>
+<p>One person in charge per shift. They write the order book, shout each order to
+the others, and once most people have copied it down the order is real. When
+the person in charge goes quiet, whoever notices first asks to take over. But
+only someone whose book is already as complete as most people's is allowed
+to.</p>
+<h3 id="readme-the-engineers-picture-three-roles-and-one-page-of-numbers">The engineer's picture: three roles and one page of numbers</h3>
+<p>Read the arrows as &quot;what makes a server change role&quot;.</p>
+<pre class="mermaid">stateDiagram-v2
+    [*] --&gt; Follower
+    Follower --&gt; Candidate: heard nothing for&lt;br/&gt;one election timeout
+    Candidate --&gt; Leader: votes from a majority
+    Candidate --&gt; Follower: someone else&#x27;s&lt;br/&gt;heartbeat arrived
+    Candidate --&gt; Candidate: nobody reached a majority —&lt;br/&gt;time out, try again in a new term
+    Leader --&gt; Follower: saw a higher term
+    Candidate --&gt; Follower: saw a higher term
+</pre>
+<p>Each server keeps one page of numbers. Three of them survive a crash; the rest
+are rebuilt. Read the &quot;in words&quot; column first.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What the server keeps</th>
+  <th>In the code</th>
+  <th>In words</th>
+  <th>Survives a crash?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>which shift it is</td>
+  <td><code>currentTerm</code></td>
+  <td>the highest term it has seen</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>who it voted for this shift</td>
+  <td><code>votedFor</code></td>
+  <td>at most one candidate per term</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>the order book</td>
+  <td><code>log[]</code></td>
+  <td>every entry it holds</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>how far is settled</td>
+  <td><code>commitIndex</code></td>
+  <td>the highest index it knows is committed</td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>where to send next (leader only, one per follower)</td>
+  <td><code>nextIndex[i]</code></td>
+  <td>a <strong>guess</strong> at the next index to send server <em>i</em></td>
+  <td>no</td>
+</tr>
+<tr>
+  <td>how far each has got (leader only, one per follower)</td>
+  <td><code>matchIndex[i]</code></td>
+  <td>a <strong>fact</strong> about the highest index server <em>i</em> actually has</td>
+  <td>no</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-how-the-two-pictures-line-up">How the two pictures line up</h3>
+<p>In this lab's code and pictures the five are numbered S0 to S4. Whenever you
+see a server number, read Ana as S0, Ben as S1, Cara as S2, Dev as S3 and Eve
+as S4.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Pizza shop</th>
+  <th>Raft</th>
+  <th>In the code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the order book</td>
+  <td>the log</td>
+  <td><code>RaftNode.log</code></td>
+</tr>
+<tr>
+  <td>slot number</td>
+  <td>index</td>
+  <td>position in <code>log</code></td>
+</tr>
+<tr>
+  <td>whose shift it is</td>
+  <td>term</td>
+  <td><code>currentTerm</code></td>
+</tr>
+<tr>
+  <td>person in charge</td>
+  <td>leader</td>
+  <td><code>role == LEADER</code></td>
+</tr>
+<tr>
+  <td>shouting an order</td>
+  <td><code>AppendEntries</code></td>
+  <td><code>sendAppend()</code></td>
+</tr>
+<tr>
+  <td>&quot;still here!&quot; every few seconds</td>
+  <td>heartbeat</td>
+  <td><code>AppendEntries</code> with no entries</td>
+</tr>
+<tr>
+  <td>most people have copied it</td>
+  <td>committed</td>
+  <td><code>advanceCommit()</code></td>
+</tr>
+<tr>
+  <td>&quot;can I take over?&quot;</td>
+  <td><code>RequestVote</code></td>
+  <td><code>startElection()</code></td>
+</tr>
+<tr>
+  <td>&quot;not with a book like that&quot;</td>
+  <td>refusing a candidate whose book is behind</td>
+  <td><code>candidateUpToDate()</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-the-story-lies-to-you">Where the story lies to you</h3>
+<p>Four places. Read this before you trust the shop.</p>
+<ol>
+<li><strong>The shop has one room; Raft has no room.</strong> Ana cannot see that Cara is
+holding up her hand. Every fact one server has about another arrived as a
+message. That message may be <em>minutes old and describe a world that no
+longer exists</em>. This is why every message carries a term. It is the only
+way to notice you are acting on stale news.</li>
+<li><strong>Nobody hands over.</strong> In the shop you imagine Ana saying &quot;Ben, you're in
+charge&quot;. That never happens in Raft. Ana usually does not know she has
+stopped being leader. Two people genuinely believe they are in charge at
+the same time, routinely. Raft is <em>fine with that</em>, because the older one
+can never assemble a majority. <strong>&quot;Only one leader&quot; is false. &quot;Only one
+leader per term, and only the newest can commit&quot; is true.</strong></li>
+<li><strong>Copying is not one-directional.</strong> A follower whose book is wrong does
+not politely append. It <strong>deletes its own entries</strong> to match the leader.
+The shop analogy makes this feel like vandalism. In Raft it is legal
+precisely because only <em>uncommitted</em> entries can ever be deleted.</li>
+<li><strong>There is no &quot;settled&quot; ceremony.</strong> Nobody announces a commit. The leader
+just notices that a majority replied, and mentions the new commit point on
+the next ordinary message. Followers find out <em>later</em>, and that lag is
+normal.</li>
+</ol>
+<h2 id="readme-9-where-can-you-see-it-before-you-read-the-rules">9. Where can you see it before you read the rules?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Open the grid. Each row is one of the five, each column
+is one slot. Press Play, send a write, tear the network, and watch the gap
+between &quot;written down&quot; and &quot;settled&quot;.</p>
+</blockquote>
+<p>Open <strong><a href="https://claude.ai/code/artifact/9e9cab79-30ef-4665-b9e5-6dec2dcab932" target="_blank" rel="noopener">The Raft Log Grid</a></strong>
+(also saved as <code>visualization.html</code>). It is the shop with every book laid
+open. This is the visualization to watch before you read a single rule.</p>
+<p>What to look at, in this order. Each row is one server; each column is one
+slot in the log. So the same column across five rows is <em>the same slot on
+five machines</em>. Disagreement shows up as two different colours stacked in one
+column. Colour is the term an entry was created in. A <strong>solid</strong> cell is
+committed and can never change. A <strong>dashed</strong> cell is written down but still
+deletable.</p>
+<p>Three things to try before reading on:</p>
+<ol>
+<li>Press <strong>Play</strong> and watch nothing happen for a moment. Then one server's
+timer runs out and the election takes about three exchanges.</li>
+<li>Press <strong>Send a write to the leader</strong>, and watch the gap between <em>the leader
+has it</em> (dashed) and <em>it is committed</em> (solid). That gap is the entire
+difference between &quot;saved&quot; and &quot;probably saved&quot;.</li>
+<li>Set <strong>Tear the network</strong> to <code>S1 and S2 (2 | 3)</code>. Watch the small side
+accept writes it can never finish, while the big side elects a newer leader
+and carries on.</li>
+</ol>
+<p>The <strong>Guess first, then watch</strong> cards at the bottom each ask a question, take
+your answer, and then run the scenario. Being wrong on those is the fastest
+part of this lesson.</p>
+<p>Here is one successful write as a sequence. Ana (the leader) takes the order;
+Ben and Cara are followers. Read the notes on the right: the client is told
+&quot;saved&quot; before the followers have run anything.</p>
+<pre class="mermaid">sequenceDiagram
+    participant C as Client
+    participant L as Leader (Ana)
+    participant F1 as Ben
+    participant F2 as Cara
+    C-&gt;&gt;L: write &quot;extra cheese&quot;
+    Note over L: appends at index 2.&lt;br/&gt;Says nothing to the client yet.
+    L-&gt;&gt;F1: AppendEntries(prev=1, entries=[extracheese])
+    L-&gt;&gt;F2: AppendEntries(prev=1, entries=[extracheese])
+    F1--&gt;&gt;L: ok, I match up to index 2
+    Note over L: 2 of 3 have it — that is a majority.&lt;br/&gt;commitIndex = 2
+    L--&gt;&gt;C: saved
+    F2--&gt;&gt;L: ok, I match up to index 2
+    L-&gt;&gt;F1: AppendEntries(heartbeat, leaderCommit=2)
+    L-&gt;&gt;F2: AppendEntries(heartbeat, leaderCommit=2)
+    Note over F1,F2: only now do the followers&lt;br/&gt;run the command
+</pre>
+<p>In words: Ana appends &quot;extra cheese&quot; at index 2 and says nothing yet. She
+shouts it to Ben and Cara. Ben answers first. Two of three is a majority, so
+Ana moves her commit index to 2 and tells the client &quot;saved&quot;. Cara's answer
+arrives later. Only on the next heartbeat do Ben and Cara learn that index 2
+is committed, and only then do they run the command.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-beginner-model">✅ Checkpoint: end of the beginner model</h3>
+<p>You can now explain what Raft is for, why one leader per numbered shift is
+the trick, and why &quot;a majority has it&quot; is the moment a write becomes real.
+That is enough to follow a design discussion and to read an etcd outage
+postmortem.</p>
+<p><strong>Say it back.</strong> Without using the words <em>term</em>, <em>commit</em> or <em>quorum</em>,
+explain to a friend why Ana can tell a customer &quot;your order is safe&quot; before
+Cara has even heard about it.</p>
+<details><summary>A good answer sounds like</summary>
+"Ana only needs most of the five to have copied the order down. Once three
+books hold it, anyone who takes charge later has to have a book as complete
+as most people's, and any three books include at least one that has the
+order. So it cannot be lost, even if Cara only hears about it later."
+</details>
+
+<p><strong>Next:</strong> the actual mechanism, message by message, and the four places
+where the obvious version of it is subtly, catastrophically wrong.</p>
+</blockquote>
+<hr />
+<h1 id="readme-intermediate-model">INTERMEDIATE MODEL</h1>
+<h2 id="readme-10-how-does-the-actual-mechanism-work-built-four-times-broken-three">10. How does the actual mechanism work? Built four times, broken three</h2>
+<blockquote>
+<p><strong>In one breath:</strong> We build Raft the obvious way, watch it break, and fix
+it, four times over. Every rule that looks arbitrary is the scar from one of
+those breaks.</p>
+</blockquote>
+<p>We will build Raft the way you would build it: the obvious version first,
+then watch it break, then fix it. <strong>Every rule in Raft that looks arbitrary is
+a scar from one of these breaks.</strong> If you only remember the finished rules you
+will forget them. If you remember the disasters, the rules are obvious.</p>
+<p>Here is the map of the four builds. Each row is one subsection below.</p>
+<pre class="mermaid">flowchart TD
+    A[&quot;10.1 Elections, v1&lt;br&gt;first to notice takes over&quot;] --&gt;|&quot;everyone times out&lt;br&gt;together, forever&quot;| AF[&quot;fix: randomise&lt;br&gt;the timeout&quot;]
+    B[&quot;10.2 Replication, v1&lt;br&gt;send the entry to everyone&quot;] --&gt;|&quot;Cara writes entry 4&lt;br&gt;into slot 1&quot;| BF[&quot;fix: prove the&lt;br&gt;previous slot matches&quot;]
+    C[&quot;10.3 Voting, v1&lt;br&gt;a higher term wins&quot;] --&gt;|&quot;a settled £500&lt;br&gt;transfer is erased&quot;| CF[&quot;fix: refuse a candidate&lt;br&gt;whose book is behind&quot;]
+    D[&quot;10.4 Committing, v1&lt;br&gt;a majority has it, so it is safe&quot;] --&gt;|&quot;Figure 8: four of five&lt;br&gt;hold it, still lost&quot;| DF[&quot;fix: only commit&lt;br&gt;your own term&quot;]
+</pre>
+<h3 id="readme-101--elections-v1-what-if-the-first-to-notice-takes-over">10.1 — Elections, v1: what if the first to notice takes over?</h3>
+<p>The rule: a follower that has heard nothing for a while declares itself
+candidate, adds one to the term, votes for itself, and asks everyone else. A
+majority of votes makes it leader.</p>
+<p>Concretely, five servers boot at once with empty logs. Nobody is leader, so
+nobody sends heartbeats, so eventually somebody's timer fires. Here is the
+trace from <code>java src/Experiments.java election</code>. Read S0 as Ana, S1 as Ben,
+S4 as Eve.</p>
+<div class="code"><pre><code>t=172   S0 starts an election for term 1 (its log ends at index 0, term 0)
+t=173   S4 steps down to follower, term 0 -&gt; 1
+t=176   S1 steps down to follower, term 0 -&gt; 1
+t=180   S0 WINS the election for term 1 with 3/5 votes [0, 1, 4]
+</code></pre></div>
+<p>In words: Ana's timer fires first, at tick 172. She asks for votes in term 1.
+Eve and Ben hear a bigger term and adopt it. Eight ticks later Ana has three
+of five votes, her own plus Ben's and Eve's, and she is leader.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What the run shows</th>
+  <th>Count</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>messages sent</td>
+  <td>12</td>
+  <td>every vote request, reply and first heartbeat Ana's election produced</td>
+</tr>
+<tr>
+  <td>messages delivered</td>
+  <td>8</td>
+  <td>enough of them arrived for three votes; the rest were not needed</td>
+</tr>
+<tr>
+  <td>leaders</td>
+  <td>1</td>
+  <td>one timer fired first, and that was the whole election</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Everyone boots at the same instant and everyone's timer is
+the same length. What happens?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Nobody is ever elected.</strong> All five time out on the same tick. All five
+become candidates for term 1. All five vote for themselves. Each has exactly
+1 of 5 votes; nobody reaches 3. They all time out again, together, in term
+2. And term 3. Over 6000 ticks with identical timeouts: <strong>term 40 reached,
+leader elected: NEVER, safety violations: 0</strong>. The cluster is perfectly
+correct and completely useless.</p>
+<p>If you said &quot;one of them wins eventually&quot;, you are assuming something breaks
+the tie. Nothing does. Same timers, same tick, same result, every term.</p>
+</details>
+
+</blockquote>
+<p><strong>The fix: randomise the timeout.</strong> Each server picks a fresh random wait in a
+range (150–300 ticks here) <em>every time it resets</em>. One server almost always
+wakes noticeably before the others. It wins before anyone else even starts,
+and its heartbeat resets everybody.</p>
+<p>Here is what 200 cold starts look like each way, from
+<code>java src/Experiments.java split-vote</code>. Read the last column for what each
+row proves.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>identical timeouts</th>
+  <th>random 150–300</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>leader elected</td>
+  <td><strong>never</strong>, in 6000 ticks</td>
+  <td><strong>200 / 200</strong></td>
+  <td>randomness is the only thing breaking the tie</td>
+</tr>
+<tr>
+  <td>terms burned</td>
+  <td>40 and climbing</td>
+  <td>1 in 199 runs, 2 in 1 run</td>
+  <td>one collision in 200, and it healed itself</td>
+</tr>
+<tr>
+  <td>time to first leader</td>
+  <td>—</td>
+  <td>155 / 174 / 332 ticks (min/median/max)</td>
+  <td>roughly one timeout plus one exchange</td>
+</tr>
+<tr>
+  <td>safety violations</td>
+  <td>0</td>
+  <td>0</td>
+  <td>the broken cluster was never <em>wrong</em>; it was only stuck</td>
+</tr>
+</tbody>
+</table></div>
+<p>Note what randomisation does <em>not</em> do. It does not make split votes
+impossible. It makes them <strong>self-correcting</strong>. Each retry re-rolls the dice,
+so the chance of n consecutive collisions vanishes. One of the 200 runs did
+split, and resolved on the next term.</p>
+<p>This is your first sighting of the distinction that runs through the rest of
+the lesson. The identical-timeout cluster never did anything <em>wrong</em>. It just
+never did anything. <strong>Safety</strong> and <strong>liveness</strong> fail in completely different
+ways.</p>
+<h3 id="readme-102--replication-v1-what-if-the-leader-just-sends-each-new-entry-to-everyone">10.2 — Replication, v1: what if the leader just sends each new entry to everyone?</h3>
+<p>Ana (the leader) appends the client's command to her own log and sends it out.
+A follower appends what it receives. When a majority have it, Ana marks it
+committed and tells the client &quot;saved&quot;.</p>
+<p>This works beautifully, right up to the first server that misses a message.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Cara was switched off while entries 1, 2 and 3 were
+written. She comes back. Ana, who has no idea Cara was away, sends her entry
+4. Cara appends it. What is in her book?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Entry 4 is sitting in slot 1.</strong> That was Cara's next free slot, so that is
+where &quot;append&quot; put it. Her book now says slot 1 is entry 4. Every other book
+says slot 1 is entry 1. Nothing has crashed, no error was returned, and Ana
+believes Cara is fully caught up. The two books will never agree again.</p>
+<p>| Cara's book | In words |
+|---|---|
+| <code>[_, _, _, entry4]</code> is what Ana <em>thinks</em> Cara has | three entries then entry 4 |
+| entry 4 at index <strong>1</strong> is what Cara <em>actually</em> has | one entry, in the wrong slot |</p>
+<p>If you said &quot;she has a gap at 1, 2 and 3&quot;, notice that a log cannot have
+gaps. Append means &quot;next free slot&quot;, and Cara's next free slot was 1.</p>
+</details>
+
+</blockquote>
+<p><strong>The fix: never accept an entry without proving the prefix already
+matches.</strong> Every shout now names the slot just before the ones being sent: its
+number and the shift it was written in. In the code these are the previous
+log index and the previous log term, <code>prevLogIndex</code> and <code>prevLogTerm</code>. The
+follower accepts only if its own log has that exact (index, term) pair.
+Otherwise it rejects.</p>
+<p>Why is one comparison enough for the whole prefix? This is the <strong>Log Matching
+Property</strong>, and it is the most elegant thing in Raft:</p>
+<blockquote>
+<p>If two logs contain an entry with the same index and the same term, then the
+logs are <strong>identical in every entry up through that index</strong>.</p>
+</blockquote>
+<p>It holds by induction. A leader never changes an entry it has already written.
+So an (index, term) pair identifies one specific entry, created once, by one
+specific leader. And that entry was only ever accepted by a follower that had
+already proved <em>its</em> predecessor matched. So agreement at index <em>i</em> certifies
+agreement at <em>i−1</em>, which certifies <em>i−2</em>, all the way down. <strong>One integer
+comparison certifies unlimited history.</strong> No checksums, no diffing, no Merkle
+trees.</p>
+<p>When you turn this check off (<code>Bugs.noLogMatchCheck</code>), the follower says yes
+to everything. It tells the leader &quot;I'm at index 3&quot; while holding nothing, and
+the leader believes it. Read S2 as Cara, S1 as Ben.</p>
+<div class="code"><pre><code>with the prefix check ON   : S2 log = [w1@t1 w2@t1 w3@t1 w4@t1 w5@t1 w6@t1]   (repaired)
+with the prefix check OFF  : S2 log = [d@t2]                                   (a hole, forever)
+                             LOG MATCHING broken: S1 and S2 agree on slot 1 but differ...
+</code></pre></div>
+<p>In words: with the check on, Cara ends up with all six writes. With it off,
+Cara holds one entry from term 2 and nothing else, and the checker reports
+that Ben and Cara claim to agree on slot 1 while holding different things.</p>
+<h3 id="readme-103--voting-v1-what-if-a-higher-term-wins-the-vote">10.3 — Voting, v1: what if a higher term wins the vote?</h3>
+<p>A candidate has a bigger term than you, so you step down and vote for it.
+Simple, and it is what a term is <em>for</em>.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Ana and Ben have committed &quot;transfer £500&quot;. That is a
+majority of three, so the customer has been told it succeeded. Ana then
+dies. Cara, who was switched off for the whole thing and has an empty book,
+comes back and asks to be leader with a higher term. Ben votes yes. What
+happens to the £500?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>It is deleted.</strong> Cara becomes leader with an empty log. The first entry
+she writes goes into slot 1. Ben's slot 1 currently holds the transfer, with
+a different term. That is a conflict, so Ben <strong>deletes his own entry</strong> and
+takes Cara's. A transaction that was acknowledged to a customer no longer
+exists on any machine.</p>
+<p>With the check disabled, the lab prints two lines. Read S1 as Ben.</p>
+<p>| What the lab prints | In words |
+|---|---|
+| <code>S1's log afterwards: [overwrite@t2]</code> | Ben's book now holds only Cara's term-2 write |
+| <code>STATE MACHINE SAFETY broken: index 1 was committed as committed-write@t1</code> | slot 1 was settled as the transfer, and is now something else |</p>
+<p>If you said &quot;Ben keeps the transfer because he already committed it&quot;,
+remember lie number 3 from section 8: followers delete to match the leader,
+and nothing in v1 stops Cara from being that leader.</p>
+</details>
+
+</blockquote>
+<p><strong>The fix: a term is not a qualification.</strong> Before granting a vote, compare
+the candidate's <em>last log entry</em> with your own, and refuse if yours is more
+complete:</p>
+<div class="code"><pre><code class="language-java">boolean candidateUpToDate(int candLastIndex, int candLastTerm) {
+    if (candLastTerm != lastLogTerm()) return candLastTerm &gt; lastLogTerm();
+    return candLastIndex &gt;= lastLogIndex();
+}
+</code></pre></div>
+<p>In words: later <strong>term</strong> wins; if the terms tie, the longer log wins. Term is
+compared first. A short log ending in term 5 beats a long log ending in term
+4, because term 5 happened later and everything in it supersedes.</p>
+<p><strong>Why this one function is the whole safety argument.</strong> Try to build a leader
+that is missing a settled entry. The settled entry sits on a majority: say Ana,
+Ben and Dev. A candidate needs votes from a majority, so three of the five.
+You cannot pick three people without picking at least one of Ana, Ben or Dev.
+There are only five. That shared person still holds the entry, and the rule
+says they refuse anyone whose book is behind. So the candidate cannot win.</p>
+<p>That paragraph <em>is</em> the proof. Two majorities always overlap, the fact from
+the <a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> lab, so <strong>at
+least one voter holds the committed entry</strong>, and that voter refuses anyone
+who does not. Therefore every leader that ever wins already has every
+committed entry. This is the <strong>Leader Completeness Property</strong>, and it is why
+Raft never needs to copy anything <em>backwards</em> from followers to a new leader.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Over 200 leader crashes (<code>java src/Experiments.java leader-crash</code>)</th>
+  <th>Count</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>new leaders missing the committed write</td>
+  <td><strong>0</strong></td>
+  <td>the overlap argument held every single time</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-104--committing-v1-is-a-majority-has-it-enough">10.4 — Committing, v1: is &quot;a majority has it&quot; enough?</h3>
+<p>The last of the four, and the one nobody guesses. The rule looks
+self-evident: count how many servers have index <em>N</em>; if it is a majority,
+index <em>N</em> is committed.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Entry <code>OLD</code> was created in term 1. It is now sitting on
+four of five servers, a clear majority, and the current leader can see that.
+Is it safe to tell the client <code>OLD</code> succeeded?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>No.</strong> This is Figure 8 of the Raft paper, and it is the single most
+surprising thing in the algorithm. A fifth server that was offline can hold
+a <em>different</em> entry at that same index, created in term <strong>2</strong>. Because term
+2 is later than term 1, that server's log counts as more up to date. So it
+can still win an election, and when it does, it overwrites the index on all
+four others. &quot;A majority has it&quot; and &quot;it can never be removed&quot; are <strong>not
+the same statement</strong>.</p>
+<p>If you said &quot;yes, four of five is more than enough&quot;, you are counting
+copies. The up-to-date check does not count copies. It compares terms, and a
+single copy with a later term beats four copies with an earlier one.</p>
+</details>
+
+</blockquote>
+<p><code>java src/Experiments.java figure8</code> drives that exact history by hand. With
+the naive count-the-replicas rule, the lab prints this. Read S0 as Ana, S1 as
+Ben, S4 as Eve.</p>
+<div class="code"><pre><code>own-term commit rule OFF (bug)
+  S0 DEAD      term=3  commit=1  log=[OLD@t1]  applied=[OLD]
+  S1 FOLLOWER  term=4  commit=1  log=[NEW@t2]  applied=[OLD]
+  S4 LEADER    term=4  commit=1  log=[NEW@t2]  applied=[NEW]
+  !! STATE MACHINE SAFETY broken: index 1 was committed as OLD@t1 but S1 has committed NEW@t2 there
+  !! STATE MACHINES DIVERGED: at position 0 S0 applied &quot;OLD&quot; but S4 applied &quot;NEW&quot;
+</code></pre></div>
+<p>In words: Ana is dead, still believing slot 1 is <code>OLD</code> and having made that
+pizza. Ben now has <code>NEW</code> in slot 1 but already made <code>OLD</code>. Eve, the leader,
+has <code>NEW</code> and made <code>NEW</code>. Four servers were told <code>OLD</code> was permanent. It is
+gone.</p>
+<p><strong>The fix, in five words: only commit your own term.</strong> A leader may only mark
+index <em>N</em> committed when the entry at <em>N</em> was created in the leader's current
+term. In the code, <code>log[N].term == currentTerm</code>:</p>
+<div class="code"><pre><code class="language-java">boolean ownTerm = log.get(n).term() == currentTerm;
+if (count &gt;= majority() &amp;&amp; ownTerm) { commitIndex = n; }
+</code></pre></div>
+<p>Why does that close it? An entry from the leader's <em>current</em> term can only be
+overwritten by a leader of a <em>later</em> term. Any such leader needed a majority
+of votes. A majority contains someone holding this entry, and the up-to-date
+check makes that someone refuse. The old-term entry had no such protection,
+because a competing entry at the same index could carry a <em>higher</em> term and
+still look fresher.</p>
+<p>And old entries are not stranded: <strong>they get committed for free,
+underneath.</strong> The moment the new leader commits one entry of its own,
+everything below it in the log is committed by the Log Matching Property. In
+practice a real leader appends a <strong>no-op</strong> entry immediately on winning,
+precisely to trigger this.</p>
+<p>With the same history and the rule switched on:</p>
+<div class="code"><pre><code>own-term commit rule ON (real Raft)
+  S1 FOLLOWER  term=4  commit=0  log=[NEW@t2]  applied=[]
+  S4 LEADER    term=4  commit=0  log=[NEW@t2]  applied=[]
+  violations: none
+</code></pre></div>
+<p>Nothing was committed, so nothing was lost. Ben and Eve hold <code>NEW</code>, nobody
+has made a pizza, and no promise was broken. <code>OLD</code> vanishing is now
+<em>correct</em>: nobody was ever told it succeeded.</p>
+<h3 id="readme-105--repair-how-does-a-wrong-log-get-fixed">10.5 — Repair: how does a wrong log get fixed?</h3>
+<p>Ana (the leader) keeps two numbers per follower. One is what she <em>knows</em>: the
+highest index that follower definitely has, <code>matchIndex[i]</code>. The other is what
+she will <em>try</em> next, <code>nextIndex[i]</code>. On winning an election she optimistically
+sets every next-index to her own log end.</p>
+<p>Then she probes. Each rejection means &quot;we don't agree that far back&quot;, so she
+takes one off the next-index and tries again. Once the follower says yes, she
+sends everything above that point, and the follower deletes any of its own
+entries that conflict.</p>
+<p><strong>The leader never diffs the logs.</strong> The follower's yes/no on the previous
+slot, the (prevLogIndex, prevLogTerm) pair, is an oracle. The leader walks it
+backwards until it hits agreement.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Two followers need repair. Cara is merely behind: she
+missed six writes, and the leader holds all six. Ana holds five entries that
+were never committed, left over from a shift that ended badly. Which repair
+costs more rejections?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Cara's, by six to zero.</strong> Being behind costs one rejection per missing
+entry, because the leader's guess starts at its own log end and walks back
+one slot at a time. Ana's five ghost entries were removed with zero
+rejections, because the leader's guess for her was frozen at election time,
+when its own log was short. One conflicting entry made Ana truncate her
+whole tail in one message.</p>
+<p>If you said &quot;Ana's, because five wrong entries must each be found and
+deleted&quot;, you are imagining a diff. There is no diff. One mismatch deletes
+everything above it.</p>
+</details>
+
+</blockquote>
+<p>Here are the two runs from <code>java src/Experiments.java log-repair</code>. Read S1 as
+Ben (the new leader in case A), S2 as Cara, S0 as Ana.</p>
+<div class="code"><pre><code>CASE A — follower far behind (missed six writes; new leader holds all six)
+  S1 optimistically sets nextIndex[S2] = 7
+  rejections before the logs agreed : 6     (7,6,5,4,3,2,1)
+  messages spent on the repair      : 47
+
+CASE B — follower divergent (five entries that were never committed)
+  nextIndex[S0] on the new leader = 2   &lt;-- frozen at election time, when its log was short
+  rejections before the logs agreed : 0
+  messages spent on the repair      : 40
+  repaired S0 log: [keep@t1 real-1@t2 real-2@t2]   -- five ghost entries deleted in one message
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Case</th>
+  <th>Rejections</th>
+  <th>Messages</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>A: Cara missed six writes</td>
+  <td>6 (the guess walked 7,6,5,4,3,2,1)</td>
+  <td>47</td>
+  <td>being <em>behind</em> costs one round trip per missing entry</td>
+</tr>
+<tr>
+  <td>B: Ana holds five ghost entries</td>
+  <td>0</td>
+  <td>40</td>
+  <td>being <em>wrong</em> was free: one mismatch truncated the whole tail</td>
+</tr>
+</tbody>
+</table></div>
+<p>Case B surprises people. Five wrong entries were removed with <strong>zero</strong>
+rejections, because a single conflicting entry causes the follower to
+truncate its whole tail. And case A is the expensive one even though nothing
+was <em>wrong</em>. Real Raft fixes exactly this by returning the conflicting
+<strong>term</strong> in the rejection, so the leader can skip a whole term per round trip.</p>
+<h3 id="readme-106--why-does-this-look-like-a-bug-and-isnt">10.6 — Why does this look like a bug and isn't?</h3>
+<p>After a leader change, a follower's leftover <strong>uncommitted</strong> entries are
+<em>not</em> deleted straight away. They survive until the new leader appends
+something of its own. <code>Tests.noOpLessonTest</code> demonstrates it:</p>
+<div class="code"><pre><code>an_uncommitted_entry_is_NOT_deleted_just_because_a_new_leader_appeared   PASS
+that_divergence_is_safe_because_nothing_was_ever_committed_there         PASS
+the_new_leaders_first_own_write_is_what_finally_deletes_it               PASS
+</code></pre></div>
+<p>Two logs genuinely disagree, for a while, and it is fine. Nobody was ever told
+those entries were safe. But it is untidy, and it delays the commit of
+everything inherited from the previous term. Which is the second reason real
+systems append a no-op on election.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-intermediate-model">✅ Checkpoint: end of the intermediate model</h3>
+<p>You can now walk through a Raft election and a Raft write message by
+message. You can explain the four rules that look arbitrary, randomised
+timeouts, the prefix check, the up-to-date check, and the own-term commit
+rule, by naming the specific disaster each one prevents. That is enough to
+read the paper.</p>
+<p><strong>Say it back.</strong> Four of the five books hold an order. In two sentences,
+and without the word <em>term</em>, explain to Ben why the shop still cannot tell
+the customer it is safe.</p>
+<details><summary>A good answer sounds like</summary>
+"The fifth book might hold a different order in that slot from a later
+shift, and a later shift beats an earlier one when people vote. So that
+fifth person could still take charge and make everyone else cross the order
+out, four copies or not."
+</details>
+
+<p><strong>Next:</strong> what actually happens under each kind of failure, which guarantee
+bends, and which one never does.</p>
+</blockquote>
+<hr />
+<h1 id="readme-engineering-model">ENGINEERING MODEL</h1>
+<h2 id="readme-11-what-happens-under-each-failure">11. What happens under each failure?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Ten failure scenarios, each one made on purpose and
+watched. Every story ends with the same two questions: which promise still
+holds, and which one is temporarily suspended.</p>
+</blockquote>
+<p>You can make every one of these happen yourself. Each story names the
+visualization control or the experiment command. The point of every scenario
+is the pair of questions at its end: <strong>which promise still holds, and which
+one is temporarily suspended.</strong> The comparison table after scenario 11.10
+holds all ten answers side by side.</p>
+<h3 id="readme-111-the-leader-crashes">11.1 The leader crashes</h3>
+<p>Ana (the leader, S0) is mid-shift when her phone dies. Her &quot;still here!&quot;
+shouts stop. Ben, Cara, Dev and Eve each have a timer running. The first timer
+to run out belongs to whoever asks to take over, in a new term. And because of
+the up-to-date check, only someone whose book already holds everything
+settled can win.</p>
+<p>To make it happen, click a leader row in the visualization and choose <em>Crash
+it</em>, or run <code>java src/Experiments.java leader-crash</code>.</p>
+<p>Over 200 runs the shop found a new leader every time. Read the last column for
+what each number means.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Recovery time, 200 runs</th>
+  <th>Ticks</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>fastest (min)</td>
+  <td>154</td>
+  <td>one short timeout plus one exchange</td>
+</tr>
+<tr>
+  <td>typical (p50)</td>
+  <td>182</td>
+  <td>the number to plan around</td>
+</tr>
+<tr>
+  <td>slow (p95)</td>
+  <td>243</td>
+  <td>a longer random timeout, still one exchange</td>
+</tr>
+<tr>
+  <td>worst (max)</td>
+  <td>488</td>
+  <td>a split vote, then a second round</td>
+</tr>
+<tr>
+  <td>failures to recover</td>
+  <td>0</td>
+  <td>the shop never stayed leaderless</td>
+</tr>
+<tr>
+  <td>new leaders missing the committed write</td>
+  <td>0</td>
+  <td>the overlap argument held every time</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why that shape? The gap is <em>one election timeout plus one round trip</em>, not
+&quot;timeout × retries&quot;, because the winner is decided in a single exchange.</p>
+<p>What holds: nothing committed is lost, and no two servers disagree. What is
+suspended: availability. For those ~180 ticks the cluster answers nothing.</p>
+<p>In production this is the visible outage in every etcd/Consul incident: a
+sub-second write stall on leader failover. You tune it with the election
+timeout, and the tuning is a straight trade against false failovers.</p>
+<h3 id="readme-112-a-follower-crashes-or-just-falls-behind">11.2 A follower crashes, or just falls behind</h3>
+<p>Dev (a follower, S3) goes into the freezer. Nothing happens, as long as a
+majority survives. Ana keeps committing on the remaining majority. Her guess
+for Dev, his <code>nextIndex</code>, simply stops moving. When Dev comes back he is
+repaired automatically, exactly as stage 10.5 showed.</p>
+<p>To make it happen, crash any non-leader.</p>
+<p>What holds: everything. What is suspended: nothing, except your margin. At 5
+servers you tolerate 2 failures. With one already down, the next one costs
+you the cluster.</p>
+<p>In production the number to watch is not &quot;is it up&quot; but <strong>how far behind</strong>. A
+follower can fall so far behind that the leader has already discarded the
+entries it needs. That follower must instead be sent a copy of the whole
+current state, a <strong>snapshot</strong> (stage 15).</p>
+<h3 id="readme-113-the-network-splits-and-the-old-leader-is-on-the-small-side">11.3 The network splits, and the old leader is on the small side</h3>
+<p>The kitchen wall goes up. Ben (the old leader, S1) and Ana (S0) are on the
+small side. Cara (S2), Dev (S3) and Eve (S4) are on the big side, and cannot
+hear Ben at all.</p>
+<p>To make it happen, set the visualization to <em>Tear the network between S1 and
+S2 (2 | 3)</em>, or run <code>java src/Experiments.java partition</code>.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Ben is still taking phone orders on the small side. Does he
+know he has stopped being leader? Do any of his new orders ever get
+settled?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>No, and no.</strong> Ben keeps accepting writes and can never commit them, because
+committing needs three books and he can only reach two. His commit index
+freezes. Meanwhile the three-server side elects a new leader in a higher
+term and carries on committing. <strong>Two leaders exist at the same moment</strong>, in
+different terms.</p>
+<p>If you said &quot;someone tells Ben he is out&quot;, remember lie number 2 from
+section 8: nobody hands over. Ben finds out only when the wall comes down.</p>
+</details>
+
+</blockquote>
+<p>Why is it safe? Committing requires a majority, and the small side does not
+have one. Its writes pile up unacknowledged. What holds: every safety
+property, without exception. The checker's counter reads
+<code>safety violations so far: 0</code> throughout the split. What is suspended:
+availability <em>on the minority side</em>, and only there.</p>
+<p>In production, clients talking to the old leader hang or time out. They must
+not treat a timeout as failure, because the write may still commit if the
+partition heals in time. This is the CP choice from
+<a href="../24-cap-theorem/notes.html#readme"><code>cap-theorem</code></a>, and this is exactly what it costs.</p>
+<h3 id="readme-114-the-partition-heals-and-the-old-leader-comes-back">11.4 The partition heals and the old leader comes back</h3>
+<p>The wall comes down, in the same run. Set the tear back to <em>nowhere</em>. Here is
+what the lab prints. Read S1 as Ben, S2 as Cara, S0 as Ana.</p>
+<div class="code"><pre><code>t=637  S1 steps down to follower, term 1 -&gt; 2 (saw a higher term from leader S2)
+t=637  S1 deletes its own entries from index 2 (had ghost-1@t1, leader says real-1@t2)
+t=638  S0 steps down to follower, term 1 -&gt; 2
+t=638  S0 deletes its own entries from index 2
+</code></pre></div>
+<p>In words: the very first message Ben hears carries Cara's higher term. Ben
+steps down without argument. His slot 2 held an order from his own term that
+nobody settled; Cara's slot 2 holds a real one, so Ben crosses his out. One
+tick later Ana does the same.</p>
+<p>What holds: everything, because deletion only ever touches uncommitted
+entries. What is suspended: nothing. But <em>this is where a client can be
+hurt</em>. A client whose write was accepted and then deleted got no error at any
+point. It simply never got a success either. <strong>Timeouts are not failures. A
+retry must be idempotent.</strong> That is the same conclusion the
+<a href="../48-transactional-outbox/notes.html#readme"><code>transactional-outbox</code></a> and
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> labs reached from
+two other directions.</p>
+<h3 id="readme-115-messages-are-lost">11.5 Messages are lost</h3>
+<p>Shouts across the kitchen start going missing. To make it happen, drag the
+<em>Drop</em> slider, or run <code>java src/Experiments.java loss</code>.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Half of all messages are lost. Does the shop still find a
+leader? Do writes still get settled? Does anything ever become wrong?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Yes, mostly no, and never.</strong> At 50% loss a leader is elected in every one
+of 30 runs, but only 7 of the 30 manage to commit their writes, and the
+cluster burns 23 terms on average getting there. Safety violations: 0, at
+every loss rate, including 90%.</p>
+<p>If you said &quot;half the messages lost means half the writes lost&quot;, loss does
+not delete anything. It only stops heartbeats landing in time, so the shop
+spends its life re-electing instead of writing.</p>
+</details>
+
+</blockquote>
+<p>Thirty seeds per row. The first table is what the cluster managed; the second
+is what it cost and what it means.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Drop rate</th>
+  <th>Elected a leader</th>
+  <th>Writes committed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0 %</td>
+  <td>30/30</td>
+  <td>30/30</td>
+</tr>
+<tr>
+  <td>10 %</td>
+  <td>30/30</td>
+  <td>30/30</td>
+</tr>
+<tr>
+  <td>20 %</td>
+  <td>30/30</td>
+  <td>30/30</td>
+</tr>
+<tr>
+  <td>30 %</td>
+  <td>30/30</td>
+  <td>30/30</td>
+</tr>
+<tr>
+  <td>50 %</td>
+  <td>30/30</td>
+  <td><strong>7/30</strong></td>
+</tr>
+<tr>
+  <td>70 %</td>
+  <td>26/30</td>
+  <td>0/30</td>
+</tr>
+<tr>
+  <td>90 %</td>
+  <td><strong>0/30</strong></td>
+  <td>0/30</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Drop rate</th>
+  <th>Avg final term</th>
+  <th>Safety violations</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0 %</td>
+  <td>1</td>
+  <td>0</td>
+  <td>one shift, no drama</td>
+</tr>
+<tr>
+  <td>10 %</td>
+  <td>1</td>
+  <td>0</td>
+  <td>a lost shout is re-sent on the next heartbeat</td>
+</tr>
+<tr>
+  <td>20 %</td>
+  <td>2</td>
+  <td>0</td>
+  <td>an occasional re-election</td>
+</tr>
+<tr>
+  <td>30 %</td>
+  <td>5</td>
+  <td>0</td>
+  <td>elections are getting frequent</td>
+</tr>
+<tr>
+  <td>50 %</td>
+  <td>23</td>
+  <td>0</td>
+  <td>the shop mostly holds elections now</td>
+</tr>
+<tr>
+  <td>70 %</td>
+  <td>40</td>
+  <td>0</td>
+  <td>some runs never find a leader at all</td>
+</tr>
+<tr>
+  <td>90 %</td>
+  <td>54</td>
+  <td>0</td>
+  <td>nothing useful happens, and nothing wrong happens</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why that shape? Loss does not corrupt anything. It only makes leaders fail to
+land heartbeats inside one election timeout. Past ~50% the cluster spends all
+its time re-electing. What holds: every safety property, at every loss rate,
+including 90%. What is suspended: liveness, smoothly and then completely.</p>
+<p>In production the observable symptom is <strong>leader elections per minute
+climbing</strong>. It is the single most useful Raft alarm there is. It means &quot;the
+network is sick&quot;, never &quot;the data is wrong&quot;.</p>
+<h3 id="readme-116-messages-are-duplicated-or-arrive-late">11.6 Messages are duplicated or arrive late</h3>
+<p>Ben hears the same shout twice, or hears it a minute late. To make it happen,
+drag the <em>Message delay</em> slider; <code>Tests.chaosTests</code> runs a 50% duplication
+rate.</p>
+<p>What happens: nothing. Every handler is idempotent by construction. A vote
+reply from an old term is ignored, because the code checks
+<code>r.term() != currentTerm</code> and drops it. A duplicated <code>AppendEntries</code>
+re-appends entries the follower already has, which the term check turns into
+a no-op. With every other message duplicated, the command <code>only-once</code> was
+applied <strong>exactly once</strong> on every server.</p>
+<p>What holds: everything. What is suspended: nothing. In production this is why
+Raft can run over a plain unreliable transport with retries and no
+deduplication layer.</p>
+<h3 id="readme-117-a-split-vote">11.7 A split vote</h3>
+<p>Two people ask to take over at the same moment, and the votes split. To make
+it happen, switch the visualization to <em>Identical</em> timeouts and press Reset,
+then Play.</p>
+<p>With identical timeouts it lasts forever: term 40+ and climbing, no leader, 0
+violations. With random timeouts it happened once in 200 cold starts, and
+resolved on the next term.</p>
+<p>What holds: safety, completely. What is suspended: liveness. This is the clean
+demonstration that the two are independent. In production the equivalent is a
+cluster whose timeouts are too tight for its network. The fix is the same:
+more spread, longer timeouts.</p>
+<h3 id="readme-118-a-server-restarts">11.8 A server restarts</h3>
+<p>Eve (S4) drops her book, picks it up, and comes back. To make it happen, crash
+and then restart any server.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Eve's page of numbers from section 8 has six lines. Which
+of them must survive her restart, and what goes wrong if one is lost?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Exactly three: her term, who she voted for, and her log.</strong> She comes back
+with <code>currentTerm</code>, <code>votedFor</code> and her <code>log</code> intact, and with <code>commitIndex</code>
+and her state machine at zero. She rebuilds by replaying her log as the
+leader tells her what is committed.</p>
+<p>Losing <code>votedFor</code> would let her vote twice in one term across a crash: two
+leaders in one term. Losing <code>currentTerm</code> would let her accept an old
+leader.</p>
+<p>If you said &quot;the commit index too, or she loses settled orders&quot;, no: the
+settled orders are in her log, and the leader will tell her again how far is
+settled. The commit index is a fact she can relearn; a vote is not.</p>
+</details>
+
+</blockquote>
+<p>Why exactly those three survive: they are precisely the state real Raft
+<code>fsync</code>s before replying to any message. What holds: everything. The test
+<code>no_safety_violation_across_a_crash_and_a_restart</code> passes. What is suspended:
+nothing.</p>
+<p>In production this is the line where a &quot;fast&quot; Raft implementation becomes an
+unsafe one. Buffering the vote instead of flushing it is a real, shipped bug
+class.</p>
+<h3 id="readme-119-the-heartbeat-is-too-slow-for-the-timeout">11.9 The heartbeat is too slow for the timeout</h3>
+<p>Ana shouts &quot;still here!&quot; less often than Ben is willing to wait. To make it
+happen, run <code>java src/Experiments.java heartbeat</code>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Heartbeat interval</th>
+  <th>Election timeout</th>
+  <th>Terms burned in 10k ticks</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>10</td>
+  <td>150–300</td>
+  <td>0</td>
+  <td>stable</td>
+</tr>
+<tr>
+  <td>50</td>
+  <td>150–300</td>
+  <td>0</td>
+  <td>stable; this lab's default</td>
+</tr>
+<tr>
+  <td>100</td>
+  <td>150–300</td>
+  <td>0</td>
+  <td>stable</td>
+</tr>
+<tr>
+  <td>140</td>
+  <td>150–300</td>
+  <td>0</td>
+  <td>stable, but with almost no margin</td>
+</tr>
+<tr>
+  <td>200</td>
+  <td>150–300</td>
+  <td>48</td>
+  <td><strong>no — churning</strong>: followers time out on a healthy leader</td>
+</tr>
+<tr>
+  <td>400</td>
+  <td>150–300</td>
+  <td>52</td>
+  <td><strong>no — churning</strong>: every heartbeat arrives after an election</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why? Once one heartbeat interval approaches the <em>minimum</em> election timeout,
+followers start timing out on a perfectly healthy leader. The cluster spends
+its life re-electing. What holds: safety. What is suspended: all useful work.</p>
+<p>In production the paper's rule of thumb is a chain of three inequalities.
+Here it is in words, then as the formula.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Rule</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>broadcastTime ≪ electionTimeout ≪ MTBF</code></td>
+  <td>a heartbeat round trip must be far shorter than the timeout, and the timeout far shorter than the time between server failures</td>
+</tr>
+</tbody>
+</table></div>
+<div class="table"><table><thead>
+<tr>
+  <th>etcd's shipped defaults</th>
+  <th>Value</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>heartbeat</td>
+  <td>100 ms</td>
+  <td>how often the leader proves it is alive</td>
+</tr>
+<tr>
+  <td>election timeout</td>
+  <td>1000 ms</td>
+  <td>how long a follower waits in silence</td>
+</tr>
+<tr>
+  <td>margin</td>
+  <td>10×</td>
+  <td>ten missed heartbeats before anyone doubts the leader</td>
+</tr>
+</tbody>
+</table></div>
+<p>etcd's docs warn specifically about raising the heartbeat for
+cross-datacentre clusters without raising the timeout too.</p>
+<h3 id="readme-1110-everything-at-once">11.10 Everything at once</h3>
+<p>Run <code>java src/Experiments.java soak</code>: 20 clusters × 300 rounds of random
+crashes, restarts, partitions and writes, with 5% packet loss throughout.</p>
+<div class="code"><pre><code>client writes accepted by a leader : 898
+elections held (sum of final terms): 2550
+SAFETY VIOLATIONS                  : 0
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>Soak result</th>
+  <th>Count</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>client writes accepted by a leader</td>
+  <td>898</td>
+  <td>the shop kept taking orders through all of it</td>
+</tr>
+<tr>
+  <td>elections held (sum of final terms)</td>
+  <td>2550</td>
+  <td>leadership changed hands constantly</td>
+</tr>
+<tr>
+  <td>safety violations</td>
+  <td>0</td>
+  <td>not one settled order was ever contradicted</td>
+</tr>
+</tbody>
+</table></div>
+<p>The checker ran <em>after every single tick</em>, not at the end.</p>
+<h3 id="readme-the-ten-failures-side-by-side">The ten failures side by side</h3>
+<p>The same answers, in one place, so you can compare down the columns.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Failure</th>
+  <th>What still holds</th>
+  <th>What is suspended</th>
+  <th>What production sees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>11.1</td>
+  <td>leader crashes</td>
+  <td>nothing committed is lost</td>
+  <td>availability, for ~180 ticks</td>
+  <td>a sub-second write stall on failover</td>
+</tr>
+<tr>
+  <td>11.2</td>
+  <td>follower crashes or falls behind</td>
+  <td>everything</td>
+  <td>only your margin</td>
+  <td>commit-index lag; eventually a snapshot</td>
+</tr>
+<tr>
+  <td>11.3</td>
+  <td>split, old leader on the small side</td>
+  <td>every safety property</td>
+  <td>availability on the minority side</td>
+  <td>clients of the old leader time out</td>
+</tr>
+<tr>
+  <td>11.4</td>
+  <td>partition heals</td>
+  <td>everything</td>
+  <td>nothing; but unacknowledged writes vanish</td>
+  <td>a timed-out write that never &quot;failed&quot;</td>
+</tr>
+<tr>
+  <td>11.5</td>
+  <td>messages lost</td>
+  <td>safety, even at 90% loss</td>
+  <td>liveness, smoothly then completely</td>
+  <td>elections per minute climbing</td>
+</tr>
+<tr>
+  <td>11.6</td>
+  <td>duplicated or late</td>
+  <td>everything</td>
+  <td>nothing</td>
+  <td>nothing; handlers are idempotent</td>
+</tr>
+<tr>
+  <td>11.7</td>
+  <td>split vote</td>
+  <td>safety</td>
+  <td>liveness, until the dice differ</td>
+  <td>timeouts too tight for the network</td>
+</tr>
+<tr>
+  <td>11.8</td>
+  <td>server restarts</td>
+  <td>everything</td>
+  <td>nothing</td>
+  <td>an unflushed vote is a shipped bug class</td>
+</tr>
+<tr>
+  <td>11.9</td>
+  <td>heartbeat too slow</td>
+  <td>safety</td>
+  <td>all useful work</td>
+  <td>churn on a healthy cluster</td>
+</tr>
+<tr>
+  <td>11.10</td>
+  <td>everything at once</td>
+  <td>safety, checked every tick</td>
+  <td>liveness, intermittently</td>
+  <td>0 violations across 2550 elections</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-is-guaranteed-and-what-is-not">12. What is guaranteed, and what is not?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five promises about the books, each one already earned
+above. Safety never depends on timing; liveness always does. And four things
+people wrongly expect from Raft.</p>
+</blockquote>
+<h3 id="readme-the-five-properties-each-earned-above">The five properties, each earned above</h3>
+<p>Every promise the shop makes is one of these five. Read the last column: it
+is the rule that enforces each one.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Property</th>
+  <th>What it says</th>
+  <th>Enforced by</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Election Safety</strong></td>
+  <td>at most one leader per term</td>
+  <td>one vote per term (<code>votedFor</code>)</td>
+</tr>
+<tr>
+  <td><strong>Leader Append-Only</strong></td>
+  <td>a leader never overwrites or deletes its own entries</td>
+  <td><code>clientRequest</code> only appends</td>
+</tr>
+<tr>
+  <td><strong>Log Matching</strong></td>
+  <td>same (index, term) ⇒ identical prefixes</td>
+  <td>the <code>prevLogIndex</code>/<code>prevLogTerm</code> check</td>
+</tr>
+<tr>
+  <td><strong>Leader Completeness</strong></td>
+  <td>a committed entry is present in every future leader</td>
+  <td>the up-to-date vote check</td>
+</tr>
+<tr>
+  <td><strong>State Machine Safety</strong></td>
+  <td>no two servers apply different commands at the same index</td>
+  <td>Leader Completeness + the own-term commit rule</td>
+</tr>
+</tbody>
+</table></div>
+<p><code>Cluster.checkSafety()</code> asserts all five after every tick of every test and
+experiment in this lab. In the shop's words: no shift ever had two people in
+charge; Ana never crossed out her own line; two books agreeing on one line
+agree on everything above it; whoever takes charge already has every settled
+order; and no two people ever made different pizzas for the same slot.</p>
+<h3 id="readme-safety-versus-liveness-the-distinction-to-take-away">Safety versus liveness: the distinction to take away</h3>
+<p><strong>Safety</strong> means nothing wrong ever happens. Raft's safety does <strong>not</strong> depend
+on timing at all. Clocks can be arbitrarily wrong. Messages can be arbitrarily
+delayed, reordered, duplicated or lost. Safety holds. Every scenario in
+section 11 confirms it, including the ones where the cluster does nothing
+useful for 6000 ticks.</p>
+<p><strong>Liveness</strong> means something eventually happens. This <em>does</em> depend on
+timing, and Raft makes no promise about it. It cannot. FLP, which you met in
+the <a href="../39-paxos/notes.html#readme"><code>paxos</code></a> lab, proves no protocol can guarantee both in an
+asynchronous network with even one crash. Raft's answer is the same as
+Multi-Paxos's: be always safe, and be live whenever the network behaves.</p>
+<p>The cleanest demonstration in this lab is the pair of identical-timeout runs.
+Turn off randomisation and liveness dies with safety untouched. Additionally
+turn off the one-vote-per-term rule and you get <strong>five leaders in one term</strong>.
+Safety in ruins, while liveness looks great.</p>
+<h3 id="readme-what-raft-explicitly-does-not-give-you">What Raft explicitly does NOT give you</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Ana is cut off on the small side of a split and still
+believes she is leader. A client asks her, not for a write, but to read the
+current balance. Is her answer correct?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Not necessarily.</strong> The big side may have elected Cara and committed new
+writes that Ana has never heard of. Ana's state machine is honest about what
+Ana knows, and Ana knows stale news. A read from a leader is only correct if
+the leader first proves it is still the leader.</p>
+<p>If you said &quot;yes, she is the leader and leaders have everything&quot;, that is
+Leader Completeness, and it is about <em>committed writes at election time</em>. It
+says nothing about a leader who has since been replaced without knowing.</p>
+</details>
+
+</blockquote>
+<ul>
+<li><strong>Fast or even correct reads, for free.</strong> Reading from the leader's state
+machine can return stale data, because a partitioned old leader does not
+know it has been replaced. Linearizable reads need an extra mechanism:
+route the read through the log, or confirm leadership with a heartbeat
+round first (<code>ReadIndex</code>), or hold a time-based lease. Reading from a
+<em>follower</em> is stale by default. <strong>This is the single most common
+misunderstanding of Raft in production.</strong></li>
+<li><strong>Protection against lying servers.</strong> The failure model is crash-stop and
+network faults. A server that sends deliberately false terms or logs breaks
+everything. Byzantine fault tolerance is a different family of protocols.</li>
+<li><strong>Scale-out for writes.</strong> Every write goes through one leader and lands on
+a majority. Adding servers makes you <em>more fault tolerant and slower</em>,
+never faster. Scaling writes means multiple Raft groups, one per shard.
+That is exactly what TiKV, CockroachDB and etcd-at-scale do, and where
+<a href="../35-consistent-hashing/notes.html#readme"><code>consistent-hashing</code></a> comes back in.</li>
+<li><strong>Progress with fewer than a majority alive.</strong> 2 of 5 servers can do
+nothing at all, by design. This is not a bug to route around.</li>
+</ul>
+<h3 id="readme-cost-in-one-table">Cost, in one table</h3>
+<p>Read the last column: it is what each line costs Ana's shop.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Cost</th>
+  <th>Value</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>messages per committed write</td>
+  <td>2 × (N−1): one <code>AppendEntries</code> and one reply per follower</td>
+  <td>one shout and one answer per colleague</td>
+</tr>
+<tr>
+  <td>round trips to commit</td>
+  <td>1 (leader → majority → leader)</td>
+  <td>Ana waits for one round of answers, not a conversation</td>
+</tr>
+<tr>
+  <td>failures tolerated</td>
+  <td>⌊(N−1)/2⌋ — 1 of 3, 2 of 5, 3 of 7</td>
+  <td>two of the five can be in the freezer</td>
+</tr>
+<tr>
+  <td>latency floor</td>
+  <td>one round trip to the <em>median</em> follower, not the slowest</td>
+  <td>the slowest colleague never sets the pace</td>
+</tr>
+<tr>
+  <td>cost of a leader failure</td>
+  <td>one election timeout + one round trip</td>
+  <td>the ~180-tick gap from scenario 11.1</td>
+</tr>
+</tbody>
+</table></div>
+<p>That &quot;median, not slowest&quot; line is worth keeping. It is the same tail-latency
+argument the <a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> lab
+worked through. Waiting for a majority rather than everyone is what keeps a
+slow replica from setting your p99.</p>
+<h2 id="readme-13-which-eight-lines-are-the-algorithm">13. Which eight lines are the algorithm?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The implementation is about 250 lines, and almost all of
+it is bookkeeping. Eight lines carry the rules. Each one is a scar from
+section 10, and each one is marked in the source.</p>
+</blockquote>
+<p>The implementation is ~250 lines in <span class="missing" title="Not in the hub: src/RaftNode.java is in the lab folder on your laptop"><code>src/RaftNode.java</code></span>.
+Almost all of it is bookkeeping. These are the load-bearing lines, each
+marked <code>// INVARIANT:</code> in the source. Read each one as a rule of Ana's shop
+first, then as code.</p>
+<p><strong>1. A vote is a one-shot resource per term.</strong> Ben can vote once per shift,
+and a repeat request from the same candidate gets the same answer. In
+<code>onRequestVote</code>:</p>
+<div class="code"><pre><code class="language-java">boolean voteFree = votedFor == -1 || votedFor == rv.candidateId();
+</code></pre></div>
+<p>Without it: two candidates both reach a majority in the same term. With
+<code>Bugs.voteTwice</code> and identical timeouts, all five servers become leader of
+term 1 simultaneously.</p>
+<p><strong>2. Being newer is not enough; you must be complete.</strong> &quot;Not with a book like
+that.&quot; In <code>candidateUpToDate</code>:</p>
+<div class="code"><pre><code class="language-java">if (candLastTerm != lastLogTerm()) return candLastTerm &gt; lastLogTerm();
+return candLastIndex &gt;= lastLogIndex();
+</code></pre></div>
+<p>Without it: a committed write is deleted (stage 10.3).</p>
+<p><strong>3. One comparison certifies the whole prefix.</strong> Cara checks the slot before
+the ones being sent. In <code>onAppendEntries</code>:</p>
+<div class="code"><pre><code class="language-java">matches = ae.prevLogIndex() &lt;= lastLogIndex()
+       &amp;&amp; log.get(ae.prevLogIndex()).term() == ae.prevLogTerm();
+</code></pre></div>
+<p>Without it: holes and permanent divergence (stage 10.2).</p>
+<p><strong>4. Followers delete their own work.</strong> Ben crosses out his ghost entries to
+match the leader. Also in <code>onAppendEntries</code>:</p>
+<div class="code"><pre><code class="language-java">if (log.get(idx).term() != e.term()) {
+    while (lastLogIndex() &gt;= idx) log.remove(log.size() - 1);
+    log.add(e);
+}
+</code></pre></div>
+<p>This looks dangerous and is not. By Leader Completeness, anything a leader
+overwrites was never committed.</p>
+<p><strong>5. Count replicas, but only for your own term.</strong> Ana counts books, but only
+for orders from her own shift. In <code>advanceCommit</code>:</p>
+<div class="code"><pre><code class="language-java">boolean ownTerm = log.get(n).term() == currentTerm;
+if (count &gt;= majority() &amp;&amp; ownTerm) commitIndex = n;
+</code></pre></div>
+<p>Without it: Figure 8 (stage 10.4).</p>
+<p><strong>6. A bigger term always wins, everywhere.</strong> Cara sees term 5 and adopts it
+without argument. In <code>stepDown</code>, called from all four handlers:</p>
+<div class="code"><pre><code class="language-java">currentTerm = newTerm; role = Role.FOLLOWER; votedFor = -1;
+</code></pre></div>
+<p>This one rule replaces every &quot;am I still the leader?&quot; check you would
+otherwise have to write.</p>
+<p><strong>7. Randomise on every reset, not once.</strong> Every time Dev resets his timer he
+rolls the dice again. In <code>resetElectionTimer</code>:</p>
+<div class="code"><pre><code class="language-java">int spread = bugs.fixedTimeout ? 0 : cluster.rng.nextInt(ELECTION_MAX - ELECTION_MIN + 1);
+</code></pre></div>
+<p><strong>8. A heartbeat is just an empty write.</strong> &quot;Still here!&quot; is an order with
+nothing in it. In <code>tick</code>:</p>
+<div class="code"><pre><code class="language-java">if (now &gt;= heartbeatDeadline) { for (int p : peers) if (p != id) sendAppend(p); }
+</code></pre></div>
+<p>There is no separate liveness protocol. The thing that replicates data is the
+same thing that proves the leader is alive.</p>
+<p>The rest of the lab: <span class="missing" title="Not in the hub: src/Cluster.java is in the lab folder on your laptop"><code>Cluster.java</code></span> is the clock, the
+fault injection and the safety checker. <span class="missing" title="Not in the hub: src/Network.java is in the lab folder on your laptop"><code>Network.java</code></span> is
+the abusable network. <span class="missing" title="Not in the hub: src/Bugs.java is in the lab folder on your laptop"><code>Bugs.java</code></span> is the five switches that
+turn each rule off.</p>
+<h2 id="readme-14-which-experiments-let-you-break-it-yourself">14. Which experiments let you break it yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eleven experiments, each framed as a question. Guess the
+answer, run it, and compare.</p>
+</blockquote>
+<p>Each is <code>java src/Experiments.java &lt;name&gt;</code>. Read the last column as what you
+should see, and check your guess against it before you run.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>question</th>
+  <th>what you should see</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>election</code></td>
+  <td>how does one of five become leader?</td>
+  <td>one timer fires first; 3 votes; 12 messages total</td>
+</tr>
+<tr>
+  <td><code>replication</code></td>
+  <td>when exactly is a write safe?</td>
+  <td>the gap between <em>leader has it</em> and <em>majority has it</em></td>
+</tr>
+<tr>
+  <td><code>leader-crash</code></td>
+  <td>how long is the cluster down?</td>
+  <td>154 / 182 / 243 / 488 ticks over 200 runs; 0 lost writes</td>
+</tr>
+<tr>
+  <td><code>split-vote</code></td>
+  <td>why randomise timeouts?</td>
+  <td>identical → no leader in 6000 ticks; random → 200/200</td>
+</tr>
+<tr>
+  <td><code>partition</code></td>
+  <td>which side of a 2|3 split works?</td>
+  <td>two leaders coexist; only the majority commits; ghosts deleted</td>
+</tr>
+<tr>
+  <td><code>log-repair</code></td>
+  <td>how does a wrong log get fixed?</td>
+  <td>6 rejections when behind, 0 when merely divergent</td>
+</tr>
+<tr>
+  <td><code>loss</code></td>
+  <td>how much loss can it take?</td>
+  <td>safety at 90% loss; liveness gone past 50%</td>
+</tr>
+<tr>
+  <td><code>stale-candidate</code></td>
+  <td>can a server that missed a write lead?</td>
+  <td>rule on → refused; rule off → the write is erased</td>
+</tr>
+<tr>
+  <td><code>figure8</code></td>
+  <td>is a majority enough to commit?</td>
+  <td><strong>no</strong> — with the naive rule, 12 safety violations</td>
+</tr>
+<tr>
+  <td><code>heartbeat</code></td>
+  <td>what if heartbeats are too slow?</td>
+  <td>stable to 140, churning at 200</td>
+</tr>
+<tr>
+  <td><code>soak</code></td>
+  <td>does any of this ever break safety?</td>
+  <td>898 writes, 2550 elections, <strong>0</strong> violations</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then go further. Edit <code>RaftNode.ELECTION_MIN/MAX/HEARTBEAT</code>, set
+<code>net.dropRate</code>/<code>duplicateRate</code>, or flip a flag in <code>Bugs</code>. Re-run
+<code>java src/Tests.java</code> to see exactly which named scenario catches it. Each
+flag is one of Ana's rules switched off.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-engineering-model">✅ Checkpoint: end of the engineering model</h3>
+<p>You can now name every failure mode, say which guarantee bends under it,
+point at the line of code that holds the others up, and prove any of it by
+running something. That is the level at which you can review someone's
+Raft-based design and debug a real cluster.</p>
+<p><strong>Say it back.</strong> A colleague's dashboard shows leader elections climbing
+and writes timing out. Without using the words <em>safety</em> or <em>liveness</em>, say
+whether the shop's books can have gone wrong, and what kind of problem this
+is.</p>
+<details><summary>A good answer sounds like</summary>
+"The books are fine. Nothing in Raft ever writes a wrong order because of
+timing; it just stops writing. Elections climbing means the 'still here'
+shouts are not landing in time, so this is a lateness problem: the network,
+the disk, or the timeouts."
+</details>
+
+<p><strong>Next:</strong> everything this toy leaves out, and what real implementations do
+instead.</p>
+</blockquote>
+<hr />
+<h1 id="readme-production-model">PRODUCTION MODEL</h1>
+<h2 id="readme-15-what-changes-between-this-toy-and-etcd">15. What changes between this toy and etcd?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A real Raft adds disk, snapshots, membership changes,
+batching and correct reads around the same state machine. Production is
+mostly the numbers you chose in advance, and one alarm: elections per
+minute.</p>
+</blockquote>
+<h3 id="readme-the-chain-from-here-to-there">The chain from here to there</h3>
+<p><strong>This lab</strong> is five objects passing messages through an in-memory network
+you can delay, drop and partition, on a logical clock.</p>
+<p><strong>A real implementation</strong> is the same state machine, plus disk, plus
+snapshots, plus a way to change the membership, plus batching, wrapped in a
+library (<code>etcd-io/raft</code> in Go, <code>tikv/raft-rs</code> in Rust, <code>hashicorp/raft</code>).</p>
+<p><strong>A production system</strong> is that library under a key-value store, replicated
+across availability zones, with clients that retry idempotently and
+monitoring that watches election rate.</p>
+<p>In the shop's words: Ana (the leader) now writes every line to a paper book
+that survives a power cut before she answers anyone. She throws away old pages
+once everyone has a photocopy of the current state. New staff join without a
+vote at first. And she batches ten orders into one shout.</p>
+<h3 id="readme-what-this-lab-leaves-out-and-how-real-systems-handle-it">What this lab leaves out, and how real systems handle it</h3>
+<p>Read the last column: it is what the real system does about each gap.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted here</th>
+  <th>Why it matters</th>
+  <th>What real Raft does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Disk persistence</strong></td>
+  <td>we keep <code>currentTerm</code>, <code>votedFor</code> and the log in memory</td>
+  <td><code>fsync</code> all three <em>before</em> replying to any RPC. This is usually the latency floor of the whole system; group commit and batching exist to amortise it</td>
+</tr>
+<tr>
+  <td><strong>Log compaction</strong></td>
+  <td>our log grows forever</td>
+  <td>periodic <strong>snapshots</strong> of the state machine, then discard the log prefix. A follower too far behind gets <code>InstallSnapshot</code> instead of entries</td>
+</tr>
+<tr>
+  <td><strong>Membership changes</strong></td>
+  <td>our cluster is fixed at 5</td>
+  <td>changing membership naively can produce two disjoint majorities. Raft's answer is <strong>single-server changes</strong> (add or remove one at a time, so old and new majorities always overlap) or <strong>joint consensus</strong> for bigger moves</td>
+</tr>
+<tr>
+  <td><strong>Batching &amp; pipelining</strong></td>
+  <td>one entry per round trip here</td>
+  <td>real leaders send many entries per <code>AppendEntries</code> and keep several in flight per follower. This is where the throughput is</td>
+</tr>
+<tr>
+  <td><strong>Linearizable reads</strong></td>
+  <td>we do not implement reads at all</td>
+  <td><strong>ReadIndex</strong> (confirm leadership with a heartbeat round, then read at the committed index) or a <strong>leader lease</strong> (cheaper, but relies on bounded clock drift)</td>
+</tr>
+<tr>
+  <td><strong>Pre-vote</strong></td>
+  <td>a rejoining server with an inflated term disrupts a healthy leader</td>
+  <td>run a &quot;would you vote for me?&quot; round <em>without</em> incrementing the term; only start a real election if a majority says yes</td>
+</tr>
+<tr>
+  <td><strong>Leadership transfer</strong></td>
+  <td>our leaders die, they never resign</td>
+  <td>a leader being drained for maintenance can hand over: catch the target up, then tell it to start an election immediately</td>
+</tr>
+<tr>
+  <td><strong>Client dedup / exactly-once</strong></td>
+  <td>our client never retries</td>
+  <td>clients attach a session id and sequence number; the state machine remembers the last result per session, so a retried write is answered, not re-applied. Same conclusion as <a href="../48-transactional-outbox/notes.html#readme"><code>transactional-outbox</code></a></td>
+</tr>
+<tr>
+  <td><strong>Faster log repair</strong></td>
+  <td>we back up one index per round trip</td>
+  <td>rejections carry the follower's conflicting term and its first index for that term, so the leader skips a whole term per round trip</td>
+</tr>
+<tr>
+  <td><strong>Learners / non-voting members</strong></td>
+  <td>every server votes here</td>
+  <td>new replicas join as learners and catch up without affecting the majority size</td>
+</tr>
+<tr>
+  <td><strong>Transport security</strong></td>
+  <td>messages are plain objects</td>
+  <td>mutual TLS between peers — see <a href="../14-tls/notes.html#readme"><code>tls</code></a></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-does-an-on-call-engineer-actually-watch">What does an on-call engineer actually watch?</h3>
+<ul>
+<li><strong>Leader elections per minute.</strong> The single best Raft health signal. Steady
+state is ~0. Anything sustained means the network, the disk, or the
+timeouts.</li>
+<li><strong>fsync / WAL write latency.</strong> A slow disk on the leader looks exactly like
+a slow network. Heartbeats land late, followers time out, the cluster
+churns. This is the most common real cause of &quot;etcd is unstable&quot;. It is
+Ana's pen running dry: she is fine, but her &quot;still here!&quot; comes late.</li>
+<li><strong>Commit index lag per follower.</strong> Catches the replica that is quietly
+falling behind and is about to need a snapshot.</li>
+<li><strong>Proposal latency and failed proposals.</strong> A proposal that fails because
+the leader changed mid-flight is normal and must be retried idempotently.</li>
+<li><strong>Database size vs quota.</strong> etcd refuses writes when its backend hits the
+quota. The symptom is a cluster that elects fine and commits nothing.</li>
+</ul>
+<h3 id="readme-the-trade-offs-stated-plainly">The trade-offs, stated plainly</h3>
+<p>Raft buys you <em>one ordered history that survives a minority failing</em>, and it
+pays for it with:</p>
+<ul>
+<li><strong>a write round trip to a majority</strong>, because you cannot beat the speed of
+light to your second availability zone;</li>
+<li><strong>no write scaling</strong>, because more servers means more fault tolerance and
+more latency, never more throughput;</li>
+<li><strong>an outage on every leader change</strong>, measured in one election timeout;</li>
+<li><strong>an absolute refusal to serve a minority</strong>, which is a feature until the
+day you lose a whole datacentre and want the survivors to keep working.</li>
+</ul>
+<p>Choose it for the things that must be exactly one: configuration, membership,
+locks, shard ownership, leader identity, sequence allocation. Do not choose it
+for bulk data. Put the <em>decisions</em> in Raft and the <em>data</em> wherever it belongs.
+That is precisely why etcd is small and Kubernetes is large.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint-end-of-the-production-model">✅ Checkpoint: end of the production model</h3>
+<p>You can now say what a real Raft implementation contains that this one
+does not, why each of those pieces exists, and what you would monitor and
+tune. You can read the etcd operations guide and the Raft paper's sections
+6–8 without anything being new.</p>
+<p><strong>Say it back.</strong> In two sentences, explain to Ana why writing each order to
+the paper book before answering makes the shop slower, and why she must do
+it anyway.</p>
+<details><summary>A good answer sounds like</summary>
+"Every answer now waits for the pen, so the pen is the slowest step in the
+whole shop. But if she answered first and the lights went out, she could
+come back and vote twice in one shift, or forget who is in charge, and then
+two people could be in charge at once."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-16-exercises--where-do-you-practise">16. Exercises — where do you practise?</h2>
+<p><a href="notes.html#exercises"><code>EXERCISES.md</code></a> has eight rungs, from &quot;say it back in your own
+words&quot; to &quot;design a config store across three datacentres&quot;. Answers are in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>; try first. Ana's shop is in every rung.</p>
+<p>Two of the rungs are code:</p>
+<div class="code"><pre><code class="language-bash">java src/ImplExerciseTest.java   # rung 5: implement three rules yourself (8 of 16 fail at the start)
+java src/DebugMeTest.java        # rung 6: three planted bugs, one per method (3 of 16 fail)
+</code></pre></div>
+<h2 id="readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Paxos agrees on one value; Raft agrees on an order, and
+a human can hold it in their head. Everything you learned about majorities,
+partitions and append-only logs feeds in, and several labs open out of it.</p>
+</blockquote>
+<p>This is the knowledge map. Read the arrows as &quot;feeds into&quot;.</p>
+<pre class="mermaid">flowchart TD
+    QR[quorums-and-replication&lt;br/&gt;majorities overlap] --&gt; R
+    PX[paxos&lt;br/&gt;agree on one value] --&gt; R
+    TPC[two-phase-commit&lt;br/&gt;a coordinator that blocks] --&gt; PX
+    CAP[cap-theorem&lt;br/&gt;partitions force a choice] --&gt; R
+    ES[event-sourcing&lt;br/&gt;an append-only log] --&gt; R
+    R((RAFT&lt;br/&gt;agree on an ORDER))
+    R --&gt; ETCD[etcd / Consul / TiKV&lt;br/&gt;CockroachDB / Kafka KRaft]
+    R --&gt; MR[multi-raft&lt;br/&gt;one group per shard]
+    R --&gt; LIN[linearizability&lt;br/&gt;what reads actually promise]
+    R --&gt; MC[membership changes&lt;br/&gt;joint consensus]
+    CH[consistent-hashing&lt;br/&gt;which nodes hold what] --&gt; MR
+    GS[gossip-protocols&lt;br/&gt;who is alive] -.-&gt; R
+    R -. the other side&lt;br/&gt;of the same boundary .-&gt; CR[crdts&lt;br/&gt;agree without deciding]
+</pre>
+<p><strong>Where this sits.</strong> <a href="../39-paxos/notes.html#readme"><code>paxos</code></a> answers <em>&quot;can a group agree on one
+value?&quot;</em>. Raft answers <em>&quot;can a group agree on an unbounded ordered sequence
+of values, and can a human understand how?&quot;</em>.
+<a href="../45-two-phase-commit/notes.html#readme"><code>two-phase-commit</code></a> had a coordinator whose death
+blocked everyone. Raft's leader dies routinely and costs one election
+timeout, because leadership is a <em>lease decided by vote</em>, not an appointment.
+Ana was voted in; she was never appointed.</p>
+<p><strong>Commonly confused with. The one sentence that separates each:</strong></p>
+<ul>
+<li><strong>Raft vs Paxos.</strong> Same guarantees. Raft restricts the design (a strong
+leader, logs that only ever grow forward, elections that only complete-log
+candidates can win) to trade some flexibility for a protocol you can hold
+in your head.</li>
+<li><strong>Raft vs Multi-Paxos.</strong> Practically the same algorithm. Multi-Paxos
+permits holes in the log and out-of-order commits; Raft forbids both, which
+is most of why it is easier.</li>
+<li><strong>Raft's majority vs a read/write quorum.</strong> A consensus quorum <strong>decides</strong>
+an order; <code>R+W&gt;N</code> merely guarantees two sets <strong>intersect</strong>. They coincide
+at &quot;2 of 3&quot;, which is why they get merged in people's heads. See
+<a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a>.</li>
+<li><strong>Raft vs primary-backup replication.</strong> Both have one writer. Only Raft can
+<em>choose a new one safely</em> without an external arbiter. That is the entire
+difference, and it is why &quot;just use a leader&quot; is not an answer.</li>
+<li><strong>Raft vs 2PC.</strong> 2PC makes <em>different</em> systems commit <em>one</em> transaction
+atomically. Raft makes <em>identical</em> replicas agree on <em>every</em> transaction's
+order. They compose: real distributed databases run 2PC across shards, with
+each shard's participants replicated by Raft.</li>
+<li><strong>Raft vs gossip.</strong> Gossip spreads facts that will eventually agree,
+cheaply, with no leader. Raft decides facts that must agree <em>immediately
+and forever</em>, expensively. See <a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a>.</li>
+<li><strong>Raft vs CRDTs.</strong> You already have the sentence from the
+<a href="../32-crdts/notes.html#readme"><code>crdts</code></a> lab: <em>CRDTs guarantee that everyone ends up agreeing;
+they do not guarantee that what everyone agrees on was ever allowed.</em> Raft
+is what you buy when the invariant matters: <code>stock &gt;= 0</code>, one owner per
+shard, a balance that cannot go negative. CRDTs let both sides keep writing
+during a partition; Raft makes the minority stop. <strong>That is the same
+boundary seen from its two sides.</strong> Choosing between them is choosing
+whether your invariant or your availability is negotiable.</li>
+<li><strong>Committed vs applied.</strong> Committed means &quot;can never change&quot;. Applied means
+&quot;the state machine has run it&quot;. Applied always lags, and a read that ignores
+the difference returns stale data.</li>
+</ul>
+<p><strong>Suggested next steps:</strong></p>
+<div class="code"><pre><code>/learn linearizability          # what &quot;strongly consistent&quot; actually promises, and why leader reads can be stale
+/learn multi-raft               # one Raft group per shard: how TiKV and CockroachDB scale writes
+/learn raft-membership-changes  # joint consensus, and how adding a node can split a cluster in two
+/learn kafka                    # KRaft is Raft; also the ISR model, which is not
+/learn flp-impossibility        # why no protocol can promise both safety and liveness
+</code></pre></div>
+<h2 id="readme-18-glossary">18. Glossary</h2>
+<p>Which word means what? Every term in this lesson, in the order it first
+appears, with Ana's shop still in mind.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>In one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>log</strong></td>
+  <td>the numbered, append-only list of commands every server must end up with</td>
+</tr>
+<tr>
+  <td><strong>entry</strong></td>
+  <td>one command in the log, stamped with the term it was created in</td>
+</tr>
+<tr>
+  <td><strong>index</strong></td>
+  <td>an entry's position in the log, counting from 1</td>
+</tr>
+<tr>
+  <td><strong>state machine</strong></td>
+  <td>the thing that runs the commands; its state is a fold over the committed log</td>
+</tr>
+<tr>
+  <td><strong>term</strong></td>
+  <td>a numbered stretch of time with at most one leader; a logical clock costing one integer</td>
+</tr>
+<tr>
+  <td><strong>follower</strong></td>
+  <td>the default role: answers messages, never initiates</td>
+</tr>
+<tr>
+  <td><strong>leader</strong></td>
+  <td>the one server that accepts client writes during a term</td>
+</tr>
+<tr>
+  <td><strong>candidate</strong></td>
+  <td>a follower currently asking to become leader</td>
+</tr>
+<tr>
+  <td><strong>majority / quorum</strong></td>
+  <td>more than half the servers; any two majorities share a member</td>
+</tr>
+<tr>
+  <td><strong>committed</strong></td>
+  <td>stored on a majority <em>and</em> created in the current leader's term — can never change</td>
+</tr>
+<tr>
+  <td><strong>commitIndex</strong></td>
+  <td>the highest index a server knows is committed</td>
+</tr>
+<tr>
+  <td><strong>applied / lastApplied</strong></td>
+  <td>how far the state machine has actually run; always ≤ commitIndex</td>
+</tr>
+<tr>
+  <td><strong>election timeout</strong></td>
+  <td>how long a follower waits in silence before running for leader; randomised per reset</td>
+</tr>
+<tr>
+  <td><strong>heartbeat</strong></td>
+  <td>an empty <code>AppendEntries</code> sent on a fixed interval to stop elections</td>
+</tr>
+<tr>
+  <td><strong>RequestVote</strong></td>
+  <td>the message a candidate sends asking for a vote</td>
+</tr>
+<tr>
+  <td><strong>AppendEntries</strong></td>
+  <td>the message that replicates entries, repairs logs, carries the commit point, and doubles as the heartbeat</td>
+</tr>
+<tr>
+  <td><strong>votedFor</strong></td>
+  <td>who this server voted for in its current term; at most one per term</td>
+</tr>
+<tr>
+  <td><strong>prevLogIndex / prevLogTerm</strong></td>
+  <td>the (index, term) the leader claims the follower already has; the whole consistency check</td>
+</tr>
+<tr>
+  <td><strong>nextIndex</strong></td>
+  <td>the leader's <em>guess</em> at where to send next for each follower</td>
+</tr>
+<tr>
+  <td><strong>matchIndex</strong></td>
+  <td>the leader's <em>knowledge</em> of the highest index each follower actually has</td>
+</tr>
+<tr>
+  <td><strong>Log Matching Property</strong></td>
+  <td>same (index, term) on two servers ⇒ identical logs up to that index</td>
+</tr>
+<tr>
+  <td><strong>Election Safety</strong></td>
+  <td>at most one leader per term</td>
+</tr>
+<tr>
+  <td><strong>Leader Append-Only</strong></td>
+  <td>a leader never overwrites or deletes entries in its own log</td>
+</tr>
+<tr>
+  <td><strong>Leader Completeness</strong></td>
+  <td>every committed entry is present in every future leader's log</td>
+</tr>
+<tr>
+  <td><strong>State Machine Safety</strong></td>
+  <td>no two servers ever apply different commands at the same index</td>
+</tr>
+<tr>
+  <td><strong>up-to-date check</strong></td>
+  <td>the vote rule comparing last (term, index); the reason committed entries survive</td>
+</tr>
+<tr>
+  <td><strong>own-term commit rule</strong></td>
+  <td>a leader may only commit entries from its own term; the fix for Figure 8</td>
+</tr>
+<tr>
+  <td><strong>Figure 8</strong></td>
+  <td>the paper's scenario where an entry on a majority is still not safe</td>
+</tr>
+<tr>
+  <td><strong>split vote</strong></td>
+  <td>an election where nobody reaches a majority; fixed by randomised timeouts</td>
+</tr>
+<tr>
+  <td><strong>safety</strong></td>
+  <td>nothing wrong ever happens; independent of timing</td>
+</tr>
+<tr>
+  <td><strong>liveness</strong></td>
+  <td>something eventually happens; depends entirely on timing</td>
+</tr>
+<tr>
+  <td><strong>no-op entry</strong></td>
+  <td>an empty entry a new leader appends to commit its predecessors' entries</td>
+</tr>
+<tr>
+  <td><strong>pre-vote</strong></td>
+  <td>a trial election that avoids disrupting a healthy leader with an inflated term</td>
+</tr>
+<tr>
+  <td><strong>ReadIndex / lease read</strong></td>
+  <td>the two ways to make a read from the leader linearizable</td>
+</tr>
+<tr>
+  <td><strong>snapshot / InstallSnapshot</strong></td>
+  <td>compacting the log, and the RPC that ships the result to a far-behind follower</td>
+</tr>
+<tr>
+  <td><strong>joint consensus</strong></td>
+  <td>the safe way to change cluster membership without two disjoint majorities</td>
+</tr>
+<tr>
+  <td><strong>learner</strong></td>
+  <td>a non-voting member that catches up before joining the majority arithmetic</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<p>What is in the folder, how do you run it, and where did the numbers come from?</p>
+<h3 id="readme-how-do-you-run-it">How do you run it?</h3>
+<div class="code"><pre><code class="language-bash">cd 40-raft
+java src/Tests.java             # 56 scenario checks, ~2s
+java src/Experiments.java       # 11 measured failure experiments
+java src/ImplExerciseTest.java  # write three rules yourself (rung 5)
+java src/DebugMeTest.java       # find three planted bugs (rung 6)
+open visualization.html         # the interactive cluster
+</code></pre></div>
+<p>No build tool, no dependencies, JDK 22+.</p>
+<h3 id="readme-what-is-in-the-folder">What is in the folder?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document: 18 sections plus this appendix</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>The Raft Log Grid, also published at <a href="https://claude.ai/code/artifact/9e9cab79-30ef-4665-b9e5-6dec2dcab932" target="_blank" rel="noopener">claude.ai/code/artifact/9e9cab79</a></td>
+</tr>
+<tr>
+  <td><code>src/RaftNode.java</code></td>
+  <td>the algorithm, ~250 lines, with every load-bearing line marked <code>// INVARIANT:</code></td>
+</tr>
+<tr>
+  <td><code>src/Cluster.java</code>, <code>src/Network.java</code>, <code>src/Bugs.java</code></td>
+  <td>the logical clock and safety checker, the abusable network, and the five rule-off switches</td>
+</tr>
+<tr>
+  <td><code>src/Tests.java</code>, <code>src/Experiments.java</code></td>
+  <td>56 scenario checks and 11 failure experiments</td>
+</tr>
+<tr>
+  <td><code>src/ImplExercise.java</code>, <code>src/DebugMe.java</code> and their tests</td>
+  <td>rungs 5 and 6 of the exercises</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code>, <code>SOLUTIONS.md</code></td>
+  <td>eight rungs and their answers</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-it-sit-among-your-other-labs">Where does it sit among your other labs?</h3>
+<p><strong>You already know the ending.</strong> The <a href="../39-paxos/notes.html#readme"><code>paxos</code></a> lab finished on
+this note: <em>&quot;it guarantees it will never decide two different things; it does
+not guarantee it will ever decide at all, which is why real systems bolt a
+leader on top.&quot;</em> Raft <strong>is</strong> that leader, designed on purpose rather than
+bolted on. Diego Ongaro and John Ousterhout's 2014 paper is literally
+subtitled <em>&quot;In Search of an Understandable Consensus Algorithm&quot;</em>. Its
+research goal was that people like you could hold it in your head. This lab
+is the test of that claim, and Ana's shop is the way it makes the claim
+testable.</p>
+<p>The knowledge map in section 17 shows the labs that feed in
+(<code>quorums-and-replication</code>, <code>paxos</code>, <code>cap-theorem</code>, <code>event-sourcing</code>) and the
+ones that open out (<code>linearizability</code>, <code>multi-raft</code>, membership changes).</p>
+<h3 id="readme-how-were-the-numbers-made">How were the numbers made?</h3>
+<p>Every number in this document was measured by running the Java in this
+folder. The simulator runs on a logical clock, so a &quot;tick&quot; is one step of
+<code>Cluster</code>, not a millisecond. Ticks are comparable with each other and with
+the lab's own timeouts (150–300 for elections, 50 for heartbeats), never with
+wall-clock figures such as etcd's 100 ms heartbeat.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Figure</th>
+  <th>How it was produced</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>single traces (the election at t=172, the heal at t=637, the Figure 8 history)</td>
+  <td>one representative run, printed verbatim; a different random seed gives different tick numbers and the same shape</td>
+</tr>
+<tr>
+  <td>counts over runs (200 cold starts, 200 leader crashes, 30 seeds per loss rate, 20 clusters × 300 soak rounds)</td>
+  <td>every run in the batch, with min / median / p95 / max reported where timing matters</td>
+</tr>
+<tr>
+  <td>&quot;0 safety violations&quot;</td>
+  <td><code>Cluster.checkSafety()</code> asserts all five properties after every tick, not at the end</td>
+</tr>
+<tr>
+  <td>the eleven experiments</td>
+  <td>each verified against the same checker; <code>java src/Experiments.java</code> reproduces all of them in one go</td>
+</tr>
+<tr>
+  <td>the etcd figures (100 ms heartbeat, 1000 ms election timeout)</td>
+  <td>etcd's shipped defaults and documentation, not this lab</td>
+</tr>
+</tbody>
+</table></div>
+<p>The ratios and the shapes are the durable findings: one timeout plus one
+exchange to recover, six rejections when behind and zero when wrong, safety
+untouched at 90% loss. The exact tick counts are one machine's dice.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-raft--exercises">Raft — Exercises</h1>
+<p>Eight rungs, easiest first. Do them in order; each assumes the one below it.
+Answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a> — try first, being wrong is the
+mechanism.</p>
+<p>Everything runs with no build tool:</p>
+<div class="code"><pre><code class="language-bash">java src/Tests.java
+java src/Experiments.java &lt;name&gt;
+java src/ImplExerciseTest.java
+java src/DebugMeTest.java
+open visualization.html
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain-no-notation-no-jargon">Rung 1 — EXPLAIN (no notation, no jargon)</h2>
+<p><strong>1.1</strong> In three sentences, to someone who has never heard of consensus: what
+problem does Raft solve, and why can't you solve it by having every machine write
+down whatever it hears?</p>
+<p><strong>1.2</strong> A colleague says: <em>&quot;Raft guarantees there is only ever one leader.&quot;</em>
+That sentence is wrong in an important way. Correct it in one sentence, and say
+what the correct version buys you.</p>
+<p><strong>1.3</strong> Why is the <em>term</em> number the only clock Raft has, and what would go wrong
+if servers compared wall-clock timestamps instead?</p>
+<p><strong>1.4</strong> Explain, without using the words <em>commit</em> or <em>quorum</em>, why waiting for
+<strong>three of five</strong> servers is better than waiting for <strong>all five</strong>, and better than
+waiting for <strong>one</strong>.</p>
+<hr />
+<h2 id="exercises-rung-2--identify-open-the-visualization">Rung 2 — IDENTIFY (open the visualization)</h2>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a> and press <strong>Play</strong> until a leader
+exists, then <strong>Send a write to the leader</strong> twice.</p>
+<p><strong>2.1</strong> Which row is the leader, and what exactly on the screen tells you? Name
+two independent signals.</p>
+<p><strong>2.2</strong> Point at a cell that is <em>written down but not yet safe</em>. How is it drawn
+differently from a safe one, and what would have to happen for it to become safe?</p>
+<p><strong>2.3</strong> Click a follower row. Its inspector shows <em>entries written down</em> and
+<em>entries it knows are safe</em>. Why are those two numbers usually different, and
+which one is bigger? Why can it never be the other way round?</p>
+<p><strong>2.4</strong> Tear the network between <strong>S1 and S2</strong>, wait for both sides to settle,
+then find on screen: (a) two servers that both believe they are leader, (b) the
+number that proves which of them is allowed to commit.</p>
+<p><strong>2.5</strong> In the <em>What just happened</em> log, find a line where a server <strong>refused</strong> a
+vote. Read the technical line under it. Which two pairs of numbers were compared,
+and which comparison decided it?</p>
+<hr />
+<h2 id="exercises-rung-3--predict-commit-to-an-answer-then-run-the-command">Rung 3 — PREDICT (commit to an answer, then run the command)</h2>
+<p><strong>3.1</strong> Server A has term 5. Servers B and C have term 6. A's election timer fires
+first and it asks B and C for votes. What happens, and what term is the cluster on
+afterwards?
+<em>Check:</em> reason it out from <code>RaftNode.onRequestVote</code>, then watch a real one in
+<code>java src/Experiments.java election</code>.</p>
+<p><strong>3.2</strong> A five-server cluster has an entry at index 4 that four of the five
+servers hold. The leader is on term 7; the entry was created in term 5. Is the
+entry committed? Can it still be deleted?
+<em>Check:</em> <code>java src/Experiments.java figure8</code></p>
+<p><strong>3.3</strong> You set the message drop rate to 60%. Predict, before running: (a) will a
+leader be elected? (b) will writes commit? (c) will any safety property break?
+<em>Check:</em> <code>java src/Experiments.java loss</code></p>
+<p><strong>3.4</strong> A follower has been offline for 200 entries. It comes back. How many
+round trips does the leader need before the follower is correct — and does the
+answer depend on <em>when</em> the current leader was elected?
+<em>Check:</em> <code>java src/Experiments.java log-repair</code></p>
+<p><strong>3.5</strong> The leader crashes one microsecond <strong>after</strong> a follower stored an entry
+but <strong>before</strong> the leader marked it committed. The client got no answer. Was the
+write kept or lost — and is either answer a bug?</p>
+<hr />
+<h2 id="exercises-rung-4--modify-change-one-thing-name-what-broke">Rung 4 — MODIFY (change one thing, name what broke)</h2>
+<p><strong>4.1</strong> In <code>src/RaftNode.java</code>, set <code>ELECTION_MIN = ELECTION_MAX = 150</code>, so every
+server uses an identical timeout. Run <code>java src/Tests.java</code>. Which tests fail?
+Was <strong>safety</strong> or <strong>liveness</strong> lost? Restore it afterwards.</p>
+<p><strong>4.2</strong> Set <code>HEARTBEAT = 200</code> (above <code>ELECTION_MIN</code>). Run
+<code>java src/Experiments.java heartbeat</code>. Explain the churn in one sentence, and
+give the rule of thumb that prevents it.</p>
+<p><strong>4.3</strong> In <code>Cluster</code>, set <code>net.duplicateRate = 1.0</code> inside a test so <strong>every</strong>
+message is delivered twice. Run <code>java src/Tests.java</code>. Nothing should break.
+Name the two mechanisms that make Raft naturally idempotent.</p>
+<p><strong>4.4</strong> Change <code>RaftNode.majority()</code> to return <code>peers.length / 2</code> (half, not half
+plus one). Run <code>java src/Tests.java</code>. Which safety property fails first, and why
+does the <em>overlap</em> argument stop working?</p>
+<p><strong>4.5</strong> In <code>advanceCommit</code>, change the loop to scan <strong>upwards</strong> from
+<code>commitIndex + 1</code> and stop at the first index without a majority, instead of
+downwards from the end. Does anything break? Is this a bug, an optimisation, or
+neither?</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — IMPLEMENT</h2>
+<p>Open <span class="missing" title="Not in the hub: src/ImplExercise.java is in the lab folder on your laptop"><code>src/ImplExercise.java</code></span>. Three methods, three of
+Raft's rules, all stubbed out.</p>
+<div class="code"><pre><code class="language-bash">java src/ImplExerciseTest.java     # 8 of 16 fail at the start
+</code></pre></div>
+<p><strong>5.1</strong> <code>candidateLogIsUpToDate</code> — compare last (term, index). Which is compared
+first, and why does that order matter?</p>
+<p><strong>5.2</strong> <code>shouldGrantVote</code> — the one-vote-per-term rule. Watch out for
+<code>grants_again_to_the_SAME_candidate</code>: why must a repeat request from the <em>same</em>
+candidate still be granted?</p>
+<p><strong>5.3</strong> <code>highestCommittableIndex</code> — a majority <em>and</em> the leader's own term. Make
+<code>FIGURE_8_refuses_to_commit_an_OLD_term_entry_on_its_own</code> pass, then explain in
+one sentence what it is protecting.</p>
+<p>All 16 must pass.</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — DEBUG</h2>
+<p><span class="missing" title="Not in the hub: src/DebugMe.java is in the lab folder on your laptop"><code>src/DebugMe.java</code></span> contains three subtly wrong rules — one per
+method. Each compiles. Each looks reasonable.</p>
+<div class="code"><pre><code class="language-bash">java src/DebugMeTest.java          # exactly 3 of 16 fail
+</code></pre></div>
+<p>For each failure answer three questions <strong>before</strong> fixing it:</p>
+<ol>
+<li>Which single character or token is wrong?</li>
+<li>Does it cost <strong>safety</strong> (something wrong happens) or <strong>liveness</strong> (nothing
+happens)?</li>
+<li>Which named Raft property does it break?</li>
+</ol>
+<p><strong>6.4</strong> Harder: one of the three bugs is completely <strong>invisible</strong> as long as no
+server is ever slow, behind or unreachable — it passes every test you would write
+on a healthy cluster, and only does damage during a failure. Which one, and why
+does that make it the most dangerous of the three to ship?</p>
+<p><strong>6.5</strong> Now do it at cluster scale. In <code>src/Bugs.java</code>, turn on one flag at a
+time, run <code>java src/Tests.java</code>, and for each flag write down: the first test that
+fails, the violation message the checker prints, and the guarantee that was lost.</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure-extend-the-system">Rung 7 — HANDLE FAILURE (extend the system)</h2>
+<p><strong>7.1 — Make client retries safe.</strong> A client sends <code>transfer £500</code>, gets a
+timeout, and retries. Today the lab would append it twice. Add a client session id
+and a sequence number to <code>Entry</code>, and make the state machine remember the last
+result per session so a retry is <em>answered</em>, not <em>re-applied</em>. Which Raft property
+does this rely on to work at all?</p>
+<p><strong>7.2 — Commit a no-op on election.</strong> Make a new leader append an empty entry
+immediately on winning (<code>checkWon</code>). Write a test showing that the previous
+term's entries become committed <em>sooner</em> as a result, and explain why a leader
+cannot simply mark them committed directly.</p>
+<p><strong>7.3 — Faster log repair.</strong> Today a rejection costs one index per round trip.
+Add the conflicting <strong>term</strong> and the follower's first index for that term to
+<code>Msg.AppendReply</code>, and use it in <code>onAppendReply</code> to skip a whole term per round
+trip. Verify with <code>java src/Experiments.java log-repair</code> that Case A's <em>6
+rejections</em> drops, and that <code>java src/Tests.java</code> still passes 56/56.</p>
+<p><strong>7.4 — Pre-vote.</strong> A server that was partitioned away returns with an inflated
+term and deposes a perfectly healthy leader. Reproduce it: partition one server
+off, let it burn 20 terms, then heal. Then implement pre-vote — a trial round that
+does <em>not</em> increment the term — and show the healthy leader survives.</p>
+<p><strong>7.5 — Make reads correct.</strong> Add a <code>read()</code> that must never return stale data.
+Show first that the naive version (read the leader's state machine) <em>can</em> be
+stale: put the leader in a minority partition and read from it. Then fix it with
+either ReadIndex or a lease, and say what each one assumes about clocks.</p>
+<hr />
+<h2 id="exercises-rung-8--design-no-single-right-answer">Rung 8 — DESIGN (no single right answer)</h2>
+<p><strong>8.1 — Three datacentres, 50 ms apart.</strong> Design the configuration store for a
+payments platform running in London, Frankfurt and Dublin, 50 ms round trip
+between them. Answer concretely:</p>
+<ul>
+<li>How many Raft servers, in which datacentres, and why not 3-in-one-DC?</li>
+<li>What is the write latency, and where exactly does it come from?</li>
+<li>What happens when Dublin is cut off? When London (holding the leader) is?</li>
+<li>Which of this lab's design elements survive unchanged, and which must change?</li>
+<li>What do you put on the dashboard, and what pages someone at 3am?</li>
+</ul>
+<p><strong>8.2 — What belongs in Raft and what does not.</strong> Your platform needs all of
+these replicated. For each, say whether it belongs in a Raft group, and if not,
+what it should use instead: (a) which service owns which shard; (b) the
+transaction ledger, 40k writes/sec; (c) the distributed lock for end-of-day
+settlement; (d) user session tokens; (e) the feature-flag config; (f) idempotency
+keys for payment requests.</p>
+<p><strong>8.3 — The 3am question.</strong> Your etcd cluster is showing 40 leader elections per
+minute. Writes are timing out. No server has crashed and the network team says the
+network is fine. List, in order, what you check and why — and name the single most
+likely cause that has nothing to do with the network.</p>
+<p><strong>8.4 — Argue the other side.</strong> Someone proposes replacing your Raft-backed lock
+service with &quot;a Postgres row and <code>SELECT FOR UPDATE</code>&quot;. Make the strongest case
+<em>for</em> their proposal, then the strongest case against, then say what you would
+actually do.</p>
+<p><strong>8.5 — Payments specifics.</strong> A payment must be recorded exactly once. Your
+service writes to a Raft group and then calls an external card network.
+Enumerate every point where a crash can leave the two out of step, and say which
+of them Raft fixes for you and which it cannot. (The
+<a href="../48-transactional-outbox/notes.html#readme"><code>transactional-outbox</code></a> and <a href="../47-saga/notes.html#readme"><code>saga</code></a> labs are
+the other half of this answer.)</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-raft--solutions">Raft — Solutions</h1>
+<p>Every measured number below was produced by running the lab. Where a claim was
+checked by running a modified copy, the command is shown.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — EXPLAIN</h2>
+<p><strong>1.1</strong> Several machines must hold the same list of changes in the same order, so
+that replaying the list anywhere gives the same answer. &quot;Everyone writes down what
+they hear&quot; fails because two machines can be told different things at the same
+moment and both write them into the same slot — and with no shared clock there is
+no fact of the matter about which came first. Raft manufactures the missing
+ordering by electing one machine to be the sole writer for a numbered stretch of
+time.</p>
+<p><strong>1.2</strong> The correct version: <strong>at most one leader per <em>term</em>, and only the leader
+of the newest term can commit anything.</strong> Two servers genuinely believe they are
+leader at the same moment all the time — the visualization's partition scenario
+shows it in three clicks. What that buys you is that Raft never has to <em>prevent</em>
+split-brain; it only has to make the losing half <strong>harmless</strong>, which is far
+cheaper. The old leader cannot reach a majority, so it can never commit, so
+nothing it does can be observed.</p>
+<p><strong>1.3</strong> Because wall clocks disagree, drift, and jump — a machine with a clock 60
+seconds fast would win every comparison and could overwrite genuinely newer
+decisions. (The <a href="../34-quorums-and-replication/notes.html#readme"><code>quorums-and-replication</code></a> lab
+measured exactly that: under last-write-wins, one node 60 s fast silently
+discarded <strong>1000 of 1000</strong> newer writes.) A term is a <em>logical</em> clock: it only
+ever increases, it increases only when someone attempts leadership, and every
+server that sees a higher one adopts it immediately. It orders <em>attempts</em>, which
+is all Raft needs.</p>
+<p><strong>1.4</strong> Waiting for all five means one machine in a bad mood stops the shop — and
+it will happen, because at any moment something is always restarting. Waiting for
+one means two different machines can each be the &quot;one&quot; for two different writes,
+and then nobody can say which happened. Three of five is the smallest number with
+the property that <strong>any two such groups must share a member</strong>, which is what makes
+&quot;was this already decided?&quot; answerable by asking any three machines. It is also a
+tail-latency device: you wait for the third-fastest, never the slowest.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — IDENTIFY</h2>
+<p><strong>2.1</strong> Two independent signals: the role badge reads <code>leader</code> and the row's dot
+is teal; and in the message band, the arcs <em>originating</em> from that row are solid
+(outbound <code>AppendEntries</code>) while every other row only sends dashed replies. A
+third: the verdict banner at the top names it.</p>
+<p><strong>2.2</strong> A dashed, outlined cell is written down but not committed; a solid filled
+cell is committed. It becomes solid when the leader has learned that a <strong>majority</strong>
+of servers hold it — and, if it was created in an earlier term, only once the
+leader commits an entry of its <em>own</em> term above it.</p>
+<p><strong>2.3</strong> <em>Entries written down</em> ≥ <em>entries it knows are safe</em>, always. The follower
+learns about the commit point on the <strong>next</strong> message after the one that carried
+the entry, so it is always one round behind. It can never be the other way round
+because <code>commitIndex = min(leaderCommit, lastLogIndex)</code> — a server refuses to
+claim as safe anything it does not actually hold.</p>
+<p><strong>2.4</strong> (a) The old leader, still badged <code>leader</code> on the small side, and the new
+leader on the big side. (b) The <strong>term</strong> number in each row's metadata. The higher
+term is the one allowed to commit; the lower one will step down the instant the
+two sides can talk again.</p>
+<p><strong>2.5</strong> The two pairs are <code>(candidate's last index, candidate's last term)</code> and
+<code>(my last index, my last term)</code>. The <strong>term</strong> comparison decides it first; the
+index is only consulted when the terms are equal. The event line reads e.g.
+<code>S1 refuses: cand (idx 0, term 0) &lt; mine (idx 1, term 1)</code>.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — PREDICT</h2>
+<p><strong>3.1</strong> A's <code>RequestVote</code> carries term 6 (it incremented 5 → 6). B and C are
+already on term 6 and have very likely already voted in it — if so they refuse,
+A's election fails, and A tries again at term 7, where it will succeed <em>if</em> its
+log is up to date. The cluster ends on term 7 (or higher). The important part:
+<strong>A's stale term did not make it lose; a stale log would have.</strong> This is the
+&quot;disruptive server&quot; problem, and it is exactly what pre-vote (exercise 7.4)
+prevents.</p>
+<p><strong>3.2</strong> <strong>Not committed, and yes it can still be deleted.</strong> This is Figure 8. Four
+of five is a majority, but the entry is from term 5 while the leader is on term 7,
+so the own-term rule forbids committing it. If the fifth server holds a <em>different</em>
+entry at index 4 created in term 6, that server's log is more up to date, so it
+can still win an election and overwrite the index on all four others. Measured with
+the rule disabled (<code>java src/Experiments.java figure8</code>): 12 distinct safety
+violations, including <code>index 1 was committed as OLD@t1 but S1 has committed NEW@t2 there</code>.</p>
+<p><strong>3.3</strong> (a) yes — measured 30/30 at 50% loss and 26/30 at 70%; (b) mostly no —
+only <strong>7 of 30</strong> runs committed their writes at 50%, and 0/30 at 70%; (c) <strong>no
+safety property breaks at any loss rate, including 90%.</strong> Loss cannot corrupt
+anything; it can only prevent heartbeats landing inside an election timeout, which
+turns the cluster into a machine for holding elections.</p>
+<p><strong>3.4</strong> It depends entirely on <strong>when the current leader was elected</strong>, because
+<code>nextIndex</code> is set optimistically to the leader's own log end <em>at that moment</em> and
+only ever walks backwards. Measured (<code>java src/Experiments.java log-repair</code>):</p>
+<ul>
+<li>follower missed 6 entries, leader elected holding all 6 → <code>nextIndex = 7</code> → <strong>6
+rejections</strong>, 47 messages.</li>
+<li>follower holds 5 wrong entries, leader elected when its own log was short →
+<code>nextIndex = 2</code> → <strong>0 rejections</strong>, and all five wrong entries deleted by a
+single message.</li>
+</ul>
+<p>The counter-intuitive half: being <em>behind</em> is expensive, being <em>wrong</em> can be free.</p>
+<p><strong>3.5</strong> <strong>Either outcome is legal and neither is a bug.</strong> The entry was never
+committed, so Raft promised nothing about it. If the next leader happens to be a
+server that stored it, it survives (and gets committed later); if not, it is
+deleted. What <em>would</em> be a bug is the client treating its timeout as &quot;the write did
+not happen&quot; — which is why every client of a Raft system must retry idempotently.
+Same conclusion as <a href="../48-transactional-outbox/notes.html#readme"><code>transactional-outbox</code></a>: <strong>a failed
+write means &quot;not confirmed&quot;, never &quot;did not happen&quot;.</strong></p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — MODIFY</h2>
+<p><strong>4.1</strong> Every election test fails; safety tests all still pass. <strong>Liveness</strong> was
+lost, safety untouched. Measured over 6000 ticks: term 40 reached, no leader ever
+elected, 0 violations. This is the cleanest demonstration in the lab that the two
+properties are independent.</p>
+<p><strong>4.2</strong> With <code>HEARTBEAT = 200</code> and <code>ELECTION_MIN = 150</code>, a follower's timer expires
+before the next heartbeat arrives, so it starts an election against a perfectly
+healthy leader — measured <strong>48 terms burned in 10,000 ticks</strong> versus 0 at
+<code>HEARTBEAT = 100</code>. Rule of thumb from the paper:
+<code>broadcastTime ≪ electionTimeout ≪ MTBF</code>; etcd ships a 10× margin (100 ms
+heartbeat, 1000 ms election timeout).</p>
+<p><strong>4.3</strong> Nothing breaks — <code>duplicates_never_broke_a_safety_property</code> passes, and
+<code>only-once</code> is applied exactly once on all five servers. Two mechanisms: <strong>(1)
+term filtering</strong> — every handler drops a message whose term does not equal
+<code>currentTerm</code>, so replies from old attempts are ignored; and <strong>(2)
+position-addressed writes</strong> — <code>AppendEntries</code> says <em>&quot;put these entries at these
+indices&quot;</em>, not <em>&quot;append these&quot;</em>, so re-delivering it writes the same content to
+the same slots. Raft is idempotent by shape, not by a dedup table.</p>
+<p><strong>4.4</strong> Measured (<code>java Tests.java</code> with <code>majority() = peers.length / 2</code>): 8+
+failures, first <code>the_winner_needed_a_majority_of_votes</code>, and the checker reports</p>
+<div class="code"><pre><code>LOG MATCHING broken: S0 and S2 both have term 1 at index 1, but differ at index 1
+STATE MACHINE SAFETY broken: index 1 was committed as committed-write@t1 but S2 has committed overwrite@t1
+</code></pre></div>
+<p>The overlap argument dies immediately: with N=5, two groups of 2 can be
+<strong>disjoint</strong> ({S0,S1} and {S2,S3}). Two candidates can each collect 2 votes in the
+same term, so two leaders exist in one term; and a &quot;committed&quot; entry can sit on 2
+servers that a future leader never has to talk to. Half <strong>plus one</strong> is not a
+convention — it is the smallest number that forces intersection.</p>
+<p><strong>4.5</strong> <strong>It breaks, and it is a liveness bug.</strong> The own-term rule makes the set
+of committable indices <strong>non-contiguous</strong>: an old-term entry at index 1 may have a
+majority and still be forbidden, while the leader's own entry at index 2 is
+allowed. An upward scan that stops at the first index failing the test stops at
+index 1 forever and never reaches index 2. Reproduced directly:</p>
+<div class="code"><pre><code>upward scan   : leader term=2 log=[old@t1 new@t2] commitIndex=0   STALLED
+downward scan : leader term=2 log=[old@t1 new@t2] commitIndex=2   committed
+</code></pre></div>
+<p>The downward scan is not a stylistic choice — it is what lets a new leader commit
+its own entry and drag its predecessors' entries into the committed region
+underneath it.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — IMPLEMENT</h2>
+<div class="code"><pre><code class="language-java">static boolean candidateLogIsUpToDate(int candLastIndex, int candLastTerm,
+                                      int myLastIndex, int myLastTerm) {
+    if (candLastTerm != myLastTerm) return candLastTerm &gt; myLastTerm;
+    return candLastIndex &gt;= myLastIndex;
+}
+
+static boolean shouldGrantVote(int myTerm, int myVotedFor,
+                               int candTerm, int candId, boolean candLogUpToDate) {
+    if (candTerm &lt; myTerm) return false;
+    if (myVotedFor != -1 &amp;&amp; myVotedFor != candId) return false;
+    return candLogUpToDate;
+}
+
+static int highestCommittableIndex(int[] matchIndex, int[] logTerms,
+                                   int currentTerm, int commitIndex) {
+    int best = commitIndex;
+    for (int n = logTerms.length - 1; n &gt; commitIndex; n--) {
+        if (logTerms[n] != currentTerm) continue;          // only your OWN term counts
+        int count = 0;
+        for (int m : matchIndex) if (m &gt;= n) count++;
+        if (count &gt;= matchIndex.length / 2 + 1) { best = n; break; }
+    }
+    return best;
+}
+</code></pre></div>
+<p><strong>5.1</strong> Term is compared <strong>first</strong>. A short log ending in term 5 is more up to date
+than a long log ending in term 4, because everything after term 4 superseded it —
+the long log's extra entries were uncommitted work from a leader that has since
+been replaced. Comparing length first would let stale-but-verbose logs win, and
+would delete committed entries.</p>
+<p><strong>5.2</strong> Because a <code>RequestVote</code> can be <strong>duplicated or retried</strong>. If S1 voted for
+S2 and the reply was lost, S2 retries; refusing the retry would waste an election
+for no reason. Granting it is safe because it is the same vote, not a second one —
+the rule is <em>one candidate per term</em>, not <em>one message per term</em>.</p>
+<p><strong>5.3</strong> It protects <strong>State Machine Safety</strong> via Figure 8: an entry from an older
+term can reach a majority and <em>still</em> be overwritten later by a server holding a
+higher-term entry at that index. Counting replicas is a valid test only for entries
+the current leader created itself.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — DEBUG</h2>
+<p>Exactly three tests fail: <code>equal_logs_are_up_to_date</code>,
+<code>grants_again_to_the_SAME_candidate</code>, <code>does_not_commit_without_a_majority</code>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>The wrong token</th>
+  <th>Cost</th>
+  <th>Property broken</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><code>candLastIndex &gt; myLastIndex</code> — should be <code>&gt;=</code></td>
+  <td><strong>liveness</strong></td>
+  <td>none, but no election can ever be won when logs are equal (i.e. always, on a healthy cluster)</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>if (myVotedFor != -1) return false</code> — missing <code>&amp;&amp; myVotedFor != candId</code></td>
+  <td><strong>liveness</strong></td>
+  <td>none; it refuses legitimate retries and wastes elections</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>count &gt;= matchIndex.length / 2</code> — should be <code>/ 2 + 1</code></td>
+  <td><strong>safety</strong></td>
+  <td>Election Safety and State Machine Safety: two disjoint &quot;majorities&quot; of 2 in a 5-server cluster</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>6.4</strong> <strong>Bug 3.</strong> Bugs 1 and 2 announce themselves the moment you start the
+cluster — elections stop working. Bug 3 is invisible while every server is healthy
+and caught up, because when all five hold index N, <code>count = 5</code> satisfies both
+<code>&gt;= 2</code> and <code>&gt;= 3</code>. It only does damage when servers are behind or partitioned —
+i.e. during the exact incident when you most need the guarantee. <strong>A safety bug
+that is quiet on the happy path is the worst kind:</strong> it ships, passes every test,
+and destroys data during your first real failure.</p>
+<p><strong>6.5</strong> Cluster-scale results, one flag at a time (<code>java src/Tests.java</code>):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Flag</th>
+  <th>First failing test / signal</th>
+  <th>Guarantee lost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>fixedTimeout</code></td>
+  <td>no leader in 6000 ticks; term 40</td>
+  <td>liveness only — 0 violations</td>
+</tr>
+<tr>
+  <td><code>voteTwice</code> (with <code>fixedTimeout</code>)</td>
+  <td><code>ELECTION SAFETY broken: term 1 has 5 leaders at once</code></td>
+  <td>Election Safety</td>
+</tr>
+<tr>
+  <td><code>noUpToDateCheck</code></td>
+  <td><code>STATE MACHINE SAFETY broken: index 1 was committed as committed-write@t1 but S2 has committed overwrite@t2</code></td>
+  <td>Leader Completeness → State Machine Safety</td>
+</tr>
+<tr>
+  <td><code>commitAnyTerm</code></td>
+  <td>12 violations in the Figure 8 history</td>
+  <td>State Machine Safety</td>
+</tr>
+<tr>
+  <td><code>noLogMatchCheck</code></td>
+  <td><code>S2 log=[d@t2]</code> where the leader has 6 entries</td>
+  <td>Log Matching</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="solutions-rung-7--handle-failure-worked-discussion-not-one-right-answer">Rung 7 — HANDLE FAILURE (worked discussion, not one right answer)</h2>
+<p><strong>7.1 — Safe retries.</strong> Add <code>(clientId, seqNo)</code> to <code>Entry</code>. The state machine keeps
+a small map <code>clientId -&gt; (lastSeqNo, lastResult)</code>. On applying an entry, if
+<code>seqNo &lt;= lastSeqNo</code> for that client, <strong>do not re-apply</strong> — return the stored
+result. The crucial dependency: this works only because <strong>every replica applies
+the same log in the same order</strong>, so every replica's dedup table is identical, so
+a retry that lands on a different leader after a failover gets the same answer. In
+other words State Machine Safety is what makes exactly-once <em>possible</em>; the
+session table is what makes it <em>happen</em>. Note the dedup table has to be part of the
+replicated state machine (and therefore part of snapshots), not a cache beside it.</p>
+<p><strong>7.2 — No-op on election.</strong> In <code>checkWon</code>, append <code>new Entry(currentTerm, &quot;&lt;no-op&gt;&quot;)</code> before the first heartbeat. Now the leader has an entry of its own
+term immediately, so as soon as a majority stores it, the own-term rule fires and
+<strong>everything below it commits at once</strong> — including all inherited entries. Without
+it, a new leader that receives no client traffic can sit indefinitely with
+uncommitted inherited entries, and <code>Tests.noOpLessonTest</code> shows the follower
+divergence that persists in the meantime. It cannot simply mark them committed
+directly: that <em>is</em> the Figure 8 bug.</p>
+<p><strong>7.3 — Faster repair.</strong> Extend <code>AppendReply</code> with <code>conflictTerm</code> and
+<code>conflictIndex</code>. On rejection the follower reports the term of the entry it has at
+<code>prevLogIndex</code> and the first index it holds for that term. The leader then either
+jumps to its own last index for <code>conflictTerm</code>, or straight to <code>conflictIndex</code>.
+Case A's six rejections become one or two. This is section 5.3 of the paper, where
+Ongaro notes the optimisation is probably unnecessary in practice because failures
+are rare — it matters most for a follower rejoining after a long absence, before
+snapshots kick in.</p>
+<p><strong>7.4 — Pre-vote.</strong> Reproduce it by partitioning one server off, letting it burn
+terms, then healing: its inflated term deposes a healthy leader, costing an
+election for no reason. Pre-vote adds a round asking <em>&quot;would you vote for me if I
+started an election?&quot;</em> <strong>without</strong> incrementing the term. Voters answer no if they
+have heard from a leader recently. Only a majority of yes answers triggers a real
+election. etcd, TiKV and CockroachDB all ship this on by default.</p>
+<p><strong>7.5 — Correct reads.</strong> First show the bug: put the leader alone in a minority
+partition and read from it — it still believes it is leader and happily returns
+data that the majority has already moved past. Two fixes:</p>
+<ul>
+<li><strong>ReadIndex</strong>: record <code>commitIndex</code>, send one round of heartbeats, wait for a
+majority to confirm you are still leader, wait until <code>lastApplied &gt;= that index</code>,
+then read. Costs one round trip; assumes nothing about clocks.</li>
+<li><strong>Lease read</strong>: after a successful heartbeat round, assume leadership for
+<code>electionTimeout - clockDrift</code>. Costs nothing; assumes <strong>bounded clock drift</strong>,
+which is a real assumption that has caused real incidents.</li>
+</ul>
+<p>The choice is the whole trade: a round trip, or a belief about clocks.</p>
+<hr />
+<h2 id="solutions-rung-8--design-discussion-no-single-right-answer">Rung 8 — DESIGN (discussion, no single right answer)</h2>
+<p><strong>8.1 — Three datacentres, 50 ms apart.</strong></p>
+<ul>
+<li><strong>Five servers, 2 + 2 + 1</strong> across London / Frankfurt / Dublin. Not 3-in-one-DC:
+that survives no datacentre loss at all. Not 1+1+1: it survives one DC, but every
+single write must cross the ocean, and any one DC loss leaves you one failure
+from a dead cluster. 2+2+1 tolerates a whole DC <em>and</em> a machine.</li>
+<li><strong>Write latency ≈ 50 ms</strong>, and the reason matters: a commit needs 3 of 5, and the
+leader plus its local partner are only 2 — so <strong>every write waits for one
+cross-DC round trip</strong>, plus the leader's <code>fsync</code>. You cannot engineer this away;
+it is the speed of light.</li>
+<li><strong>Dublin cut off:</strong> nothing happens. Dublin's single server is a minority; the
+other four carry on. Dublin's clients must be routed elsewhere.</li>
+<li><strong>London cut off (holding the leader):</strong> Frankfurt + Dublin have 3 of 5 and
+elect a new leader after one election timeout. London's two servers keep
+believing, commit nothing, and step down on reconnect. <strong>Set the election timeout
+well above 50 ms</strong> — a 150 ms timeout across a 50 ms link will re-elect on every
+hiccup.</li>
+<li><strong>Survives unchanged:</strong> every safety rule, the message shapes, the failure
+behaviour. <strong>Must change:</strong> persistence with real <code>fsync</code>, snapshots, membership
+changes, batching, correct reads, timeouts tuned to WAN latency, pre-vote, and
+mutual TLS between DCs.</li>
+<li><strong>Dashboard:</strong> leader elections per minute (page on sustained &gt; 0), fsync p99,
+commit-index lag per follower, proposal latency p99, quota usage. <strong>Page someone
+at 3am for:</strong> sustained elections, or quorum lost.</li>
+</ul>
+<p><strong>8.2 — What belongs in Raft.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>(a) shard ownership</td>
+  <td><strong>Yes.</strong> Small, must be exactly one answer, read constantly. This is etcd's core use case.</td>
+</tr>
+<tr>
+  <td>(b) ledger at 40k writes/sec</td>
+  <td><strong>No.</strong> One leader, one majority round trip per write — you would be throughput-bound and latency-bound. Use a partitioned log or database; if you need consensus, use <strong>many</strong> Raft groups (one per shard), not one.</td>
+</tr>
+<tr>
+  <td>(c) end-of-day settlement lock</td>
+  <td><strong>Yes</strong>, with care — a lock needs a lease with a fencing token, because a leaseholder can be paused by GC and wake up believing it still holds the lock. Raft gives you the token; it does not stop the stale holder acting.</td>
+</tr>
+<tr>
+  <td>(d) session tokens</td>
+  <td><strong>No.</strong> High volume, per-user, and staleness is harmless. Redis or a signed token.</td>
+</tr>
+<tr>
+  <td>(e) feature flags</td>
+  <td><strong>Yes</strong> if flips must be instant and globally consistent; otherwise a config service with eventual propagation is cheaper — see <a href="../37-gossip-protocols/notes.html#readme"><code>gossip-protocols</code></a>.</td>
+</tr>
+<tr>
+  <td>(f) idempotency keys</td>
+  <td><strong>Depends on grain.</strong> Inside one shard's state machine, they belong in that shard's Raft group. A global idempotency store at payment volume does not — put them in the same store as the payment, so the key and the effect commit together (<a href="../48-transactional-outbox/notes.html#readme"><code>transactional-outbox</code></a>).</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>8.3 — 40 elections/minute, nothing crashed, network fine.</strong></p>
+<ol>
+<li><strong>fsync / WAL write latency on the leader.</strong> This is the most likely cause and
+it is not a network problem at all. Raft must durably store <code>currentTerm</code>,
+<code>votedFor</code> and new entries <em>before</em> replying; a slow or contended disk delays
+heartbeats exactly as if the network were slow. A noisy neighbour on the same
+volume is the classic cause.</li>
+<li><strong>Timeout configuration</strong> — heartbeat raised without raising the election
+timeout, or defaults tuned for a LAN running across a WAN.</li>
+<li><strong>A disruptive rejoining server</strong> with an inflated term, if pre-vote is off.</li>
+<li><strong>Database size / quota</strong> — a cluster at its backend quota elects fine and
+commits nothing.</li>
+<li><strong>CPU starvation or GC pauses</strong> on the leader — same symptom as slow disk.</li>
+</ol>
+<p>The lesson from <code>java src/Experiments.java loss</code> is what tells you where <em>not</em> to
+look: election churn is always a <strong>timing</strong> problem, never a correctness one. Your
+data is fine. Something is late.</p>
+<p><strong>8.4 — Raft lock service vs <code>SELECT FOR UPDATE</code>.</strong></p>
+<p><em>For:</em> it is one line of SQL against a database you already run, back up, monitor
+and understand. It is genuinely correct for mutual exclusion while the connection
+lives. Most teams do not need distributed locks; they need a mutex, and Postgres is
+a fine mutex. You avoid operating a second stateful system.</p>
+<p><em>Against:</em> your Postgres is a single point of failure and its failover is <em>not</em>
+consensus — a primary/replica promotion under a partition can produce two writable
+primaries, and then two holders of your &quot;exclusive&quot; lock. Lock lifetime is tied to
+a TCP connection, so a hung client holds it until a TCP timeout you do not control.
+And there is no fencing token, so a paused holder can wake and act.</p>
+<p><em>What I would do:</em> if you already run etcd (and if you run Kubernetes, you do), use
+it — you get leases and fencing tokens for free, with no new system. If you do not,
+use Postgres advisory locks with an explicit expiry and a <strong>fencing token</strong> the
+downstream resource checks, and write down that your lock's safety is bounded by
+your Postgres failover story.</p>
+<p><strong>8.5 — Payments: where Raft stops.</strong></p>
+<p>Crash points between &quot;record the payment&quot; and &quot;call the card network&quot;:</p>
+<ol>
+<li><strong>After the client sends, before the leader appends</strong> — nothing recorded, client
+times out. Retry must be idempotent.</li>
+<li><strong>After the leader appends, before a majority stores it</strong> — may or may not
+survive. <em>Raft does not tell you which.</em></li>
+<li><strong>After commit, before the client is told</strong> — recorded, client saw a timeout.
+<strong>The dangerous one:</strong> the client will retry, and without an idempotency key it
+pays twice.</li>
+<li><strong>After commit, before the external call</strong> — recorded but not executed. Needs a
+durable outbox and a worker, not Raft.</li>
+<li><strong>External call made, response lost</strong> — the card network's problem <em>and</em> yours:
+you must reconcile, using their idempotency key.</li>
+<li><strong>External call succeeded, before recording the result</strong> — recorded as pending
+forever until reconciliation.</li>
+</ol>
+<p><strong>Raft fixes exactly one thing: 2 and 3 stop being ambiguous <em>internally</em></strong> — once
+committed, every replica agrees the payment exists, and a failover cannot lose it.
+It fixes <strong>nothing</strong> about 1, 4, 5 or 6, because those cross a boundary Raft cannot
+see. The two-part answer is: Raft for the internal ordering, a
+<a href="../48-transactional-outbox/notes.html#readme"><code>transactional-outbox</code></a> for the hand-off to the outside
+world, an idempotency key end to end, and a <a href="../47-saga/notes.html#readme"><code>saga</code></a>-style compensation
+for what cannot be undone. <strong>Consensus makes your replicas agree; it does not make
+the world agree with you.</strong></p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../39-paxos/notes.html"><small>← Lab 39</small>paxos</a><a href="../41-zab/notes.html" style="text-align:right"><small>Lab 41 →</small>zab</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-thing-exist">1. Why does this thing exist?</a><a href="#readme-2-what-is-the-problem-the-pizza-shop">2. What is the problem? The pizza shop</a><a href="#readme-3-why-not-just-have-everyone-write-down-what-they-hear">3. Why not just have everyone write down what they hear?</a><a href="#readme-4-what-goes-wrong-when-two-phones-ring-at-once">4. What goes wrong when two phones ring at once?</a><a href="#readme-5-what-do-we-actually-need">5. What do we actually need?</a><a href="#readme-6-what-is-the-key-idea">6. What is the key idea?</a><a href="#readme-7-which-words-do-you-need-now">7. Which words do you need now?</a><a href="#readme-8-what-are-the-two-pictures-to-keep-in-your-head">8. What are the two pictures to keep in your head?</a><a href="#readme-9-where-can-you-see-it-before-you-read-the-rules">9. Where can you see it before you read the rules?</a><a href="#readme-10-how-does-the-actual-mechanism-work-built-four-times-broken-three">10. How does the actual mechanism work? Built four times, broken three</a><a href="#readme-11-what-happens-under-each-failure">11. What happens under each failure?</a><a href="#readme-12-what-is-guaranteed-and-what-is-not">12. What is guaranteed, and what is not?</a><a href="#readme-13-which-eight-lines-are-the-algorithm">13. Which eight lines are the algorithm?</a><a href="#readme-14-which-experiments-let-you-break-it-yourself">14. Which experiments let you break it yourself?</a><a href="#readme-15-what-changes-between-this-toy-and-etcd">15. What changes between this toy and etcd?</a><a href="#readme-16-exercises--where-do-you-practise">16. Exercises — where do you practise?</a><a href="#readme-17-where-does-this-sit-and-what-comes-next">17. Where does this sit, and what comes next?</a><a href="#readme-18-glossary">18. Glossary</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

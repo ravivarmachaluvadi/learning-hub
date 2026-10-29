@@ -1,0 +1,1588 @@
+<!doctype html>
+<html lang="en" data-hub-lab="11-caching">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>11. caching</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 11 of 71 · Stage 2</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 11 · One Machine, Done Right</p><article id="readme"><h1 id="readme-caching--from-remember-the-answer-to-production">Caching — from &quot;remember the answer&quot; to production</h1>
+<blockquote>
+<p><strong>Depth layers in this doc:</strong>
+<strong>BEGINNER MODEL</strong> (stages 1–9) → <strong>INTERMEDIATE MODEL</strong> (stage 10) →
+<strong>ENGINEERING MODEL</strong> (stages 11–14) → <strong>PRODUCTION MODEL</strong> (stage 15)</p>
+<p>Files in this lab: <code>CachingLab.java</code> (runnable — five scenarios, zero
+dependencies), <code>visualization.html</code> (interactive), <code>EXERCISES.md</code>,
+<code>SOLUTIONS.md</code>.</p>
+<p><strong>Every number in this document was produced by running the code in this
+folder.</strong> Where I state a behavior I have not executed, I say so.</p>
+</blockquote>
+<p>In the <a href="../06-software-architecture-patterns/notes.html#readme">software-architecture-patterns</a>
+lab, caching appeared twice in passing: as one entry in the data-pattern
+family, and as failure <strong>F6, &quot;cache inconsistency as a product bug&quot;</strong> — one
+paragraph about a customer seeing their old address. This lab is that
+paragraph, opened all the way up. It also collects the debt that lab left:
+it called caching &quot;the hardest data pattern&quot; and moved on.</p>
+<p><strong>You already have a caching lab — this is its other half.</strong>
+<a href="../12-http-caching/notes.html#readme">http-caching</a> covers the copies that live <em>between you
+and the outside world</em> (browsers, CDNs, <code>Cache-Control</code>, <code>ETag</code>) — copies
+you can only advise, never delete. This lab covers the cache <em>inside your
+own system</em> (Redis, Memcached, Caffeine) — the one you fill, size, evict
+from, and invalidate yourself. Stage 17 draws the line between them
+precisely; you do not need that lab first.</p>
+<hr />
+<h2 id="readme-1-why--why-does-this-exist">1. WHY — why does this exist?</h2>
+<p>Computers answer the same question over and over. A restaurant's menu page
+is built by asking the database for the same twelve dishes, fifty thousand
+times a lunchtime — and every one of those trips takes a few milliseconds
+that the customer waits through, and costs a slice of a database server
+that is far more expensive than the machine asking. Do nothing about it and
+two things happen: pages feel slow, and the database becomes the wall the
+whole product hits — you cannot add users, because the one machine holding
+the truth is already answering as fast as it can. Nearly every fast system
+you have used is fast because it stopped re-computing answers it already
+had. And nearly every strange bug where a website shows you something that
+is <em>no longer true</em> comes from the same mechanism, done imperfectly.</p>
+<hr />
+<h2 id="readme-2-the-problem--meeras-menu-page">2. THE PROBLEM — Meera's menu page</h2>
+<p>Meera runs <strong>TiffinBox</strong>, the lunch-delivery service from the previous lab.
+Her database is one machine holding every dish, order, and customer.</p>
+<p>The menu page is the first thing every customer sees. Building it asks the
+database: <em>give me today's twelve dishes, with prices, photos, and the
+kitchen's current availability.</em> That question takes about <strong>5 milliseconds</strong>
+to answer.</p>
+<p>At 200 lunches a day, nobody notices. Then TiffinBox grows: <strong>50,000 menu
+views between 12:00 and 13:00</strong>. That is roughly 14 views every second, all
+asking the identical question, and getting the identical answer, because
+the menu changed once — at 9 a.m., when the kitchen set it.</p>
+<p>Dev, her engineer, watches the database at 12:30. It is at 90% CPU. The page
+that used to load instantly now takes over a second, because requests are
+queuing behind each other for a database that is doing the same work
+thousands of times. Nothing is broken. Nothing is buggy. The system is just
+<strong>answering a settled question, again and again, at full price.</strong></p>
+<hr />
+<h2 id="readme-3-the-naive-solution--remember-the-answer">3. THE NAIVE SOLUTION — &quot;remember the answer&quot;</h2>
+<p>Dev's instinct is exactly right, and it is the seed of everything in this
+lab. In the application, he keeps a variable:</p>
+<div class="code"><pre><code class="language-java">Map&lt;String, Menu&gt; remembered = new HashMap&lt;&gt;();
+
+Menu getMenu(String day) {
+    Menu m = remembered.get(day);        // did we already ask this?
+    if (m == null) {
+        m = database.loadMenu(day);      // no — ask once
+        remembered.put(day, m);          // and keep the answer
+    }
+    return m;                             // yes — answer from memory
+}
+</code></pre></div>
+<p>The first customer after each deploy pays the 5 ms. The next 49,999 get
+their answer from memory in microseconds. Database CPU drops from 90% to
+almost nothing. Dev ships it at 2 p.m. and it works beautifully.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> This code is genuinely good and genuinely broken. Three
+different things go wrong with it, on three different timescales — hours,
+days, and immediately-but-invisibly. What are they?</p>
+<details><summary>Reveal</summary>
+
+<ol>
+<li><strong>Within hours (memory):</strong> <code>remembered</code> only ever grows. Menus are keyed
+by day, so that's slow — but Dev will reuse this trick for <em>customers</em>
+and <em>dish photos</em> next week, and then the map grows with every customer
+who ever visits. The app runs out of memory and crashes. A store that
+never forgets is not a cache; it is a memory leak that starts out
+looking helpful.</li>
+<li><strong>Within a day (wrongness):</strong> at 3 p.m. the kitchen marks paneer
+sold-out. The database is updated. The map is not. Every customer keeps
+seeing paneer available, ordering it, and getting a refund call. The
+remembered answer was correct when it was remembered; nothing told it
+the world had moved.</li>
+<li><strong>Immediately, invisibly (disagreement):</strong> TiffinBox runs on <strong>three</strong>
+app servers behind a load balancer. Each has its own <code>remembered</code> map,
+filled at a different moment. Three customers refreshing the same page
+get three different menus, and refreshing bounces you between them.
+Nobody can reproduce it, because the answer depends on which machine
+you land on.</details>
+
+</li>
+</ol>
+</blockquote>
+<hr />
+<h2 id="readme-4-the-failure--watching-all-three-happen">4. THE FAILURE — watching all three happen</h2>
+<p>Take them in the order Meera's team actually met them, because each one
+teaches a different lesson.</p>
+<p><strong>Failure 1 — the memory ceiling.</strong> Dev extends the trick to dish photos.
+Memory climbs all afternoon and the process dies at 23:14. The lesson is
+not &quot;photos were too big.&quot; It is that <strong>memory is finite and the set of
+possible questions is not.</strong> Any store that keeps everything must eventually
+choose between crashing and <em>forgetting something</em> — and if you do not
+choose what to forget, the operating system chooses for you, by killing the
+process.</p>
+<p><strong>Failure 2 — the wrongness window.</strong> Paneer stays &quot;available&quot; for four
+hours after it sold out. Notice what the naive code assumed: that an answer,
+once true, stays true. Every remembered answer is a <em>copy</em> of something that
+lives somewhere else and can change without warning. The moment you keep a
+copy, you have signed up for the question <strong>&quot;how wrong am I willing to be,
+and for how long?&quot;</strong> — and if you never answer it deliberately, the answer
+is &quot;infinitely wrong, forever.&quot;</p>
+<p><strong>Failure 3 — three machines, three truths.</strong> This is the one that ruins
+afternoons, because it is invisible in development (one machine) and
+unreproducible in production (which machine answered you?).</p>
+<p>Here is the shape of all three, and it is worth seeing that they are one
+shape: <strong>you made a second copy of the truth, and copies need rules.</strong></p>
+<pre class="mermaid">flowchart LR
+    C1[Customer] --&gt; LB[Load balancer]
+    LB --&gt; A1[&quot;App server 1&lt;br/&gt;own copy: paneer available&quot;]
+    LB --&gt; A2[&quot;App server 2&lt;br/&gt;own copy: paneer SOLD OUT&quot;]
+    LB --&gt; A3[&quot;App server 3&lt;br/&gt;own copy: empty&quot;]
+    A1 --&gt; DB[(&quot;Database&lt;br/&gt;truth: paneer SOLD OUT&quot;)]
+    A2 --&gt; DB
+    A3 --&gt; DB
+</pre>
+<p>Look at the three app boxes: same instant, three different answers, and only
+one of them matches the database underneath.</p>
+<hr />
+<h2 id="readme-5-the-real-requirement">5. THE REAL REQUIREMENT</h2>
+<p>Strip away the mechanism and what Meera needs is:</p>
+<blockquote>
+<p><strong>Serve repeated questions fast, out of a fixed amount of memory, being
+wrong by no more than a knowable amount of time — and know which
+questions to keep when the memory is full.</strong></p>
+</blockquote>
+<p>Read that sentence again, because it has four demands in it and each one
+becomes a section of this lab: <em>fast</em> (why the trick works at all), <em>fixed
+memory</em> (how much to keep), <em>wrong by no more than a knowable amount</em> (how
+the copy finds out the world moved), and <em>which questions to keep</em> (how to
+choose what gets thrown away). Everything from here is the pursuit of that
+one sentence.</p>
+<hr />
+<h2 id="readme-6-the-key-idea">6. THE KEY IDEA</h2>
+<blockquote>
+<p><strong>Keep a small, bounded copy of the answers you are asked most often, and
+decide in advance both what to throw away when it is full and how stale
+you will let it get.</strong></p>
+</blockquote>
+<p>Two decisions, made deliberately, are what separate a cache from a memory
+leak that lies to your customers. The rest of this lab is what those two
+decisions cost and how real systems make them.</p>
+<hr />
+<h2 id="readme-7-terminology--the-professional-words-now-that-you-have-felt-them">7. TERMINOLOGY — the professional words, now that you have felt them</h2>
+<p>Seven load-bearing terms. Each gets: plain meaning, precise meaning, why the
+word exists, a real example, and what it connects to.</p>
+<p><strong>Cache</strong> — plain: a small fast store of answers you already worked out.
+Precise: a bounded store holding copies of data whose authoritative version
+lives elsewhere, used to avoid recomputing or re-fetching. The word (from
+French <em>cacher</em>, to hide) exists to distinguish it from a <strong>database</strong>: a
+database is <em>responsible</em> for your data, a cache is <em>not</em> — you must be able
+to delete a cache entirely and lose nothing but speed. That test is the
+sharpest one in this lab: <strong>if wiping it loses data, it is not a cache</strong>, it
+is a database you are treating carelessly. Example: Meera's <code>remembered</code> map
+holds a copy of the menu; the menu's home is Postgres.</p>
+<p><strong>Source of truth</strong> — plain: the copy that is right by definition. Precise:
+the authoritative store; when a cache and the source of truth disagree, the
+cache is wrong, always, by definition. The term exists because with copies
+around, &quot;correct&quot; needs an owner. Example: Postgres says paneer is sold out;
+the app's map says available; the map is wrong — not &quot;differently right.&quot;</p>
+<p><strong>Hit / miss / hit ratio</strong> — plain: found it / didn't / how often you find
+it. Precise: a <strong>hit</strong> is a lookup served from the cache, a <strong>miss</strong> is one
+that had to go to the source of truth; the <strong>hit ratio</strong> is hits ÷ total
+lookups. These exist because hit ratio is the single number that decides
+whether a cache is worth having, and it is the first thing you put on a
+dashboard. Example: from <code>java CachingLab.java hit-rate</code> in this folder, a
+1,000-entry cache over a 10,000-key workload got <strong>67.3%</strong> — two of every
+three menu views never touched the database.</p>
+<p><strong>Working set</strong> — plain: the handful of things actually being asked for
+right now. Precise: the set of keys accessed within a given time window,
+which is almost always far smaller than the total keyspace. The term exists
+(from 1960s virtual-memory research) to name <em>why caching works at all</em>:
+access is <strong>skewed</strong>, not uniform. If every key were equally likely, a cache
+holding 10% of keys would hit 10% of the time and be nearly worthless. In
+the measured run above, 10% of the keyspace captured 67.3% of the traffic —
+that gap between 10% and 67.3% is the entire business case for caching.</p>
+<p><strong>Eviction / eviction policy</strong> — plain: throwing something out to make room,
+and the rule for choosing the victim. Precise: when a bounded cache is full,
+the policy selects which entry to remove. The word exists because <em>removal
+is not deletion of stale data</em> — the evicted entry may be perfectly valid;
+it is being sacrificed for space. Example: a policy might remove whatever was
+used longest ago — stage 10 builds four such rules and measures them against
+each other. Connects to failure 1: eviction is the mechanism that makes
+&quot;fixed memory&quot; possible.</p>
+<p><strong>Staleness</strong> — plain: how out-of-date your copy might be. Precise: the time
+window between the source of truth changing and the cache reflecting that
+change; during it, the cache serves values that are wrong. The term exists
+so the wrongness can be <em>budgeted</em> rather than denied — the engineering
+question is never &quot;is it stale?&quot; (it is) but &quot;<strong>bounded by what?</strong>&quot; Example:
+a 60-second time limit means a price change can be invisible to customers for
+up to 60 seconds, and you decide whether that is acceptable <em>before</em> the
+incident. This is the same idea as the <strong>consistency window</strong> from your
+<a href="../51-cqrs/notes.html#readme">cqrs</a> lab, at a different layer.</p>
+<p><strong>TTL (time to live)</strong> — plain: an expiry date on each stored answer.
+Precise: a per-entry duration after which the entry is treated as absent and
+must be re-fetched. It exists as the cheapest possible staleness bound: with
+no other machinery at all, a 60-second TTL guarantees the cache cannot be
+wrong for longer than 60 seconds. Example: <code>SET menu:2026-08-28 &lt;json&gt; EX 60</code>
+in Redis. Connects to eviction — but note the difference, because it is
+constantly muddled: <strong>TTL is about correctness (this copy is too old to
+trust); eviction is about space (I need room).</strong> An entry can be evicted
+while perfectly fresh, and can expire while the cache is half empty.</p>
+<p>Smaller terms are defined at first use; all of them land in the
+<a href="#readme-18-glossary">GLOSSARY</a>.</p>
+<hr />
+<h2 id="readme-8-mental-models--carry-two">8. MENTAL MODELS — carry two</h2>
+<p><strong>The simple model: a chef's prep counter.</strong> The walk-in fridge (the
+database) holds everything, but it is across the kitchen and every trip
+costs time. So the chef keeps a small counter beside the stove with the
+ingredients this hour's orders need. The counter is small on purpose — a
+counter the size of the fridge would defeat the point. When it fills, the
+chef pushes something aside to make room, and which thing they push aside is
+a real decision. The counter holds <em>portions taken from</em> the fridge, not the
+only portions in existence: if the counter is knocked over, service slows
+while the chef fetches from the fridge again, but no food is lost.</p>
+<p><strong>The engineering model: a bounded map plus three policies and one
+equation.</strong> A cache is:</p>
+<ul>
+<li><p>a <strong>bounded key→value map</strong> (<code>size ≤ capacity</code>, always — the invariant that
+makes memory finite);</p>
+</li>
+<li><p>an <strong>eviction policy</strong>: given a full cache, choose a victim;</p>
+</li>
+<li><p>a <strong>staleness policy</strong>: TTL, and/or invalidation on write — how the copy
+learns the truth moved;</p>
+</li>
+<li><p>a <strong>concurrency policy</strong>: what happens when many readers miss the same key
+at the same moment (stage 11 makes this a headline event, not a footnote);</p>
+</li>
+<li><p>governed by the <strong>average latency equation</strong>:</p>
+<p><code>avg = hit_ratio × cache_latency + (1 − hit_ratio) × source_latency</code></p>
+<p>This one line runs the entire field. With the measured 67.3% hit ratio,
+0.05 ms cache and 5 ms database: <code>0.673×0.05 + 0.327×5 = 1.67 ms</code> — versus
+5 ms uncached. Verified: that is exactly what <code>hit-rate</code> prints.</p>
+</li>
+</ul>
+<div class="table"><table><thead>
+<tr>
+  <th>Prep counter</th>
+  <th>Engineering model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The walk-in fridge</td>
+  <td>Source of truth (the database)</td>
+</tr>
+<tr>
+  <td>The counter beside the stove</td>
+  <td>The cache (bounded map)</td>
+</tr>
+<tr>
+  <td>Counter size</td>
+  <td>Capacity</td>
+</tr>
+<tr>
+  <td>Ingredient is already on the counter</td>
+  <td>Hit</td>
+</tr>
+<tr>
+  <td>Trip to the fridge</td>
+  <td>Miss → load from source of truth</td>
+</tr>
+<tr>
+  <td>Pushing something aside for room</td>
+  <td>Eviction, chosen by policy</td>
+</tr>
+<tr>
+  <td>&quot;This cream smells off now&quot;</td>
+  <td>Staleness / TTL expiry</td>
+</tr>
+<tr>
+  <td>Knocking the counter over</td>
+  <td>Cache flush — slow, not lossy</td>
+</tr>
+<tr>
+  <td>Three chefs, three counters</td>
+  <td>Multiple app servers, each with a local cache</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the analogy breaks — three places, and they are exactly the hard
+parts:</strong></p>
+<ol>
+<li><strong>Ingredients on a counter do not silently become different
+ingredients.</strong> But the database can change <em>while your copy sits there
+looking fine</em>, and nothing about the copy reveals it — this is failure 2,
+and no kitchen intuition prepares you for it. The engineering model says:
+a cached value carries no evidence of its own freshness; freshness must be
+imposed from outside (TTL) or announced (invalidation).</li>
+<li><strong>A counter is one chef's.</strong> A real system has many app servers, each
+with its own copy, plus possibly a shared remote cache and a CDN — the
+truth can be <em>differently stale in several places at once</em> (failure 3).
+The kitchen picture quietly implies a single observer; production never
+has one.</li>
+<li><strong>Taking an ingredient from the fridge removes it from the fridge.</strong> A
+cache read <em>copies</em>; the original stays and keeps evolving. Nearly every
+caching bug lives in that gap between copy and original.</li>
+</ol>
+<p>Hold onto point 1 especially: the prep-counter picture is genuinely useful
+for <em>speed</em> reasoning and genuinely misleading for <em>correctness</em> reasoning.</p>
+<hr />
+<h2 id="readme-9-visualization--watch-the-mechanism-move">9. VISUALIZATION — watch the mechanism move</h2>
+<p>Open <strong><code>visualization.html</code></strong> in this folder (also published as an
+interactive artifact — link in the session summary). It is the mechanism of
+stage 10 made clickable:</p>
+<ul>
+<li>send reads and watch hits, misses, evictions, and the hit ratio move;</li>
+<li>switch the eviction policy live and watch which entry gets sacrificed;</li>
+<li>run a report that reads every dish once, and watch it push the popular
+dishes out — then switch the throw-away rule and watch that stop happening;</li>
+<li>fire many simultaneous readers at one key that has just been removed, and
+watch how many of them each go to the database (stage 11 names this one);</li>
+<li>step <strong>backward</strong> through any sequence to re-watch the moment something
+changed.</li>
+</ul>
+<p>Every event is narrated in a full sentence saying what happened and why.
+Use it alongside stage 10 rather than after it.</p>
+<hr />
+<blockquote>
+<p><strong>✅ CHECKPOINT — you now hold the BEGINNER MODEL.</strong> You can say what a
+cache is (a bounded copy you could delete without loss), why it works
+(skewed access — a small working set absorbs most traffic), and the two
+deliberate decisions it demands (what to evict, how stale to allow). Next
+layer: the actual mechanism, one design decision at a time — each one
+arriving after the version before it visibly fails.</p>
+</blockquote>
+<hr />
+<h2 id="readme-10-the-actual-mechanism">10. THE ACTUAL MECHANISM</h2>
+<h3 id="readme-101-the-read-path-v1-cache-aside">10.1 The read path, v1: cache-aside</h3>
+<p>The pattern Dev wrote by instinct in stage 3 has a name — <strong>cache-aside</strong>
+(also &quot;lazy loading&quot;): the application, not the cache, orchestrates.</p>
+<pre class="mermaid">sequenceDiagram
+    participant App
+    participant Cache
+    participant DB as Database
+    App-&gt;&gt;Cache: get(&quot;menu:2026-08-28&quot;)
+    alt hit
+        Cache--&gt;&gt;App: menu (≈0.05 ms)
+    else miss
+        Cache--&gt;&gt;App: nothing
+        App-&gt;&gt;DB: SELECT … (≈5 ms)
+        DB--&gt;&gt;App: menu
+        App-&gt;&gt;Cache: put(&quot;menu:2026-08-28&quot;, menu)
+        Note over App,Cache: the app fills the cache — the cache never&lt;br/&gt;talks to the database itself
+    end
+</pre>
+<p>Follow the <code>alt</code> block: the hit path touches one system, the miss path
+touches three. Two properties fall out, and they are why cache-aside is the
+default everywhere: only requested data is ever cached (no guessing), and
+<strong>if the cache dies the application still works</strong>, just slowly — the
+database is still reachable on the miss path. That resilience is exactly
+the &quot;you could delete it and lose nothing&quot; test from stage 7, cashed in.</p>
+<p>The cost is that the <em>first</em> request for every key pays full price (a <strong>cold
+cache</strong>: immediately after a start or a restart, every single request misses
+and the database receives the full, unprotected load), and the application
+code must remember to do the caching correctly at every call site.</p>
+<h3 id="readme-102-why-it-works-at-all--the-numbers">10.2 Why it works at all — the numbers</h3>
+<p>Signpost: this table is <code>java CachingLab.java hit-rate</code> — 200,000 requests
+over 10,000 keys with realistic skew, 5 ms database, 0.05 ms cache. Read
+the first column against the last.</p>
+<div class="code"><pre><code>cache size   hit ratio  avg latency    DB calls     (% of keyspace held)
+100          38.8%      3.077 ms       122,307      (1%)
+500          58.5%      2.107 ms        83,092      (5%)
+1000         67.3%      1.670 ms        65,456      (10%)
+2000         76.4%      1.217 ms        47,154      (20%)
+5000         88.7%      0.611 ms        22,661      (50%)
+</code></pre></div>
+<p>Three things to take from it. <strong>(1)</strong> Holding 1% of the keyspace already
+serves 38.8% of traffic — that is skew, the working set doing its job; with
+uniform access, 1% of keys would buy 1% of hits and caching would be
+pointless. <strong>(2)</strong> The database call column is the real prize: at size 1000,
+134,544 of 200,000 queries never happened. Caching is a <em>capacity</em> strategy
+at least as much as a latency one. <strong>(3)</strong> Diminishing returns are brutal
+and universal — 100→500 buys +19.7 points, 2000→5000 buys +12.3 points for
+six times the memory. There is always a knee, and past it you are buying
+RAM to shave microseconds.</p>
+<h3 id="readme-103-what-to-throw-away--eviction-four-attempts">10.3 What to throw away — eviction, four attempts</h3>
+<p>Now the second deliberate decision. The cache is full; something must go.</p>
+<p><strong>v1 — FIFO (first in, first out):</strong> evict whatever has been in the cache
+longest. Simple, obvious, and it ignores the only signal that matters.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> The menu key is requested 10,000 times an hour. Under FIFO,
+with a busy cache, what happens to it?</p>
+<details><summary>Reveal</summary>
+It gets evicted, on schedule, no matter how hot it is — because FIFO
+measures *age since insertion*, not usefulness. Then the next request
+misses, re-loads it from the database, and the clock starts again. Your
+most valuable entry is thrown out on a timer. `CachingLab` asserts exactly
+this in `fifo_evicts_hot_key_anyway` (run `java CachingLab.java test`).
+</details>
+
+</blockquote>
+<p><strong>v2 — LRU (least recently used):</strong> evict the entry nobody has touched for
+the longest. One line of difference — <em>every hit promotes the entry to
+most-recent</em> — and it captures the actual signal: recently used things tend
+to be used again. This is the default in most systems, and the data structure
+is a small classic: a hash map for O(1) lookup, plus a doubly-linked list for
+O(1) recency ordering (<code>LruCache</code> in <code>CachingLab.java</code>; neither structure
+works alone — the map has no order, the list has no fast lookup).</p>
+<p><strong>v2 breaks — scan pollution.</strong> Meera adds a nightly report that reads every
+dish row once. Each row is &quot;most recently used&quot; the instant it is read, so
+the report's one-time reads march through the cache and evict the genuinely
+hot menu entries. The report gains nothing (it never re-reads anything) and
+lunch service pays for it.</p>
+<p><strong>v3 — LFU (least frequently used):</strong> evict the entry used the <em>fewest</em>
+times. A row the scan touched once has frequency 1 and cannot displace the
+menu key with frequency 10,000. Scan resistance, solved.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> LFU wins the scan case decisively. Where does counting
+frequency-over-all-history go wrong? (Think about Meera launching in a new
+city.)</p>
+<details><summary>Reveal</summary>
+When popularity *changes*. Yesterday's hot keys carry enormous accumulated
+counts; today's genuinely hot keys start at 1 and can never win an eviction
+contest against a stale champion. The cache fills with entries that *used
+to* matter — **cache squatting** — and the new working set can't get
+established. LFU's strength (long memory) becomes its disease the moment
+the future stops resembling the past.
+</details>
+
+</blockquote>
+<p>Signpost: this is <code>java CachingLab.java eviction</code> — the same cache and
+workload under three conditions. Column C is where the prediction above gets
+tested.</p>
+<div class="code"><pre><code>policy     A: skewed      B: + scan      C: shifting
+FIFO       62.8%          56.8%          66.7%
+LRU        67.3%          61.9%          74.9%
+LFU        75.2%          75.1%          48.9%
+Random     62.8%          56.9%          66.6%
+</code></pre></div>
+<p>Read it as three verdicts. <strong>A (stable popularity):</strong> LRU beats FIFO and
+Random by ~4.5 points — promoting on hit is worth real money; LFU leads
+outright at 75.2% because when popularity never changes, history predicts
+the future perfectly. <strong>B (a scan runs):</strong> LRU and FIFO each lose ~5 points
+of <em>user</em> hit ratio to pollution; LFU loses 0.1 — untouched, exactly as
+predicted. <strong>C (the hot set moves):</strong> LFU collapses to 48.9%, worst of all
+four, below even Random, while LRU rises to 74.9%. The policy that won A and
+B loses C by 26 points.</p>
+<p>The lesson is not &quot;use LRU&quot; or &quot;use LFU.&quot; It is that <strong>no eviction policy
+wins everywhere, because each one is a bet about how the future resembles
+the past</strong> — recency bets that what was just used will be used again;
+frequency bets that what was used often will be used often. Production
+caches (Caffeine's W-TinyLFU on the JVM, Redis's sampled-LRU/LFU modes) take
+the obvious way out: <em>combine both signals, and age the frequency counts so
+old champions decay.</em> Every weird detail in those designs is a scar from
+column B or column C.</p>
+<h3 id="readme-104-the-write-path--where-correctness-lives">10.4 The write path — where correctness lives</h3>
+<p>Reads were about speed. Writes are where the wrongness from failure 2 gets
+decided. The kitchen marks paneer sold out; the database row changes. What
+happens to the copy?</p>
+<p>Four strategies, and the differences are consequential:</p>
+<p><strong>(a) Invalidate on write (delete the key).</strong> Write the database, then
+delete the cached entry. The next reader misses and re-loads fresh. Simple,
+and the standard partner for cache-aside — you never have to make the cache
+and database agree on <em>content</em>, only on <em>absence</em>.</p>
+<p><strong>(b) Update on write (write the new value into the cache).</strong> Tempting —
+avoids the next miss — and more dangerous: two concurrent writers can land
+in the cache in the opposite order to how they landed in the database,
+leaving the cache holding the older value permanently. Delete is idempotent
+and order-tolerant; update is neither. <strong>Prefer invalidate to update</strong> is
+about as close to a rule as this field gets.</p>
+<p><strong>(c) Write-through.</strong> The application writes to the cache, which
+synchronously writes to the database before acknowledging. The cache is
+never behind — at the cost of latency on every write, and a cache that is
+now in the write path (if it is down, writes fail — you have given up
+cache-aside's independence).</p>
+<p><strong>(d) Write-behind (write-back).</strong> Write to the cache, acknowledge
+immediately, flush to the database asynchronously. The fastest writes here,
+and the only option in this lab that <strong>can lose acknowledged data</strong>: for a
+window, the cache holds the only copy. That is the cache becoming a database
+without being built like one — use it only where losing that window is
+genuinely acceptable (view counters, telemetry), never for orders or money.</p>
+<pre class="mermaid">flowchart TD
+    W[Write arrives] --&gt; Q{Which strategy?}
+    Q --&gt;|invalidate| I[&quot;DB write → DELETE cache key&lt;br/&gt;next read re-loads fresh&lt;br/&gt;✅ order-tolerant, idempotent&quot;]
+    Q --&gt;|update| U[&quot;DB write → PUT new value&lt;br/&gt;⚠️ concurrent writers can invert order&quot;]
+    Q --&gt;|write-through| T[&quot;cache write → DB write → ack&lt;br/&gt;✅ never behind ⚠️ slower, cache in write path&quot;]
+    Q --&gt;|write-behind| B[&quot;cache write → ack → async DB flush&lt;br/&gt;⚡ fastest ⚠️ can lose acknowledged writes&quot;]
+</pre>
+<h3 id="readme-105-ttl--the-safety-net-you-always-want">10.5 TTL — the safety net you always want</h3>
+<p>Even with perfect invalidation, put a TTL on entries. Why, if invalidation
+already handles updates? Because <strong>invalidation is a message that can be
+missed</strong> — a deploy bug, a dropped event, a race (stage 11 shows one), a
+key you forgot to invalidate when you added a new write path six months
+later. A TTL converts <em>&quot;wrong forever, silently&quot;</em> into <em>&quot;wrong for at most
+60 seconds.&quot;</em> It costs a small amount of hit ratio and buys a bound on your
+worst case. Choose it from the business: menu prices at 60s, a currency
+rate at 5s, a country list at 24h.</p>
+<p>The one caution: identical TTLs on many keys created at the same moment
+(a deploy, a cache warm-up) make them all expire <em>simultaneously</em>, so every
+one of those keys misses at the same instant and the database takes the whole
+surge at once — a flood you inflicted on yourself, and the subject of F1
+below. Add <strong>jitter</strong> (<code>60s ± 10%</code>) so the expiries spread out, exactly as
+you learned to jitter retries in the
+<a href="../06-software-architecture-patterns/notes.html#readme">architecture lab</a>.</p>
+<hr />
+<blockquote>
+<p><strong>✅ CHECKPOINT — you now hold the INTERMEDIATE MODEL.</strong> You can design a
+cache: cache-aside reads, invalidate-on-write, a jittered TTL, an eviction
+policy chosen against your workload's shape, and the latency equation to
+justify it. What you cannot yet do is survive it in production, because
+everything so far assumed one reader at a time and no failures. That
+assumption is where caches actually hurt people.</p>
+</blockquote>
+<hr />
+<h2 id="readme-11-failure-scenarios">11. FAILURE SCENARIOS</h2>
+<p>Six failure modes that matter. Each: how to create it, where to watch it,
+what happened and why, how the system responds, and which guarantee bends.</p>
+<h3 id="readme-f1--cache-stampede-thundering-herd-on-one-key">F1 — Cache stampede (thundering herd on one key)</h3>
+<p>You met this name in the <a href="../04-database-landscape/notes.html#readme">database-landscape</a> lab
+and again at the HTTP layer in <a href="../12-http-caching/notes.html#readme">http-caching</a>. Here is the
+mechanism itself, with the cost measured.</p>
+<p><strong>Create it:</strong> <code>java CachingLab.java stampede</code> — 200 concurrent readers, one
+key that just expired, a 50 ms database read.</p>
+<p><strong>What happened</strong> (verified output):</p>
+<div class="code"><pre><code>WITHOUT protection:          DB calls: 200    wall time: 68 ms
+WITH single-flight lock:     DB calls: 1      wall time: 57 ms
+</code></pre></div>
+<p><strong>Why:</strong> between the expiry and the first successful fill, <em>every</em> arriving
+request sees a miss, and each independently decides to ask the database. The
+cache's protection disappears exactly when load is highest. On a real hot
+key at lunch peak this is a coordinated denial-of-service that your own
+system performs on your own database — and it self-amplifies: the database
+slows under 200× load, so the fill takes longer, so more requests pile into
+the same window.</p>
+<p><strong>The fix — single-flight:</strong> the first request to miss a key takes a
+per-key lock and loads; concurrent missers <em>wait for that same load</em> rather
+than starting their own. In the code, the loser of <code>putIfAbsent</code> joins the
+winner's <code>CompletableFuture</code>:</p>
+<div class="code"><pre><code class="language-java">CompletableFuture&lt;Integer&gt; existing = inFlight.putIfAbsent(1, mine);
+if (existing != null) return existing.join();   // join the flight already in the air
+</code></pre></div>
+<p><strong>Guarantee kept:</strong> correctness — every caller still gets a correct value.
+<strong>Guarantee bent:</strong> latency fairness — 199 callers now wait on one loader
+(bounded by that loader's timeout, which is why single-flight needs a
+timeout). <strong>In production:</strong> Caffeine's <code>LoadingCache</code> does this per key by
+default; Redis users implement it with a short-lived lock key, or with
+<strong>probabilistic early refresh</strong> (refresh a hot key slightly <em>before</em> expiry,
+in the background, so it never expires under load).</p>
+<h3 id="readme-f2--the-stale-fill-race-invalidation-done-right-still-wrong">F2 — The stale-fill race (invalidation done right, still wrong)</h3>
+<p><strong>Create it:</strong> <code>java CachingLab.java stale-race</code>.</p>
+<p><strong>What happened</strong> (verified output):</p>
+<div class="code"><pre><code>NAIVE fill:              cache says: ₹100     DB truth: 120   → STALE — cache and truth disagree
+WITH version check:      cache says: (empty)  DB truth: 120   → consistent
+</code></pre></div>
+<p><strong>Why — the interleaving, step by step.</strong> A reader misses and fetches ₹100
+from the database. Before it can fill the cache, it stalls (GC pause, slow
+network — anything). Meanwhile a writer sets the price to ₹120, commits, and
+deletes the cache key — textbook invalidation, executed perfectly. <em>Then</em>
+the stalled reader wakes and writes its ₹100 into the now-empty cache. The
+delete happened before the fill, so the delete accomplished nothing. The
+cache now serves ₹100 until the next write or TTL — <strong>and no line of code
+was wrong.</strong></p>
+<p>This is the deepest idea in the lab: cache + database is a <strong>dual write</strong> —
+the same problem your <a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> lab
+was built around, wearing different clothes. Two stores, no shared
+transaction, therefore an interleaving exists where they disagree.</p>
+<p><strong>The fix — prove the truth did not move.</strong> The reader records the version it
+read and fills only if the version is unchanged:</p>
+<div class="code"><pre><code class="language-java">if (dbVersion.get() == seen) { cache.put(1, value); }  // else discard the fill
+</code></pre></div>
+<p><strong>Guarantee kept:</strong> bounded staleness, <em>if</em> you also have a TTL.
+<strong>Guarantee bent:</strong> none formally — you cannot eliminate this race without a
+protocol, only shrink its window. <strong>In production:</strong> memcached <strong>leases</strong>
+(Facebook's published fix: the cache hands a miss-token to one reader and
+rejects fills carrying a stale token), Redis <code>WATCH</code>/CAS fills, or the
+common honest choice — accept the race, keep the TTL short, and know the
+worst case.</p>
+<h3 id="readme-f3--unbounded-growth-the-memory-leak-wearing-a-cache-costume">F3 — Unbounded growth (the memory leak wearing a cache costume)</h3>
+<p><strong>Create it:</strong> delete the capacity check from <code>LruCache.put</code> and run any
+workload with many distinct keys. <strong>Why:</strong> the set of possible keys (every
+customer, every search term) is unbounded; memory is not. <strong>Response:</strong>
+in a JVM, rising heap → longer GC pauses → latency climbs → eventually
+<code>OutOfMemoryError</code>; the pauses usually hurt before the crash does, which is
+why this is often misdiagnosed as &quot;a GC problem.&quot; <strong>Guarantee bent:</strong> the
+capacity invariant <code>size ≤ capacity</code> — the one thing that made memory
+finite. <strong>In production:</strong> always set a maximum size <em>or</em> a maximum weight;
+never cache an unbounded keyspace without one; alert on cache memory and on
+eviction rate (a sudden eviction spike means your working set outgrew the
+cache). <code>CachingLab</code>'s <code>lru_capacity_bound_holds</code> test exists precisely to
+pin this invariant.</p>
+<h3 id="readme-f4--the-hot-key">F4 — The hot key</h3>
+<p><strong>Create it:</strong> point 30% of all traffic at a single key (a celebrity
+restaurant, a flash-sale item). This is the <strong>hot key / hot partition</strong> you
+met in <a href="../04-database-landscape/notes.html#readme">database-landscape</a>, now on the cache tier.
+<strong>Why it is a cache problem:</strong> in a <em>distributed</em> cache, keys are spread
+across nodes by hash, so one key lives on exactly one node — that node
+saturates while the rest idle, and you cannot fix it by adding nodes (the
+hash sends the key to the same place).
+<strong>Response/fixes:</strong> a small local in-process cache in front of the remote
+one (<strong>near cache</strong> / L1-L2 — the hot key gets served from every app server
+without a network hop), or key-splitting (<code>item:42#1..#8</code>, read a random
+shard). <strong>Guarantee bent:</strong> the assumption that load spreads with keys.
+<strong>In production:</strong> Netflix's EVCache and most CDN designs are, in part,
+answers to this; watch for per-node hit-rate and CPU skew on your cache
+dashboard, not just the fleet average.</p>
+<h3 id="readme-f5--cache-penetration-caching-the-absence">F5 — Cache penetration (caching the absence)</h3>
+<p><strong>Create it:</strong> request keys that <em>do not exist</em> in the database — a scraper
+walking <code>/dish/999999</code>, or a bug requesting null IDs. <strong>Why:</strong> a miss on a
+nonexistent key can never be filled by a successful load, so every such
+request reaches the database, every time. The cache provides zero protection
+against exactly the traffic most likely to be hostile. <strong>Fix:</strong> <strong>negative
+caching</strong> — store a tombstone (&quot;no such dish&quot;) with a short TTL, so repeats
+are absorbed; plus a <strong>bloom filter</strong> in front for very large keyspaces —
+the same structure that let LSM engines skip 98.2% of disk reads for absent
+keys in your <a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a> lab, doing the identical job
+one layer up.
+<strong>Guarantee bent:</strong> the implicit assumption that a cached key exists.
+<strong>Careful:</strong> negative entries need <em>shorter</em> TTLs than positive ones — a
+dish that gets created should not stay invisible for an hour.</p>
+<h3 id="readme-f6--cold-start--mass-eviction">F6 — Cold start / mass eviction</h3>
+<p><strong>Create it:</strong> restart the cache (or deploy, or fail over) at 12:30.
+<strong>Why:</strong> every request misses simultaneously; the database receives full
+uncached production load, which — by the numbers in 10.2 — is roughly <strong>3×</strong>
+what it was sized for at a 67% hit ratio, and often far more. Systems that
+have run comfortably for months fall over in the first minute after a cache
+restart, and the restart looks innocent in the timeline. <strong>Response:</strong>
+never flush a whole production cache at peak; warm caches before taking
+traffic (replay top keys); stagger restarts across nodes; keep single-flight
+on so the herd collapses to one load per key; and size the database for
+<em>some</em> survivable fraction of uncached load. <strong>Guarantee bent:</strong> the hidden
+one — that your database can serve your actual traffic. It usually cannot,
+and the cache has been quietly hiding that fact.</p>
+<hr />
+<h2 id="readme-12-correctness--what-a-cache-does-and-does-not-guarantee">12. CORRECTNESS — what a cache does and does not guarantee</h2>
+<p>Time to be precise, because the honest answer surprises people.</p>
+<p><strong>A cache guarantees nothing about freshness by itself.</strong> There is no
+invariant like Paxos's &quot;only one value is ever chosen.&quot; A cache is a
+<em>replica</em>, and by the <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> reasoning you already
+have, a replica that answers during a partition (or just during the gap
+between a write and an invalidation) answers <em>possibly-stale</em>. Caching is
+therefore an availability/latency choice paid for in consistency — you have
+made the AP-flavored trade, usually without noticing.</p>
+<p><strong>What you <em>do</em> get, and only if you engineer it:</strong></p>
+<ul>
+<li><strong>Bounded staleness</strong> — from TTL. This is the only freshness property you
+get for free-ish, and it is a <em>bound</em>, not a promise of freshness.</li>
+<li><strong>Eventual consistency</strong> — with invalidation-on-write plus TTL, the cache
+converges to the truth after each change. (Same idea as your
+<a href="../51-cqrs/notes.html#readme">cqrs</a> read models converging behind the write model.)</li>
+<li><strong>The capacity invariant</strong> — <code>size ≤ capacity</code>, always. This one <em>is</em>
+absolute, and it is what makes a cache a cache rather than a leak.</li>
+<li><strong>Loss-free deletion</strong> — you can drop the entire cache and lose only
+speed. If that is not true of your system, you are running a database.</li>
+</ul>
+<p><strong>What you explicitly do NOT get:</strong></p>
+<ul>
+<li><strong>Read-your-own-writes</strong> — Meera updates a price and immediately reloads;
+a different app server serves her its own stale copy. You must <em>engineer</em>
+this (invalidate before responding to the write, route the writer's reads
+past the cache for a few seconds, or version the key).</li>
+<li><strong>Monotonic reads</strong> — two consecutive reads can go to two servers with
+differently-stale copies, so a customer can watch a price go ₹120 → ₹100 →
+₹120. Time can appear to run backwards. This is failure 3 from stage 4,
+and it is why &quot;just refresh the page&quot; sometimes fixes things and sometimes
+makes them worse.</li>
+<li><strong>Atomic cache+database updates</strong> — impossible without a distributed
+transaction; this is the dual write of F2. Every real system shrinks the
+window rather than closing it.</li>
+</ul>
+<p><strong>What you traded away to get the speed:</strong> simplicity (a second store with
+its own failure modes), debuggability (the answer now depends on invisible
+state), and a class of correctness bugs that are rare, unreproducible, and
+land as customer complaints rather than exceptions. That is the honest bill.
+The reason to pay it is stage 10.2's third column — the queries that never
+happened.</p>
+<hr />
+<h2 id="readme-13-code--the-load-bearing-lines">13. CODE — the load-bearing lines</h2>
+<p><code>CachingLab.java</code> is ~330 lines, zero dependencies, five scenarios. The
+lines that matter, and what each one enforces:</p>
+<p><strong>The capacity invariant</strong> (<code>LruCache.put</code>) — the difference between a cache
+and a leak:</p>
+<div class="code"><pre><code class="language-java">if (map.size() == capacity) {
+    Node victim = tail.prev;            // least-recently-used lives at the tail
+    unlink(victim); map.remove(victim.key);
+}
+</code></pre></div>
+<p><strong>The LRU promotion</strong> (<code>LruCache.get</code>) — one line, worth 4.5 points of hit
+ratio over FIFO in the measured run:</p>
+<div class="code"><pre><code class="language-java">unlink(n); linkAtHead(n);   // every hit promotes to most-recent
+</code></pre></div>
+<p><strong>Single-flight</strong> (<code>runStampede</code>) — turns 200 database calls into 1:</p>
+<div class="code"><pre><code class="language-java">CompletableFuture&lt;Integer&gt; existing = inFlight.putIfAbsent(1, mine);
+if (existing != null) return existing.join();
+</code></pre></div>
+<p><strong>The version-checked fill</strong> (<code>runStaleRace</code>) — the dual-write mitigation:</p>
+<div class="code"><pre><code class="language-java">if (dbVersion.get() == seen) { cache.put(1, value); }   // fill only if truth hasn&#x27;t moved
+</code></pre></div>
+<p>The concurrency scenarios use <strong>virtual threads</strong>
+(<code>Executors.newVirtualThreadPerTaskExecutor()</code>, <code>Thread.ofVirtual()</code>) from
+your <a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a> lab — 200 blocking
+loaders is exactly the &quot;waiting is nearly free&quot; case, and it keeps the
+stampede demo to one process with no thread-pool tuning.</p>
+<h2 id="readme-14-experiments--predict-first-then-run">14. EXPERIMENTS — predict first, then run</h2>
+<p>Each: the question, the command, what you should see, and why.</p>
+<ol>
+<li><strong>How much memory do you actually need?</strong> — <em>Predict: to serve two-thirds
+of traffic from cache, what fraction of the keyspace must you hold?</em> →
+<code>java CachingLab.java hit-rate</code> → 10% holds 67.3%. Skew is doing the work,
+not size.</li>
+<li><strong>Does eviction policy matter?</strong> — <em>Predict: which policy wins?</em> →
+<code>java CachingLab.java eviction</code> → it depends entirely on the workload;
+LFU wins two columns by a mile and loses the third by 26 points.</li>
+<li><strong>What does one expired hot key cost?</strong> — <em>Predict: how many database
+calls will 200 simultaneous readers make?</em> →
+<code>java CachingLab.java stampede</code> → 200 without protection, 1 with.</li>
+<li><strong>Can correct invalidation still leave stale data?</strong> — <em>Predict: yes or
+no?</em> → <code>java CachingLab.java stale-race</code> → yes: ₹100 cached against ₹120
+truth.</li>
+<li><strong>Break it yourself:</strong> remove the capacity check (F3), or the version
+check (F2), or set every TTL identical and watch synchronized expiry.
+<code>java CachingLab.java test</code> should fail loudly for the first one — the
+tests exist as executable statements of the invariants.</li>
+</ol>
+<hr />
+<blockquote>
+<p><strong>✅ CHECKPOINT — you now hold the ENGINEERING MODEL.</strong> You can name what a
+cache guarantees (bounded staleness, capacity, loss-free deletion) and what
+it never does (read-your-own-writes, monotonic reads, atomic updates), and
+you have watched the two failures that cause most real incidents. Last
+layer: what this looks like when it is somebody's on-call rotation.</p>
+</blockquote>
+<hr />
+<h2 id="readme-15-production">15. PRODUCTION</h2>
+<p><strong>The chain from this lab to a real system.</strong> <code>CachingLab</code>'s <code>LruCache</code> →
+<strong>Caffeine</strong> (the JVM standard: W-TinyLFU admission, per-entry TTLs,
+<code>LoadingCache</code> with single-flight built in, async refresh) → a <strong>remote
+cache</strong> (Redis or Memcached: shared by all app servers, so failure 3
+disappears, at the cost of a ~0.5 ms network hop and a new tier to operate)
+→ a <strong>multi-tier arrangement</strong> (L1 in-process Caffeine for the hottest keys,
+L2 Redis for shared state, plus a CDN in front for public assets) →
+<strong>invalidation plumbing</strong> (an event stream or CDC from your
+<a href="../48-transactional-outbox/notes.html#readme">outbox</a> lab firing cache deletes when rows
+change).</p>
+<p><strong>Redis vs Memcached, in one line each:</strong> Memcached is a pure multi-threaded
+LRU key→bytes cache — simpler, excellent at exactly one job; Redis adds data
+structures, persistence, replication, and scripting, which makes it more
+useful and also makes people mistake it for a database (write-behind by
+accident). Both are correct choices; the mistake is assuming the second one
+is a durable store.</p>
+<p><strong>What an on-call engineer actually watches</strong> — the four numbers, in order
+of diagnostic value: <strong>hit ratio</strong> (a sudden drop means a deploy changed key
+names, a TTL, or the working set — it is usually the <em>first</em> symptom of a
+caching incident, before latency moves); <strong>eviction rate</strong> (rising = the
+working set outgrew the cache, so the hit ratio is about to fall);
+<strong>p99 latency of the cache itself</strong> (a slow cache is worse than no cache —
+you pay the cache latency <em>and</em> the database latency on every miss); and
+<strong>cache memory / key count</strong>. Add an alert for <em>hit ratio dropping below
+your latency budget's requirement</em>, computed from the stage-8 equation:
+that is the alert that catches problems while they are still small.</p>
+<p><strong>The tuning dials and their tradeoffs:</strong> capacity (hit ratio vs memory cost
+— find the knee from 10.2), TTL (staleness bound vs hit ratio vs stampede
+risk), eviction policy (match it to whether your popularity is stable or
+shifting — column A vs column C), and single-flight timeouts (herd
+protection vs one slow loader blocking many callers).</p>
+<p><strong>What this lab intentionally omits, and how real systems handle each:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Omitted here</th>
+  <th>Reality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Network, serialization</td>
+  <td>A remote cache costs ~0.2–1 ms per call and requires serializing values; a fat object can make caching <em>slower</em> than the query. Measure before assuming.</td>
+</tr>
+<tr>
+  <td>Distribution across nodes</td>
+  <td><strong>Consistent hashing</strong> so adding a node re-maps ~1/N keys instead of all of them (a <code>/learn</code> topic of its own).</td>
+</tr>
+<tr>
+  <td>Cache-node failure</td>
+  <td>Redis Cluster/Sentinel failover; the load shifting to the database is F6 in miniature — size for it.</td>
+</tr>
+<tr>
+  <td>Multi-region</td>
+  <td>Region-local caches with independent staleness; cross-region invalidation is a distributed-systems problem, not a caching one.</td>
+</tr>
+<tr>
+  <td>Security &amp; isolation</td>
+  <td>Multi-tenant key prefixes, encryption in transit, and never caching another tenant's data under a shared key (a real breach class).</td>
+</tr>
+<tr>
+  <td>Cost</td>
+  <td>RAM is roughly 100× the price of disk per byte; caching is a <em>spend</em>, justified by the DB-calls-avoided column, not by taste.</td>
+</tr>
+<tr>
+  <td>CPU caches, HTTP caching</td>
+  <td>Same principles, other layers: L1/L2/L3 hardware caches below, and browser/CDN caching above — the latter is your <a href="../12-http-caching/notes.html#readme">http-caching</a> lab, which is where <code>Cache-Control</code>, <code>ETag</code> and <code>304</code> live.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Anchors worth remembering:</strong> Facebook's <em>Scaling Memcache at Facebook</em>
+(NSDI 2013) — the paper that named leases and documented stampedes at
+enormous scale; Caffeine's W-TinyLFU work (the answer to columns B and C);
+Netflix's EVCache (near-cache + replication for hot keys); and the industry's
+favorite joke, which you can now read as a lab summary: <em>there are only two
+hard things in computer science — cache invalidation and naming things.</em></p>
+<hr />
+<h2 id="readme-16-exercises">16. EXERCISES</h2>
+<p>The eight-rung ladder is in <a href="notes.html#exercises"><code>EXERCISES.md</code></a>, with worked
+answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Rungs 5–6 are code against
+<code>CachingLab.java</code> (implement a TTL cache; find the planted bug); rungs 7–8
+are design work (make invalidation survive a dropped message; design the
+cache tier for TiffinBox at 3M orders/day).</p>
+<h2 id="readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">flowchart TD
+    ARCH[software-architecture-patterns&lt;br/&gt;caching as one data pattern] --&gt; THIS
+    OB[transactional-outbox&lt;br/&gt;the dual-write problem] --&gt; THIS
+    CAP[cap-theorem&lt;br/&gt;a replica must choose] --&gt; THIS
+    CQRS[cqrs&lt;br/&gt;consistency window] --&gt; THIS
+    DL[database-landscape&lt;br/&gt;hot keys, derived copies] --&gt; THIS
+    THIS[THIS LAB&lt;br/&gt;caching inside your system&lt;br/&gt;Redis · Caffeine · eviction · invalidation]
+    THIS --- HTTP[http-caching lab&lt;br/&gt;the SAME ideas between&lt;br/&gt;client and server]
+    THIS --&gt; N1[consistent-hashing?&lt;br/&gt;how a distributed cache spreads keys]
+    THIS --&gt; N2[redis?&lt;br/&gt;the tool, in depth]
+    THIS --&gt; N3[load-balancing?]
+</pre>
+<p><strong>Your two caching labs, and the line between them.</strong> This lab is the cache
+<strong>you operate inside your system</strong> — a Redis or Caffeine instance you fill,
+size, evict from, and invalidate, where the failure modes are stampedes,
+stale fills, and memory. <a href="../12-http-caching/notes.html#readme">http-caching</a> is the cache
+<strong>you negotiate with strangers</strong> — <code>Cache-Control</code>, <code>ETag</code>, <code>304</code>, browsers
+and CDNs you do not control, where the failure mode is a copy you cannot
+reach to delete. Same physics (a bounded copy that can go stale), opposite
+control: here you hold the delete button; there you only get to <em>suggest</em>
+an expiry, which is why that lab's hardest lesson is versioned URLs.</p>
+<p><strong>Commonly confused, one sentence each:</strong> <em>cache vs database</em> — deleting a
+cache loses only speed; deleting a database loses data. <em>Cache vs read
+replica</em> — a replica holds the <em>whole</em> dataset kept in sync by the database
+itself; a cache holds an arbitrary bounded subset kept in sync by you.
+<em>Cache vs <a href="../51-cqrs/notes.html#readme">CQRS</a> read model</em> — a read model is a purpose-built,
+authoritative-for-reads projection you rebuild deliberately; a cache is an
+opportunistic copy of whatever was asked for. <em>Eviction vs expiry</em> — space
+vs age. <em>Application cache vs HTTP cache</em> — see the paragraph above: who
+can delete the copy. <em>Memoization vs caching</em> — memoization is caching a
+pure function's result (no staleness problem, because the truth cannot
+move); caching in this lab is copying <em>mutable</em> state, and all the hard
+parts come from that one difference.</p>
+<p><strong>Next steps, ready to type:</strong> <code>/learn consistent-hashing</code> (the natural
+sequel, and already queued by three of your labs — how a distributed cache
+decides which node holds a key, and why adding a node re-maps only 1/N of
+them instead of everything), <code>/learn redis</code> (the tool in depth), or
+<code>/learn load-balancing</code>. If you have not read the sibling
+<a href="../12-http-caching/notes.html#readme">http-caching</a> lab yet, read it next — together the two
+cover the whole path from browser to disk.</p>
+<h2 id="readme-18-glossary">18. GLOSSARY</h2>
+<p>In order of appearance.</p>
+<ul>
+<li><strong>Cache</strong> — a bounded store of copies whose authoritative version lives elsewhere; deleting it must lose nothing but speed.</li>
+<li><strong>Source of truth</strong> — the authoritative store; when it and a cache disagree, the cache is wrong by definition.</li>
+<li><strong>Hit / miss</strong> — a lookup served from the cache / one that had to go to the source of truth.</li>
+<li><strong>Hit ratio</strong> — hits ÷ total lookups; the single number that says whether a cache is earning its keep.</li>
+<li><strong>Working set</strong> — the keys actually being accessed in a time window; far smaller than the keyspace, which is why caching works.</li>
+<li><strong>Skew</strong> — the unevenness of access (a few keys get most traffic).</li>
+<li><strong>Eviction</strong> — removing a valid entry to make room; chosen by an <strong>eviction policy</strong>.</li>
+<li><strong>Staleness</strong> — the window during which a cached copy no longer matches the truth.</li>
+<li><strong>Eventual consistency</strong> — the cache converges to the truth after each change (via invalidation and/or TTL) rather than matching it at every instant.</li>
+<li><strong>TTL (time to live)</strong> — a per-entry expiry that bounds staleness without any other machinery.</li>
+<li><strong>Capacity invariant</strong> — <code>size ≤ capacity</code>, always; what makes a cache bounded rather than a leak.</li>
+<li><strong>Cache-aside (lazy loading)</strong> — the app checks the cache, loads from the source on a miss, and fills the cache itself.</li>
+<li><strong>Cold cache</strong> — a cache with nothing useful in it yet; every request misses.</li>
+<li><strong>FIFO / LRU / LFU / Random</strong> — evict oldest-inserted / least-recently-used / least-frequently-used / an arbitrary entry.</li>
+<li><strong>Scan pollution</strong> — a one-pass read of many cold keys evicting the genuinely hot ones (LRU's weakness).</li>
+<li><strong>Cache squatting</strong> — old high-frequency entries blocking a new working set (LFU's weakness).</li>
+<li><strong>W-TinyLFU</strong> — a modern admission policy combining frequency and recency with aging; Caffeine's default.</li>
+<li><strong>Invalidate on write</strong> — delete the cached key after writing the source of truth; order-tolerant and idempotent.</li>
+<li><strong>Write-through</strong> — write cache and source synchronously before acknowledging.</li>
+<li><strong>Write-behind (write-back)</strong> — acknowledge from the cache, flush to the source asynchronously; can lose acknowledged writes.</li>
+<li><strong>Jitter</strong> — randomizing TTLs (or retries) so many entries don't expire simultaneously.</li>
+<li><strong>Cache stampede (thundering herd)</strong> — many concurrent misses on one key all loading from the source at once.</li>
+<li><strong>Single-flight</strong> — deduplicating concurrent loads of the same key so only one reaches the source.</li>
+<li><strong>Probabilistic early refresh</strong> — refreshing a hot key shortly before expiry, in the background, so it never expires under load.</li>
+<li><strong>Stale-fill race</strong> — a slow reader writing a pre-update value into the cache after a correct invalidation.</li>
+<li><strong>Dual write</strong> — updating two stores with no shared transaction; the root of the stale-fill race (see the outbox lab).</li>
+<li><strong>Lease</strong> — a miss-token issued to one reader so late fills carrying an old token can be rejected (Facebook's memcache fix).</li>
+<li><strong>Hot key</strong> — a single key taking a large share of traffic; saturates one node in a distributed cache.</li>
+<li><strong>Near cache (L1/L2)</strong> — a small in-process cache in front of a shared remote cache.</li>
+<li><strong>Cache penetration</strong> — repeated misses for keys that do not exist, giving the source no protection.</li>
+<li><strong>Negative caching</strong> — caching &quot;not found&quot; with a short TTL to absorb penetration.</li>
+<li><strong>Bloom filter</strong> — a compact probabilistic structure answering &quot;definitely absent / possibly present.&quot;</li>
+<li><strong>Cold start</strong> — the post-restart period when an empty cache passes full load to the source of truth.</li>
+<li><strong>Read-your-own-writes</strong> — a reader seeing their own update immediately; not automatic with a cache.</li>
+<li><strong>Monotonic reads</strong> — never seeing time run backwards across successive reads; not automatic with a cache.</li>
+<li><strong>Consistent hashing</strong> — distributing keys so adding/removing a node re-maps only a small fraction of them.</li>
+<li><strong>Memoization</strong> — caching a pure function's result; no staleness problem, because the truth cannot move.</li>
+</ul>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--the-eight-rung-ladder">Exercises — the eight-rung ladder</h1>
+<p>Attempt each rung before opening <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Rungs 3–6
+are runnable against <code>CachingLab.java</code> and <code>BrokenCache.java</code> in this
+folder — predict first, then run; being wrong before you run is where the
+learning is.</p>
+<hr />
+<h2 id="exercises-rung-1--explain-your-own-words-no-notation">Rung 1 — Explain (your own words, no notation)</h2>
+<p><strong>1.1</strong> Explain to a non-engineer why a cache makes a website fast, and why
+the same trick is what makes a website occasionally show you something that
+is no longer true. Two short paragraphs.</p>
+<p><strong>1.2</strong> What is the one test that tells you whether the thing you built is a
+cache or a database? Why does that test matter operationally?</p>
+<p><strong>1.3</strong> Why does caching work <em>at all</em>? Answer without using the word
+&quot;cache&quot; — the answer is a fact about how people use software, not about
+software.</p>
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Open <code>visualization.html</code>. Send enough reads to fill the cache, then
+send one more. Which entry was evicted, and which rule chose it? Switch the
+policy to LFU and repeat: does the same entry go?</p>
+<p><strong>2.2</strong> In <code>CachingLab.java</code>, find the single line that makes <code>LruCache</code>
+behave differently from <code>FifoCache</code>. Why is that one line worth ~4.5 points
+of hit ratio?</p>
+<p><strong>2.3</strong> In the stampede scenario, find the line that makes 199 of 200
+threads <em>not</em> call the database. What does the loser of that race do
+instead?</p>
+<p><strong>2.4</strong> Look at the four write strategies in stage 10.4. Which one can lose
+data that was already acknowledged to the user, and which line of its
+description tells you that?</p>
+<h2 id="exercises-rung-3--predict-then-run">Rung 3 — Predict, then run</h2>
+<p><strong>3.1</strong> A cache holds 1,000 of 10,000 keys — 10% of the keyspace. Predict
+the hit ratio if access were perfectly uniform (every key equally likely).
+Then predict it for realistic skewed access. Run <code>java CachingLab.java hit-rate</code> and compare with the measured 67.3%. Explain the gap in one
+sentence.</p>
+<p><strong>3.2</strong> A workload's popular keys change every few hours (a news site, a
+menu that rotates). Predict the ranking of FIFO / LRU / LFU / Random. Run
+<code>java CachingLab.java eviction</code> and read column C. Were you right about
+LFU?</p>
+<p><strong>3.3</strong> 200 requests arrive for one just-expired key. Predict the number of
+database calls with no protection, and with single-flight. Run
+<code>java CachingLab.java stampede</code>.</p>
+<p><strong>3.4</strong> A writer updates a price and correctly deletes the cache key.
+Predict: can the cache still end up holding the old price? Run
+<code>java CachingLab.java stale-race</code> and explain the interleaving that caused
+it.</p>
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> In <code>runHitRate</code>, change the skew parameter of <code>SkewedKeys</code> from
+<code>1.0</code> to <code>0.5</code> (flatter — popularity spread more evenly) and re-run. What
+happens to the hit ratios, and what does that tell you about which
+<em>workloads</em> deserve a cache at all?</p>
+<p><strong>4.2</strong> Change the eviction scenario's cache size from 1,000 to 100 and
+re-run. Which policy's advantage grows, and why does cache size interact
+with policy choice?</p>
+<p><strong>4.3</strong> In <code>runStampede</code>, remove the <code>inFlight.remove(1)</code> in the <code>finally</code>
+block. What breaks — immediately, or only on the <em>second</em> expiry of that
+key? Which failure mode from stage 11 have you just created?</p>
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> Add a <code>TtlCache</code> to <code>CachingLab.java</code>: entries carry an expiry
+timestamp; <code>get</code> returns <code>null</code> for an expired entry (and removes it);
+capacity and LRU eviction still apply. Then add tests that must pass:
+<code>ttl_entry_expires_after_deadline</code>, <code>ttl_expired_entry_is_not_a_hit</code>, and
+<code>ttl_does_not_break_capacity_bound</code>.</p>
+<p><strong>5.2</strong> Extend it with <strong>jitter</strong>: given a base TTL of 60 s, each entry gets
+<code>60 s ± 10%</code>. Write a test proving that 1,000 entries created in the same
+millisecond do not all expire in the same second.</p>
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1</strong> <code>BrokenCache.java</code> in this folder contains an LRU implementation
+with <strong>one</strong> planted bug. Run <code>java BrokenCache.java</code> to see the failing
+check. Then answer, before fixing: which invariant from stage 12 does it
+violate, what would the production symptom be (be specific — what would a
+customer or an on-call engineer actually see?), and would a hit-ratio
+dashboard catch it?</p>
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> Your invalidation is delivered as an event (&quot;dish 42 changed&quot;) from
+the <a href="../48-transactional-outbox/notes.html#readme">outbox</a> relay. Events are <strong>at-least-once</strong>
+and can be <strong>delayed</strong>. Design the cache invalidation so that: a duplicate
+invalidation is harmless, an invalidation delayed by 10 seconds does not
+resurrect stale data, and a <em>dropped</em> invalidation cannot leave the cache
+wrong forever. Name every mechanism you use and what specifically each one
+protects against.</p>
+<p><strong>7.2</strong> TiffinBox has 3 app servers, each with an in-process cache, plus a
+shared Redis. A price changes. Walk through exactly what must happen for
+all three servers to stop serving the old price, and state the worst-case
+staleness of your design. Then answer: what breaks if Redis is down for 30
+seconds — and what should the app do during those 30 seconds?</p>
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1</strong> Design the caching tier for TiffinBox at 3M orders/day, 40 cities,
+lunchtime peak 20× baseline. The data: menus (change ~daily, read
+constantly), dish availability (changes every few minutes, must be nearly
+correct or customers order sold-out food), customer profiles (rarely
+change), rider GPS positions (2,000 writes/sec, read by the tracking
+screen), and prices (change rarely, must never be shown wrong at checkout).</p>
+<p>For <strong>each</strong> of those five, decide: cache or not; where (in-process, Redis,
+both); TTL; invalidation strategy; eviction policy; and what happens on a
+miss storm. Then answer the three questions that make it a design and not a
+list: (a) which of the five would you refuse to cache, and why; (b) what is
+your worst-case staleness for <em>price at checkout</em>, and how do you defend
+that number to Meera; (c) the cache tier goes down entirely at 12:30 — what
+happens, and what did you build in advance so the answer isn't &quot;everything
+falls over&quot;?</p>
+<p><strong>8.2</strong> (Reverse) A team reports: &quot;we added Redis and p99 latency got
+<em>worse</em>.&quot; Give at least four distinct mechanisms that could produce that
+result, and for each, the single measurement that would confirm or rule it
+out.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<p>Every number here was produced by running the code in this folder. Where a
+solution required a variant of the lab (a changed parameter), the command
+that produces it is given so you can reproduce the figure yourself.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> A website is fast when it stops re-answering questions it has
+already answered. The menu page asks the database for the same twelve
+dishes fifty thousand times a lunchtime; if the app keeps the answer in
+memory after the first ask, the other 49,999 visitors get it in microseconds
+instead of milliseconds, and the database is left free to do work that
+actually differs.</p>
+<p>The trouble is that the kept answer is a <em>copy</em>, and copies do not find out
+when the original changes. When the kitchen marks a dish sold out, the
+database knows immediately and the copy does not — so for as long as that
+copy is still being handed out, the site is confidently showing something
+untrue. Everything difficult about caching comes from that one gap, and the
+engineering job is to make the gap short and known rather than long and
+accidental.</p>
+<p><strong>1.2</strong> The test: <strong>can you delete the whole thing and lose nothing but
+speed?</strong> If yes, it is a cache. If deleting it loses data, it is a database
+you are running without a database's care (no backups, no durability, an
+eviction policy silently discarding rows). It matters operationally because
+it decides what you are allowed to do during an incident: you may flush a
+cache to resolve corruption, fail it over casually, and let it lose
+everything on restart. Do that to something that was secretly a database and
+you have caused a data-loss incident. This is also exactly what makes
+write-behind (stage 10.4d) dangerous: it turns a cache into the only copy
+for a window.</p>
+<p><strong>1.3</strong> Because people do not use software evenly. Out of a hundred thousand
+dishes, the same twelve get looked at all lunchtime; out of a million
+customers, the ones ordering right now are a tiny fraction. Demand is
+concentrated, so a small store of the currently-popular answers covers most
+of the asking. If every item were equally likely to be requested, keeping
+10% of them would satisfy only 10% of requests and the whole idea would
+collapse — as exercise 3.1 measures.</p>
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> With LRU, the evicted entry is the one you touched longest ago — not
+the oldest-inserted, and not the least useful. Under LFU the answer usually
+differs: an entry you inserted long ago but have hit many times survives,
+while a recently-inserted, rarely-hit entry goes. That divergence is the
+whole content of the policy debate.</p>
+<p><strong>2.2</strong> <code>LruCache.get</code>:</p>
+<div class="code"><pre><code class="language-java">unlink(n); linkAtHead(n);   // every hit promotes to most-recent
+</code></pre></div>
+<p><code>FifoCache.get</code> deliberately does not do this. It is worth ~4.5 points
+(measured: LRU 67.3% vs FIFO 62.8% on workload A) because it changes what
+the cache is <em>measuring</em>. FIFO measures age since insertion, which is
+uncorrelated with future usefulness; LRU measures time since last use, which
+is a genuine predictor. One line converts a meaningless signal into a
+meaningful one.</p>
+<p><strong>2.3</strong> In <code>runStampede</code>:</p>
+<div class="code"><pre><code class="language-java">CompletableFuture&lt;Integer&gt; existing = inFlight.putIfAbsent(1, mine);
+if (existing != null) return existing.join();
+</code></pre></div>
+<p><code>putIfAbsent</code> returns non-null only for threads that lost the race. Those
+199 losers do not call the database; they block on the winner's future and
+receive the winner's result. One load, 200 satisfied callers.</p>
+<p><strong>2.4</strong> Write-behind. The giveaway is &quot;acknowledge immediately, flush to the
+database asynchronously&quot; — between the acknowledgement and the flush, the
+cache holds the only copy of a write the user was already told succeeded, so
+a crash in that window loses acknowledged data.</p>
+<h2 id="solutions-rung-3--predict-then-run">Rung 3 — Predict, then run</h2>
+<p><strong>3.1</strong> Under uniform access, holding 10% of keys gives a <strong>~10%</strong> hit
+ratio — the cache is nearly worthless, because there is no such thing as a
+popular key. Measured under realistic skew: <strong>67.3%</strong>. The gap between 10%
+and 67.3% is the working set doing its job, and it is the entire business
+case for caching: <em>caching converts skew into speed, and where there is no
+skew there is nothing to convert.</em></p>
+<p><strong>3.2</strong> The predictable ranking is LRU ahead of FIFO and Random; the
+interesting question is LFU. Measured (<code>java CachingLab.java eviction</code>,
+column C — the hot set moves halfway through):</p>
+<div class="code"><pre><code>FIFO 66.7%   LRU 74.9%   LFU 48.9%   Random 66.6%
+</code></pre></div>
+<p>LFU is last, and by a wide margin — 26 points behind LRU, and worse than
+Random. It wins columns A (75.2%) and B (75.1%) and loses C decisively,
+because accumulated counts from the old hot set block the new one from ever
+being admitted: <strong>cache squatting</strong>. If you predicted &quot;LFU wins because it
+won the other two columns,&quot; this is the instructive failure — a policy is a
+bet about how the future resembles the past, and a shifting workload
+breaks that bet.</p>
+<p><strong>3.3</strong> Measured: <strong>200 database calls without protection, 1 with
+single-flight.</strong> If you predicted a number between 1 and 200 you were
+reasoning about timing; the honest answer is that <em>without</em> coordination it
+is exactly as many as there are concurrent missers, because nothing tells
+any of them that another is already loading.</p>
+<p><strong>3.4</strong> Yes — the cache can hold the old price despite a correct delete.
+Measured: cache says ₹100, truth says ₹120. The interleaving:</p>
+<ol>
+<li>Reader misses, fetches ₹100 from the database.</li>
+<li>Reader stalls (GC pause, slow network — anything at all).</li>
+<li>Writer sets ₹120, commits, deletes the cache key. <em>Correct invalidation.</em></li>
+<li>Reader wakes and writes its ₹100 into the now-empty cache.</li>
+</ol>
+<p>The delete happened <em>before</em> the fill it needed to prevent, so it
+accomplished nothing. No line of code is wrong; the ordering is. This is the
+<strong>dual write</strong> from your <a href="../48-transactional-outbox/notes.html#readme">outbox</a> lab: two stores,
+no shared transaction, therefore an interleaving where they disagree.</p>
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Change the skew from <code>1.0</code> to <code>0.5</code> (flatter popularity). Measured:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>cache size</th>
+  <th>skew 1.0</th>
+  <th>skew 0.5</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>100</td>
+  <td>38.8%</td>
+  <td>2.4%</td>
+</tr>
+<tr>
+  <td>1000</td>
+  <td>67.3%</td>
+  <td><strong>17.8%</strong></td>
+</tr>
+<tr>
+  <td>5000</td>
+  <td>88.7%</td>
+  <td>61.0%</td>
+</tr>
+</tbody>
+</table></div>
+<p>At 1,000 entries the hit ratio collapses from 67.3% to 17.8%, and average
+latency goes from 1.670 ms to 4.117 ms — against 5 ms with no cache at all.
+The cache has become nearly pointless while still costing memory, a network
+hop, invalidation complexity, and a new failure mode.</p>
+<p>The lesson is a selection rule: <strong>the workload decides whether a cache is
+worth having, and skew is the property to measure.</strong> Before adding a cache,
+look at your access distribution — if the top 1% of keys is not taking a
+large share of traffic, you are buying complexity for a rounding error.
+(Uniform-access workloads — random UUID lookups, one-shot report queries —
+are the classic case where caching disappoints.)</p>
+<p><strong>4.2</strong> Change the eviction scenario's <code>size</code> from 1000 to 100. Measured:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>policy</th>
+  <th>A (size 1000)</th>
+  <th>A (size 100)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>FIFO</td>
+  <td>62.8%</td>
+  <td>34.1%</td>
+</tr>
+<tr>
+  <td>LRU</td>
+  <td>67.3%</td>
+  <td>38.8%</td>
+</tr>
+<tr>
+  <td>LFU</td>
+  <td>75.2%</td>
+  <td>52.6%</td>
+</tr>
+</tbody>
+</table></div>
+<p>LFU's advantage over LRU <strong>grows from 7.9 to 13.8 points</strong>. The general
+rule: policy choice matters most when the cache is <em>small relative to the
+working set</em>, because that is when eviction decisions are frequent and
+consequential. When the cache comfortably holds the working set, almost
+nothing gets evicted and every policy converges to the same (high) number —
+which is why &quot;which policy?&quot; is often the wrong first question. The right
+first question is &quot;is the cache big enough to hold the working set?&quot;, and
+only if the answer is no does policy become decisive.</p>
+<p>(Note column C at size 100: everything collapses to ~8%, because the moving
+hot set is 1,000 keys and the cache holds 100 — no policy can cache a
+working set that does not fit. Another way to see that sizing dominates.)</p>
+<p><strong>4.3</strong> Removing <code>inFlight.remove(1)</code> leaves the completed future in the
+in-flight map forever. The <em>first</em> expiry still works perfectly — this is
+what makes the bug nasty. On the <strong>second</strong> expiry of that key, every
+arriving request finds the stale future via <code>putIfAbsent</code>, joins it, and
+receives <strong>the value loaded during the previous expiry cycle</strong> — instantly,
+forever, with a 100% &quot;hit rate&quot; on a value that never refreshes again. You
+have created a permanently stale entry that no TTL can rescue (the TTL
+expires the cache entry, but the loader never runs again), plus an unbounded
+map of dead futures. This is stage 11's <strong>F3 (unbounded growth)</strong> and a
+worst-case <strong>F2 (staleness)</strong> in one line — and note that it would look
+<em>excellent</em> on a hit-ratio dashboard, which is why staleness needs its own
+detection, not just performance metrics.</p>
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> A workable shape (LRU with per-entry deadlines):</p>
+<div class="code"><pre><code class="language-java">static class TtlCache {
+    record Entry(int value, long expiresAtNanos) {}
+    final int capacity; final long ttlNanos;
+    final LinkedHashMap&lt;Integer, Entry&gt; map = new LinkedHashMap&lt;&gt;(16, 0.75f, true); // access-order = LRU
+    TtlCache(int capacity, long ttlMillis) {
+        this.capacity = capacity;
+        this.ttlNanos = ttlMillis * 1_000_000L;
+    }
+    Integer get(int key) {
+        Entry e = map.get(key);
+        if (e == null) return null;
+        if (System.nanoTime() &gt;= e.expiresAtNanos()) {   // expiry is about AGE (correctness)…
+            map.remove(key);
+            return null;                                  // an expired entry is a MISS, never a stale hit
+        }
+        return e.value();
+    }
+    void put(int key, int value) {
+        map.put(key, new Entry(value, System.nanoTime() + ttlNanos));
+        if (map.size() &gt; capacity) {                      // …eviction is about SPACE, and still applies
+            Iterator&lt;Integer&gt; it = map.keySet().iterator();
+            it.next(); it.remove();                       // LinkedHashMap access-order: eldest = LRU victim
+        }
+    }
+}
+</code></pre></div>
+<p>The three tests should assert: a <code>get</code> after the deadline returns <code>null</code>
+(use a 50 ms TTL and sleep 60 ms); an expired entry does not count as a hit
+(check your hit counter, not just the return value — this is the bug people
+actually ship); and inserting <code>capacity + 10</code> fresh entries leaves
+<code>map.size() == capacity</code>. The point of the third test is that TTL and
+eviction are <em>independent</em> mechanisms — adding expiry must not quietly break
+the capacity invariant.</p>
+<p><strong>5.2</strong> Jitter: <code>expiresAt = now + ttl ± random(0, 0.1 × ttl)</code>. The test
+creates 1,000 entries in a tight loop and asserts that their expiry
+timestamps span a range of at least (say) 5% of the TTL — i.e. they do not
+all land in the same instant. Why it matters: identical TTLs set at the same
+moment (a deploy, a cache warm, a bulk import) expire together and produce a
+self-inflicted stampede on every one of those keys simultaneously. Same
+reasoning as jittered retries in the
+<a href="../06-software-architecture-patterns/notes.html#readme">architecture lab</a> — synchronized
+clients are the danger, and randomness is the cure.</p>
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>The bug:</strong> in <code>BuggyLruCache.put</code>, the eviction branch calls
+<code>unlink(victim)</code> but never <code>map.remove(victim.key)</code>. The fix is one line:</p>
+<div class="code"><pre><code class="language-java">Node victim = tail.prev;
+unlink(victim);
+map.remove(victim.key);   // ← missing
+</code></pre></div>
+<p><strong>Which invariant:</strong> the <strong>capacity invariant</strong> (<code>size ≤ capacity</code>) from
+stage 12 — the one property that makes a cache bounded rather than a memory
+leak.</p>
+<p><strong>Why the damage is worse than one leaked node</strong> (the second clue in the
+program's output): the eviction branch is guarded by
+<code>if (map.size() == capacity)</code>. Once the map grows past capacity without
+being trimmed, that equality is <strong>never true again</strong>, so eviction stops
+entirely. Measured with capacity 3 and 100 inserts: the map holds 100
+entries and the list holds 99. The cache degenerates into an unbounded map
+after a single failed eviction.</p>
+<p><strong>Production symptom:</strong> the process's heap grows steadily under normal
+traffic. Long before an <code>OutOfMemoryError</code>, GC pauses lengthen, so the
+service's p99 latency climbs and periodically spikes — engineers usually
+chase this as &quot;a GC problem&quot; or &quot;a memory leak somewhere,&quot; because the cache
+looks healthy by every cache metric. Customers see occasional slow requests,
+then a restart-and-recover cycle every few hours.</p>
+<p><strong>Would a hit-ratio dashboard catch it?</strong> <strong>No — and this is the exercise's
+real lesson.</strong> The hit ratio would look <em>fantastic and improving</em>, because
+nothing is ever evicted: every key ever requested stays cached forever. The
+metric that catches it is <strong>cache size / entry count</strong> (or heap usage), and
+the alert you want is on the <em>invariant</em> (entries ≤ configured maximum), not
+on performance. Performance metrics cannot detect a bug whose symptom is
+&quot;too much caching.&quot;</p>
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> Invalidation over an at-least-once, possibly-delayed, possibly-lost
+event stream. Four mechanisms, each protecting against one named thing:</p>
+<ul>
+<li><strong>Duplicates are harmless by construction — use delete, not update.</strong>
+&quot;Delete key <code>dish:42</code>&quot; is idempotent: applying it twice is identical to
+once. (Had you published &quot;set dish:42 = ₹120,&quot; two deliveries could land
+out of order and leave the older value resident permanently. This is stage
+10.4's <em>prefer invalidate to update</em>, and it is why the delivery guarantee
+from your outbox lab shapes the cache design.)</li>
+<li><strong>Delayed events cannot resurrect stale data — version the payload.</strong>
+Carry the row version in the event and in the cache entry; a fill or
+delete whose version is older than what the cache holds is ignored. This
+is exactly the F2 mitigation, applied to the invalidation path rather than
+the fill path.</li>
+<li><strong>A dropped event cannot be wrong forever — TTL.</strong> This is the load-
+bearing reason every entry gets a TTL even with &quot;perfect&quot; invalidation:
+it converts <em>silently wrong forever</em> into <em>wrong for at most N seconds</em>.
+Invalidation optimizes the common case; the TTL bounds the worst case.</li>
+<li><strong>Detect the drops — reconcile.</strong> A periodic job samples cached keys
+against the source of truth and reports disagreements as a metric
+(the drift/reconciliation idea from your
+<a href="../04-database-landscape/notes.html#readme">database-landscape</a> lab). Without it, dropped
+invalidations are invisible; with it, you can alert on a rising
+disagreement rate before customers do.</li>
+</ul>
+<p><strong>7.2</strong> Three app servers with in-process caches plus a shared Redis. For a
+price change to take effect everywhere:</p>
+<ol>
+<li>The writer commits the price to the database (source of truth).</li>
+<li>It deletes the key in Redis — one delete, one shared copy handled.</li>
+<li>Each app server's <strong>local</strong> copy must also go. Local caches cannot be
+deleted by the writer, so you need either (a) a pub/sub invalidation
+message all three servers subscribe to, or (b) — much more common and
+more honest — a <strong>very short TTL on the local tier</strong> (a few seconds),
+accepting that L1 is deliberately allowed to be slightly stale.</li>
+</ol>
+<p><strong>Worst-case staleness</strong> = local TTL + pub/sub delivery delay (if used), or
+just the local TTL if you rely on expiry. With a 5-second L1 TTL, a customer
+can see the old price for up to 5 seconds after the change — say that number
+out loud and get it agreed, because it is a product decision.</p>
+<p><strong>If Redis is down for 30 seconds:</strong> with cache-aside, every miss falls
+through to the database, so the system stays <em>correct</em> and gets <em>slow</em> — and
+the database receives roughly the full uncached load (stage 11's F6). What
+the app should do: (a) keep serving from L1 where it can, (b) apply a
+timeout to Redis calls so a slow Redis does not become slower than the
+database itself (a hung cache call is worse than no cache — you pay it
+<em>before</em> the database call), (c) use a circuit breaker so calls to a dead
+Redis fail instantly instead of timing out per request, and (d) rely on
+single-flight so the database sees one load per key rather than one per
+request. That combination is the resilience family from your
+<a href="../06-software-architecture-patterns/notes.html#readme">architecture lab</a> applied to the cache
+tier — and it is why &quot;cache down&quot; should be a degraded mode, not an outage.</p>
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1</strong> A defensible design. Judge yours on the <em>reasoning</em>, not on matching
+these choices.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Data</th>
+  <th>Cache?</th>
+  <th>Where</th>
+  <th>TTL</th>
+  <th>Invalidation</th>
+  <th>Notes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Menus</td>
+  <td>Yes — the ideal case</td>
+  <td>L1 (in-process) + L2 Redis</td>
+  <td>L1 5 s, L2 5 min</td>
+  <td>On kitchen publish</td>
+  <td>Tiny, hot, changes ~daily: this is what caches are for</td>
+</tr>
+<tr>
+  <td>Dish availability</td>
+  <td>Yes, carefully</td>
+  <td>L2 Redis only</td>
+  <td>10–30 s</td>
+  <td>Event on every stock change</td>
+  <td>Short TTL because wrongness has a direct customer cost (ordering sold-out food)</td>
+</tr>
+<tr>
+  <td>Customer profiles</td>
+  <td>Yes</td>
+  <td>L2 Redis</td>
+  <td>15 min</td>
+  <td>On profile write</td>
+  <td>Big keyspace, moderate skew; per-customer keys, watch memory</td>
+</tr>
+<tr>
+  <td>Rider GPS</td>
+  <td><strong>No</strong></td>
+  <td>—</td>
+  <td>—</td>
+  <td>—</td>
+  <td>See (a) below</td>
+</tr>
+<tr>
+  <td>Prices at checkout</td>
+  <td><strong>Not on the checkout path</strong></td>
+  <td>Cache for <em>display</em>, read from source of truth at charge time</td>
+  <td>Display 30 s</td>
+  <td>On price change</td>
+  <td>See (b) below</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>(a) What I would refuse to cache: rider GPS positions.</strong> Every write
+invalidates the value, so the hit ratio approaches zero while you pay full
+cost — a cache is only worth having when reads-per-write is high, and here
+it is near 1. Worse, the whole value of that data is <em>freshness</em>: a cached
+position is a wrong position. Write-heavy, low-reuse, freshness-critical
+data is the canonical do-not-cache profile. (Use a store built for the write
+pattern instead — the time-series direction from your
+<a href="../04-database-landscape/notes.html#readme">database-landscape</a> lab.)</p>
+<p><strong>(b) Worst-case staleness for price at checkout: zero, by design.</strong> The
+defense to Meera is not a number, it is a <em>split</em>: cached prices are fine
+for browsing (a 30-second-old price on the menu page is harmless and saves
+enormous load), but the price used to <strong>charge a card must be read from the
+source of truth inside the same transaction that creates the order.</strong> A
+cache is a replica, a replica can be stale, and a stale price at checkout is
+a billing dispute — an incident class with legal and support cost, not just
+an unhappy refresh. This is the general rule the exercise is testing:
+<strong>cache for display, never for the authoritative check</strong> — the same rule
+that made the flash-sale design in the architecture lab wrong.</p>
+<p><strong>(c) The cache tier dies at 12:30.</strong> What happens: every read falls through
+to the database, which is receiving roughly 3× its accustomed load (from the
+67.3% hit ratio — the database has been sized against the <em>cached</em> load all
+along). What must exist in advance: single-flight so simultaneous misses
+collapse to one load per key; a Redis timeout short enough that a <em>slow</em>
+Redis doesn't add latency on top of the database call; a circuit breaker so
+a dead cache is skipped instantly; load shedding by priority (browsing sheds
+before checkout); an L1 in-process cache that keeps serving the hottest keys
+with no Redis at all; and honest capacity planning — know what fraction of
+uncached load the database can survive, because &quot;the cache is never down&quot; is
+not a plan. Warm caches before returning traffic; never flush at peak.</p>
+<p><strong>8.2</strong> &quot;We added Redis and p99 got worse.&quot; Four mechanisms, each with its
+confirming measurement:</p>
+<ol>
+<li><strong>Low hit ratio</strong> — nearly every request now pays cache latency <em>plus</em>
+database latency. The stage-8 equation with a 5% hit ratio and a 1 ms
+cache is strictly worse than no cache at all. <em>Measure:</em> hit ratio. If it
+is low, the workload has no skew (exercise 4.1) or the TTL is too short.</li>
+<li><strong>Serialization cost</strong> — the cached objects are large, and
+serialize/deserialize costs more than the query did. Common with fat
+object graphs; the cache &quot;hit&quot; is slower than the database &quot;miss.&quot;
+<em>Measure:</em> time the serialize/deserialize step separately from the
+network round trip, and compare payload size against query cost.</li>
+<li><strong>Cache latency in the tail</strong> — Redis p99 is far worse than its p50
+(a noisy neighbor, a slow <code>KEYS</code>-style command blocking the single
+thread, network jitter, or an undersized connection pool causing
+queueing). Because the cache is on <em>every</em> request path, its tail becomes
+your tail. <em>Measure:</em> Redis-side p99 latency and connection-pool wait
+time, not just averages.</li>
+<li><strong>Stampedes / hot key</strong> — periodic expiry of hot keys produces bursts
+where many requests queue behind one load (or one Redis node saturates).
+The p50 looks fine, the p99 is made of those bursts. <em>Measure:</em> database
+load correlated with TTL boundaries; per-node cache CPU for skew.</li>
+</ol>
+<p>A fifth, worth naming because it is common: <strong>the cache became a network
+hop for data that was already in memory</strong> — replacing a local in-process
+cache with a remote one always adds latency, and only pays off if the shared
+hit ratio is much higher. <em>Measure:</em> compare L1-only against L1+L2.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../10-optimistic-vs-pessimistic-locking/notes.html"><small>← Lab 10</small>optimistic-vs-pessimistic-locking</a><a href="../12-http-caching/notes.html" style="text-align:right"><small>Lab 12 →</small>http-caching</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why--why-does-this-exist">1. WHY — why does this exist?</a><a href="#readme-2-the-problem--meeras-menu-page">2. THE PROBLEM — Meera&#x27;s menu page</a><a href="#readme-3-the-naive-solution--remember-the-answer">3. THE NAIVE SOLUTION — &quot;remember the answer&quot;</a><a href="#readme-4-the-failure--watching-all-three-happen">4. THE FAILURE — watching all three happen</a><a href="#readme-5-the-real-requirement">5. THE REAL REQUIREMENT</a><a href="#readme-6-the-key-idea">6. THE KEY IDEA</a><a href="#readme-7-terminology--the-professional-words-now-that-you-have-felt-them">7. TERMINOLOGY — the professional words, now that you have felt them</a><a href="#readme-8-mental-models--carry-two">8. MENTAL MODELS — carry two</a><a href="#readme-9-visualization--watch-the-mechanism-move">9. VISUALIZATION — watch the mechanism move</a><a href="#readme-10-the-actual-mechanism">10. THE ACTUAL MECHANISM</a><a href="#readme-11-failure-scenarios">11. FAILURE SCENARIOS</a><a href="#readme-12-correctness--what-a-cache-does-and-does-not-guarantee">12. CORRECTNESS — what a cache does and does not guarantee</a><a href="#readme-13-code--the-load-bearing-lines">13. CODE — the load-bearing lines</a><a href="#readme-14-experiments--predict-first-then-run">14. EXPERIMENTS — predict first, then run</a><a href="#readme-15-production">15. PRODUCTION</a><a href="#readme-16-exercises">16. EXERCISES</a><a href="#readme-17-knowledge-map--next-steps">17. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-18-glossary">18. GLOSSARY</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

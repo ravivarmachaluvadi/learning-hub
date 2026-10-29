@@ -1,0 +1,730 @@
+<!doctype html>
+<html lang="en" data-hub-lab="19-structured-concurrency">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>19. structured-concurrency</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 19 of 71 · Stage 3</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 19 · The JVM Underneath: One Machine, Many Threads</p><article id="readme"><h1 id="readme-structured-concurrency--a-learning-lab">Structured Concurrency — a learning lab</h1>
+<p><em>From &quot;never heard of it&quot; to reading JEP 505 comfortably. Everything runs on
+this machine (JDK 25, where this API is a <strong>preview feature</strong>) via
+<code>./run.sh</code>. All quoted numbers and error messages are real output from these
+demos. Builds directly on the <a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a>
+lab — virtual threads made tasks cheap; this is the discipline for managing
+the thousands you now create.</em></p>
+<hr />
+<h2 id="readme-1-why-does-this-exist">1. Why does this exist?</h2>
+<p>When a piece of code starts several concurrent subtasks, today's tools let
+those subtasks simply... float away. The code that started them can return,
+fail, or be cancelled, and the subtasks keep running — unowned, unsupervised,
+invisible. Structured concurrency exists to give concurrent code the same
+guarantee sequential code has always had: <strong>when a function returns, all the
+work it started is finished.</strong> Nothing leaks, no error is lost, cancelling
+the parent cancels the children.</p>
+<h2 id="readme-2-the-problem-as-a-story">2. The problem, as a story</h2>
+<p>Your manager asks you and a colleague to each prepare half of a customer
+presentation by Friday. On Wednesday the customer cancels the deal. Your
+manager hears about it, shrugs, and moves on — but <strong>nobody tells your
+colleague</strong>, who works late nights on a presentation for a meeting that will
+never happen. In the other direction: on Friday your half is missing — you'd
+hit a blocker on Tuesday — but the manager only finds out at the deadline,
+because <em>nothing connected your failure to the person waiting on it</em>.</p>
+<p>The pain in both directions is the same missing thing: no standing
+relationship between the person who started the work and the people doing it.
+Handing out work is easy; <strong>owning</strong> it — being told promptly when a part
+fails, calling the others home when the goal disappears, never going home
+until everyone is accounted for — is what's missing.</p>
+<h2 id="readme-3-the-naive-solution">3. The naive solution</h2>
+<p>Start the subtasks with the tools Java has had for years, then collect
+results:</p>
+<div class="code"><pre><code class="language-java">Future&lt;String&gt; profile = executor.submit(this::fetchProfile);   // 500 ms
+Future&lt;String&gt; orders  = executor.submit(this::fetchOrders);    // fails at 50 ms
+return combine(profile.get(), orders.get());
+</code></pre></div>
+<p>Two tasks, run concurrently, results collected. Looks fine.</p>
+<h2 id="readme-4-why-that-fails--the-orphan">4. Why that fails — the orphan</h2>
+<p>Run <code>./run.sh orphan</code> and watch the timestamps (real output):</p>
+<div class="code"><pre><code>[   0 ms] handleRequest(): calling fetchProfileAndOrders()...
+[  70 ms] handleRequest(): FAILED with &#x27;orders service is down&#x27; — returning 500 to the client.
+[  70 ms] handleRequest(): done. The request is over. Nothing should be running for it.
+[ 517 ms]    &gt;&gt;&gt; ORPHAN: profile fetch finished — but nobody is listening anymore!
+</code></pre></div>
+<p><code>orders.get()</code> threw at ~70 ms, so <code>profile.get()</code> — the only line that
+waits for the profile task — <strong>was never reached</strong>. The request is dead, the
+client got a 500, and the profile fetch is still out there: an <strong>orphan</strong>.
+Multiply by a busy server and orphans are burning CPU, holding DB
+connections, and writing side effects for requests that already failed. The
+naive code has three structural holes:</p>
+<ul>
+<li><strong>A failure doesn't stop the siblings</strong> (wasted work — or worse, if you
+awaited <code>profile.get()</code> <em>first</em>, you'd wait 500 ms before even noticing
+the 50 ms failure).</li>
+<li><strong>Cancelling the parent doesn't cancel the children</strong> — interrupting the
+request thread does nothing to tasks it spawned.</li>
+<li><strong>Nothing in the code's shape says who owns whom.</strong> A thread dump shows a
+flat pile of tasks; which request started which task is unrecoverable.</li>
+</ul>
+<p>You can hand-fix each hole with try/finally, <code>cancel(true)</code> calls, and
+bookkeeping — and every codebase fixes them differently, partially, and
+wrongly. (The essay that named this problem — Nathaniel J. Smith's <em>&quot;Notes
+on structured concurrency, or: Go statement considered harmful&quot;</em> — argues
+these floating tasks are to concurrency what <code>goto</code> was to control flow.)</p>
+<h2 id="readme-5-the-key-idea">5. The key idea</h2>
+<p><strong>Confine every concurrent subtask's lifetime inside a code block, the way a
+local variable's lifetime is confined.</strong> Concurrency becomes a tree: a block
+opens, forks children, joins them, and <em>cannot be left</em> — normally or by
+exception — until every child is done or cancelled. Errors flow up the tree;
+cancellation flows down it; the code's shape <em>is</em> the ownership chart.</p>
+<h2 id="readme-6-the-vocabulary">6. The vocabulary</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain-English meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Scope</strong> (<code>StructuredTaskScope</code>)</td>
+  <td>The code block that owns a family of subtasks. Opened in try-with-resources; children cannot outlive it.</td>
+</tr>
+<tr>
+  <td><strong>Owner</strong></td>
+  <td>The one thread that opened the scope. Only it may fork or join.</td>
+</tr>
+<tr>
+  <td><strong>Fork</strong></td>
+  <td>Start a child subtask (in its own virtual thread) belonging to this scope.</td>
+</tr>
+<tr>
+  <td><strong>Subtask</strong></td>
+  <td>A forked child: your <code>Callable</code> plus its state (<code>SUCCESS</code> / <code>FAILED</code> / <code>UNAVAILABLE</code>) and, after join, its result.</td>
+</tr>
+<tr>
+  <td><strong>Join</strong></td>
+  <td>The owner waits at this line for the outcome — as defined by the joiner. Mandatory: skipping it is an error.</td>
+</tr>
+<tr>
+  <td><strong>Joiner</strong></td>
+  <td>The scope's completion <em>policy</em>: what to wait for, what triggers cancellation, what <code>join()</code> returns.</td>
+</tr>
+<tr>
+  <td><strong>Cancellation</strong></td>
+  <td>The scope telling still-running subtasks &quot;stop — you're no longer needed&quot; (by interrupting their threads).</td>
+</tr>
+<tr>
+  <td><strong>Fail-fast</strong></td>
+  <td>The default policy: the first child failure immediately cancels all siblings.</td>
+</tr>
+<tr>
+  <td><strong>Close guarantee</strong></td>
+  <td>Leaving the scope's block (even via an exception) waits until no subtask is running.</td>
+</tr>
+<tr>
+  <td><strong>Structure violation</strong></td>
+  <td>Any use of the API that breaks the tree shape — caught with an exception, never allowed silently.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-7-the-mental-model">7. The mental model</h2>
+<blockquote>
+<p><strong>A scope is a stack frame that can hold several concurrent children.</strong>
+Method calls form a tree that grows <em>down</em> (A calls B calls C); scopes let
+the tree also grow <em>sideways</em> (B forks B1, B2, B3 in parallel) — but it is
+still one tree with one rule: <strong>a parent never returns while any child is
+alive.</strong> Results and errors climb up the tree; cancellation cascades down
+it; the whole tree shares one deadline if you give it one.</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+    R[&quot;handleRequest()&quot;] --&gt; S[&quot;scope: page-load&quot;]
+    S --&gt; A[&quot;fork: fetchProfile()&quot;]
+    S --&gt; B[&quot;fork: fetchOrders()&quot;]
+    B --&gt; S2[&quot;nested scope inside fetchOrders()&quot;]
+    S2 --&gt; C[&quot;fork: ordersFromCache()&quot;]
+    S2 --&gt; D[&quot;fork: ordersFromDb()&quot;]
+</pre>
+<p>Cancel <code>handleRequest()</code> and everything below dies with it — including the
+grandchildren, because cancelling <code>fetchOrders()</code> exits its nested scope,
+which cancels <em>its</em> children. That transitivity is what the naive version
+can never give you.</p>
+<h2 id="readme-8-see-it-move">8. See it move</h2>
+<ul>
+<li><strong>Interactive simulator</strong> — <code>visualization.html</code> in this directory
+(published copy: <a href="https://claude.ai/code/artifact/ca4292ad-2632-4d25-b61d-2db64e044615" target="_blank" rel="noopener">https://claude.ai/code/artifact/ca4292ad-2632-4d25-b61d-2db64e044615</a>). Fork a family, click children
+to make them fail, switch the joiner policy, set a deadline, and toggle
+the &quot;old world&quot; mode to watch orphans leak. Start with its story buttons.</li>
+<li><strong>Demo 2</strong> (<code>./run.sh failfast</code>) is the mechanism in 15 lines — watch a
+5-second subtask die 59 ms in.</li>
+</ul>
+<h2 id="readme-9-the-actual-mechanism">9. The actual mechanism</h2>
+<p>The canonical shape (Demo 1, <code>./run.sh fanout</code> — runs in 132 ms, the max of
+its children, not the sum):</p>
+<div class="code"><pre><code class="language-java">try (var scope = StructuredTaskScope.&lt;String&gt;open()) {        // 1. open
+    Subtask&lt;String&gt; profile = scope.fork(() -&gt; fetchProfile()); // 2. fork
+    Subtask&lt;String&gt; orders  = scope.fork(() -&gt; fetchOrders());  //    fork
+    scope.join();                                             // 3. join — mandatory
+    return combine(profile.get(), orders.get());              // 4. results, only now
+}                                                             // 5. close guarantee
+</code></pre></div>
+<p>Step by step:</p>
+<ol>
+<li><strong><code>open()</code></strong> creates the scope; the current thread becomes its owner.
+Default policy: wait for all children to succeed, fail fast otherwise.</li>
+<li><strong><code>fork(callable)</code></strong> starts each child in a fresh <strong>virtual thread</strong>
+(this is why forking per-subtask is affordable — see the
+<a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a> lab) and returns the
+<code>Subtask</code> handle. It is <em>not</em> a <code>Future</code>: it has no blocking <code>get</code>-alone
+semantics, no <code>cancel()</code> — the scope manages all of that.</li>
+<li><strong><code>join()</code></strong> parks the owner until the policy is satisfied: all children
+succeeded, or one failed → all others cancelled → <code>FailedException</code>
+with the original failure as <code>getCause()</code>.</li>
+<li><strong><code>subtask.get()</code></strong> is legal only after a successful join.</li>
+<li><strong>Close.</strong> Leaving the block — <em>any</em> way — first waits until every child
+is finished. An exception thrown between fork and join still cancels and
+awaits every child before propagating.</li>
+</ol>
+<p><strong>The rules are enforced, not advisory.</strong> Each misuse gets an exception (all
+verified on this JDK — these are the actual messages):</p>
+<div class="table"><table><thead>
+<tr>
+  <th>You did</th>
+  <th>You get</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>subtask.get()</code> before <code>join()</code></td>
+  <td><code>IllegalStateException: join not called</code></td>
+</tr>
+<tr>
+  <td><code>fork()</code> after <code>join()</code></td>
+  <td><code>IllegalStateException: Already joined or scope is closed</code></td>
+</tr>
+<tr>
+  <td>left the block without <code>join()</code></td>
+  <td><code>IllegalStateException: Owner did not join after forking</code></td>
+</tr>
+<tr>
+  <td><code>fork()</code> from a non-owner thread</td>
+  <td><code>WrongThreadException</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Choosing a policy — the five built-in joiners:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Joiner</th>
+  <th>Waits until</th>
+  <th>On child failure</th>
+  <th><code>join()</code> returns</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>awaitAllSuccessfulOrThrow()</code> <em>(the <code>open()</code> default)</em></td>
+  <td>all succeed</td>
+  <td>cancel siblings, throw</td>
+  <td>nothing — use <code>subtask.get()</code></td>
+</tr>
+<tr>
+  <td><code>allSuccessfulOrThrow()</code></td>
+  <td>all succeed</td>
+  <td>cancel siblings, throw</td>
+  <td><code>Stream&lt;Subtask&lt;T&gt;&gt;</code> — for N homogeneous forks</td>
+</tr>
+<tr>
+  <td><code>anySuccessfulResultOrThrow()</code></td>
+  <td><strong>first success</strong></td>
+  <td>keep going; throw only if <em>all</em> fail</td>
+  <td>the winning result (losers cancelled)</td>
+</tr>
+<tr>
+  <td><code>awaitAll()</code></td>
+  <td>all finish, success <em>or</em> failure</td>
+  <td>nothing — no fail-fast</td>
+  <td>nothing — inspect each subtask yourself</td>
+</tr>
+<tr>
+  <td><code>allUntil(predicate)</code></td>
+  <td>your predicate says stop (or all done)</td>
+  <td>your call</td>
+  <td><code>Stream&lt;Subtask&lt;T&gt;&gt;</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Demo 3 (<code>./run.sh race</code>) uses <code>anySuccessfulResultOrThrow</code> to hedge across
+two replicas: winner in 51 ms, the 300 ms loser cancelled — and shows the
+all-fail case throwing <code>FailedException</code>.</p>
+<p><strong>Configuration</strong> — the second argument to <code>open</code>:</p>
+<div class="code"><pre><code class="language-java">StructuredTaskScope.open(Joiner.&lt;String&gt;awaitAllSuccessfulOrThrow(),
+        cfg -&gt; cfg.withName(&quot;page-load&quot;)                 // shows up in thread dumps
+                  .withTimeout(Duration.ofMillis(150))); // one deadline for the whole tree
+</code></pre></div>
+<p>Demo 4 (<code>./run.sh deadline</code>): the deadline fired at 155 ms, cancelled the
+400 ms straggler, and <code>join()</code> threw <code>TimeoutException</code>.</p>
+<h2 id="readme-10-failure-scenarios-walked-through">10. Failure scenarios, walked through</h2>
+<p><strong>(a) A child fails (the default policy).</strong> Demo 2's real sequence: orders
+throws at 50 ms → scope interrupts profile's thread → profile's
+<code>Thread.sleep</code> throws <code>InterruptedException</code> (&quot;I was interrupted — my
+sibling must have failed&quot;) → scope waits for it to actually finish →
+<code>join()</code> throws <code>FailedException(cause=&quot;orders service is down&quot;)</code> → elapsed
+59 ms, and the subtask handle reports state <code>UNAVAILABLE</code>. Two exceptions
+existed (the failure, the interrupt); the policy keeps the one that matters
+and attaches it as the cause.</p>
+<p><strong>(b) The owner itself is interrupted</strong> (your request got cancelled from
+above): <code>join()</code> throws <code>InterruptedException</code>, and on the way out of the
+block the scope cancels and awaits all children. Cancellation is transitive
+down nested scopes — each level's close cancels the next.</p>
+<p><strong>(c) Deadline hits</strong> — §9's demo 4: <em>one</em> timeout governs the family; no
+arithmetic distributing budgets across calls.</p>
+<p><strong>(d) All replicas fail under <code>anySuccessful</code></strong> — <code>FailedException</code>
+carrying one of the failures as cause (the others are recorded on their
+subtask handles).</p>
+<p><strong>(e) A subtask ignores interruption.</strong> Cancellation is <strong>cooperative</strong>:
+the scope <em>interrupts</em>; it cannot kill. A child that catches and swallows
+<code>InterruptedException</code> and keeps looping — or blocks in a non-interruptible
+call — delays the scope's exit indefinitely (the close guarantee holds: the
+scope waits rather than leak). The discipline: treat interruption as &quot;stop
+now&quot;; never swallow it. (Exercise D2 makes you feel this one.)</p>
+<p><strong>(f) Side effects don't roll back.</strong> Cancelled ≠ undone: a cancelled
+subtask that already wrote a row leaves the row. Structured concurrency
+scopes <em>lifetimes</em>, not <em>transactions</em> — pair it with idempotency or sagas
+for effects.</p>
+<h2 id="readme-11-what-is-guaranteed-and-what-is-not">11. What is guaranteed, and what is not</h2>
+<p><strong>The invariant</strong> (this is the whole point): <em>when control leaves the
+scope's block, zero subtasks of that scope are running</em> — on the success
+path, the failure path, the timeout path, and the interrupted path alike.
+The test <code>no_subtask_outlives_the_scope_even_on_failure</code> proves it: a
+5-second subtask's <code>finally</code> has always run by the first line after the
+block, even though a sibling blew the scope up milliseconds in.</p>
+<p>Guaranteed on top of that: the first relevant failure is never lost (it's
+the <code>FailedException</code> cause); cancellation reaches every descendant through
+nested scopes; the parent-child structure is <em>visible</em> — thread dumps via
+<code>jcmd &lt;pid&gt; Thread.dump_to_file -format=json</code> show scopes (with their
+<code>withName</code> names) as a tree.</p>
+<p><strong>Not guaranteed:</strong> prompt termination (cancellation is cooperative — see
+10e); rollback of side effects (10f); any result from cancelled subtasks
+(state <code>UNAVAILABLE</code>, result gone); fairness between siblings. <strong>Traded
+away:</strong> free-form lifetimes. Work that legitimately outlives a request — a
+background refresher, a daemon — does not belong in a request's scope; give
+it its own explicitly-owned lifecycle instead of laundering it through an
+unrelated one.</p>
+<h2 id="readme-12-the-code-in-this-lab">12. The code in this lab</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>src/OrphanLeak.java</code></td>
+  <td>The disease: old-style fan-out leaks an orphan past the request's death.</td>
+</tr>
+<tr>
+  <td><code>src/FanOut.java</code></td>
+  <td>The canonical fork/join/combine shape; concurrent, no orphans possible.</td>
+</tr>
+<tr>
+  <td><code>src/FailFast.java</code></td>
+  <td>First failure cancels siblings: 5 s subtask dead in 59 ms, cause preserved.</td>
+</tr>
+<tr>
+  <td><code>src/RaceReplicas.java</code></td>
+  <td><code>anySuccessful</code>: hedged requests in three lines; all-fail case throws.</td>
+</tr>
+<tr>
+  <td><code>src/Deadline.java</code></td>
+  <td>One <code>withTimeout</code> for the whole family.</td>
+</tr>
+<tr>
+  <td><code>src/ScenarioTests.java</code></td>
+  <td>11 scenario tests: the invariant, all four enforcement rules, three joiners, ScopedValue flow.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-13-run-the-experiments">13. Run the experiments</h2>
+<div class="code"><pre><code class="language-bash">./run.sh orphan     # the old world&#x27;s leak, with timestamps
+./run.sh fanout     # the canonical shape
+./run.sh failfast   # sibling cancellation, measured
+./run.sh race       # hedged replicas
+./run.sh deadline   # scope-wide timeout
+./run.sh test       # 11 scenario tests
+./run.sh all
+</code></pre></div>
+<p>The preview flags (<code>--enable-preview --source 25</code>) are in <code>run.sh</code>; only
+<code>orphan</code> runs without them, because the broken world needs no new API.</p>
+<h2 id="readme-14-from-this-lab-to-production">14. From this lab to production</h2>
+<ul>
+<li><strong>Preview status — the honest caveat.</strong> <code>StructuredTaskScope</code> is JEP 505,
+the <em>fifth</em> preview (JDK 25), and the API has churned: code from JDK 21–24
+tutorials uses <code>new StructuredTaskScope.ShutdownOnFailure()</code> /
+<code>ShutdownOnSuccess</code> — same concepts, old names. Don't ship
+<code>--enable-preview</code> in production or expose preview types in library APIs;
+do design new code so it migrates trivially (private fan-out helpers).</li>
+<li><strong>The discipline transfers even without the API</strong>: always cancel siblings
+on failure, always propagate cancellation downward, never let a task
+outlive its purpose — enforced manually with executors today, by the
+scope tomorrow.</li>
+<li><strong>Cooperative cancellation hygiene</strong> is what makes any of it work: honor
+<code>InterruptedException</code>, prefer interruptible blocking calls (JDBC drivers
+and HTTP clients vary!), keep cleanup in <code>finally</code>.</li>
+<li><strong>Where it shines</strong>: request fan-out (the page that calls 5 services),
+hedged/tail-latency requests (see the joiner table), speculative work you
+want abandoned wholesale, per-request deadlines.</li>
+<li><strong>The ecosystem already thinks this way</strong>: Kotlin coroutines
+(<code>coroutineScope</code> + automatic child cancellation), Python's <code>trio</code>
+&quot;nurseries&quot; and <code>asyncio.TaskGroup</code>, Go's <code>errgroup.WithContext</code> — Java is
+standardizing a pattern its neighbors validated.</li>
+<li><strong>Context propagation</strong>: <code>ScopedValue</code> (JEP 506, final in 25) bindings
+flow into forks automatically (last scenario test) — request IDs and auth
+context without <code>ThreadLocal</code> leaks.</li>
+</ul>
+<h2 id="readme-15-exercises">15. Exercises</h2>
+<p>See <a href="notes.html#exercises"><code>EXERCISES.md</code></a>; answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.
+D2 (the uncancellable subtask) is the one that will save you a production
+incident someday.</p>
+<h2 id="readme-16-structured-concurrency-vs-the-neighbors">16. Structured concurrency vs. the neighbors</h2>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th><code>StructuredTaskScope</code></th>
+  <th><code>CompletableFuture</code></th>
+  <th>Kotlin <code>coroutineScope</code></th>
+  <th>Go + <code>errgroup</code></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Lifetime bound to a block</td>
+  <td><strong>yes — enforced</strong></td>
+  <td>no</td>
+  <td>yes</td>
+  <td>yes (by convention)</td>
+</tr>
+<tr>
+  <td>Failure cancels siblings</td>
+  <td>yes (policy)</td>
+  <td>manual</td>
+  <td>yes</td>
+  <td>yes</td>
+</tr>
+<tr>
+  <td>Cancels via</td>
+  <td>interrupt</td>
+  <td><code>cancel()</code> (no interrupt by default)</td>
+  <td>cooperative suspension</td>
+  <td>context cancellation</td>
+</tr>
+<tr>
+  <td>Composition style</td>
+  <td>blocking code on virtual threads</td>
+  <td>callback chains</td>
+  <td>suspending functions</td>
+  <td>blocking + channels</td>
+</tr>
+<tr>
+  <td>Status</td>
+  <td>preview</td>
+  <td>stable</td>
+  <td>stable</td>
+  <td>stable</td>
+</tr>
+</tbody>
+</table></div>
+<p>Choose <code>CompletableFuture</code> today for stable-API needs and event-driven
+composition; reach for scopes when the shape is &quot;fork some children, need
+them all (or one), then continue&quot; — which is most server code.</p>
+<h2 id="readme-17-where-to-go-next">17. Where to go next</h2>
+<pre class="mermaid">flowchart TD
+    VT[&quot;java-virtual-threads ✓ (../18-java-virtual-threads/)&quot;] --&gt; SC[&quot;structured-concurrency (this lab)&quot;]
+    JMM[&quot;java-memory-model ✓ (../17-java-memory-model/)&quot;] --&gt; VT
+    SC --&gt; SV[&quot;/learn scoped-values — context without ThreadLocal&quot;]
+    SC --&gt; CI[&quot;/learn cancellation-and-interruption — the cooperative machinery underneath&quot;]
+    SC --&gt; KT[&quot;/learn kotlin-coroutines — the same ideas, shipped stable years ago&quot;]
+    SC --&gt; TL[&quot;/learn tail-latency-and-hedging — why anySuccessful exists&quot;]
+</pre>
+<p><em>Read next from the source: JEP 505 (structured concurrency), JEP 506
+(scoped values), and Nathaniel J. Smith's &quot;go statement considered harmful&quot;
+essay — the piece that started it all.</em></p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises">Exercises</h1>
+<p><strong>Predict</strong> (reason before running), <strong>modify</strong> (change a demo, explain the
+result), <strong>debug</strong> (find the planted bug). Answers in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a> — write your answer down first; the gap
+between your guess and the output is where the concept sticks.</p>
+<p>All commands run from this directory; preview flags included.</p>
+<hr />
+<h2 id="exercises-predict">Predict</h2>
+<p><strong>P1 — same three forks, two policies.</strong>
+<span class="missing" title="Not in the hub: src/P1.java is in the lab folder on your laptop"><code>src/P1.java</code></span> forks the same three subtasks (100, 200,
+300 ms, all succeed) twice: once under the default joiner, once under
+<code>anySuccessfulResultOrThrow</code>. Predict both elapsed times and what the second
+<code>join()</code> returns. Then:</p>
+<div class="code"><pre><code class="language-bash">java --enable-preview --source 25 src/P1.java
+</code></pre></div>
+<p><strong>P2 — a failure under <code>awaitAll</code>.</strong>
+Without running anything: scope opened with <code>Joiner.awaitAll()</code>, two forks —
+one returns &quot;ok&quot; after 150 ms, one throws immediately. (a) Does <code>join()</code>
+throw? (b) Is the 150 ms sibling cancelled? (c) How do you find out the
+failure happened at all? Check yourself against the test
+<code>await_all_joiner_does_not_fail_fast</code> in <code>src/ScenarioTests.java</code>
+(<code>./run.sh test</code> runs it).</p>
+<hr />
+<h2 id="exercises-modify">Modify</h2>
+<p><strong>M1 — move the failure later.</strong>
+In <code>src/FailFast.java</code>, change the failing subtask's <code>Thread.sleep(50)</code> to
+<code>Thread.sleep(400)</code>. Predict the new elapsed time, run it, then put it back.
+What single sentence describes the relationship between &quot;time of first
+failure&quot; and &quot;cost of the whole scope&quot; under the default joiner?</p>
+<p><strong>M2 — loosen the deadline.</strong>
+In <code>src/Deadline.java</code>, change the timeout from 150 ms to 500 ms. Predict:
+what prints now, and after how long? What does this tell you about where
+<code>TimeoutException</code> sits relative to normal completion — is a timeout an
+error of the <em>tasks</em> or of the <em>scope</em>?</p>
+<p><strong>M3 — a failure under the racing joiner.</strong>
+In <code>src/RaceReplicas.java</code>, make replica-B (the fast one) <strong>throw</strong> after
+40 ms instead of succeeding, leaving slow replica-A returning normally at
+300 ms. Predict the outcome and elapsed time, run it, put it back. What did
+you just learn about how <code>anySuccessfulResultOrThrow</code> treats a failure —
+and why is that the right behavior for hedged requests?</p>
+<hr />
+<h2 id="exercises-debug">Debug</h2>
+<p><strong>D1 — &quot;structured, but no faster&quot;.</strong>
+<code>java --enable-preview --source 25 src/BrokenPage.java</code> renders 5 widgets of
+~100 ms each using scope/fork/join — and takes ~523 ms. No exception, no
+pinning, no trick sleeps. Find the structural bug, state the rule it
+reveals, fix it (aim: ~100 ms), and say which <em>enforced</em> rule (README §9
+table) would have bitten you if you'd tried the obvious wrong fix of
+hoisting the scope but keeping join inside the loop.</p>
+<p><strong>D2 — the subtask that wouldn't die.</strong>
+<code>java --enable-preview --source 25 src/UnkillableChild.java</code>: the sibling
+fails at 50 ms, yet <code>join()</code> only throws after ~565 ms. Explain the exact
+sequence (when was the child interrupted? how many times? what did it do?),
+name the guarantee that HELD and the property that was LOST, and fix
+<code>resilientFetch</code> so the scope exits in ~60 ms while keeping its retry
+behavior for genuine failures.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<h2 id="solutions-p1--312-ms-and-108-ms">P1 — 312 ms and 108 ms</h2>
+<p>Default joiner (<code>awaitAllSuccessfulOrThrow</code>): waits for <strong>all</strong> → the
+slowest child governs → ~300 ms (measured 312). <code>anySuccessfulResultOrThrow</code>:
+the <strong>first success</strong> wins → ~100 ms (measured 108), <code>join()</code> returns
+<code>&quot;cache&quot;</code>, and the 200/300 ms children are cancelled mid-sleep. Same forks,
+same code shape — the <em>joiner</em> is what defines &quot;done&quot;.</p>
+<h2 id="solutions-p2--no-throw-no-cancellation-you-must-look">P2 — no throw, no cancellation, you must look</h2>
+<p>(a) <code>join()</code> returns normally — <code>awaitAll</code> has no fail-fast. (b) The
+sibling runs to completion (the test asserts its <code>finally</code>-free happy path
+finished and its state is <code>SUCCESS</code>). (c) The failure exists only on the
+failed subtask's handle: <code>subtask.state() == FAILED</code>,
+<code>subtask.exception()</code>. <code>awaitAll</code> is the &quot;gather what you can&quot; policy —
+and it quietly shifts <em>all</em> error-handling responsibility onto you.</p>
+<h2 id="solutions-m1--410-ms-the-sentence">M1 — ~410 ms; the sentence</h2>
+<p>The scope now runs until the failure at ~400 ms, then cancels the 5 s
+sibling and throws: measured ~410 ms. The sentence: <strong>under fail-fast, the
+whole scope costs as much as the <em>first failure</em> (or the slowest success,
+whichever resolves the policy first) — never as much as the slowest task.</strong></p>
+<h2 id="solutions-m2--normal-completion-at-400-ms">M2 — normal completion at ~400 ms</h2>
+<p>Both children now beat the deadline: profile at 100 ms, orders at 400 ms,
+<code>join()</code> returns normally at ~400 ms and the &quot;unreachable&quot; line prints.
+The timeout is a property of the <strong>scope</strong>, not of any task: nothing about
+the tasks changed, only the family's budget. <code>TimeoutException</code> appears
+exactly when the budget, not the work, is exhausted.</p>
+<h2 id="solutions-m3--winner-replica-a-at-300-ms">M3 — winner: replica-A at ~300 ms</h2>
+<p>A single failure does <strong>not</strong> end an <code>anySuccessfulResultOrThrow</code> scope —
+it's recorded and the scope keeps waiting for someone to succeed; it throws
+only when <em>no one</em> can anymore (all failed). So: B's failure at 40 ms is
+noted, A wins at ~300 ms, elapsed ~300 ms. Right for hedging because a
+hedge exists to survive one replica being broken — failing the whole
+request because the <em>fast</em> replica errored would defeat the point.</p>
+<h2 id="solutions-d1--five-scopes-of-one-child-each">D1 — five scopes of one child each</h2>
+<p>The scope is opened <strong>inside the loop</strong>: each iteration forks one child,
+joins it, closes. Concurrency in structured concurrency comes from siblings
+<em>within one scope</em> — five one-child scopes are just sequential calls with
+ceremony: 5 × ~100 ms ≈ 523 ms. Fix: hoist the scope, fork all five, join
+once, then read the five subtask handles → ~105 ms. The rule it reveals:
+<strong>the scope is the unit of concurrency; fork everything before you join
+anything.</strong> The tempting wrong fix — one scope, but <code>join()</code> inside the
+loop after each fork — dies on the second iteration with
+<code>IllegalStateException: Already joined or scope is closed</code> (README §9:
+fork-after-join is rejected).</p>
+<p>Note the fixed version wants one more idea for real code: closing over the
+loop variable per fork (fine for <code>List.of</code> iteration since <code>name</code> is
+effectively final per iteration).</p>
+<h2 id="solutions-d2--interrupted-once-at-50-ms-the-child-ate-it">D2 — interrupted once, at 50 ms; the child ate it</h2>
+<p>Sequence: sibling throws at 50 ms → scope cancels: <strong>interrupts the child
+once</strong> → the child's attempt-1 <code>sleep</code> throws <code>InterruptedException</code>, the
+child prints &quot;retrying anyway!&quot; and starts attempt 2 → nothing interrupts
+it again (cancellation is not a machine gun) → attempt 2 sleeps the full
+500 ms and returns &quot;data&quot; at ~550 ms → only now is every subtask finished,
+so <code>join()</code> throws at ~565 ms.</p>
+<p><strong>Held:</strong> the close guarantee — the scope never let anything outlive it;
+you were <em>held</em>, not leaked. <strong>Lost:</strong> promptness (liveness) — cancellation
+is cooperative, and a subtask that swallows interruption converts
+&quot;cancelled&quot; into &quot;wait for it anyway&quot;. Fix — treat interruption as &quot;stop
+now&quot;, retry only genuine failures:</p>
+<div class="code"><pre><code class="language-java">static String resilientFetch() throws InterruptedException {
+    for (int attempt = 1; attempt &lt;= 4; attempt++) {
+        try {
+            Thread.sleep(500);
+            return &quot;data&quot;;
+        } catch (InterruptedException e) {
+            throw e;                        // cancelled: leave immediately
+        } catch (RuntimeException e) {
+            // a real failure of the attempt: loop and retry
+        }
+    }
+    return &quot;gave up&quot;;
+}
+</code></pre></div>
+<p>With that, the scope exits in ~60 ms. (In this toy the only failure mode
+<em>was</em> interruption, so the retry loop had nothing legitimate left to retry —
+which is itself the point: retry logic must distinguish &quot;it broke&quot; from
+&quot;stop&quot;.)</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../18-java-virtual-threads/notes.html"><small>← Lab 18</small>java-virtual-threads</a><a href="../20-scoped-values/notes.html" style="text-align:right"><small>Lab 20 →</small>scoped-values</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-exist">1. Why does this exist?</a><a href="#readme-2-the-problem-as-a-story">2. The problem, as a story</a><a href="#readme-3-the-naive-solution">3. The naive solution</a><a href="#readme-4-why-that-fails--the-orphan">4. Why that fails — the orphan</a><a href="#readme-5-the-key-idea">5. The key idea</a><a href="#readme-6-the-vocabulary">6. The vocabulary</a><a href="#readme-7-the-mental-model">7. The mental model</a><a href="#readme-8-see-it-move">8. See it move</a><a href="#readme-9-the-actual-mechanism">9. The actual mechanism</a><a href="#readme-10-failure-scenarios-walked-through">10. Failure scenarios, walked through</a><a href="#readme-11-what-is-guaranteed-and-what-is-not">11. What is guaranteed, and what is not</a><a href="#readme-12-the-code-in-this-lab">12. The code in this lab</a><a href="#readme-13-run-the-experiments">13. Run the experiments</a><a href="#readme-14-from-this-lab-to-production">14. From this lab to production</a><a href="#readme-15-exercises">15. Exercises</a><a href="#readme-16-structured-concurrency-vs-the-neighbors">16. Structured concurrency vs. the neighbors</a><a href="#readme-17-where-to-go-next">17. Where to go next</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,786 @@
+<!doctype html>
+<html lang="en" data-hub-lab="48-transactional-outbox">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>48. transactional-outbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 48 of 71 · Stage 6</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 48 · Work That Spans Services</p><article id="readme"><h1 id="readme-the-transactional-outbox-pattern--a-learning-lab">The Transactional Outbox Pattern — a learning lab</h1>
+<p><em>Audience: a backend engineer who has never met this pattern. By the end you
+should be able to reason about its failure modes, argue for or against it in
+a design review, and read the Debezium / microservices.io material fluently.</em></p>
+<p><strong>Lab contents</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>This document — the full story</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>Interactive simulator — crash any component at any step and watch what happens</td>
+</tr>
+<tr>
+  <td><code>OutboxLab.java</code></td>
+  <td>Runnable single-process simulation (real H2 transactions, simulated broker and crashes)</td>
+</tr>
+<tr>
+  <td><code>OutboxTest.java</code></td>
+  <td>Scenario-named tests, <code>java -cp ../lib/h2.jar OutboxTest.java</code></td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code> / <code>SOLUTIONS.md</code></td>
+  <td>Predict / modify / debug exercises, with answers separate</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-1-why-does-this-exist">1. WHY does this exist?</h2>
+<p>Modern backends are rarely one program. When something important happens in
+one service (&quot;a customer placed an order&quot;), other services need to hear about
+it (&quot;reserve the stock&quot;, &quot;send the confirmation email&quot;, &quot;update analytics&quot;).
+The outbox pattern exists because of one stubborn fact: <strong>saving data in your
+database and telling other systems about it are two separate physical acts,
+and the world can crash between them.</strong></p>
+<h2 id="readme-2-the-problem-as-a-story">2. THE PROBLEM, as a story</h2>
+<p>Imagine you run a small mail-order shop with a paper ledger and a postal
+service.</p>
+<p>Every time a customer phones in an order, you must do two things:</p>
+<ol>
+<li><strong>Write the order into your ledger</strong> (so you don't forget it and can
+charge for it).</li>
+<li><strong>Mail a letter to the warehouse across town</strong> telling them to reserve
+the goods.</li>
+</ol>
+<p>The ledger is on your desk. The postbox is down the street. There is no way
+to do both in a single instant — you always do one first, then the other.</p>
+<p>Now suppose you faint (shops crash too) at exactly the wrong moment:</p>
+<ul>
+<li><strong>Ledger first, then faint before mailing:</strong> the order exists, the money
+will be charged, but the warehouse never hears about it. The customer
+waits forever. Worst of all, <em>nothing looks wrong</em> — your ledger is
+perfectly consistent, there's just a letter that never existed.</li>
+<li><strong>Mail first, then faint before writing the ledger:</strong> the warehouse ships
+goods for an order your ledger says never happened. You gave away stock
+for free.</li>
+</ul>
+<p>Either order of operations has a losing crash. That is the whole problem.</p>
+<h2 id="readme-3-the-naive-solution-just-do-both-dual-write">3. THE NAIVE SOLUTION: just do both (&quot;dual write&quot;)</h2>
+<p>In code, the story above looks like this — and it is what almost everyone
+writes first:</p>
+<div class="code"><pre><code class="language-java">@Transactional
+public void placeOrder(Order order) {
+    orderRepository.save(order);           // write #1: the database
+    kafkaTemplate.send(&quot;order-placed&quot;,     // write #2: the message broker
+                        order.toEvent());
+}
+</code></pre></div>
+<p>This is called a <strong>dual write</strong> — writing the same logical fact to two
+independent systems (a database and a message broker) with two independent
+operations. It looks fine. It even passes every test you'll write, because
+tests rarely crash between two adjacent lines.</p>
+<blockquote>
+<p>A tempting variation: &quot;I'll send the Kafka message <em>inside</em> the database
+transaction, so it rolls back together!&quot; It doesn't. Kafka is not your
+database. The <code>@Transactional</code> annotation controls the database connection
+only; the broker send is a network call to a different system that commits
+or fails on its own. (Worse: if the send happens inside the transaction and
+the transaction later rolls back, you've announced an order that doesn't
+exist.)</p>
+</blockquote>
+<h2 id="readme-4-why-it-fails-concretely">4. WHY IT FAILS, concretely</h2>
+<p>Walk the crash through with real values. Stock of <code>red-mug</code> is 10. A customer
+orders 2.</p>
+<ol>
+<li><code>INSERT INTO orders (id, item, qty) VALUES ('a17', 'red-mug', 2)</code> — commits. Durable.</li>
+<li><strong>The process dies.</strong> (Deploy, OOM-kill, power loss, <code>kill -9</code> — pick one.)</li>
+<li>The process restarts. The order <code>a17</code> is in the database. No event was
+ever sent, and — this is the key part — <strong>no trace exists anywhere that an
+event <em>should have been</em> sent.</strong> There is nothing to retry from.</li>
+<li>Inventory still thinks stock is 10. The warehouse never ships. The
+customer emails support three days later.</li>
+</ol>
+<p>Run it yourself:</p>
+<div class="code"><pre><code class="language-bash">java -cp ../lib/h2.jar OutboxLab.java dual-write-crash
+</code></pre></div>
+<div class="code"><pre><code class="language-text">  CRASH: process died after DB commit, before publish
+Process &#x27;restarts&#x27; (new objects, same database file):
+  orders table:        [(&#x27;32685b6d&#x27;, &#x27;red-mug&#x27;, 2)]
+  broker log:          0 messages
+</code></pre></div>
+<p>Flip the order of the two writes and you just trade this failure for its
+mirror image (event sent, order rolled back — a &quot;phantom event&quot;). Retrying
+doesn't fix it either: you can't retry what you have no record of, and
+retrying the <em>whole</em> operation double-charges the customer.</p>
+<pre class="mermaid">sequenceDiagram
+    participant S as Order Service
+    participant DB as Database
+    participant K as Broker (Kafka)
+    S-&gt;&gt;DB: INSERT order a17 (commit ✓)
+    Note over S: 💥 process dies here
+    S--xK: send &quot;order-placed&quot; (never happens)
+    Note over DB,K: DB says: order exists.&lt;br/&gt;Broker says: nothing ever happened.&lt;br/&gt;No system knows they disagree.
+</pre>
+<h2 id="readme-5-the-key-idea">5. THE KEY IDEA</h2>
+<p><strong>Don't write to two systems. Write to one — your database — twice, in one
+transaction: the business data AND the message you intend to send. Then let a
+separate process reliably move the stored messages to the broker.</strong></p>
+<p>In the shop story: instead of running to the postbox, you write the letter
+and place it in an <strong>outbox tray on your own desk, in the same pen-session as
+the ledger entry</strong>. A mail clerk comes by regularly, takes whatever is in the
+tray, mails it, and stamps it &quot;sent&quot;. If you faint, the letter is either in
+the tray (will be mailed later) or was never written (and neither was the
+ledger entry). No combination of faints loses a letter.</p>
+<h2 id="readme-6-terminology">6. TERMINOLOGY</h2>
+<p>Now the professional vocabulary, each term in plain English:</p>
+<ul>
+<li><strong>Transactional outbox</strong> — the pattern itself: store outgoing messages in
+a database table within the same transaction as the business change.</li>
+<li><strong>Outbox table</strong> — a normal table in <em>your</em> database (typical columns:
+<code>id</code>, <code>aggregate_id</code>, <code>event_type</code>, <code>payload</code>, <code>created_at</code>,
+<code>published_at</code>) holding messages waiting to be sent.</li>
+<li><strong>Message relay</strong> — the process that moves rows from the outbox table to
+the broker. Two common implementations: <em>polling publisher</em> and <em>log-based
+CDC</em> (both below).</li>
+<li><strong>Polling publisher</strong> — a relay that repeatedly queries
+<code>SELECT ... WHERE published_at IS NULL</code> and publishes what it finds.</li>
+<li><strong>CDC (change data capture)</strong> — reading the database's own write-ahead
+log / binlog (its internal journal of every committed change) to learn
+about new outbox rows without querying. <strong>Debezium</strong> is the standard
+open-source tool for this.</li>
+<li><strong>Dual write</strong> — the anti-pattern: two independent writes to two systems
+hoping both succeed.</li>
+<li><strong>At-least-once delivery</strong> — the guarantee this pattern gives: every
+message arrives one <em>or more</em> times. The &quot;or more&quot; is not sloppiness; it
+is mathematically unavoidable (section 10).</li>
+<li><strong>Idempotent</strong> — an operation that is safe to apply twice; doing it again
+changes nothing (&quot;set stock to 8&quot; is idempotent, &quot;subtract 2&quot; is not).</li>
+<li><strong>Idempotent consumer / inbox pattern</strong> — the receiving side's mirror
+trick: record each processed message-id in the consumer's own database, in
+the same transaction as the effect, and skip ids seen before.</li>
+<li><strong>Aggregate</strong> — DDD term you'll meet in outbox docs: the business entity
+the event is about (the order). <code>aggregate_id</code> is used as the message key
+so all events for one order stay in order.</li>
+</ul>
+<h2 id="readme-7-mental-model">7. MENTAL MODEL</h2>
+<p>Carry this picture: <strong>the outbox turns &quot;send a message&quot; into &quot;commit a row&quot;,
+and rows are the one thing a database never half-does.</strong> After that, the
+only remaining job is moving committed rows to the broker — which is safe to
+retry forever, because the row remembers whether it was sent. Losing becomes
+impossible; the residual (and acceptable) risk is sending twice.</p>
+<pre class="mermaid">flowchart LR
+    subgraph SvcDB[&quot;Order Service&#x27;s database — ONE transaction&quot;]
+        O[(orders)]
+        X[(outbox)]
+    end
+    S[Order Service] --&gt;|&quot;INSERT order + INSERT outbox row (atomic)&quot;| SvcDB
+    R[Message Relay] --&gt;|&quot;read unpublished rows&quot;| X
+    R --&gt;|publish| K[[Broker]]
+    R --&gt;|&quot;mark published&quot;| X
+    K --&gt; C[Inventory Service]
+    C --&gt;|&quot;dedupe by message-id + apply, atomic&quot;| CDB[(inventory +\nprocessed_messages)]
+</pre>
+<h2 id="readme-8-see-it-move--the-interactive-simulator">8. SEE IT MOVE — the interactive simulator</h2>
+<p>Open <strong><code>visualization.html</code></strong> (also published as an artifact). It shows the
+five boxes above with live state — orders table, outbox rows, broker log,
+consumer's stock and dedupe table — and lets you:</p>
+<ul>
+<li>choose <strong>dual write</strong> or <strong>outbox</strong> as the strategy,</li>
+<li><strong>crash</strong> the service or the relay at any of the dangerous instants,</li>
+<li>restart components and watch recovery,</li>
+<li>toggle the consumer between <strong>naive</strong> and <strong>idempotent</strong>,</li>
+<li>or press <strong>&quot;run the story for me&quot;</strong> and watch all four acts narrated.</li>
+</ul>
+<p>The verdict banner always states, in one sentence, whether the system is
+currently consistent and why. Recommended: play with it now, then read on.</p>
+<h2 id="readme-9-the-actual-mechanism-step-by-step">9. THE ACTUAL MECHANISM, step by step</h2>
+<p>Same concrete case: stock 10, customer orders 2 × <code>red-mug</code>.</p>
+<p><strong>Step 1 — the business transaction.</strong> One database transaction:</p>
+<div class="code"><pre><code class="language-sql">BEGIN;
+INSERT INTO orders (id, item, qty) VALUES (&#x27;a17&#x27;, &#x27;red-mug&#x27;, 2);
+INSERT INTO outbox (message_id, topic, payload, published_at)
+VALUES (&#x27;m91&#x27;, &#x27;order-placed&#x27;,
+        &#x27;{&quot;order_id&quot;:&quot;a17&quot;,&quot;item&quot;:&quot;red-mug&quot;,&quot;qty&quot;:2}&#x27;, NULL);
+COMMIT;
+</code></pre></div>
+<p>Atomicity is doing all the work here: both rows or neither. Note the
+<code>message_id 'm91'</code> is generated <em>now, by the producer</em> — it will be the
+dedupe key at the far end.</p>
+<p><strong>Step 2 — the relay picks it up.</strong> A polling relay runs, say, every 200 ms:</p>
+<div class="code"><pre><code class="language-sql">SELECT * FROM outbox WHERE published_at IS NULL ORDER BY seq LIMIT 100;
+</code></pre></div>
+<p>It finds <code>m91</code>, publishes it to the broker (with <code>aggregate_id 'a17'</code> as the
+partition key), then:</p>
+<div class="code"><pre><code class="language-sql">UPDATE outbox SET published_at = now() WHERE message_id = &#x27;m91&#x27;;
+</code></pre></div>
+<p><strong>Step 3 — the consumer applies it.</strong> The inventory service reads <code>m91</code> and,
+in <strong>one transaction of its own database</strong>:</p>
+<div class="code"><pre><code class="language-sql">BEGIN;
+INSERT INTO processed_messages (message_id) VALUES (&#x27;m91&#x27;);  -- fails if seen
+UPDATE inventory SET stock = stock - 2 WHERE item = &#x27;red-mug&#x27;;
+COMMIT;
+</code></pre></div>
+<p>Stock: 10 → 8. Done.</p>
+<p>The corresponding lab code: <code>placeOrderOutbox</code> and <code>Relay.pollOnce</code> in
+<code>OutboxLab.java</code>, and the happy-path sequence:</p>
+<pre class="mermaid">sequenceDiagram
+    participant S as Order Service
+    participant DB as orders + outbox (one DB)
+    participant R as Relay
+    participant K as Broker
+    participant C as Inventory Service
+    S-&gt;&gt;DB: BEGIN#59; INSERT order#59; INSERT outbox#59; COMMIT
+    loop every poll interval
+        R-&gt;&gt;DB: SELECT unpublished rows
+        R-&gt;&gt;K: publish m91
+        R-&gt;&gt;DB: UPDATE outbox SET published_at
+    end
+    K-&gt;&gt;C: deliver m91
+    C-&gt;&gt;C: BEGIN#59; record m91#59; stock 10→8#59; COMMIT
+</pre>
+<h2 id="readme-10-failure-scenarios--walk-every-crash-point">10. FAILURE SCENARIOS — walk every crash point</h2>
+<p>The honest test of the pattern: crash it everywhere and see what happens.</p>
+<p><strong>(a) Service crashes before COMMIT.</strong> Neither the order nor the outbox row
+exists. The customer got an error and retries. Clean.</p>
+<p><strong>(b) Service crashes after COMMIT, before any relay runs</strong> — the exact
+crash that killed dual write. Now the outbox row is durable. The relay (a
+separate process) finds it on its next poll and publishes. The message was
+<em>delayed</em>, never <em>lost</em>. Run it:
+<code>java -cp ../lib/h2.jar OutboxLab.java outbox-survives-crash</code>.</p>
+<p><strong>(c) Relay crashes after <code>SELECT</code>, before publish.</strong> Row still unmarked;
+next poll re-reads it. Nothing happened, nothing lost.</p>
+<p><strong>(d) Relay crashes after publish, before <code>UPDATE ... published_at</code>.</strong> ⚠️
+This is <em>the</em> important one. The broker has the message; the outbox row
+still says unpublished. The restarted relay publishes it <strong>again</strong>. The
+broker now holds two copies of <code>m91</code>.</p>
+<p>This gap cannot be engineered away: &quot;publish to broker&quot; and &quot;mark row
+published&quot; are again two systems. You must choose which side of the gap to
+err on — mark-then-publish loses messages on crash (at-most-once);
+publish-then-mark duplicates them (at-least-once). The outbox pattern
+chooses duplication, because duplicates can be handled and losses cannot.</p>
+<pre class="mermaid">sequenceDiagram
+    participant R as Relay
+    participant K as Broker
+    participant DB as outbox table
+    R-&gt;&gt;K: publish m91 (1st copy)
+    Note over R: 💥 relay dies before marking
+    Note over R: relay restarts
+    R-&gt;&gt;DB: SELECT unpublished → m91 still there
+    R-&gt;&gt;K: publish m91 (2nd copy!)
+    R-&gt;&gt;DB: UPDATE published_at
+</pre>
+<p>Run it: <code>java -cp ../lib/h2.jar OutboxLab.java relay-crash-duplicate</code> — with a naive
+consumer, stock ends at <strong>6</strong> instead of 8 (decremented twice):</p>
+<div class="code"><pre><code class="language-text">  broker log now holds 2 copies of the same message_id.
+    consumer: applied message 683c3543 (red-mug x2) -&gt; stock now 8
+    consumer: applied message 683c3543 (red-mug x2) -&gt; stock now 6
+  final stock: 6 (correct answer: 8)
+</code></pre></div>
+<p><strong>(e) The fix for (d): the idempotent consumer.</strong> The consumer keeps a
+<code>processed_messages</code> table and inserts the message-id <em>in the same
+transaction</em> as the stock update. Second copy of <code>m91</code> → the insert hits the
+primary key → skip. Run: <code>java -cp ../lib/h2.jar OutboxLab.java idempotent-consumer</code> — stock
+correctly ends at 8, with the duplicate reported as skipped. (Same-transaction
+matters: if you recorded the id <em>after</em> applying, a consumer crash between the
+two would re-apply on restart; if <em>before</em> in a separate transaction, a crash
+between them would skip a message forever.)</p>
+<p><strong>(f) Consumer crashes mid-processing.</strong> Its transaction rolls back — both
+the effect and the dedupe record. The broker redelivers; processing repeats
+from a clean slate. Test: <code>test_idempotent_consumer_resumes_after_its_own_restart</code>.</p>
+<p><strong>(g) Broker is down.</strong> Relay's publish fails; it leaves rows unmarked and
+retries with backoff. The outbox table absorbs the backlog — it's a durable
+buffer. (Watch its depth; that's your lag metric.)</p>
+<p><strong>(h) Relay is down for an hour.</strong> Nothing is lost, everything is late.
+Outbox converts a messaging outage from <em>data loss</em> into <em>latency</em>.</p>
+<h2 id="readme-11-correctness--what-is-and-isnt-guaranteed">11. CORRECTNESS — what is and isn't guaranteed</h2>
+<p><strong>Guaranteed:</strong></p>
+<ul>
+<li><strong>No lost messages</strong> — every committed business change eventually produces
+its message (assuming the relay eventually runs). This is the safety
+property.</li>
+<li><strong>No phantom messages</strong> — a rolled-back transaction sends nothing, because
+the outbox row rolled back with it.</li>
+<li><strong>Per-aggregate ordering</strong> (with care) — rows are relayed in commit order
+(<code>ORDER BY seq</code>), and using the aggregate id as the broker partition key
+keeps one order's events in sequence.</li>
+</ul>
+<p><strong>Explicitly NOT guaranteed:</strong></p>
+<ul>
+<li><strong>Exactly-once delivery.</strong> You get at-least-once. Any vendor slide saying
+&quot;exactly-once delivery&quot; across independent systems is really
+<em>at-least-once delivery + idempotent processing</em>, which produces an
+<strong>effectively-once outcome</strong>. That distinction is interview-grade.</li>
+<li><strong>Immediacy.</strong> Consumers see events after a relay delay (poll interval or
+CDC lag). The system is <em>eventually</em> consistent; the readme of every
+outbox library says &quot;within milliseconds&quot;, and every incident report says
+&quot;the lag grew&quot;.</li>
+<li><strong>Global ordering across aggregates.</strong> Two different orders' events may
+interleave arbitrarily.</li>
+</ul>
+<p><strong>Traded away to get this:</strong> latency (the relay hop), a table that needs
+cleaning, operational surface (one more process to monitor), and the
+obligation to make every consumer idempotent. That last one is not optional
+fine print — <strong>an outbox without idempotent consumers is a bug factory</strong>,
+as experiment 3 shows.</p>
+<h2 id="readme-12-the-code">12. THE CODE</h2>
+<p><code>OutboxLab.java</code> is deliberately small. Map of what's real:</p>
+<ul>
+<li><code>OrderService.placeOrderDualWrite</code> — the anti-pattern, with a crash
+injection point between the two writes.</li>
+<li><code>OrderService.placeOrderOutbox</code> — the pattern: both inserts are wrapped by
+one real H2 transaction, ended by a single <code>conn.commit()</code>.</li>
+<li><code>Relay.pollOnce</code> — the polling publisher, with a crash injection point in
+gap (d).</li>
+<li><code>InventoryService.consumeAll</code> — consumer with an <code>idempotent</code> flag; the
+dedupe insert, the stock update, and the offset advance share one
+transaction.</li>
+</ul>
+<p>What a production Spring version of step 1 looks like (this snippet is
+illustrative, not part of the runnable lab):</p>
+<div class="code"><pre><code class="language-java">@Transactional                                   // ONE local DB transaction
+public void placeOrder(Order order) {
+    orderRepository.save(order);
+    outboxRepository.save(OutboxEvent.of(
+        &quot;order&quot;,  order.getId(),                 // aggregate type + id (key)
+        &quot;OrderPlaced&quot;, toJson(order)));          // event type + payload
+    // no broker call here — the relay/Debezium handles publication
+}
+</code></pre></div>
+<h2 id="readme-13-experiments--break-it-yourself">13. EXPERIMENTS — break it yourself</h2>
+<div class="code"><pre><code class="language-bash">java -cp ../lib/h2.jar OutboxLab.java dual-write-crash      # act 1: silent loss
+java -cp ../lib/h2.jar OutboxLab.java outbox-survives-crash # act 2: the fix
+java -cp ../lib/h2.jar OutboxLab.java relay-crash-duplicate # act 3: the price (duplicates)
+java -cp ../lib/h2.jar OutboxLab.java idempotent-consumer   # act 4: paying the price
+java -cp ../lib/h2.jar OutboxTest.java                      # all 10 scenarios as tests
+</code></pre></div>
+<p>Run them from this directory (that is what <code>../lib/h2.jar</code> resolves against).
+No build tool and no JUnit: H2 is the only dependency, and <code>java</code> compiles the
+two source files on the fly. Each run starts by deleting its own <code>.mv.db</code>
+files, so experiments are always repeatable.</p>
+<p>Each experiment prints a narrated trace and a verdict; each maps to a
+section-10 scenario. The interactive page runs the same four acts visually.</p>
+<h2 id="readme-14-production--what-the-lab-omits-and-how-real-systems-do-it">14. PRODUCTION — what the lab omits and how real systems do it</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Lab simplification</th>
+  <th>Production reality</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Relay = polling loop you call by hand</td>
+  <td>Either a real polling publisher (with backoff, batching, <code>FOR UPDATE SKIP LOCKED</code> so multiple relay instances don't grab the same rows) or — more common at scale — <strong>Debezium</strong> tailing the database's write-ahead log, which sees outbox inserts with no polling and near-zero lag. Debezium ships a purpose-built <strong>outbox event router</strong> that reads your outbox table's columns and routes events to topics.</td>
+</tr>
+<tr>
+  <td>Outbox rows kept forever</td>
+  <td>The table must be pruned or it becomes your biggest table. Options: delete rows once marked published; or (a beloved Debezium trick) <strong>insert and delete the row in the same transaction</strong> — the WAL still contains the insert, so CDC still emits the event, and the table stays empty.</td>
+</tr>
+<tr>
+  <td>One relay, one producer instance</td>
+  <td>Many app instances all writing outbox rows (fine — it's just a table), and either one leader-elected relay or several using <code>SKIP LOCKED</code>.</td>
+</tr>
+<tr>
+  <td>Broker as an in-memory list</td>
+  <td>Kafka: choose the partition key = aggregate id for ordering; configure producer retries + <code>enable.idempotence=true</code> (that setting dedupes <em>broker-side retries only</em> — it does <strong>not</strong> replace your consumer-side dedupe, because a restarted relay is a new producer session).</td>
+</tr>
+<tr>
+  <td>Dedupe table grows forever</td>
+  <td>Real inbox tables get TTL'd: keep ids for longer than the maximum plausible redelivery window (days, not forever). Some consumers get idempotency for free instead — upserts, &quot;set state to X&quot; operations, or version checks (<code>WHERE version = 41</code>).</td>
+</tr>
+<tr>
+  <td>No monitoring</td>
+  <td>The two metrics that matter: <strong>outbox lag</strong> (oldest unpublished row's age) and <strong>outbox depth</strong>. Alert on both; a stuck relay looks exactly like a healthy quiet system until you measure lag.</td>
+</tr>
+<tr>
+  <td>No schema management</td>
+  <td>Payloads are contracts. Version them (schema registry, or an explicit <code>event_version</code> column) — consumers will meet old events replayed months later.</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Off-the-shelf implementations</strong> so you don't hand-roll: Debezium Outbox
+Event Router (Kafka Connect), Spring Modulith's event publication registry
+(a JVM-local outbox for application events), Eventuate Tram, MassTransit /
+NServiceBus outbox (.NET), Sequin/pgmq-style Postgres tooling. Rolling your
+own polling publisher is also genuinely fine for modest scale — it's ~50
+lines, as this lab shows.</p>
+<h2 id="readme-15-exercises">15. EXERCISES</h2>
+<p>See <code>EXERCISES.md</code> — three tiers (predict / modify / debug), answers in
+<code>SOLUTIONS.md</code>. Attempt before peeking; the predict ones are runnable
+against the lab.</p>
+<h2 id="readme-16-related-concepts--and-when-to-choose-which">16. RELATED CONCEPTS — and when to choose which</h2>
+<ul>
+<li><strong>Two-phase commit (2PC/XA)</strong> — the &quot;make both systems commit together&quot;
+alternative: a coordinator asks the DB and the broker to <em>prepare</em>, then
+tells both to <em>commit</em>. Gives atomicity but couples availability (a died
+coordinator leaves participants blocked holding locks), needs XA support
+in every participant (Kafka has no XA), and is slow. Outbox deliberately
+gives up &quot;atomic across systems&quot; for &quot;atomic in one system + reliable
+relay&quot;. Modern microservice practice almost always prefers outbox.</li>
+<li><strong>Saga</strong> — a <em>different layer</em>: outbox reliably delivers one event; a saga
+chains many local transactions across services with compensating actions
+when a later step fails (&quot;order placed → payment failed → cancel order&quot;).
+Sagas are usually <em>built on top of</em> the outbox — each saga step publishes
+its events through one. Not rivals; a stack.</li>
+<li><strong>CDC on the business tables directly</strong> (no outbox table) — let Debezium
+stream the <code>orders</code> table itself. Simpler, but your <em>table schema becomes
+your public event contract</em>, and intent is lost (an UPDATE row doesn't say
+<em>why</em> it changed). The outbox table is precisely the decoupling layer:
+explicit, versioned, intention-revealing events.</li>
+<li><strong>Event sourcing</strong> — flips the relationship: the events <em>are</em> the store
+(state is derived by replay), so there's nothing to keep in sync and no
+outbox needed. Far bigger architectural commitment; choose it for the
+domain-modeling benefits, not just to avoid dual writes.</li>
+<li><strong>Kafka transactions</strong> — atomic <em>across Kafka topics</em> (consume-process-
+produce), not across your database and Kafka. They solve a different
+problem and don't replace the outbox.</li>
+</ul>
+<p>Rule of thumb: <strong>database is the source of truth + others must hear about
+changes ⇒ outbox.</strong> Everything else is either a layer above it (saga), a
+transport for it (CDC/Debezium), or a different world (event sourcing).</p>
+<h2 id="readme-17-next-steps--knowledge-map">17. NEXT STEPS — knowledge map</h2>
+<pre class="mermaid">flowchart TD
+    ACID[&quot;ACID transactions&lt;br/&gt;(prerequisite — you have it)&quot;] --&gt; OB
+    MQ[&quot;messaging basics&lt;br/&gt;(prerequisite — you have it)&quot;] --&gt; OB
+    OB[&quot;transactional-outbox&lt;br/&gt;(this lab)&quot;] --&gt; IC[&quot;/learn idempotent-consumer&lt;br/&gt;(inbox pattern, dedupe strategies)&quot;]
+    OB --&gt; CDC[&quot;/learn cdc-debezium&lt;br/&gt;(WAL, connectors, event router)&quot;]
+    OB --&gt; SAGA[&quot;/learn saga&lt;br/&gt;(orchestration vs choreography)&quot;]
+    OB --&gt; EOS[&quot;/learn kafka-exactly-once&lt;br/&gt;(idempotent producer, txns)&quot;]
+    OB --&gt; TPC[&quot;/learn two-phase-commit&lt;br/&gt;(the road not taken)&quot;]
+    SAGA --&gt; ES[&quot;/learn event-sourcing&quot;]
+</pre>
+<p>Suggested order: <code>/learn cdc-debezium</code> (how the relay works at scale), then
+saga (what you build on top — <strong>sibling lab: <a href="../47-saga/notes.html#readme"><code>../47-saga/</code></a></strong>),
+then two-phase-commit (the contrast — <strong>sibling lab:
+<a href="../45-two-phase-commit/notes.html#readme"><code>../45-two-phase-commit/</code></a></strong>). Other sibling
+labs (<code>java-memory-model</code>, <code>java-virtual-threads</code>) are unrelated to this track.</p>
+<hr />
+<p><strong>Glossary recap:</strong> outbox table · message relay · polling publisher · CDC ·
+Debezium · dual write · at-least-once · idempotent · inbox pattern ·
+aggregate. If any of these doesn't ring a bell, section 6 defines them all.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--transactional-outbox">Exercises — transactional outbox</h1>
+<p>Attempt each one before opening <code>SOLUTIONS.md</code>. The predict exercises are
+runnable against the lab; run the command <em>after</em> committing to an answer.</p>
+<h2 id="exercises-tier-1--predict">Tier 1 — Predict</h2>
+<p><strong>P1.</strong> In the dual-write version, swap the two writes: publish to the broker
+<em>first</em>, then commit the order to the database — and the process crashes
+between them. What is the end state of (a) the orders table, (b) the broker
+log, (c) the inventory service's stock after it consumes? Is this failure
+better or worse than the DB-first crash, and for whom?</p>
+<p><strong>P2.</strong> With the outbox pattern, the producer commits 3 orders and then the
+relay's <em>first ever</em> poll crashes after publishing only the first message
+(before marking it). The relay restarts and polls again. Exactly how many
+messages does the broker log contain, and in what order? Check with:</p>
+<div class="code"><pre><code class="language-bash">jshell --class-path ../lib/h2.jar OutboxLab.java - &lt;&lt;&#x27;EOF&#x27;
+new java.io.File(&quot;./.lab-p2-orders.mv.db&quot;).delete();
+var b = new OutboxLab.Broker();
+var s = new OutboxLab.OrderService(&quot;./.lab-p2-orders&quot;);
+for (var item : new String[]{&quot;red&quot;, &quot;blue&quot;, &quot;green&quot;}) s.placeOrderOutbox(item, 1);
+try { new OutboxLab.Relay(&quot;./.lab-p2-orders&quot;).pollOnce(b, true); } catch (OutboxLab.Crash e) { }
+new OutboxLab.Relay(&quot;./.lab-p2-orders&quot;).pollOnce(b);
+System.out.println(b.log.stream().map(OutboxLab.Message::payload).toList());
+/exit
+EOF
+</code></pre></div>
+<p><strong>P3.</strong> An idempotent consumer processes message <code>m91</code>, and <em>then its own
+process crashes</em> after the stock update but before its transaction commits.
+The broker redelivers <code>m91</code>. Is stock decremented zero, one, or two times in
+the end — and which line of <code>InventoryService.consumeAll</code> makes it so?</p>
+<p><strong>P4.</strong> The relay is stopped for 6 hours (bad deploy) while the shop keeps
+taking orders. List everything that is (a) lost, (b) wrong, (c) merely late,
+once the relay restarts. Which single SQL query would have told the on-call
+engineer about the problem within a minute?</p>
+<h2 id="exercises-tier-2--modify">Tier 2 — Modify</h2>
+<p><strong>M1.</strong> Change <code>InventoryService.consumeAll</code> so the dedupe-insert into
+<code>processed_messages</code> happens in its <strong>own separate transaction, committed
+before</strong> the stock-update transaction. Which test in <code>OutboxTest.java</code> should
+now be able to fail, under what crash timing, and which guarantee flips from
+&quot;at-least-once outcome&quot; to &quot;at-most-once outcome&quot;?</p>
+<p><strong>M2.</strong> Change <code>Relay.pollOnce</code> to mark the row published <strong>before</strong>
+publishing to the broker (mark-then-publish). Re-run
+<code>test_relay_crash_between_publish_and_mark_causes_duplicate</code> — it will fail.
+Write the replacement test that captures the <em>new</em> failure mode this
+ordering has, and name the delivery guarantee it now provides.</p>
+<p><strong>M3.</strong> The outbox table in the lab keeps rows forever. Add a
+<code>prunePublished(olderThanSeq)</code> method to <code>OrderService</code> and decide: is it
+safe to delete a row the <em>instant</em> <code>published_at</code> is set? What real-world
+capability do you lose (hint: think replay / audit), and what does Debezium's
+insert-and-delete-in-same-transaction trick preserve that plain pruning
+doesn't?</p>
+<p><strong>M4.</strong> Make the <em>consumer</em> idempotent without a <code>processed_messages</code> table
+at all, by changing the event payload from &quot;subtract qty 2&quot; semantics to a
+naturally idempotent form. What payload would you choose for inventory, and
+what new race appears if two <em>different</em> legitimate orders for the same item
+are in flight?</p>
+<h2 id="exercises-tier-3--debug">Tier 3 — Debug</h2>
+<p><strong>D1.</strong> A teammate &quot;optimizes&quot; <code>placeOrderOutbox</code> by moving the outbox
+insert <em>after</em> the transaction's <code>conn.commit()</code> (&quot;the outbox insert is slowing
+down the hot path — I commit the order first, then insert the outbox row
+right after; it's only microseconds later&quot;). Which test in <code>OutboxTest.java</code>
+still passes despite the bug? Which <em>new</em> test would catch it? (Write it.)</p>
+<p><strong>D2.</strong> Production incident: inventory occasionally goes negative on popular
+items during deploy windows. The consumer IS idempotent (<code>processed_messages</code>
+in place), the outbox IS atomic. The relay logs show restarts. Where else in
+this lab's code could a duplicate-with-a-<em>different</em>-message-id come from,
+so that dedupe never triggers? (Hint: read <code>placeOrderDualWrite</code> vs
+<code>placeOrderOutbox</code> — where is each <code>message_id</code> generated, and what would
+happen if the <em>client/web tier</em> retried a timed-out <code>placeOrder</code> HTTP call?)</p>
+<p><strong>D3.</strong> Someone reports &quot;events arrive out of order for the same order id&quot;.
+The lab's relay uses <code>ORDER BY seq</code> — so where can reordering still creep in
+once this design goes to production with (a) multiple relay instances using
+<code>SKIP LOCKED</code>, or (b) a Kafka producer with <code>retries&gt;0</code> and
+<code>max.in.flight.requests.per.connection=5</code> and idempotence off? Name the fix
+for each.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<h2 id="solutions-tier-1--predict">Tier 1 — Predict</h2>
+<p><strong>P1.</strong> (a) empty — the order rolled back / was never committed; (b) one
+<code>order-placed</code> message: a <strong>phantom event</strong>; (c) stock decremented for an
+order that doesn't exist — inventory reserved (or shipped) for free. It's
+<em>worse for you</em> than DB-first: DB-first loses a notification (customer-visible
+delay, recoverable by support); broker-first corrupts downstream state based
+on a fact that never happened, and un-shipping is harder than re-notifying.
+Neither ordering is acceptable — that's the point of the pattern.</p>
+<p><strong>P2.</strong> Four messages: <code>red, red, blue, green</code>. Crash after publishing <code>red</code>
+leaves all three rows unmarked; the second poll re-reads from the start and
+publishes all three. Only the message that crossed the crash gap duplicates;
+order per the <code>seq</code> column is preserved otherwise. General rule: after a relay
+crash, exactly the messages published-but-not-yet-marked in that batch appear
+twice.</p>
+<p><strong>P3.</strong> Exactly once. The consumer's dedupe-insert, stock update, and offset
+advance share one transaction (the single <code>conn.commit()</code> in <code>consumeAll</code>). The
+crash before commit rolls back all three, so the redelivered <code>m91</code> finds no
+<code>processed_messages</code> row and applies cleanly. This same-transaction property
+is the load-bearing line of the whole consumer.</p>
+<p><strong>P4.</strong> (a) Lost: nothing. (b) Wrong: nothing durable — though consumers'
+views are stale for 6 h, which can cause business-level errors like overselling
+(stale ≠ corrupt: it heals on catch-up). (c) Late: every event from the
+window; the relay drains the backlog in commit order on restart. The query:
+<code>SELECT min(created_at) FROM outbox WHERE published_at IS NULL</code> (oldest
+unpublished age = outbox lag) — alert when it exceeds a few seconds.</p>
+<h2 id="solutions-tier-2--modify">Tier 2 — Modify</h2>
+<p><strong>M1.</strong> <code>test_idempotent_consumer_resumes_after_its_own_restart</code> — or any
+crash between &quot;dedupe committed&quot; and &quot;effect committed&quot;. Timing: consumer
+commits the <code>processed_messages</code> insert, crashes, restarts, sees the id as
+already-processed, skips the message — whose effect <strong>never happened</strong>. The
+message is lost at the consumer despite being delivered: at-most-once
+processing. Moral: the dedupe record must commit <em>with</em> the effect, never
+before it.</p>
+<p><strong>M2.</strong> New failure: relay marks the row, crashes before publishing → the
+row is never re-read → <strong>message lost</strong> (at-most-once delivery). Replacement
+test shape:</p>
+<div class="code"><pre><code class="language-java">run(&quot;test_mark_then_publish_loses_message_on_crash&quot;, () -&gt; {
+    var svc = orderService(); svc.placeOrderOutbox(&quot;red-mug&quot;, 2);
+    var crashing = relay();
+    assertCrash(() -&gt; crashing.pollOnceMarkedFirst(broker, true));  // crashAfterMark
+    relay().pollOnceMarkedFirst(broker);
+    assertEquals(0, broker.log.size(), &quot;gone forever&quot;);
+});
+</code></pre></div>
+<p>This is the whole choice in one line: publish-then-mark = duplicates
+(recoverable); mark-then-publish = losses (not recoverable).</p>
+<p><strong>M3.</strong> Deleting the instant it's marked is <em>safe for delivery</em> (the broker
+has it) but you lose: replay (re-publish history to a new consumer), audit
+(&quot;did we ever emit X?&quot;), and debugging of consumer claims. Debezium's
+insert+delete-in-one-transaction keeps the event in the <strong>WAL/CDC stream</strong>
+(which has its own retention, e.g. the Kafka topic), so history lives in the
+log where it belongs while the table stays at size zero — you've moved
+retention to a system designed for it.</p>
+<p><strong>M4.</strong> Payload carries absolute intent per order, e.g.
+<code>{&quot;order_id&quot;:&quot;a17&quot;,&quot;item&quot;:&quot;red-mug&quot;,&quot;reserved_qty&quot;:2}</code> applied as an upsert
+into a <code>reservations(order_id PRIMARY KEY, item, qty)</code> table, with stock
+computed as <code>initial - SUM(reservations)</code>. Re-applying the same order_id
+upserts the same row — naturally idempotent. The race: two <em>different</em>
+orders both reserving from stock 1 — both upserts succeed and the sum
+oversells; you now need a constraint/check (<code>WHERE stock &gt;= qty</code> style) or to
+move the availability decision back to the producer side. Idempotency by
+natural key trades the dedupe table for harder invariants.</p>
+<h2 id="solutions-tier-3--debug">Tier 3 — Debug</h2>
+<p><strong>D1.</strong> Every current test still passes — including
+<code>test_outbox_write_is_atomic_with_business_write</code> — because no test crashes
+<em>between</em> the two commits (the bug window is microseconds and tests are
+crash-free there). The catching test injects a crash between them:</p>
+<div class="code"><pre><code class="language-java">run(&quot;test_split_commits_lose_message_on_crash_between&quot;, () -&gt; {
+    var svc = orderService();
+    assertCrash(() -&gt; svc.placeOrderOutboxSplit(  // the &quot;optimized&quot; version
+            &quot;red-mug&quot;, 2, true));                 // crashBetweenCommits
+    var restarted = orderService();
+    assertEquals(1, restarted.orders().size(), &quot;order committed&quot;);
+    assertEquals(1, restarted.unpublishedOutboxRows().size(), &quot;outbox row&quot;);  // FAILS: 0
+});
+</code></pre></div>
+<p>The &quot;optimization&quot; is dual write reborn one layer down — same crash, same
+silent loss. Lesson: atomicity bugs are invisible to crash-free tests; you
+must test the crash points themselves (this is why the lab has <code>Crash</code>).</p>
+<p><strong>D2.</strong> Client-level retries. <code>message_id</code> is generated <em>per call</em> inside
+<code>placeOrder*</code>. If the web tier times out and retries <code>placeOrder</code>, you get
+two orders, two outbox rows, two <strong>different</strong> message_ids — dedupe by
+message_id is blind to it, correctly, because to this layer they <em>are</em>
+different messages. The fix lives a layer up: an <strong>idempotency key</strong> supplied
+by the client (<code>Idempotency-Key</code> header, unique per user action), enforced by
+a unique constraint on <code>orders</code>. Dedupe must exist at every layer that
+retries; each layer's key identifies <em>that layer's</em> notion of &quot;the same
+action&quot;.</p>
+<p><strong>D3.</strong> (a) Two relay instances each grab disjoint row sets with
+<code>SKIP LOCKED</code>; instance B can publish order a17's <em>second</em> event while
+instance A (holding the first) is slow — cross-instance reordering. Fixes:
+single active relay (leader election), or partition rows by aggregate id so
+one aggregate's events always go through one instance. (b) With
+<code>max.in.flight=5</code> and idempotence off, batch 1 fails, batch 2 succeeds,
+batch 1 retries → arrives after batch 2. Fixes: <code>enable.idempotence=true</code>
+(caps in-flight and sequences batches) or <code>max.in.flight=1</code>. Ordering, like
+delivery, must be defended at <em>every</em> hop: table → relay → producer →
+partition → consumer.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../47-saga/notes.html"><small>← Lab 47</small>saga</a><a href="../49-idempotency/notes.html" style="text-align:right"><small>Lab 49 →</small>idempotency</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-exist">1. WHY does this exist?</a><a href="#readme-2-the-problem-as-a-story">2. THE PROBLEM, as a story</a><a href="#readme-3-the-naive-solution-just-do-both-dual-write">3. THE NAIVE SOLUTION: just do both (&quot;dual write&quot;)</a><a href="#readme-4-why-it-fails-concretely">4. WHY IT FAILS, concretely</a><a href="#readme-5-the-key-idea">5. THE KEY IDEA</a><a href="#readme-6-terminology">6. TERMINOLOGY</a><a href="#readme-7-mental-model">7. MENTAL MODEL</a><a href="#readme-8-see-it-move--the-interactive-simulator">8. SEE IT MOVE — the interactive simulator</a><a href="#readme-9-the-actual-mechanism-step-by-step">9. THE ACTUAL MECHANISM, step by step</a><a href="#readme-10-failure-scenarios--walk-every-crash-point">10. FAILURE SCENARIOS — walk every crash point</a><a href="#readme-11-correctness--what-is-and-isnt-guaranteed">11. CORRECTNESS — what is and isn&#x27;t guaranteed</a><a href="#readme-12-the-code">12. THE CODE</a><a href="#readme-13-experiments--break-it-yourself">13. EXPERIMENTS — break it yourself</a><a href="#readme-14-production--what-the-lab-omits-and-how-real-systems-do-it">14. PRODUCTION — what the lab omits and how real systems do it</a><a href="#readme-15-exercises">15. EXERCISES</a><a href="#readme-16-related-concepts--and-when-to-choose-which">16. RELATED CONCEPTS — and when to choose which</a><a href="#readme-17-next-steps--knowledge-map">17. NEXT STEPS — knowledge map</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

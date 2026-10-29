@@ -1,0 +1,168 @@
+/*
+ * The API catalogue: React's hooks and APIs, for autocomplete, the hover cards and auto-import
+ * (js/assist.js), the "missing import" warning (js/habits.js), and the Reference page
+ * (js/views/reference.js, #/reference).
+ *
+ * Entry shape: {id (= name), name, module: 'react' | 'react-dom' | 'react-dom/client',
+ *   kind: 'hook' | 'component' | 'function', track (the track that teaches it), sig, summary (one or
+ *   two sentences, Markdown), snippet? (what autocomplete inserts at the start of a statement; $0 is
+ *   where the cursor goes; mid-expression only the name goes in), lesson? (the lesson that teaches
+ *   it: required once its track is built), docs (react.dev)}
+ *
+ * tests/check_data.py checks every field, link and snippet (each must compile); tests/test_ui.py
+ * ("assist") proves every name is a real export of its module in the vendored React.
+ */
+(function (U) {
+  var R = 'https://react.dev/reference/react/';
+  var D = 'https://react.dev/reference/react-dom/';
+
+  U.data.api = [
+    /* ---------------------------------------------------------------- state */
+    { id: 'useState', name: 'useState', module: 'react', kind: 'hook', track: 'foundations', lesson: 'r-state-basics',
+      sig: 'const [state, setState] = useState(initialState)',
+      summary: 'A component\'s memory: a value that survives re-renders, and the function that changes it and asks React to draw again.',
+      snippet: 'const [value, setValue] = useState($0);', docs: R + 'useState' },
+    { id: 'useReducer', name: 'useReducer', module: 'react', kind: 'hook', track: 'state', lesson: 'r-use-reducer',
+      sig: 'const [state, dispatch] = useReducer(reducer, initialArg)',
+      summary: 'State changed by actions: `dispatch({ type: \'added\' })` runs your `reducer(state, action)`, which returns the next state.',
+      snippet: 'const [state, dispatch] = useReducer(reducer, $0);', docs: R + 'useReducer' },
+    { id: 'useId', name: 'useId', module: 'react', kind: 'hook', track: 'state', lesson: 'r-forms',
+      sig: 'const id = useId()',
+      summary: 'A unique id for this component, the same on the server and in the browser: for `htmlFor` and `aria-*` links.',
+      snippet: 'const id = useId();', docs: R + 'useId' },
+
+    /* ---------------------------------------------------------------- effects and refs */
+    { id: 'useEffect', name: 'useEffect', module: 'react', kind: 'hook', track: 'effects', lesson: 'r-effects',
+      sig: 'useEffect(setup, dependencies?)',
+      summary: 'Runs code after React has drawn, to sync with something outside React (a timer, a fetch, the DOM). Return a cleanup; list what it reads in the dependencies.',
+      snippet: 'useEffect(() => {\n  $0\n}, []);', docs: R + 'useEffect' },
+    { id: 'useLayoutEffect', name: 'useLayoutEffect', module: 'react', kind: 'hook', track: 'effects', lesson: 'r-dom-refs',
+      sig: 'useLayoutEffect(setup, dependencies?)',
+      summary: 'Like `useEffect`, but before the browser paints: for measuring the layout. It blocks painting, so prefer `useEffect`.',
+      snippet: 'useLayoutEffect(() => {\n  $0\n}, []);', docs: R + 'useLayoutEffect' },
+    { id: 'useRef', name: 'useRef', module: 'react', kind: 'hook', track: 'effects', lesson: 'r-refs',
+      sig: 'const ref = useRef(initialValue)',
+      summary: 'A box, `ref.current`, that survives re-renders without causing one: for a DOM node (`<input ref={ref} />`) or a value such as a timer id.',
+      snippet: 'const ref = useRef($0);', docs: R + 'useRef' },
+    { id: 'useImperativeHandle', name: 'useImperativeHandle', module: 'react', kind: 'hook', track: 'effects', lesson: 'r-dom-refs',
+      sig: 'useImperativeHandle(ref, createHandle, dependencies?)',
+      summary: 'Chooses what a parent\'s ref to your component sees: a few methods (`focus()`) instead of the whole DOM node.',
+      snippet: 'useImperativeHandle(ref, () => ({\n  $0\n}), []);', docs: R + 'useImperativeHandle' },
+    { id: 'useSyncExternalStore', name: 'useSyncExternalStore', module: 'react', kind: 'hook', track: 'effects', lesson: 'r-custom-hooks',
+      sig: 'const snapshot = useSyncExternalStore(subscribe, getSnapshot)',
+      summary: 'Reads a store that lives outside React (a browser API, a state library) and re-renders when it changes.',
+      snippet: 'const value = useSyncExternalStore(subscribe, getSnapshot$0);', docs: R + 'useSyncExternalStore' },
+    { id: 'useDebugValue', name: 'useDebugValue', module: 'react', kind: 'hook', track: 'effects', lesson: 'r-custom-hooks',
+      sig: 'useDebugValue(value, format?)',
+      summary: 'A label for your custom hook in React DevTools.',
+      snippet: 'useDebugValue($0);', docs: R + 'useDebugValue' },
+    { id: 'StrictMode', name: 'StrictMode', module: 'react', kind: 'component', track: 'effects', lesson: 'r-effect-cleanup',
+      sig: '<StrictMode>…</StrictMode>',
+      summary: 'In development, renders twice and runs effects twice to surface impure components and missing cleanups. Nothing changes in production.',
+      docs: R + 'StrictMode' },
+    { id: 'flushSync', name: 'flushSync', module: 'react-dom', kind: 'function', track: 'effects', lesson: 'r-dom-refs',
+      sig: 'flushSync(callback)',
+      summary: 'Applies the state updates inside the callback to the DOM at once, for example to scroll to an item you just added. Rarely needed.',
+      snippet: 'flushSync(() => {\n  $0\n});', docs: D + 'flushSync' },
+    { id: 'useEffectEvent', name: 'useEffectEvent', module: 'react', kind: 'hook', track: 'effects', lesson: 'r-effect-deps',
+      sig: 'const onEvent = useEffectEvent(callback)',
+      summary: 'A function for your effects to call that always sees the latest props and state, and is not a dependency, so the effect does not run again when they change. React 19.2.',
+      snippet: 'const onEvent = useEffectEvent(() => {\n  $0\n});', docs: R + 'useEffectEvent' },
+    { id: 'forwardRef', name: 'forwardRef', module: 'react', kind: 'function', track: 'effects', lesson: 'r-dom-refs',
+      sig: 'const Input = forwardRef(function Input(props, ref) { … })',
+      summary: 'Before React 19, the way to let a parent pass a `ref` to your component. In React 19 `ref` is a plain prop, so new code does not need it.',
+      docs: R + 'forwardRef' },
+
+    /* ---------------------------------------------------------------- composition */
+    { id: 'useContext', name: 'useContext', module: 'react', kind: 'hook', track: 'composition', lesson: 'r-context',
+      sig: 'const value = useContext(SomeContext)',
+      summary: 'Reads a value from the nearest `<SomeContext value={…}>` above, with no props passed down in between.',
+      snippet: 'const value = useContext($0);', docs: R + 'useContext' },
+    { id: 'createContext', name: 'createContext', module: 'react', kind: 'function', track: 'composition', lesson: 'r-context',
+      sig: 'const SomeContext = createContext(defaultValue)',
+      summary: 'Makes a context: provide it with `<SomeContext value={…}>`, read it with `useContext(SomeContext)`. Create it outside any component.',
+      snippet: 'const MyContext = createContext($0);', docs: R + 'createContext' },
+    { id: 'createPortal', name: 'createPortal', module: 'react-dom', kind: 'function', track: 'composition', lesson: 'r-portals',
+      sig: 'createPortal(children, domNode)',
+      summary: 'Draws children into another DOM node (often `document.body`), for modals and tooltips, while they stay in your component tree for events and context.',
+      docs: D + 'createPortal' },
+
+    /* ---------------------------------------------------------------- performance */
+    { id: 'useMemo', name: 'useMemo', module: 'react', kind: 'hook', track: 'performance', lesson: 'r-usememo-usecallback',
+      sig: 'const value = useMemo(calculate, dependencies)',
+      summary: 'Keeps the result of a slow calculation between renders, recalculating only when a dependency changes.',
+      snippet: 'const value = useMemo(() => {\n  return $0;\n}, []);', docs: R + 'useMemo' },
+    { id: 'useCallback', name: 'useCallback', module: 'react', kind: 'hook', track: 'performance', lesson: 'r-usememo-usecallback',
+      sig: 'const fn = useCallback(fn, dependencies)',
+      summary: 'Keeps the same function between renders, so a child wrapped in `memo` does not re-render for a "new" function prop.',
+      snippet: 'const handle = useCallback(() => {\n  $0\n}, []);', docs: R + 'useCallback' },
+    { id: 'useTransition', name: 'useTransition', module: 'react', kind: 'hook', track: 'performance', lesson: 'r-transitions',
+      sig: 'const [isPending, startTransition] = useTransition()',
+      summary: 'Marks an update as not urgent, so typing stays responsive while React prepares the slow part; `isPending` says it is still working.',
+      snippet: 'const [isPending, startTransition] = useTransition();', docs: R + 'useTransition' },
+    { id: 'useDeferredValue', name: 'useDeferredValue', module: 'react', kind: 'hook', track: 'performance', lesson: 'r-transitions',
+      sig: 'const deferred = useDeferredValue(value)',
+      summary: 'A copy of a value that lags behind while React is busy: render the slow list from it and the input from the real value.',
+      snippet: 'const deferred = useDeferredValue($0);', docs: R + 'useDeferredValue' },
+    { id: 'memo', name: 'memo', module: 'react', kind: 'function', track: 'performance', lesson: 'r-memo',
+      sig: 'const Memoized = memo(Component)',
+      summary: 'Skips re-rendering a component when its props are the same as last time.',
+      snippet: 'const Memo = memo(function Memo(props) {\n  $0\n});', docs: R + 'memo' },
+    { id: 'lazy', name: 'lazy', module: 'react', kind: 'function', track: 'performance', lesson: 'r-lazy-suspense',
+      sig: 'const Page = lazy(() => import(\'./Page\'))',
+      summary: 'Loads a component\'s code the first time it is drawn; wrap it in `<Suspense>` to show something while it loads.',
+      snippet: 'const Page = lazy(() => import(\'./Page$0\'));', docs: R + 'lazy' },
+    { id: 'startTransition', name: 'startTransition', module: 'react', kind: 'function', track: 'performance', lesson: 'r-transitions',
+      sig: 'startTransition(action)',
+      summary: '`useTransition`\'s start function without the hook: marks an update as not urgent, for code outside components.',
+      snippet: 'startTransition(() => {\n  $0\n});', docs: R + 'startTransition' },
+    { id: 'Suspense', name: 'Suspense', module: 'react', kind: 'component', track: 'performance', lesson: 'r-lazy-suspense',
+      sig: '<Suspense fallback={<Spinner />}>…</Suspense>',
+      summary: 'Shows the fallback while something inside is still loading: lazy code, or data read with `use`.',
+      docs: R + 'Suspense' },
+    { id: 'Profiler', name: 'Profiler', module: 'react', kind: 'component', track: 'performance', lesson: 'r-rendering',
+      sig: '<Profiler id="list" onRender={log}>…</Profiler>',
+      summary: 'Measures how long its children take to render, reported to `onRender`.',
+      docs: R + 'Profiler' },
+
+    /* ---------------------------------------------------------------- React 19 */
+    { id: 'useActionState', name: 'useActionState', module: 'react', kind: 'hook', track: 'react19', lesson: 'r-use-action-state',
+      sig: 'const [state, formAction, isPending] = useActionState(action, initialState)',
+      summary: 'State that an action updates, typically a form\'s: `<form action={formAction}>`. The action gets the previous state and the form data; `isPending` is true while it runs.',
+      snippet: 'const [state, formAction, isPending] = useActionState(async (previous, formData) => {\n  $0\n}, null);', docs: R + 'useActionState' },
+    { id: 'useOptimistic', name: 'useOptimistic', module: 'react', kind: 'hook', track: 'react19', lesson: 'r-use-optimistic',
+      sig: 'const [optimistic, addOptimistic] = useOptimistic(state, updateFn)',
+      summary: 'Shows the result of an action at once (a sent comment, a ticked box) while the real request is still on its way.',
+      snippet: 'const [optimistic, addOptimistic] = useOptimistic(state, (current, next) => {\n  return $0;\n});', docs: R + 'useOptimistic' },
+    { id: 'use', name: 'use', module: 'react', kind: 'function', track: 'react19', lesson: 'r-use',
+      sig: 'const value = use(resource)',
+      summary: 'Reads a promise (suspending until it settles) or a context. Unlike hooks, it may be called inside `if` and loops.',
+      snippet: 'const value = use($0);', docs: R + 'use' },
+    { id: 'useFormStatus', name: 'useFormStatus', module: 'react-dom', kind: 'hook', track: 'react19', lesson: 'r-use-form-status',
+      sig: 'const { pending, data, method, action } = useFormStatus()',
+      summary: 'Inside a `<form>`, tells a child (a submit button) whether the form is being sent.',
+      snippet: 'const { pending } = useFormStatus();', docs: D + 'hooks/useFormStatus' },
+    { id: 'hydrateRoot', name: 'hydrateRoot', module: 'react-dom/client', kind: 'function', track: 'react19', lesson: 'r-rendering-strategies',
+      sig: 'const root = hydrateRoot(domNode, reactNode)',
+      summary: 'Attaches React to HTML the server already made (server rendering), instead of drawing it from scratch. Its first render must match that HTML exactly.',
+      docs: D + 'client/hydrateRoot' },
+    { id: 'requestFormReset', name: 'requestFormReset', module: 'react-dom', kind: 'function', track: 'react19', lesson: 'r-actions',
+      sig: 'requestFormReset(formElement)',
+      summary: 'Resets a `<form>` at the end of the current transition, as React does after the form\'s own action. For a form whose action is not the one running.',
+      snippet: 'requestFormReset($0);', docs: D + 'requestFormReset' },
+    { id: 'Activity', name: 'Activity', module: 'react', kind: 'component', track: 'react19', lesson: 'r-react-19-upgrade',
+      sig: '<Activity mode={visible ? \'visible\' : \'hidden\'}>…</Activity>',
+      summary: 'Hides its children without unmounting them: their state and DOM are kept (with `display: none`), their effects are cleaned up while hidden. React 19.2.',
+      docs: R + 'Activity' },
+
+    /* ---------------------------------------------------------------- foundations */
+    { id: 'Fragment', name: 'Fragment', module: 'react', kind: 'component', track: 'foundations', lesson: 'r-jsx',
+      sig: '<Fragment>…</Fragment> or <>…</>',
+      summary: 'Groups elements without adding a DOM node. Write `<>…</>`, or `<Fragment key={…}>` when a list needs a key.',
+      docs: R + 'Fragment' },
+    { id: 'createRoot', name: 'createRoot', module: 'react-dom/client', kind: 'function', track: 'foundations', lesson: 'r-first-component',
+      sig: 'const root = createRoot(domNode)',
+      summary: 'Where a React app starts: `createRoot(document.getElementById(\'root\')).render(<App />)`. This tool does it for you.',
+      snippet: 'createRoot(document.getElementById(\'root\')).render(<App />);', docs: D + 'client/createRoot' }
+  ];
+})(window.RLT);

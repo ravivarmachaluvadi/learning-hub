@@ -1,0 +1,276 @@
+<!doctype html>
+<html lang="en" data-hub-lab="21-java-version-features">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Java 18 — UTF-8 everywhere, silently</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 21 · java-18.md</span><nav class="tabs" aria-label="This lab"><a href="notes.html">Lab notes</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 21 · java-version-features</p><h1 id="doc-java-18--utf-8-everywhere-silently">Java 18 — UTF-8 everywhere, silently</h1>
+<p><strong>GA:</strong> March 2022 · <strong>LTS:</strong> no · <strong>Class file major version:</strong> 62 ·
+<strong>Oracle support:</strong> ended September 2022 <strong>[documented — Oracle roadmap]</strong></p>
+<p><strong>Previous:</strong> <a href="java-17.html">Java 17</a> · <strong>Next:</strong> <a href="java-19.html">Java 19</a> ·
+<strong>Back to:</strong> <a href="notes.html#readme">the story</a></p>
+<hr />
+<h2 id="doc-the-one-thing-to-remember">The one thing to remember</h2>
+<p><strong>Java 18 makes UTF-8 the default charset on every platform — and it does so
+silently.</strong> No exception, no warning, no compile error. Text that used to
+decode one way now decodes another way, on platforms where the OS default
+wasn't UTF-8.</p>
+<p>That makes it the cleanest example in this lab of the failure class that
+actually reaches customers. Every other hazard in the README throws something;
+this one changes your output and says nothing. It is
+<a href="notes.html#readme-f6--utf-8-became-the-default-charset-jdk-18-jep-400">F6</a>.</p>
+<h2 id="doc-what-you-actually-get">What you actually get</h2>
+<h3 id="doc-utf-8-by-default--jep-400">UTF-8 by default — JEP 400</h3>
+<p>Before Java 18, the <em>default charset</em> — used by <code>new FileReader(f)</code>,
+<code>new String(bytes)</code>, <code>new PrintWriter(f)</code>, <code>Files.readAllLines(p)</code> and many
+others when you don't pass one — came from the operating system locale.</p>
+<p>That meant: UTF-8 on most Linux, <code>windows-1252</code> on a US/European Windows,
+<code>Shift_JIS</code> on a Japanese Windows, <code>MS950</code> on a Traditional Chinese one. The
+same program, the same file, different results.</p>
+<p>From Java 18 the default is <strong>UTF-8 everywhere</strong>, regardless of locale.</p>
+<p><strong>Why this is right:</strong> it removes an entire class of &quot;works on CI, fails on a
+developer laptop&quot; bugs, and it matches what every other modern platform does.</p>
+<p><strong>Why it is dangerous anyway:</strong> if a Windows service has been writing files
+with the platform default for a decade, those files are in <code>windows-1252</code>. On
+JDK 18+ they will be <em>read</em> as UTF-8. Bytes that were legal <code>windows-1252</code>
+become replacement characters or mojibake. The application does not fail; it
+produces wrong text.</p>
+<p><strong>The bridge:</strong> <code>-Dfile.encoding=COMPAT</code> restores the JDK 17 behaviour.
+Treat it as temporary.</p>
+<p><strong>The real fix, which was always the right advice:</strong> never rely on the default
+charset.</p>
+<div class="code"><pre><code class="language-java">new String(bytes)                                  // depends on the default
+new String(bytes, StandardCharsets.UTF_8)          // says what it means
+
+Files.readAllLines(p)                              // UTF-8 since Java 8 for this one
+new FileReader(f)                                  // default charset
+new FileReader(f, StandardCharsets.UTF_8)          // explicit, added in Java 11
+</code></pre></div>
+<p>Note the inconsistency that trips people up: <code>Files.readString</code>,
+<code>Files.readAllLines</code> and <code>Files.newBufferedReader</code> specified UTF-8 from the
+start. <code>FileReader</code>, <code>FileWriter</code>, <code>PrintWriter(File)</code>, <code>new String(byte[])</code>
+and <code>String.getBytes()</code> use the default. That is why JEP 400 changes behaviour
+for some of your code and not other parts.</p>
+<p><code>System.out</code> is a separate story: its encoding is <code>stdout.encoding</code>, which
+follows the <em>console</em>, not <code>file.encoding</code> — so console output on Windows can
+still differ from file output.</p>
+<h3 id="doc-simple-web-server--jep-408">Simple web server — JEP 408</h3>
+<div class="code"><pre><code>$ jwebserver -p 8000 -d /path/to/files
+</code></pre></div>
+<p>A static file server, and a <code>com.sun.net.httpserver</code> API to embed one. For
+testing and local development only — explicitly not a production server. Useful
+for serving a directory of test fixtures, or for opening this lab's
+<code>visualization.html</code> if your browser blocks local file access.</p>
+<h3 id="doc-code-snippets-in-javadoc--jep-413">Code snippets in Javadoc — JEP 413</h3>
+<p><code>{@snippet}</code> — Javadoc code examples that are actually compiled and validated,
+rather than comments that rot.</p>
+<h3 id="doc-internet-address-resolution-spi--jep-418">Internet-address resolution SPI — JEP 418</h3>
+<p>A plug point for host name resolution, replacing the built-in resolver. The
+motivation is virtual threads: the JDK's built-in resolver uses a native call
+that would pin a virtual thread. This SPI is what lets a non-pinning resolver
+be plugged in — another unglamorous prerequisite, like the socket rewrites in
+<a href="java-13.html">13</a> and <a href="java-15.html">15</a>.</p>
+<h3 id="doc-core-reflection-reimplemented-with-method-handles--jep-416">Core reflection reimplemented with method handles — JEP 416</h3>
+<p>An internal rewrite: <code>java.lang.reflect</code> now sits on <code>MethodHandle</code>
+infrastructure instead of generating bytecode stubs. Roughly three thousand
+lines of native code deleted. Performance characteristics of reflection shift
+slightly — worth knowing if you have a reflection-heavy benchmark that
+straddles this release.</p>
+<h2 id="doc-pipeline-movement-this-release">Pipeline movement this release</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Feature</th>
+  <th>State here</th>
+  <th>Ends up</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Pattern matching for <code>switch</code> (JEP 420)</td>
+  <td>2nd preview</td>
+  <td>Final in <a href="java-21.html">21</a></td>
+</tr>
+<tr>
+  <td>FFM (JEP 419)</td>
+  <td>2nd incubator</td>
+  <td>Final in <a href="java-22.html">22</a></td>
+</tr>
+<tr>
+  <td>Vector API (JEP 417)</td>
+  <td>3rd incubator</td>
+  <td>Still incubating in <a href="java-25.html">25</a></td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="doc-what-broke">What broke</h2>
+<ul>
+<li><p><strong>UTF-8 default — JEP 400.</strong> Discussed above. Silent.</p>
+</li>
+<li><p><strong>Finalization deprecated for removal — JEP 421.</strong> <code>Object.finalize()</code> — a
+1995 mistake that has been discouraged since roughly 1997 — is now terminally
+deprecated. You can test life without it using <code>--finalization=disabled</code>.</p>
+<p>Finalizers are unpredictable (no guarantee they ever run), can resurrect
+objects, and slow down GC. The replacements are try-with-resources for
+deterministic cleanup and <code>java.lang.ref.Cleaner</code> for a safety net. If you
+find <code>finalize()</code> in a codebase, it is almost always both unnecessary and
+actively harmful.</p>
+</li>
+</ul>
+<h2 id="doc-verdict-for-your-day-job">Verdict for your day job</h2>
+<p><strong>Don't target it.</strong> Six months, ended September 2022.</p>
+<p>But <strong>JEP 400 will reach you</strong> whether you target 18 or not — it is in every
+release from 18 onward, so it lands on you at 21 or 25 just the same. If you
+run on Windows, or read files written by a Windows process, or handle any
+non-ASCII text at all, read the section above before your next upgrade and add
+a test that asserts on decoded content.</p>
+</main><aside aria-label="On this page"><h2>On this page</h2><a href="#doc-the-one-thing-to-remember">The one thing to remember</a><a href="#doc-what-you-actually-get">What you actually get</a><a href="#doc-pipeline-movement-this-release">Pipeline movement this release</a><a href="#doc-what-broke">What broke</a><a href="#doc-verdict-for-your-day-job">Verdict for your day job</a><h2>More in this lab</h2><a href="java-09.html">java-09</a><a href="java-10.html">java-10</a><a href="java-11.html">java-11</a><a href="java-12.html">java-12</a><a href="java-13.html">java-13</a><a href="java-14.html">java-14</a><a href="java-15.html">java-15</a><a href="java-16.html">java-16</a><a href="java-17.html">java-17</a><a href="java-18.html">java-18</a><a href="java-19.html">java-19</a><a href="java-20.html">java-20</a><a href="java-21.html">java-21</a><a href="java-22.html">java-22</a><a href="java-23.html">java-23</a><a href="java-24.html">java-24</a><a href="java-25.html">java-25</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

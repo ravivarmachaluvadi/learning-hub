@@ -1,0 +1,3300 @@
+<!doctype html>
+<html lang="en" data-hub-lab="35-consistent-hashing">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>35. consistent-hashing</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 35 of 71 · Stage 5</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 35 · Copies and Agreement</p><article id="readme"><h1 id="readme-consistent-hashing--how-to-spread-data-over-machines-without-moving-it-all-every-time">Consistent hashing — how to spread data over machines without moving it all every time</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Priya's coat is in a school cloakroom with four attendants,
+Amara, Bao, Chidi and Dev, and there is no list and nobody to ask. Every child
+finds their attendant by a rule, and the first rule anyone thinks of, &quot;divide
+by how many attendants there are&quot;, sends three-quarters of the children to
+the wrong desk the moment Dev goes home sick. The fix is to take the number
+of attendants <em>out</em> of the rule: stand each attendant at a fixed door on a
+circular corridor, and let every child walk clockwise from their own door
+until they meet one. Now Dev leaving moves only Dev's coats, and Amara, Bao
+and Chidi keep every coat they had. That one missing number is the whole of
+consistent hashing; the rest of this lab is what you must add so the shares
+stay even, a dead attendant's coats spread out instead of landing on one
+neighbour, and copies end up on different machines.</p>
+</blockquote>
+<p>Watch it before you read it: <a href="https://claude.ai/code/artifact/4169af96-aa2e-4918-9d19-a10c74336747" target="_blank" rel="noopener">The Clockwise Rule</a>,
+also saved as <a href="visualization.html"><code>visualization.html</code></a>. Section 9 says what to click; section 19 says how the lab was built.</p>
+<hr />
+<h2 id="readme-1-why-does-this-problem-exist-at-all">1. Why does this problem exist at all?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> When your data no longer fits on one machine, every part
+of your system has to know which machine holds each item, without asking
+anyone. The obvious rule for that works perfectly until the number of
+machines changes. Then it sends almost everything to the wrong place at once.</p>
+</blockquote>
+<p>You have more data than fits on one machine, or more traffic than one machine
+can serve. So you buy several and split the work between them.</p>
+<p>That creates a question straight away. It has to be answered millions of times
+a second, by every part of your system, without anybody asking anybody: <strong>given
+this item, which machine has it?</strong> Every one of your twenty application servers
+must reach the same answer, alone, instantly, from nothing but the item's name.</p>
+<p>There is an obvious rule that does exactly this. It costs nothing, and it
+spreads the work perfectly evenly. It is what everybody writes. And it is right
+up until the moment the number of machines changes. That means your first
+deploy, your first autoscale, or your first hardware failure.</p>
+<p>When that happens, the obvious rule sends <strong>almost every item to a different
+machine at once</strong>. If those machines were a cache, your cache is now empty.
+Your database is receiving your full unfiltered traffic with nothing in front
+of it. That is not a slowdown. It is an outage, and it happens at the exact
+moment you were trying to add capacity.</p>
+<p>This lab is about why that happens and what to do instead.</p>
+<h2 id="readme-2-the-cloakroom-how-does-every-child-find-their-coat-with-nobody-to-ask">2. The cloakroom: how does every child find their coat with nobody to ask?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five hundred coats, four attendants, no list. Every child
+must work out which attendant has their coat, alone, from something they
+already know.</p>
+</blockquote>
+<p>A school has a cloakroom holding 500 coats and four attendants: <strong>Amara, Bao,
+Chidi and Dev</strong>.</p>
+<p>The cloakroom cannot have a queue at a desk. 500 children arrive in four
+minutes. So there is no list and nobody to ask. Every child has to work out for
+themselves which attendant has their coat, from something they already know.</p>
+<p>That constraint is the whole problem. Remember it: <strong>no lookup, no asking,
+everyone computes the same answer alone.</strong></p>
+<p>Priya is one of the 500. Follow her coat. It is the one thing that something
+happens to in every section from here on.</p>
+<p><strong>Where this lab takes you.</strong> Stop at any checkpoint and you still have
+something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–9</td>
+  <td>tell the cloakroom story, and say why &quot;divide by the number of attendants&quot; fails</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>10</td>
+  <td>build the ring from scratch, and name the five places it breaks on the way</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>11–14</td>
+  <td>reason about nine failures, say what is guaranteed, and read the code and experiments</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>15</td>
+  <td>choose between the ring, its rivals, and the design Redis and Kafka picked instead</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-3-what-does-a-reasonable-person-try-first">3. What does a reasonable person try first?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Count the letters in your name, divide by four, and the
+remainder is your attendant. It is fast, it needs no list, and it spreads the
+coats evenly. There is nothing wrong with it. Yet.</p>
+</blockquote>
+<p>The school's rule:</p>
+<blockquote>
+<p>Count the letters in your name. Divide by the number of attendants. The
+remainder is your attendant.</p>
+</blockquote>
+<p>Priya has 5 letters. 5 divided by 4 leaves 1, so Priya's coat is with attendant
+number 1, Bao. Every child can do this in their head. It needs no list, and the
+coats spread evenly across all four.</p>
+<p>This is a genuinely good rule. It is fast, it needs no memory, and it is
+perfectly balanced. Every property you would ask for, it has.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Is there any property this rule lacks? Think about what the
+cloakroom will look like at lunchtime, not just at nine o'clock.</em></p>
+<details><summary>Reveal</summary>
+At nine o'clock it lacks nothing. If you said "it is unbalanced" or "it is
+slow", both are false, and experiment 6 in section 10 shows it: the remainder
+rule is the fastest scheme in this lab and among the best balanced. The
+missing property only shows itself when the *number of attendants changes*.
+That is the next section.
+</details>
+
+</blockquote>
+<h2 id="readme-4-why-does-the-remainder-rule-break-when-dev-goes-home">4. Why does the remainder rule break when Dev goes home?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Dev goes home sick, so everyone divides by three instead
+of four. Now three-quarters of the children walk to the wrong attendant, even
+though only a quarter of the coats were ever Dev's.</p>
+</blockquote>
+<p>Dev goes home sick at lunchtime. Now there are three attendants, so everyone
+divides by 3 instead of 4.</p>
+<p>Priya: 5 divided by 3 leaves 2. That is attendant number 2, Chidi. But Priya's
+coat is with Bao, because Bao is who the <em>old</em> rule chose this morning.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> 500 children, one attendant of four goes home. How many
+children find their coat with the attendant their new calculation points at?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>About one in four.</strong> The lab's Java, run over 200,000 items, prints:</p>
+<div class="code"><pre><code>4 machines -&gt; 3 :  the remainder rule moved 75.0% of items
+</code></pre></div>
+<p>| What changed | Coats sent to a new attendant | What it means |
+|---|---|---|
+| 4 attendants → 3 | 75.0% | three-quarters of the cloakroom is now unfindable |
+| 100 attendants → 99 | 99.0% | nearly everything moves, to redistribute the 1% that had to |</p>
+<p>If you said &quot;three in four find it&quot;, you were counting the coats Dev never
+held and assuming they stayed findable. They did not. Notice what makes this
+so much worse than it first sounds: <strong>Dev only ever held a quarter of the
+coats.</strong> Losing Dev should have disturbed a quarter of the children. Instead
+it disturbed three-quarters. The extra half is children whose coats never
+moved at all, and who are now looking in the wrong place.</p>
+<p>It gets worse as the school grows, not better. At 100 attendants, losing one
+moves <strong>99.0%</strong> of the coats, to redistribute the 1% that genuinely had to
+move.</p>
+</details>
+
+</blockquote>
+<p><strong>Sit with what just went wrong, because it is not &quot;the rule is inaccurate&quot;.</strong>
+The rule is perfectly accurate. The problem is what it depends on.</p>
+<p>&quot;The remainder after dividing by the number of attendants&quot; makes every child's
+answer depend on a <strong>fact about the whole cloakroom</strong>: how many attendants are
+on duty. Change that one number and every answer changes at once. That includes
+the overwhelming majority of children whose own situation did not change in any
+way.</p>
+<p>Engineers have a name for this rule. You will meet it everywhere, including in
+this lab's code and experiment output: <strong>modulo hashing</strong>, after the remainder
+operation at its heart. In words: turn the item's name into a number, divide by
+the number of machines, keep the remainder. Written as code it is
+<code>hash(key) % numberOfMachines</code>, the key's number divided by the machine count,
+keep the remainder. The <code>%</code> sign means &quot;the remainder of&quot;.</p>
+<p>That is the actual disease. It is worth stating in a form you can carry to
+other problems: <strong>a rule whose output depends on a global count will produce a
+global change whenever the count changes.</strong> Any rule with the total in it has
+this, no matter how clever the rest of it is.</p>
+<h2 id="readme-5-what-do-we-actually-need">5. What do we actually need?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Keep the part that works: every child decides alone. Fix
+the part that does not: when one attendant leaves, only that attendant's
+coats may be affected.</p>
+</blockquote>
+<p>Stated plainly, before any solution:</p>
+<blockquote>
+<p>Every child must work out their attendant <strong>alone</strong>, from their own name and
+the list of who is on duty. No queue, no lookup, no asking.</p>
+<p>And when one attendant joins or leaves, <strong>only that attendant's share of the
+coats may be affected</strong>, roughly one in four of them. No other child's answer
+may change.</p>
+</blockquote>
+<p>The first clause is what the remainder rule already gives us, and we must not
+lose it. The second is the one it fails. Everything that follows is the pursuit
+of both at once.</p>
+<h2 id="readme-6-what-idea-fixes-it">6. What idea fixes it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Rebuild the cloakroom as a circular corridor of numbered
+doors. Each attendant stands at a fixed door. Each coat has a door number.
+Walk clockwise until you meet an attendant. The number of attendants is
+nowhere in that rule.</p>
+</blockquote>
+<p>Rebuild the cloakroom as a <strong>circular corridor with a thousand numbered
+doors</strong>, 0 to 999, running all the way round.</p>
+<ul>
+<li>Every coat gets a door number from the child's name. Some fixed calculation
+that always gives the same number for the same name.</li>
+<li>Every attendant stands at some door, at a spot decided the same way from
+their own name. Amara at 91, Bao at 305, Chidi at 502, Dev at 780.</li>
+<li><strong>The rule: walk clockwise from your coat's door number until you meet an
+attendant. That attendant has your coat.</strong></li>
+</ul>
+<p>Priya's name gives door 340. She walks 341, 342, ... and meets Chidi at 502.
+Chidi has her coat.</p>
+<pre class="mermaid">flowchart TD
+  P[&quot;Priya&#x27;s coat&lt;br&gt;door 340&quot;] --&gt; W[&quot;walk clockwise&lt;br&gt;341, 342, ...&quot;]
+  W --&gt; C[&quot;Chidi at 502&lt;br&gt;has the coat&quot;]
+  D[&quot;Dev at 780&lt;br&gt;goes home&quot;] -.-&gt;|&quot;only doors 503 to 780&lt;br&gt;walk on past 999&quot;| A[&quot;Amara at 91&lt;br&gt;after the wrap&quot;]
+</pre>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Dev goes home again. He stood at door 780. Which children
+have to walk somewhere new, and where do they end up?</em></p>
+<details><summary>Reveal</summary>
+Only the children whose door numbers fall between Chidi at 502 and Dev at
+780. They keep walking past 780, run off the end at 999, come back in at 0,
+and reach Amara at 91. Priya at 340 is not one of them; she still meets
+Chidi. If you said "everyone past 780 as well", look again: a coat at 900
+walked to Amara *before* Dev left too, because Dev at 780 was already behind
+it.
+</details>
+
+</blockquote>
+<p>Now Dev goes home. Dev stood at 780, so the coats affected are exactly those
+whose numbers fall between Chidi at 502 and Dev at 780. They now keep walking
+past 780 and reach Amara at 91, wrapping round the end. <strong>Every other child's
+walk is unchanged</strong>, because nothing between the other attendants moved.</p>
+<p>Look at the rule again and notice what is missing from it: <em>how many attendants
+there are</em>. It does not appear. There is nothing global left to change.</p>
+<p>That is the whole invention. Everything else in this document is consequences.</p>
+<h2 id="readme-7-what-do-engineers-call-all-these-things">7. What do engineers call all these things?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The door-number calculation is a hash function. The
+corridor is the hash space, and bent into a circle it is the ring. Attendants
+are nodes, coats are keys, and &quot;the first attendant clockwise&quot; is the
+successor. You have already felt every one of them.</p>
+</blockquote>
+<p>You have earned all of these. Each names something you have already felt in
+the corridor. Walk it once more, naming things as we pass them.</p>
+<h3 id="readme-the-calculation-that-turns-a-name-into-a-door-number">The calculation that turns a name into a door number</h3>
+<p>The thing that turned &quot;Priya&quot; into door 340 is a <strong>hash function</strong>. In words: a
+calculation that takes any input and gives back a fixed-size number. For our
+purposes it must have two properties. It must be <strong>deterministic</strong>: same input,
+same output, on every machine, forever. And it must be <strong>uniform</strong>: outputs
+spread evenly over the whole range, with no clumping.</p>
+<p>Why does the term exist separately from, say, encryption? To separate the two
+jobs a hash can do. Cryptographic hashes promise you cannot work backwards or
+find collisions. We need neither of those. We need only spread and determinism.
+That is why this world uses fast non-cryptographic hashes like MurmurHash
+rather than SHA-256.</p>
+<p>In this lab's code, <code>src/Hashing.java</code> has <code>hash64(&quot;user:100000&quot;)</code>, which
+always produces the same 64-bit number, on every machine, in every process.</p>
+<p>One trap, and the lab shows it happening: uniformity is a property of the hash
+<em>and</em> of the range you use it in. Section 11 F6 shows a perfectly good hash
+destroying a cluster because its output was 32 bits wide and the space it was
+being placed into was 64.</p>
+<h3 id="readme-the-corridor-and-why-it-is-a-circle">The corridor, and why it is a circle</h3>
+<p>All the door numbers, laid out in a circle, are the <strong>hash space</strong>, treated as
+a <strong>ring</strong>. In words: the full range of numbers the hash function can produce,
+with the largest value declared to wrap round to the smallest. For a 64-bit
+hash that range is 0 to 2⁶⁴−1, two to the power sixty-four, minus one.</p>
+<p>Why name it? Because it is the thing that stays <em>fixed</em>. The number of machines
+changes constantly; the hash space never does. Putting both the items and the
+machines into that one unchanging space is the substitution that solves the
+problem, and the ring is that space.</p>
+<p>In the code, <code>Ring.successorIndex</code> binary-searches a sorted array of positions.
+When it runs off the end, it returns index 0. That single line is where the
+corridor becomes a circle.</p>
+<h3 id="readme-attendants-and-coats">Attendants and coats</h3>
+<p>An attendant is a <strong>node</strong>: a machine that can hold data. A coat is a <strong>key</strong>:
+the identifier of one item. Both are hashed into the same space, which is the
+point. They are the same kind of thing as far as the ring is concerned.</p>
+<p>The words are deliberately generic. The same mechanism places cache entries on
+cache servers, database rows on database nodes, and live HTTP requests on
+backend servers. Naming them &quot;key&quot; and &quot;node&quot; keeps the mechanism separate from
+any one use.</p>
+<h3 id="readme-the-first-attendant-you-meet">The first attendant you meet</h3>
+<p>The attendant Priya meets walking clockwise is the key's <strong>successor</strong>, its
+clockwise owner. In words: the node whose position is the smallest one greater
+than or equal to the key's position, wrapping to the first node if there is
+none.</p>
+<p>&quot;Successor&quot; is the word the original paper and every implementation uses. It
+names a <em>relative</em> relationship rather than an absolute slot. That is precisely
+the difference from the remainder rule. A key does not have a slot number that
+must be recomputed. It has a neighbour.</p>
+<p>Concretely: key at 340, nodes at 91/305/502/780, so the owner is the node at
+502. That is Priya and Chidi again.</p>
+<h3 id="readme-the-share-of-coats-that-have-to-move">The share of coats that have to move</h3>
+<p>When Dev went home, some share of the coats had to find a new attendant. That
+share is the <strong>remapping fraction</strong>. In words: the proportion of keys whose
+owner changes when the membership changes.</p>
+<p>It is the number the whole field is optimising, and it has a floor that people
+forget. Suppose there are some number of machines, call that number n, and one
+more joins. For all n+1 machines to share the keys evenly, at least one share in
+n+1 of the keys <em>must</em> end up somewhere new. That movement is not waste. It is
+the job. Everything <strong>above</strong> the floor is waste, and that gap is what to
+measure.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Symbol</th>
+  <th>In words</th>
+  <th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>n</code></td>
+  <td>how many machines there are right now</td>
+  <td>10</td>
+</tr>
+<tr>
+  <td><code>1/(n+1)</code></td>
+  <td>the floor: one share in n+1 must move so the newcomer gets a fair share</td>
+  <td>1/11, which is 9.1%</td>
+</tr>
+<tr>
+  <td><code>hash(key) % n</code></td>
+  <td>the remainder rule: the key's hash, divided by the machine count, keep the remainder</td>
+  <td>5 % 4 = 1, so Bao</td>
+</tr>
+</tbody>
+</table></div>
+<p>Experiment 1 counts it on 200,000 keys:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>change</th>
+  <th>remainder rule</th>
+  <th>ring</th>
+  <th>unavoidable</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>10 → 11 machines</td>
+  <td>90.8%</td>
+  <td>9.5%</td>
+  <td>9.1%</td>
+  <td>the ring is within half a point of the floor</td>
+</tr>
+<tr>
+  <td>100 → 101 machines</td>
+  <td>99.0%</td>
+  <td>0.9%</td>
+  <td>1.0%</td>
+  <td>the remainder rule does a hundred times the necessary work</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-the-map-back-to-the-story">The map back to the story</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>In the story</th>
+  <th>Engineers say</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the calculation that gives Priya door 340</td>
+  <td>hash function</td>
+  <td>section 6, the door number from a name</td>
+</tr>
+<tr>
+  <td>the corridor of 1,000 doors, bent into a circle</td>
+  <td>hash space, the ring</td>
+  <td>section 6, the corridor</td>
+</tr>
+<tr>
+  <td>an attendant, a coat</td>
+  <td>node, key</td>
+  <td>section 2, the cloakroom</td>
+</tr>
+<tr>
+  <td>the first attendant clockwise (Chidi, for Priya)</td>
+  <td>successor, the clockwise owner</td>
+  <td>section 6, Priya's walk</td>
+</tr>
+<tr>
+  <td>the share of coats that walk somewhere new when Dev leaves</td>
+  <td>remapping fraction</td>
+  <td>section 4, three-quarters against one-quarter</td>
+</tr>
+<tr>
+  <td>divide by the number on duty, keep the remainder</td>
+  <td>modulo hashing</td>
+  <td>section 3, the school's first rule</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-what-two-pictures-should-you-carry-in-your-head">8. What two pictures should you carry in your head?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The simple picture is the corridor. The engineering
+picture is a sorted array of numbers inside every client, searched with
+binary search. They are the same thing, and there are four places the
+corridor picture lies to you.</p>
+</blockquote>
+<h3 id="readme-the-simple-model-carry-this-around">The simple model (carry this around)</h3>
+<p>A circular corridor of numbered doors. Attendants stand at fixed spots decided
+by their names. Every coat has a door number decided by its owner's name. Walk
+clockwise until you meet an attendant.</p>
+<h3 id="readme-the-engineering-model-this-is-what-actually-runs">The engineering model (this is what actually runs)</h3>
+<p>Read it top to bottom. It is Priya's walk, done by a client program.</p>
+<pre class="mermaid">flowchart TD
+  subgraph client [Inside every client, independently]
+    K[&quot;key&lt;br&gt;user:100000&quot;] --&gt; H[&quot;hash function&lt;br&gt;-&gt; 14,382,905,163,...&quot;]
+    H --&gt; B[&quot;binary search a sorted&lt;br&gt;array of node positions&quot;]
+    B --&gt; O[&quot;the first position&lt;br&gt;at or after it&quot;]
+    O --&gt; N[&quot;that position&#x27;s node&quot;]
+  end
+  M[[&quot;the list of machines,&lt;br&gt;however it reaches&lt;br&gt;this client&quot;]] -.rebuilds.-&gt; B
+</pre>
+<ul>
+<li><strong>State:</strong> a sorted array of positions, and a parallel array naming which
+node each position belongs to. That is all. There is no server, no table, and
+no lookup service.</li>
+<li><strong>Lookup:</strong> hash the key, binary search, take the successor. No network
+involved. The cost is a binary search over all the positions, written
+<code>O(log(nodes × positions))</code>. In words: the time grows only with the logarithm
+of how many positions there are.</li>
+<li><strong>On a membership change:</strong> rebuild the array. Nothing else in the system is
+told anything.</li>
+<li><strong>The invariant everything rests on:</strong> a node's positions depend only on that
+node's own name, never on how many other nodes exist.</li>
+</ul>
+<h3 id="readme-the-map-between-them">The map between them</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>cloakroom</th>
+  <th>consistent hashing</th>
+  <th>where it is in the code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the circular corridor of doors</td>
+  <td>the hash space, treated as a ring</td>
+  <td><code>Ring.positions</code></td>
+</tr>
+<tr>
+  <td>a child's name → a door number</td>
+  <td>the hash function applied to a key</td>
+  <td><code>Hashing.hash64</code></td>
+</tr>
+<tr>
+  <td>an attendant standing at a door</td>
+  <td>a node's position on the ring</td>
+  <td><code>Ring.rebuild</code></td>
+</tr>
+<tr>
+  <td>walking clockwise to the next attendant</td>
+  <td>finding the successor</td>
+  <td><code>Ring.successorIndex</code></td>
+</tr>
+<tr>
+  <td>wrapping past door 999 back to door 0</td>
+  <td>the wrap that closes the ring</td>
+  <td><code>lo == positions.length ? 0 : lo</code></td>
+</tr>
+<tr>
+  <td>an attendant going home</td>
+  <td>a node leaving</td>
+  <td><code>Ring.removeNode</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-the-story-lies-to-you">Where the story lies to you</h3>
+<p>Four places, and each one matters later:</p>
+<ol>
+<li><strong>The corridor has 1,000 doors; a real ring has 2⁶⁴ positions.</strong> With a
+thousand doors, two children would constantly share one and you would wonder
+what happens. In a 64-bit space, positions are so astronomically sparse that
+collisions never come up. The sparseness is not a detail. It is why the
+hash's <em>width</em> is load-bearing (section 11 F6).</li>
+<li><strong>An attendant stands in one place; a machine occupies hundreds of positions
+at once.</strong> The single most important refinement in section 10 has no
+counterpart in the story, because a person cannot be in two places.
+Machines can, and must.</li>
+<li><strong>The children can see who is on duty.</strong> Real machines find out late.
+Whatever mechanism tells them takes time to reach everyone, and during that
+window different clients hold different lists and compute different owners.
+That is a real failure mode with real consequences (section 11 F4), and the
+story simply does not contain it.</li>
+<li><strong>Coats do not walk to their new attendant by themselves.</strong> This is the big
+one. Consistent hashing decides <strong>where an item belongs</strong>. It does not move
+anything. For a cache you do not need it to: the item is simply absent and
+gets fetched again. For stored data, something else entirely must notice the
+change and copy the data. That machinery is a separate system with its own
+failure modes (section 11 F8).</li>
+</ol>
+<h2 id="readme-9-can-you-watch-it-move">9. Can you watch it move?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Open the visualization, press &quot;Add a machine&quot;, and watch
+one strip of coloured dots barely flicker while the other repaints itself.
+That is section 4 and section 6 side by side.</p>
+</blockquote>
+<p>Spend five minutes here before the mechanism. The rest of the document is much
+easier once you have seen keys change colour.</p>
+<p><strong>→ <a href="https://claude.ai/code/artifact/4169af96-aa2e-4918-9d19-a10c74336747" target="_blank" rel="noopener">The Clockwise Rule</a></strong>
+<em>(also saved locally as <code>visualization.html</code>)</em></p>
+<p>The page is the corridor, drawn as a circle. Machines are the thick coloured
+bands. Items are the small dots just inside, and a dot takes the colour of the
+band ahead of it clockwise. Click any dot to watch its walk, which is Priya's
+walk from section 6.</p>
+<p>The thing to actually do: press <strong>Add a machine</strong>, then look at the two strips
+lower down. Both show the same 180 items coloured by owner, one under the ring,
+one under the remainder rule. The ring's strip barely flickers. The other one
+turns into a different picture entirely. That is section 4 and section 6, side
+by side, on identical data.</p>
+<p>Five predict-then-watch scenarios cover the surprises: how little moves, why
+one position per machine is not enough, where a dead machine's items land, why
+nothing ever moves sideways, and what a too-narrow hash does to the whole
+cluster.</p>
+<blockquote>
+<p><strong>CHECKPOINT — end of the beginner model, start of the intermediate.</strong> You
+can now explain why the obvious rule fails, what the ring replaces it with,
+and why &quot;the number of machines is not in the formula&quot; is the entire trick.
+That is enough to follow a design discussion and to spot the bug in
+someone's sharding scheme. What the next layer adds: the version of this you
+would build from section 6 alone is badly broken in two specific ways. Next
+we build it, break it, and fix it.</p>
+<p><strong>Say it back.</strong> Without using the words <em>hash</em>, <em>ring</em> or <em>modulo</em>, explain
+to a friend why Dev going home sent three-quarters of the children to the
+wrong desk under the first rule, and only a quarter under the second.</p>
+<details><summary>A good answer sounds like</summary>
+"The first rule had 'how many attendants' inside it, so when that number
+changed every child's answer changed, even for children whose coats never
+moved. The second rule only says 'walk to the next attendant', and Dev
+leaving only changes the walk for children who used to stop at Dev."
+</details>
+
+</blockquote>
+<h2 id="readme-10-how-do-you-build-it-and-where-does-it-break-on-the-way">10. How do you build it, and where does it break on the way?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Build exactly what section 6 describes, with real numbers,
+and watch it fail five times. Each fix is a scar: many positions per machine,
+distinct machines for copies, more positions for bigger machines, an optional
+hard cap. Then meet two rivals that skip the ring entirely.</p>
+</blockquote>
+<p>Let us build exactly what section 6 describes, and watch it fail. The four
+attendants become four machines, named by their initials. Amara is machine A,
+Bao is B, Chidi is C, Dev is D.</p>
+<h3 id="readme-v1-what-does-the-rule-look-like-with-real-numbers">v1: what does the rule look like with real numbers?</h3>
+<p>Four machines. Hash each machine's name to get its position:</p>
+<div class="code"><pre><code>hash(&quot;A&quot;) = 91      hash(&quot;B&quot;) = 305     hash(&quot;C&quot;) = 502     hash(&quot;D&quot;) = 780
+</code></pre></div>
+<p>Sorted, that is the ring: <code>[91:A, 305:B, 502:C, 780:D]</code>. In words: Amara at 91,
+Bao at 305, Chidi at 502, Dev at 780, exactly where they stood in the corridor.
+Now place some keys. Each key is a shopping cart, and <code>cart:17</code>, at 340, is
+Priya's.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>key</th>
+  <th>its position</th>
+  <th>first position at or after it</th>
+  <th>owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>cart:17</code></td>
+  <td>340</td>
+  <td>502</td>
+  <td><strong>C</strong></td>
+</tr>
+<tr>
+  <td><code>cart:22</code></td>
+  <td>88</td>
+  <td>91</td>
+  <td><strong>A</strong></td>
+</tr>
+<tr>
+  <td><code>cart:31</code></td>
+  <td>954</td>
+  <td><em>(none, so wrap to the first)</em></td>
+  <td><strong>A</strong></td>
+</tr>
+<tr>
+  <td><code>cart:45</code></td>
+  <td>610</td>
+  <td>780</td>
+  <td><strong>D</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><code>cart:31</code> is the interesting one. Its position, 954, is past every machine, so
+the walk runs off the end of the array and comes back to the start. That wrap
+is one line of code. It is what makes this a circle rather than a line. Without
+it, every key above 780 would have no owner at all. The test
+<code>ring_wraps_around_past_the_top_of_the_number_space</code> pins it.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>A fifth attendant, Esha (machine E), arrives and stands at
+door 400. Which of the four keys above change owner, and where do they go?</em></p>
+<details><summary>Reveal</summary>
+Only `cart:17`, Priya's, and it goes to E. It sat at 340, and 400 is now the
+first position after it. If you said `cart:45` moves too, check: 610 walks to
+780 both before and after, because Esha stood *behind* it, not in front of
+it. Nothing can move between A, B, C and D, and the paragraph after the table
+says why that is not luck.
+</details>
+
+</blockquote>
+<p><strong>Now add machine E at position 400.</strong> The ring becomes
+<code>[91:A, 305:B, 400:E, 502:C, 780:D]</code>. Recompute:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>key</th>
+  <th>position</th>
+  <th>owner before</th>
+  <th>owner now</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>cart:17</code></td>
+  <td>340</td>
+  <td>C</td>
+  <td><strong>E</strong> ← moved</td>
+</tr>
+<tr>
+  <td><code>cart:22</code></td>
+  <td>88</td>
+  <td>A</td>
+  <td>A</td>
+</tr>
+<tr>
+  <td><code>cart:31</code></td>
+  <td>954</td>
+  <td>A</td>
+  <td>A</td>
+</tr>
+<tr>
+  <td><code>cart:45</code></td>
+  <td>610</td>
+  <td>D</td>
+  <td>D</td>
+</tr>
+</tbody>
+</table></div>
+<p>One key moved, and it moved <strong>onto the new machine</strong>. Look at why that is not
+luck. Inserting a position into the ring can only put a new candidate <em>in front
+of</em> some keys. It cannot reorder any of the machines that were already there.
+So no key can be pushed from one existing machine to another.</p>
+<p>That property has a name, <strong>monotonicity</strong>, and it is the formal statement of
+what consistent hashing guarantees: <em>adding a node only ever moves keys onto
+the newcomer, never sideways between existing nodes.</em> Experiment 4 counts it on
+200,000 keys. In its output, <code>vnodes=200</code> means 200 positions per machine, and
+break 1 below explains why there are 200 of them.</p>
+<div class="code"><pre><code>strategy               moved to newcomer  moved elsewhere    total moved
+modulo                           17,989          163,679        181,668
+ring(vnodes=200)                 18,603                0         18,603
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>strategy</th>
+  <th>moved to newcomer</th>
+  <th>moved elsewhere</th>
+  <th>total moved</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>modulo</td>
+  <td>17,989</td>
+  <td>163,679</td>
+  <td>181,668</td>
+  <td>nine in ten of its moves were sideways, for nothing</td>
+</tr>
+<tr>
+  <td>ring, 200 positions per machine</td>
+  <td>18,603</td>
+  <td>0</td>
+  <td>18,603</td>
+  <td>every move was onto the newcomer; not one was sideways</td>
+</tr>
+</tbody>
+</table></div>
+<p>The middle column is the whole lab in one number. Modulo's 163,679 sideways
+moves achieved nothing whatsoever. Those keys were fine where they were.</p>
+<h3 id="readme-break-1-why-is-the-load-so-uneven">Break 1: why is the load so uneven?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> eight machines, one position each. Eight random points on a
+circle. Do they cut it into eight roughly equal slices?</p>
+<details><summary>Reveal</summary>
+
+<p>No, and it is much worse than &quot;roughly&quot;. Experiment 2, 200,000 keys over 8
+machines, where a fair share is 25,000:</p>
+<div class="code"><pre><code>positions       busiest     quietest      imbalance
+1               118,515        1,657          4.74x
+</code></pre></div>
+<p>The busiest machine holds <strong>4.74 times its fair share</strong> and the quietest
+holds under 7% of one. If you said &quot;roughly equal, give or take&quot;, you were
+picturing evenly spaced points. Random points are not evenly spaced. And no
+hash function can fix this, because nothing is wrong with the hash. Random
+points on a circle simply leave gaps of wildly differing size, and <strong>the gap
+is the machine's share</strong>.</p>
+</details>
+
+</blockquote>
+<p>Back in the corridor: Amara at 91, Bao at 305, Chidi at 502, Dev at 780. Bao's
+stretch runs from door 92 to door 305, which is 214 doors. Chidi's runs from
+306 to 502, which is 197. Dev's runs from 503 to 780, which is 278. Amara's,
+with the wrap, runs from 781 round to 91, which is 311. Nobody chose those
+shares. The names did.</p>
+<p><strong>The fix: put each machine at many positions instead of one.</strong> In the story,
+Bao no longer stands at one door. Bao stands at two hundred doors at once,
+scattered round the corridor, and a coat is Bao's if the first door it reaches
+is any of them. Machine A appears at <code>hash(&quot;A#0&quot;)</code>, <code>hash(&quot;A#1&quot;)</code>, ...
+<code>hash(&quot;A#199&quot;)</code>: two hundred unrelated points scattered right round the circle.
+Its share is now the sum of two hundred independent gaps. The relative
+variation of a sum of many independent values shrinks as the square root of
+how many there are. Written <code>1/√n</code>, one over root n: with 100 positions the
+wobble is about a tenth of what it was with one.</p>
+<p>These extra positions are called <strong>virtual nodes</strong> (or <em>vnodes</em>, or <em>tokens</em>,
+depending whose documentation you are reading). In words: extra positions for
+one machine, so its share is an average rather than a lottery. Experiment 2
+sweeps the count:</p>
+<div class="code"><pre><code>positions       busiest     quietest      imbalance
+1               118,515        1,657          4.74x
+5                47,097       18,895          1.88x
+20               33,252       19,306          1.33x
+100              26,435       23,332          1.06x   &lt;- typical production setting
+500              25,592       24,299          1.02x
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>positions per machine</th>
+  <th>busiest</th>
+  <th>quietest</th>
+  <th>imbalance</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>118,515</td>
+  <td>1,657</td>
+  <td>4.74×</td>
+  <td>a lottery; the biggest slice is nearly five fair shares</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>47,097</td>
+  <td>18,895</td>
+  <td>1.88×</td>
+  <td>better, and still nearly double on one machine</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td>33,252</td>
+  <td>19,306</td>
+  <td>1.33×</td>
+  <td>a third over on the busiest</td>
+</tr>
+<tr>
+  <td>100</td>
+  <td>26,435</td>
+  <td>23,332</td>
+  <td>1.06×</td>
+  <td>the typical production setting: 6% over</td>
+</tr>
+<tr>
+  <td>500</td>
+  <td>25,592</td>
+  <td>24,299</td>
+  <td>1.02×</td>
+  <td>five times the memory for four more points</td>
+</tr>
+</tbody>
+</table></div>
+<p>That curve is why production values sit in the low hundreds. Going from 1 to
+100 removes almost all of the imbalance. Going from 100 to 500 buys another
+four percentage points for five times the memory.</p>
+<h3 id="readme-break-2-a-machine-dies-who-inherits-its-keys">Break 2: a machine dies. Who inherits its keys?</h3>
+<p>Virtual nodes were introduced above to fix <em>steady-state balance</em>. They turn
+out to fix something more dangerous, and this is the reason that actually
+matters.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> eight machines, one position each, and one of them fails. Its
+keys have to go somewhere. Do they spread over the seven survivors, or land
+on one of them?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>All on one</strong>, and it is chosen by an accident of the circle rather than by
+who has room. Experiment 3:</p>
+<div class="code"><pre><code>--- 1 position per machine ---
+n3 held 7,996 keys. After it died they went to:
+  n7   +  7,996   (1,657 -&gt; 9,653, +483%)
+</code></pre></div>
+<p>n7 was the <em>quietest</em> machine in the cluster and is now by far the busiest,
+in one step, with no warning. If you said &quot;they spread out&quot;, you were
+thinking of the many-positions ring. With one position each, a dead machine
+has exactly one clockwise neighbour, and that neighbour gets everything.</p>
+<p>Now think about what happens if the cluster was near capacity. The inheritor
+is not chosen by who can cope, so it may well be a machine that cannot. When
+it falls over, <strong>its</strong> entire share lands on <strong>its</strong> single neighbour, which
+is now taking three machines' worth. That is a cascading failure with a
+concrete mechanism, and it is a real way clusters die.</p>
+</details>
+
+</blockquote>
+<p>In the corridor this is Dev going home with one door each: every one of Dev's
+coats walks on to Amara, and only Amara. With two hundred doors each, the dead
+machine's share is cut into two hundred small gaps whose neighbours are all
+different machines, so it spreads over everybody:</p>
+<div class="code"><pre><code>--- 200 positions per machine ---
+n3 held 24,550 keys. After it died they went to:
+  n0 +2,705 (+10%)   n1 +4,253 (+19%)   n2 +2,794 (+12%)   n4 +2,613 (+10%)
+  n5 +4,368 (+18%)   n6 +3,113 (+12%)   n7 +4,704 (+18%)
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>positions per machine</th>
+  <th>who inherits n3's keys</th>
+  <th>biggest single rise</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>n7 alone: +7,996, from 1,657 to 9,653</td>
+  <td>+483%</td>
+  <td>the quietest machine becomes the busiest in one step</td>
+</tr>
+<tr>
+  <td>200</td>
+  <td>all seven: n0 +2,705, n1 +4,253, n2 +2,794, n4 +2,613, n5 +4,368, n6 +3,113, n7 +4,704</td>
+  <td>+19%</td>
+  <td>a 10–19% bump on everyone; nobody falls over</td>
+</tr>
+</tbody>
+</table></div>
+<p>A uniform 10–19% bump on everyone, instead of +483% on one victim. <strong>This, not
+the balance, is the argument for virtual nodes that would survive a design
+review.</strong></p>
+<h3 id="readme-break-3-where-do-the-copies-go">Break 3: where do the copies go?</h3>
+<p>One machine holding the only copy of a key is not a design anyone ships. In the
+corridor: if Chidi loses Priya's coat, Priya has no coat. So you want each coat
+with several attendants. Engineers call the number of copies the <strong>replication
+factor</strong>. In words: how many distinct machines hold a copy of each key. It is
+written <code>r</code>, so <code>r</code> = 3 means three machines each hold the key. The obvious
+extension: take the next <code>r</code> positions clockwise.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> the ring has 200 positions per machine. You take the next 3
+positions clockwise and call them your three replicas. What is wrong with
+that?</p>
+<details><summary>Reveal</summary>
+
+<p>With 200 positions each, adjacent positions are frequently the <strong>same
+physical machine</strong>. So all three &quot;copies&quot; can land on one box. Your data
+reads as replicated, is not, and you find out the day that machine dies. If
+you said &quot;nothing, three positions are three places&quot;, remember that Bao now
+stands at two hundred doors, and two of the next three doors may both be Bao.</p>
+<p>The fix is one line: walk clockwise collecting <strong>distinct</strong> nodes, skipping
+further positions belonging to a machine already chosen. It is the
+<code>!out.contains(n)</code> check in <code>Ring.owners</code>, and <code>BrokenRing</code> bug 2 removes it
+so you can watch the failure.</p>
+</details>
+
+</blockquote>
+<p>Real systems go one step further than distinctness, and it is worth knowing
+why. Three distinct machines in the same rack share a power supply and a
+top-of-rack switch. They fail together, and your replication factor of 3 is
+really 1. Cassandra and DynamoDB therefore make the walk <strong>rack- and
+datacentre-aware</strong>: keep walking until you have three machines in three
+different failure domains. Consistent hashing gives you the ordering. What
+counts as &quot;different enough&quot; is yours to define.</p>
+<h3 id="readme-break-4-what-if-the-machines-are-not-the-same-size">Break 4: what if the machines are not the same size?</h3>
+<p>You bought five machines two years ago and three more last month with four
+times the memory. Equal shares would waste most of the new hardware. In the
+corridor: Dev is a much faster attendant than Bao, and should hold more coats.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>How do you tell the ring that one machine should hold four
+times as much? Does it need a new setting?</em></p>
+<details><summary>Reveal</summary>
+No new setting. A machine's share **is** the total width of its gaps, so give
+it four times as many positions. If you guessed "a weight field that the
+lookup consults", you were adding a step the lookup never needs. The weight
+is already baked into where the positions are.
+</details>
+
+</blockquote>
+<p>There is no separate weighting mechanism, because there does not need to be
+one. Experiment 8 gives the large machines four times the positions:</p>
+<div class="code"><pre><code>machine              keys   fair share      ratio
+small-1            18,128       18,181      1.00x
+small-3            17,325       18,181      0.95x
+large-1            73,178       72,724      1.01x
+large-2            70,999       72,724      0.98x
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>machine</th>
+  <th>keys</th>
+  <th>fair share</th>
+  <th>ratio</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>small-1</td>
+  <td>18,128</td>
+  <td>18,181</td>
+  <td>1.00×</td>
+  <td>exactly its share</td>
+</tr>
+<tr>
+  <td>small-3</td>
+  <td>17,325</td>
+  <td>18,181</td>
+  <td>0.95×</td>
+  <td>5% under, within the usual wobble</td>
+</tr>
+<tr>
+  <td>large-1</td>
+  <td>73,178</td>
+  <td>72,724</td>
+  <td>1.01×</td>
+  <td>four times a small machine's share, as asked</td>
+</tr>
+<tr>
+  <td>large-2</td>
+  <td>70,999</td>
+  <td>72,724</td>
+  <td>0.98×</td>
+  <td>the same, 2% under</td>
+</tr>
+</tbody>
+</table></div>
+<p>The catch: weight is expressed in whole positions, so fine ratios need enough
+positions to exist at all. Another reason the number is in the hundreds.</p>
+<h3 id="readme-break-5-the-average-is-fixed-what-about-the-worst-case">Break 5: the average is fixed. What about the worst case?</h3>
+<p>Two hundred positions brings the busiest machine to about 1.06× its fair
+share. For <em>stored data</em> that is fine. For <em>live requests</em> it may not be. 6%
+over on a machine sized at 95% utilisation is the machine falling over.</p>
+<p>The fix, if you need it, is <strong>consistent hashing with bounded loads</strong>. In the
+corridor: every attendant has a hard limit on coats. When Priya reaches Chidi
+and Chidi is full, she keeps walking to the next attendant who is not. In
+words: give every machine a hard cap, a little above its fair share, and when a
+key's rightful owner is full, keep walking to the first machine that is not.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Symbol</th>
+  <th>In words</th>
+  <th>Example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>c</code></td>
+  <td>the slack factor: how far above a fair share a machine may go</td>
+  <td>1.05 means 5% over</td>
+</tr>
+<tr>
+  <td><code>ceil(c × total / n)</code></td>
+  <td>the cap: the slack factor times the fair share, rounded up</td>
+  <td>1.05 × 200,000 / 10, which is 21,000</td>
+</tr>
+</tbody>
+</table></div>
+<p>Experiment 7:</p>
+<div class="code"><pre><code>setting                         busiest      imbalance   sent elsewhere
+ring, no cap                     21,636         1.082x                -
+bounded load (c=1.05)            20,980         1.049x              914
+bounded load (c=1.01)            20,192         1.010x            4,356
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>setting</th>
+  <th>busiest</th>
+  <th>imbalance</th>
+  <th>sent elsewhere</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>ring, no cap</td>
+  <td>21,636</td>
+  <td>1.082×</td>
+  <td>none</td>
+  <td>8% over on the busiest</td>
+</tr>
+<tr>
+  <td>bounded load, c = 1.05</td>
+  <td>20,980</td>
+  <td>1.049×</td>
+  <td>914</td>
+  <td>the cap holds at 5%; 914 keys walked on</td>
+</tr>
+<tr>
+  <td>bounded load, c = 1.01</td>
+  <td>20,192</td>
+  <td>1.010×</td>
+  <td>4,356</td>
+  <td>nearly perfect, and 4,356 keys are not where the ring says</td>
+</tr>
+</tbody>
+</table></div>
+<p>The last column is the price. There is a much bigger one hiding behind it:
+<strong>this is stateful</strong>. A key's answer now depends on how many other items have
+already been placed. So two clients with different traffic reach different
+answers, and you cannot recompute an item's location later from the key alone.
+It is a load balancer's tool, HAProxy ships it, and not a database's.</p>
+<h3 id="readme-one-more-thing-do-you-need-the-ring-at-all">One more thing: do you need the ring at all?</h3>
+<p>Everything above builds the ring, because the ring is what the libraries
+implement and what people mean by &quot;consistent hashing&quot;. But two other
+algorithms give you the same core guarantee, and one of them is simpler than
+anything on this page.</p>
+<p><strong>Rendezvous hashing</strong>, also called <em>highest random weight</em>, is from Thaler &amp;
+Ravishankar. It was published in <strong>1996, a year before</strong> the consistent hashing
+paper, and is far less famous. In the corridor: instead of standing at doors,
+every attendant rolls a die for every coat, and the coat goes to whoever rolled
+highest for it. The whole algorithm is: for a given key, score every machine by
+<code>hash(key + machine)</code>, the hash of the key and the machine's name joined
+together, and give the key to the highest scorer.</p>
+<p>That is it. No circle, no sorted array, no virtual positions, no tuning knob.
+And it inherits the properties you spent this section earning. A machine
+leaving only affects the keys it was winning. Because every survivor is
+re-scored independently, those keys spread perfectly across all of them rather
+than piling onto one successor. Replication is free too: take the top <code>r</code>
+scorers instead of the top 1.</p>
+<p><strong>Jump consistent hash</strong> (Lamping &amp; Veach, Google, 2014). About twenty lines,
+literally zero memory, and the best balance of anything here. It has one hard
+limitation: it maps a key to a bucket <em>number</em>, so buckets are positions in an
+ordered list and you can only add or remove at the <strong>end</strong>. There is no way to
+express &quot;machine 3 died&quot;. In the corridor: attendants are numbered in a line,
+a new one may join at the end and the last one may leave, but Chidi, in the
+middle, is never allowed to go home.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Five rows, 100 machines, 200,000 keys. Which column will the
+remainder rule lose on, and how many will it win or tie?</em></p>
+<details><summary>Reveal</summary>
+It loses exactly one column, "moved on remove", and it is competitive or
+winning on every other. If you said "it will be the worst balanced",
+experiment 6 says otherwise: 1.07×, as good as jump hash. Balance was never
+the hard part.
+</details>
+
+</blockquote>
+<p>Experiment 6 runs all of them over 100 machines and 200,000 keys:</p>
+<div class="code"><pre><code>strategy                   imbalance  moved on remove         lookup       memory
+ring(vnodes=200)               1.16x             1.1%       0.138 us 100 x 200 entries
+ring(vnodes=20)                1.66x             1.0%       0.091 us 100 x 20 entries
+rendezvous                     1.06x             1.0%       4.013 us the node list
+jump hash                      1.07x             1.0%       0.152 us nothing at all
+modulo                         1.07x            99.0%       0.051 us the node list
+</code></pre></div>
+<p>Read it as two tables. First, balance and movement:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>strategy</th>
+  <th>imbalance</th>
+  <th>moved on remove</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>ring, 200 positions</td>
+  <td>1.16×</td>
+  <td>1.1%</td>
+  <td>near the floor on movement; balance a little rough at 100 machines</td>
+</tr>
+<tr>
+  <td>ring, 20 positions</td>
+  <td>1.66×</td>
+  <td>1.0%</td>
+  <td>movement fine, balance poor: too few positions</td>
+</tr>
+<tr>
+  <td>rendezvous</td>
+  <td>1.06×</td>
+  <td>1.0%</td>
+  <td>the best balance here, with no tuning at all</td>
+</tr>
+<tr>
+  <td>jump hash</td>
+  <td>1.07×</td>
+  <td>1.0%</td>
+  <td>as good, but only when the change is at the end of the list</td>
+</tr>
+<tr>
+  <td>modulo</td>
+  <td>1.07×</td>
+  <td>99.0%</td>
+  <td>balance is fine; nearly every key moves on any change</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then cost:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>strategy</th>
+  <th>lookup</th>
+  <th>memory</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>ring, 200 positions</td>
+  <td>0.138 µs</td>
+  <td>100 × 200 entries</td>
+  <td>a binary search over 20,000 entries</td>
+</tr>
+<tr>
+  <td>ring, 20 positions</td>
+  <td>0.091 µs</td>
+  <td>100 × 20 entries</td>
+  <td>a smaller search over 2,000</td>
+</tr>
+<tr>
+  <td>rendezvous</td>
+  <td>4.013 µs</td>
+  <td>the node list</td>
+  <td>scores all 100 machines every lookup: 29× the ring</td>
+</tr>
+<tr>
+  <td>jump hash</td>
+  <td>0.152 µs</td>
+  <td>nothing at all</td>
+  <td>a short loop and no state</td>
+</tr>
+<tr>
+  <td>modulo</td>
+  <td>0.051 µs</td>
+  <td>the node list</td>
+  <td>one division; the fastest thing in the lab</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read the balance column first and notice that <strong>almost everything wins it,
+including modulo</strong>. Balance was never the hard part. The column that
+disqualifies modulo is &quot;moved on remove&quot;. The columns that separate the other
+three are lookup cost and what kind of membership change they can express.</p>
+<p>Rendezvous is <strong>29× slower per lookup</strong> than the ring at 100 machines, because
+it scans every machine while the ring binary-searches. At ten machines that
+difference is irrelevant and rendezvous is the better engineering choice. At a
+thousand it is disqualifying. That single trade is why the ring won the
+mindshare. It is worth knowing that the simpler algorithm exists and is often
+the right answer.</p>
+<blockquote>
+<p><strong>CHECKPOINT — end of the intermediate model, start of the engineering.</strong>
+You can now derive the real algorithm from scratch: hash both keys and
+machines into one fixed space, take the successor, scatter each machine over
+many positions, walk to distinct nodes for replicas, weight by position
+count. Every one of those is a scar from a failure you just watched. What
+the next layer adds: what this looks like when it goes wrong in production.
+Which failures it prevents, which it merely reshapes, and which it does
+nothing about at all.</p>
+<p><strong>Say it back.</strong> A colleague says &quot;virtual nodes are for balance&quot;. In two
+sentences, give them the better reason, using Dev and Amara.</p>
+<details><summary>A good answer sounds like</summary>
+"With one door each, every coat Dev held walks to Amara alone, so Amara gets
+a whole attendant's worth at once and may fall over too. With two hundred
+doors each, Dev's coats are spread among all the others, a little each, and
+nobody falls over."
+</details>
+
+</blockquote>
+<h2 id="readme-11-what-goes-wrong-in-production-and-what-survives-each-time">11. What goes wrong in production, and what survives each time?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nine things go wrong. The ring prevents some, shrinks
+some, and does nothing about others. In every one of them the placement
+stays correct. What breaks is balance, capacity, agreement, or data that
+never moved.</p>
+</blockquote>
+<p>Each failure below is told first as something that happens in the cloakroom,
+then as what you would see on a real cluster. The comparison table at the end
+of the section lines them all up.</p>
+<h3 id="readme-f1-what-if-there-are-too-few-positions">F1: what if there are too few positions?</h3>
+<p>Run <code>java src/Experiments.java 2</code>, or drag the positions slider to 1 in the
+visualization.</p>
+<p>In the corridor with one door per attendant, Amara owns 311 doors and Chidi
+197. Nobody chose that. The names did. On the cluster it is section 10 break
+1: few random points cut a circle into wildly unequal gaps, and the gap is the
+share. The busiest machine sits at <strong>4.74×</strong> its fair share.</p>
+<p>Correctness is untouched. Every key still has exactly one well-defined owner
+and every client agrees on it. What you lose is your ability to size the
+cluster, because you must provision for the worst machine, not the average
+one.</p>
+<p>On call, watch per-node key count or request rate as a ratio to the mean, not
+in absolute terms. An alert on <code>max/mean &gt; 1.3</code>, the busiest node at more than
+1.3 times the average, catches both a bad position count and the hot key in
+F5.</p>
+<h3 id="readme-f2-a-machine-dies-and-one-neighbour-inherits-all-of-it-why">F2: a machine dies and one neighbour inherits all of it. Why?</h3>
+<p>Run <code>java src/Experiments.java 3</code>, or the third scenario in the visualization.</p>
+<p>Dev goes home with one door each, and every one of his coats walks to Amara.
+On the cluster it is section 10 break 2. With one position each, the whole
+share lands on a single successor chosen by geometry rather than by capacity.
+The run shows <strong>+483%</strong> on a machine that was the quietest in the cluster.</p>
+<p>Correctness again survives. What is lost is the assumption that failures are
+independent. One machine's death is now a targeted load spike on one specific
+other machine, and if that one falls over the pattern repeats.</p>
+<p>This is why nobody runs one position per node. It is also why you should test
+a node failure under load rather than at rest. The failure mode is a
+<em>capacity</em> event, not an availability one, and it is invisible on an idle
+cluster.</p>
+<h3 id="readme-f3-what-is-the-miss-storm-when-you-add-capacity">F3: what is the miss storm when you add capacity?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> a 10-machine cache is running at 92% hit ratio. You add an
+11th machine mid-traffic. What does your database experience in the next few
+seconds?</p>
+<details><summary>Reveal</summary>
+
+<p>Under the ring, almost nothing. Under the remainder rule, close to your full
+unfiltered request rate. If you said &quot;a small dip either way&quot;, the remainder
+rule's dip is not small: it is the cache going cold. Experiment 5 tracks hit
+ratio in windows of 25,000 requests:</p>
+<div class="code"><pre><code>modulo             55%  85%  88%  90%  91%  92% |ADD| 59%  85%  89%  90%  91%  92%
+                   database hit 10,313 times in the 25,000 requests right after
+ring(vnodes=200)   55%  85%  88%  90%  91%  92% |ADD| 90%  93%  94%  95%  95%  96%
+                   database hit  2,622 times in the 25,000 requests right after
+</code></pre></div>
+<p>| rule | hit ratio just before | hit ratio just after | database hits in the next 25,000 requests | what it means |
+|---|---|---|---|---|
+| modulo | 92% | 59% | 10,313 | a cold cache, in one instant, for the whole fleet |
+| ring, 200 positions | 92% | 90% | 2,622 | a two-point dip; the database barely notices |</p>
+<p>Modulo's hit ratio collapses from 92% back to 59%. The ring dips two points.
+Both then climb: modulo 59, 85, 89, 90, 91, 92; the ring 90, 93, 94, 95, 95,
+96. The warm-up before the add is the same for both: 55, 85, 88, 90, 91, 92.</p>
+</details>
+
+</blockquote>
+<p>In the corridor: a new attendant, Esha, arrives with an empty rail. Every child
+whose walk now ends at Esha's desk finds no coat there, and every one of them
+goes to the office for a replacement at the same moment. On the cluster: every
+key that moves is a cache entry now sitting on a machine that does not have
+it, so the next request for it misses. They all move at the same instant, so
+they all miss at the same instant.</p>
+<p>Nothing is incorrect. A cache miss returns the right answer. What is lost is
+the protection your cache was providing, at the exact moment you were adding
+capacity, which is a particularly cruel piece of timing.</p>
+<p>Note that both rows recover within a minute. <strong>The storm is a transient</strong>,
+which is what makes it dangerous. It is over before you finish reading the
+alert, it vanishes into a five-minute average, and the thing it took down was
+your database rather than your cache. This is <a href="../11-caching/notes.html#readme">caching</a>'s
+cold-cache problem with a specific trigger: your own deploy.</p>
+<h3 id="readme-f4-what-if-two-clients-disagree-about-who-is-alive">F4: what if two clients disagree about who is alive?</h3>
+<p>Run <code>java src/Experiments.java 9</code>.</p>
+<p>In the corridor: Esha has just arrived, but only half the children have been
+told. Those who know walk to Esha. Those who do not walk past her to Chidi. Two
+children with the same door number now go to two different desks. On the
+cluster: a machine is added; client A has heard, client B has not yet.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Half your clients know about the new machine and half do
+not. What fraction of keys do the two halves disagree about, under each
+rule?</em></p>
+<details><summary>Reveal</summary>
+Exactly the remapping fraction from section 7: about nine keys in ten under
+modulo, about one in ten under the ring. If you said "all of them, under
+both", remember that a client who has not heard still agrees with one who
+has about every key that did not move.
+</details>
+
+</blockquote>
+<div class="code"><pre><code>strategy                   keys disagreed         of 200,000
+modulo                            181,699              90.8%
+ring(vnodes=200)                   19,015               9.5%
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>strategy</th>
+  <th>keys disagreed</th>
+  <th>share of 200,000</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>modulo</td>
+  <td>181,699</td>
+  <td>90.8%</td>
+  <td>a write and a read for the same key go to different machines nine times in ten</td>
+</tr>
+<tr>
+  <td>ring, 200 positions</td>
+  <td>19,015</td>
+  <td>9.5%</td>
+  <td>the disagreement is exactly the keys that moved, and no more</td>
+</tr>
+</tbody>
+</table></div>
+<p>Membership never changes everywhere at the same instant. It propagates, by
+gossip, by a config push, by a watch firing. During that window your clients
+hold different lists and therefore compute different owners.</p>
+<p>Every individual client remains self-consistent. What is lost is agreement
+<em>between</em> clients, so a write may land on one machine while a read looks on
+another.</p>
+<p>This is the failure that makes consistent hashing an <em>operational</em> win rather
+than merely an efficient one, and it is the one people miss. You do not
+control the length of the propagation window. You do control the <strong>blast
+radius</strong>, and it is exactly the remapping fraction. For a cache the cost is
+extra misses. For stored data a write to the wrong owner is invisible until
+the reader who needed it comes looking. Section 15 covers the alternative
+design that removes this window entirely by accepting a coordinator.</p>
+<h3 id="readme-f5-what-if-one-key-gets-all-the-traffic">F5: what if one key gets all the traffic?</h3>
+<p>In the corridor: one coat, and five hundred children asking for it. It hangs
+on one hook, with one attendant, and hiring more attendants does not help. On
+the cluster: consistent hashing distributes <em>keys</em>. A single key lives on one
+machine. If one key is 30% of your traffic, 30% of your traffic is on one
+machine, and adding machines does nothing at all.</p>
+<p>Correctness is fine. Horizontal scalability for that workload is gone.</p>
+<p>You met this in <a href="../60-distributed-rate-limiting/notes.html#readme">distributed-rate-limiting</a> as
+the hot-key problem and again in <a href="../13-redis/notes.html#readme">redis</a> as F8, and the remedies
+are the same. Split the key into <code>key:0..key:9</code> and combine. Put a short-TTL
+local cache in front of it. Or route by a different dimension. <strong>Worth saying
+plainly: no placement algorithm on this page helps with a hot key.</strong> They all
+agree that one key has one owner, which is the thing hurting you.</p>
+<h3 id="readme-f6-what-if-the-hash-is-narrower-than-the-space-you-put-it-in">F6: what if the hash is narrower than the space you put it in?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> the ring is fine, the machine positions are spread perfectly
+across the whole 64-bit circle. The only change: keys are hashed with a
+32-bit function instead of a 64-bit one. What happens?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>One machine gets everything.</strong> 8 machines and 20,000 keys:</p>
+<div class="code"><pre><code>64-bit key hash: {n0=2636, n1=2385, n2=2539, n3=2378, n4=2546, n5=2509, n6=2349, n7=2658}
+32-bit key hash: {n0=0, n1=0, n2=0, n3=0, n4=0, n5=20000, n6=0, n7=0}
+</code></pre></div>
+<p>| key hash | keys per machine | what it means |
+|---|---|---|
+| 64-bit | n0 2,636 · n1 2,385 · n2 2,539 · n3 2,378 · n4 2,546 · n5 2,509 · n6 2,349 · n7 2,658 | every machine near the 2,500 fair share |
+| 32-bit | n5 20,000; every other machine 0 | one machine holds the entire dataset |</p>
+<p>If you said &quot;somewhat lumpy&quot;, the thing to update is that this is a range
+mismatch, not a quality problem. Nothing collided and nothing is broken. A
+32-bit value spans about 4×10⁹, four thousand million. The ring spans about
+1.8×10¹⁹. So every key in the system lands inside roughly one
+hundred-millionth of the circle, and whichever machine owns that sliver owns
+the entire dataset. The other seven are idle.</p>
+</details>
+
+</blockquote>
+<p>In the corridor: the children's door numbers only ever come out between 0 and
+9, while the attendants stand at 91, 305, 502 and 780. Every child walks to
+Amara. On the cluster, the realistic version is somebody using
+<code>key.hashCode()</code>, a language's built-in string hash, or a truncated digest as
+the ring position. The rule to remember: <strong>whatever hashes your keys must
+produce values spanning the same range the node positions occupy.</strong> Test it by
+counting keys per node on a sample. This failure is loud in that one metric and
+completely silent everywhere else.</p>
+<h3 id="readme-f7-what-if-two-client-libraries-build-different-rings">F7: what if two client libraries build different rings?</h3>
+<p>In the corridor: the Java children and the Python children were given
+different instructions for turning a name into a door number. Each group is
+internally consistent, and each group looks for coats where the other group
+never hung them. On the cluster: a client's ring is built from three things.
+The hash function, the string format used to name virtual positions, and the
+number of positions. Ours uses <code>hash64(node + &quot;#&quot; + i)</code>: the machine's name, a
+hash sign and the position's index, all hashed together. memcached's <em>ketama</em>
+uses MD5 over <code>node + &quot;-&quot; + i</code> and takes four positions from each digest.
+Neither is more correct. They are simply different, and <strong>two clients that
+disagree on any of the three compute different owners for the same key</strong>.</p>
+<p>Each client is internally consistent and confidently wrong about the other.
+This is F4 made permanent instead of transient.</p>
+<p>This genuinely happens when a polyglot fleet uses one memcached cluster from a
+Java service and a Python service with libraries that are not
+ketama-compatible. The symptom is a persistently poor hit ratio with no other
+explanation, because each language's clients keep re-populating keys the other
+language's clients cannot find. Pin the library and the settings, and check by
+hashing a known key list in both and diffing.</p>
+<h3 id="readme-f8-the-ring-says-where-data-belongs-who-moves-it">F8: the ring says where data belongs. Who moves it?</h3>
+<p>In the corridor: Esha arrives and stands at door 400. Priya's coat now
+<em>belongs</em> with Esha. It is still hanging on Chidi's rail, because coats do not
+walk. On the cluster: the ring is a pure function. When a machine joins, keys
+instantly <em>belong</em> somewhere new, and not one byte has been copied. For a
+cache that is fine. The data is simply absent and gets fetched again, which is
+F3. For stored data, a separate process must detect the change and stream the
+affected ranges.</p>
+<p>Placement is correct immediately. Durability and completeness are not. During
+the transfer the new owner is missing data it is responsible for, so reads
+must either be served from the old owner or accept a gap.</p>
+<p>This is what Cassandra's bootstrap/decommission and DynamoDB's partition splits
+actually spend their time doing. It is throttled precisely because it competes
+with live traffic, and it is where &quot;we added a node and latency got worse for
+two hours&quot; comes from. Consistent hashing shrank the volume from ~100% to
+~1/n, about one share in n. It did not make it free.</p>
+<h3 id="readme-f9-what-happens-when-the-ring-itself-gets-big">F9: what happens when the ring itself gets big?</h3>
+<p>In the corridor: every child carries a list of every door every attendant
+stands at. With two hundred doors per attendant and a thousand attendants,
+that list is long, and every child rewrites it whenever anyone joins or
+leaves. On the cluster: every client holds <code>nodes × positions</code> entries, the
+machine count times the positions per machine, and re-sorts them on every
+membership change.</p>
+<div class="code"><pre><code>   10 machines x 200 positions =      2,000 entries
+  100 machines x 200 positions =     20,000 entries
+1,000 machines x 200 positions =    200,000 entries
+</code></pre></div>
+<div class="table"><table><thead>
+<tr>
+  <th>machines</th>
+  <th>positions each</th>
+  <th>entries per client</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>10</td>
+  <td>200</td>
+  <td>2,000</td>
+  <td>trivial</td>
+</tr>
+<tr>
+  <td>100</td>
+  <td>200</td>
+  <td>20,000</td>
+  <td>still cheap, sorted again on every change</td>
+</tr>
+<tr>
+  <td>1,000</td>
+  <td>200</td>
+  <td>200,000</td>
+  <td>a real cost, in every client, on every change</td>
+</tr>
+</tbody>
+</table></div>
+<p>This is exactly why Cassandra lowered its default <code>num_tokens</code> from 256 to 16.
+It added an allocation algorithm that places the fewer positions deliberately
+rather than randomly, getting the balance of many positions with the footprint
+of few. It is a good reminder that &quot;just raise the vnode count&quot; has a real cost
+at scale.</p>
+<h3 id="readme-the-nine-failures-side-by-side">The nine failures, side by side</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>what breaks</th>
+  <th>what survives</th>
+  <th>what is lost</th>
+  <th>what to watch</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1</td>
+  <td>one position each, uneven gaps</td>
+  <td>every key has one agreed owner</td>
+  <td>the ability to size the cluster</td>
+  <td>busiest ÷ mean, alert above 1.3</td>
+</tr>
+<tr>
+  <td>F2</td>
+  <td>one neighbour inherits a dead node</td>
+  <td>correctness</td>
+  <td>independence of failures</td>
+  <td>a node failure under load, not at rest</td>
+</tr>
+<tr>
+  <td>F3</td>
+  <td>keys move, so they all miss at once</td>
+  <td>right answers, via the database</td>
+  <td>the cache's protection, briefly</td>
+  <td>hit ratio around deploys, per second</td>
+</tr>
+<tr>
+  <td>F4</td>
+  <td>clients hold different lists</td>
+  <td>each client agrees with itself</td>
+  <td>agreement between clients</td>
+  <td>the ring version each client is on</td>
+</tr>
+<tr>
+  <td>F5</td>
+  <td>one key, one machine</td>
+  <td>correctness</td>
+  <td>horizontal scaling for that key</td>
+  <td>busiest ÷ mean again</td>
+</tr>
+<tr>
+  <td>F6</td>
+  <td>key hash narrower than the ring</td>
+  <td>nothing collides</td>
+  <td>seven idle machines</td>
+  <td>nodes receiving zero traffic</td>
+</tr>
+<tr>
+  <td>F7</td>
+  <td>two libraries, two rings</td>
+  <td>each library agrees with itself</td>
+  <td>the other library's keys</td>
+  <td>zero-traffic nodes, poor hit ratio</td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>belonging is not moving</td>
+  <td>placement</td>
+  <td>completeness during transfer</td>
+  <td>streaming backlog</td>
+</tr>
+<tr>
+  <td>F9</td>
+  <td>nodes × positions per client</td>
+  <td>everything</td>
+  <td>memory and rebuild time</td>
+  <td>rebuild time as the fleet grows</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-is-guaranteed-what-is-not-and-what-did-it-cost">12. What is guaranteed, what is not, and what did it cost?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The ring promises five things, and the important one is
+that adding a machine never moves a key sideways. It does not promise exact
+balance, help with a hot key, agreement during a change, or that data has
+moved. Against the remainder rule it loses four rows out of five, and wins
+the only one that matters.</p>
+</blockquote>
+<h3 id="readme-what-is-guaranteed">What is guaranteed?</h3>
+<p>Every one of these is something you watched happen to Priya's coat.</p>
+<ol>
+<li><strong>Monotonicity.</strong> Adding a node moves keys only onto that node, never
+between two existing nodes. Esha arriving took Priya's coat from Chidi, and
+nothing else changed. Experiment 4 counted exactly zero sideways moves. This
+is the formal property, and it is the one the remainder rule lacks.</li>
+<li><strong>Bounded remapping.</strong> A membership change disturbs about 1/n of the
+keyspace, one share in n, close to the theoretical floor. Dev leaving
+disturbed Dev's quarter.</li>
+<li><strong>No coordination.</strong> Every client computes ownership alone, from the
+membership list, with no lookup and no network call. Every child works it
+out in their head. Pinned by
+<code>two_clients_building_the_ring_separately_agree_on_every_key</code>, which builds
+two rings by adding the same machines in opposite orders and checks all
+20,000 keys.</li>
+<li><strong>Determinism.</strong> Same key, same membership, same answer. In every process,
+every language, forever, <em>provided</em> the hash and the position-naming match
+(F7).</li>
+<li><strong>Spread and death-spread.</strong> With enough positions, both the steady-state
+load and a dead node's inherited load are shared across all survivors.</li>
+</ol>
+<h3 id="readme-what-is-not-guaranteed">What is NOT guaranteed?</h3>
+<ul>
+<li><strong>Exact balance.</strong> The guarantee is statistical. With 100 positions per node
+you get about 1.06× on the busiest. You never get 1.00×, and no setting
+gives you a hard ceiling. Bounded loads gives you one, at the cost of
+becoming stateful.</li>
+<li><strong>That a hot key is helped.</strong> It is not, at all (F5).</li>
+<li><strong>That clients agree during a membership change.</strong> They do not. The ring
+only bounds how much they disagree about (F4).</li>
+<li><strong>That data has actually moved.</strong> Placement is not migration (F8). Priya's
+coat is still on Chidi's rail.</li>
+<li><strong>Compatibility between implementations</strong> (F7).</li>
+</ul>
+<h3 id="readme-what-did-it-cost-against-the-rule-it-replaced">What did it cost, against the rule it replaced?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Five rows: memory, lookup, tuning, balance, movement on
+change. How many does the plain remainder rule win?</em></p>
+<details><summary>Reveal</summary>
+Four. If you said "none, that is why we replaced it", look at the table: the
+remainder rule is simpler, smaller, faster and better balanced. It loses
+only on movement, and that is the only row that turns a deploy into an
+outage.
+</details>
+
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>remainder rule</th>
+  <th>ring</th>
+  <th>what it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>memory</td>
+  <td>none</td>
+  <td>nodes × positions entries, per client</td>
+  <td>the ring costs memory in every client</td>
+</tr>
+<tr>
+  <td>lookup</td>
+  <td>one modulo</td>
+  <td>binary search, ~0.14 µs at 100 nodes</td>
+  <td>both are cheap; modulo is cheaper</td>
+</tr>
+<tr>
+  <td>tuning</td>
+  <td>nothing to get wrong</td>
+  <td>a position count you must choose</td>
+  <td>the ring adds a knob</td>
+</tr>
+<tr>
+  <td>balance</td>
+  <td>exact</td>
+  <td>~1.06× at 100 positions</td>
+  <td>the ring is a little rougher</td>
+</tr>
+<tr>
+  <td><strong>movement on change</strong></td>
+  <td><strong>99.0%</strong></td>
+  <td><strong>0.9%</strong></td>
+  <td>the only row anyone cares about</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read that table top to bottom and notice that the remainder rule <strong>wins four
+rows out of five</strong>. It is simpler, smaller, faster and better balanced. It
+loses one row, and that row is the only one anybody cares about, because it is
+the difference between a routine deploy and an outage.</p>
+<p>That is worth internalising as a general shape. The naive solution is usually
+not naive about the things people check. It is naive about the thing nobody
+checked until it happened.</p>
+<h3 id="readme-where-does-this-sit-formally">Where does this sit formally?</h3>
+<p>The ring is from Karger et al., <em>Consistent Hashing and Random Trees</em> (1997),
+written to distribute web pages across caches. That work became Akamai.
+Rendezvous hashing (Thaler &amp; Ravishankar) predates it by a year and is less
+famous despite being simpler. The classical result is that with Θ(log n)
+virtual positions per node, in words &quot;a number of positions that grows like
+the logarithm of the machine count&quot;, the load is within a constant factor of
+the mean with high probability. That is the theory behind the curve you saw in
+experiment 2.</p>
+<h2 id="readme-13-what-does-the-code-look-like-and-where-is-the-line-that-matters">13. What does the code look like, and where is the line that matters?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six small Java files, no build tool, nothing to install.
+Priya's walk is three lines called <code>Ring.owner</code>, and what makes those three
+lines work is what is missing from them.</p>
+</blockquote>
+<p>Everything in this lab runs. The corridor is a sorted array, Priya's walk is a
+binary search, and every number you have read came out of these files.</p>
+<p>Every strategy implements one interface with a single question on it: given a
+key, which machine? That is what lets the experiments run the remainder rule,
+the ring, rendezvous and jump hash over the same workload and compare answers
+fairly.</p>
+<p><strong>The four files that decide where a coat goes:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>file</th>
+  <th>what it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>src/Hashing.java</code></td>
+  <td>the hash, and a deliberately narrow one for F6</td>
+</tr>
+<tr>
+  <td><code>src/Placement.java</code></td>
+  <td>the one question: given a key, which machine?</td>
+</tr>
+<tr>
+  <td><code>src/Ring.java</code></td>
+  <td>consistent hashing — the star</td>
+</tr>
+<tr>
+  <td><code>src/Placements.java</code></td>
+  <td>modulo, rendezvous, jump hash, bounded loads</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The three files that check them:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>file</th>
+  <th>what it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>src/Tests.java</code></td>
+  <td>22 scenario-named tests</td>
+</tr>
+<tr>
+  <td><code>src/Experiments.java</code></td>
+  <td>the nine experiments in section 14</td>
+</tr>
+<tr>
+  <td><code>src/BrokenRing.java</code></td>
+  <td>three planted bugs, for the debug exercise</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-lines-should-you-actually-read">Which lines should you actually read?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em><code>Ring.owner</code> is three lines long. Which of those lines is
+consistent hashing?</em></p>
+<details><summary>Reveal</summary>
+None of them. The trick is a line that is not there. There is no division, no
+remainder, and no mention of how many machines exist. If you went looking for
+a clever line, the point of this lab is that the cleverness is a deletion.
+</details>
+
+</blockquote>
+<p>Read them in this order. Each one is a thing you already watched happen in the
+corridor.</p>
+<ol>
+<li><strong><code>Ring.owner</code></strong> — hash the key, take the successor. Three lines. Note what
+is absent: no division, no modulo, no reference to how many machines exist.
+That absence <em>is</em> consistent hashing.</li>
+<li><strong><code>Ring.successorIndex</code></strong> — a binary search whose only unusual feature is
+<code>lo == positions.length ? 0 : lo</code>. That ternary is where the line becomes a
+circle. It is Priya walking past door 999 and arriving at door 0.</li>
+<li><strong><code>Ring.rebuild</code></strong> — each machine is placed at <code>hash(name + &quot;#&quot; + i)</code>. The
+position depends only on the machine's own name, never on the cluster. That
+is the invariant monotonicity rests on, and it is why Bao's doors do not
+move when Dev goes home.</li>
+<li><strong><code>Ring.owners</code></strong> — the <code>!out.contains(n)</code> distinctness check, without which
+three replicas can turn out to be one machine. Break 3 in section 10.</li>
+<li><strong><code>Placements.Modulo.owner</code></strong> — one line, with <code>nodes.size()</code> inside it.
+That is the entire bug this lab exists to explain.</li>
+<li><strong><code>Placements.Jump.removeNode</code></strong> — throws, on purpose. An algorithm that
+cannot express &quot;machine 3 died&quot; should say so loudly rather than quietly do
+something else.</li>
+</ol>
+<h3 id="readme-one-deliberate-flaw-disclosed">One deliberate flaw, disclosed</h3>
+<p><code>Ring</code> ships with a real latent bug that all 22 tests pass over. A machine
+registered with a weight silently drops back to weight 1 if it re-registers
+through the single-argument <code>addNode</code>. In the corridor: Dev is given four times
+the doors, signs in again at the end of his break, and quietly goes back to a
+normal share.</p>
+<p>It is left in for two reasons. Finding it is exercise 6.6. And it is a good
+example of where bugs actually survive: not in clever code, but in <strong>sequences
+of operations nobody wrote a test for</strong>. This suite covers add, remove and
+rebuild thoroughly, and re-add not at all.</p>
+<h3 id="readme-how-do-you-run-it">How do you run it?</h3>
+<div class="code"><pre><code class="language-bash">cd ~/Documents/Learning/35-consistent-hashing
+
+java src/Tests.java              # 22 scenario tests, ~10s
+java src/Experiments.java        # all nine experiments, ~3 min
+java src/Experiments.java 1 5    # just 1 and 5
+java src/BrokenRing.java         # three planted bugs
+</code></pre></div>
+<h2 id="readme-14-what-should-you-guess-before-you-press-run">14. What should you guess before you press run?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nine experiments, each one a question. Write your answer
+down first, then run it, then work out where your intuition was wrong. The
+gap is the lesson.</p>
+</blockquote>
+<p>Every figure in this lab came from these nine runs. You have already read most
+of the output. Going back and predicting each one cold, before running it, is
+worth more than reading the tables again.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>question to answer before running</th>
+  <th>command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>10 machines become 11. What fraction of keys move, under each rule?</td>
+  <td><code>java src/Experiments.java 1</code></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>8 machines, one ring position each. Is the load even?</td>
+  <td><code>... 2</code></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>A machine dies. Where do its keys go?</td>
+  <td><code>... 3</code></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>When you <em>add</em> a machine, can a key move between two existing ones?</td>
+  <td><code>... 4</code></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>You add a cache node mid-traffic. What does the database feel?</td>
+  <td><code>... 5</code></td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>Four strategies, same workload. Which is best?</td>
+  <td><code>... 6</code></td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>Virtual nodes leave ~6% imbalance. Can you cap it, and what does that cost?</td>
+  <td><code>... 7</code></td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>One machine has 4× the RAM. How do you tell the ring?</td>
+  <td><code>... 8</code></td>
+</tr>
+<tr>
+  <td>9</td>
+  <td>Half your clients have not heard about the new machine yet. How bad is that?</td>
+  <td><code>... 9</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Two of those numbers behave differently from the rest, and section 19 says
+which and why.</p>
+<blockquote>
+<p><strong>✅ CHECKPOINT — end of the engineering model, start of the production
+model.</strong> You can now reason about this the way an on-call engineer has to:
+which failures the ring prevents, which it only shrinks, and which it does
+not touch at all. Hot keys, moving the data, and client incompatibility are
+all in that last group. What the last layer adds: the bridge to real systems,
+including the fact that two of the systems you would most expect to use
+consistent hashing deliberately do not.</p>
+<p><strong>Say it back.</strong> A teammate asks why the on-call dashboard tracks &quot;busiest
+node divided by the average&quot; instead of the busiest node's key count. Answer
+in two sentences, without using the word <em>imbalance</em>.</p>
+<details><summary>A good answer sounds like</summary>
+"A raw count tells you nothing, because a big cluster and a small one have
+completely different normal counts. The ratio tells you whether one machine
+is doing more than its share, and that one signal catches too few positions,
+a single overloaded key, and a hash that is too narrow."
+</details>
+
+</blockquote>
+<h2 id="readme-15-what-do-real-systems-do-and-which-of-them-chose-something-else">15. What do real systems do, and which of them chose something else?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> There are two ways to keep the machine count out of the
+formula, and the ring is only one of them. The other is to fix the number of
+slots forever and let a coordinator publish who owns each slot. Redis and
+Kafka picked the second one.</p>
+</blockquote>
+<h3 id="readme-the-design-space-honestly">The design space, honestly</h3>
+<p>Both designs solve section 4's disease. They pay for it differently.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th><strong>consistent hashing</strong></th>
+  <th><strong>fixed partitions + an assignment table</strong></th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>the idea</td>
+  <td>keys map to a position; the position maps to whoever is next clockwise</td>
+  <td>keys map to one of a large, <strong>never-changing</strong> number of slots; a table says which machine owns each slot</td>
+</tr>
+<tr>
+  <td>why modulo's bug is absent</td>
+  <td>the machine count is not in the formula</td>
+  <td>the <em>slot</em> count is in the formula and it never changes</td>
+</tr>
+<tr>
+  <td>who decides</td>
+  <td>every client, alone</td>
+  <td>a coordinator, which publishes the table</td>
+</tr>
+<tr>
+  <td>rebalancing</td>
+  <td>implicit; the ring shifts</td>
+  <td>explicit; move slot 4,102 from A to B</td>
+</tr>
+<tr>
+  <td>clients disagreeing mid-change</td>
+  <td>yes, bounded by 1/n (F4)</td>
+  <td>no — there is one authoritative table version</td>
+</tr>
+<tr>
+  <td>operator control</td>
+  <td>statistical</td>
+  <td>exact, and you can move one slot by hand</td>
+</tr>
+<tr>
+  <td>used by</td>
+  <td>Cassandra, DynamoDB, Riak, memcached clients, Envoy, HAProxy, Akamai</td>
+  <td><strong>Redis Cluster</strong> (16,384 slots), <strong>Kafka</strong> (partitions), Elasticsearch (shards)</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Redis Cluster spreads keys over many nodes and survives nodes
+joining. Is it using consistent hashing?</em></p>
+<details><summary>Reveal</summary>
+No. It computes `CRC16(key) mod 16384`, which is the remainder rule from
+section 3, unchanged. If you said yes, the thing to notice is what number the
+remainder is taken over: 16,384 slots, not the machine count. The slot count
+never changes, so section 4 never fires.
+</details>
+
+</blockquote>
+<p><strong>This is the correction to make now, while <a href="../13-redis/notes.html#readme">redis</a> is fresh.</strong> Redis
+Cluster does <em>not</em> use consistent hashing. <code>CRC16(key) mod 16384</code> is a plain
+modulo. It is safe only because 16,384 never changes, and a separate table maps
+slots to nodes.</p>
+<p>Kafka is the same shape: <code>hash(key) % numPartitions</code>. That is why <strong>adding
+partitions to a Kafka topic breaks key-to-partition affinity</strong>, and why it is
+treated as a significant operation rather than a routine one.</p>
+<p>The trade is coordination for control. Consistent hashing removes the
+coordinator, and accepts statistical balance and a disagreement window. Fixed
+slots accept a coordinator, and get exact placement, hand-tunable rebalancing
+and no ambiguity. Neither is more advanced. <strong>Pick by whether you already have
+a reliable coordinator.</strong> If you are running one anyway, fixed slots are
+usually the easier system to operate.</p>
+<h3 id="readme-what-does-this-lab-leave-out">What does this lab leave out?</h3>
+<p>The ring decides placement. Everything in this table is what a real system
+wraps around that decision.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>omitted</th>
+  <th>what real systems do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>moving the data</td>
+  <td>bootstrap/decommission streaming, throttled against live traffic (F8)</td>
+</tr>
+<tr>
+  <td>failure-domain awareness</td>
+  <td>walk to r distinct <strong>racks</strong> or datacentres, not just distinct nodes</td>
+</tr>
+<tr>
+  <td>membership propagation</td>
+  <td>gossip (Cassandra, Riak) or a coordinator (Redis Cluster, Kafka)</td>
+</tr>
+<tr>
+  <td>Maglev hashing</td>
+  <td>Google's load-balancer scheme: builds a lookup table for O(1) lookups with minimal disruption; in Envoy alongside ring hash</td>
+</tr>
+<tr>
+  <td>deliberate token allocation</td>
+  <td>Cassandra's algorithm places few positions well instead of many at random</td>
+</tr>
+<tr>
+  <td>read repair, hinted handoff, anti-entropy</td>
+  <td>what keeps replicas equal once placement has decided where they are</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-does-an-operator-actually-watch">What does an operator actually watch?</h3>
+<p>Five signals. The first one catches three separate failures on its own.</p>
+<ul>
+<li><strong>Keys or requests per node as a ratio to the mean.</strong> Absolute counts hide
+everything. Alert above ~1.3×. It catches a bad position count (F1), a hot
+key (F5) and a narrow hash (F6) with one signal.</li>
+<li><strong>Nodes receiving zero traffic.</strong> The single loudest symptom of F6 and F7,
+and silent in every other metric.</li>
+<li><strong>Rebalance and streaming throughput and backlog</strong> during a membership
+change (F8).</li>
+<li><strong>Cache hit ratio around deploys.</strong> The transient in F3 disappears from any
+average wide enough to be convenient.</li>
+<li><strong>The ring version or membership epoch each client is on</strong>, so you can see
+the F4 window rather than infer it.</li>
+</ul>
+<h3 id="readme-which-one-should-you-pick">Which one should you pick?</h3>
+<p>Read the left column until you find yourself, then read across.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>your situation</th>
+  <th>pick</th>
+  <th>why</th>
+  <th>what to check</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>small cluster, under about 30 nodes, and you control every client</td>
+  <td>rendezvous hashing</td>
+  <td>no tuning, no memory, better balance, perfect death-spread (section 10)</td>
+  <td>its 4.0 µs lookup at 100 nodes against your latency budget</td>
+</tr>
+<tr>
+  <td>large cluster, or you must interoperate with existing clients</td>
+  <td>the ring</td>
+  <td>it is what the libraries implement and what everyone expects</td>
+  <td>that every client agrees on hash, naming format and position count (F7)</td>
+</tr>
+<tr>
+  <td>you already run a coordinator: ZooKeeper, etcd, a control plane</td>
+  <td>fixed slots plus an assignment table</td>
+  <td>easier to operate and to reason about during an incident</td>
+  <td>that the coordinator is genuinely reliable</td>
+</tr>
+<tr>
+  <td>splitting a static dataset into n parts, where n only ever grows at the end</td>
+  <td>jump hash</td>
+  <td>best balance, zero memory</td>
+  <td>never use it where any node can fail</td>
+</tr>
+<tr>
+  <td>balancing live requests where the tail is what hurts</td>
+  <td>bounded loads</td>
+  <td>a hard cap instead of a statistical one</td>
+  <td>it is stateful, and unusable for stored data</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-when-does-none-of-this-help">When does none of this help?</h3>
+<p>Four situations. In each one the ring is not the wrong choice; it is simply not
+the thing that is hurting you.</p>
+<ul>
+<li>One key is your bottleneck (F5). Priya's coat is one coat, on one hook.</li>
+<li>You need range queries. Hashing destroys ordering by design. That is exactly
+why Cassandra's default partitioner cannot do range scans on partition keys,
+and why HBase and CockroachDB use <strong>range partitioning</strong> instead.</li>
+<li>The item's location must be chosen by something other than its identity: by
+geography, by tenant, by regulation.</li>
+<li>You have three machines and no growth plans, and modulo's failure would cost
+you a brief cache miss.</li>
+</ul>
+<blockquote>
+<p><strong>✅ CHECKPOINT — end of the production model.</strong> You can now pick between the
+ring, its two rivals and the fixed-slot design, say what each one costs, and
+name the five things an operator should have on a dashboard. You also know
+the two places the ring is silent: a hot key, and data that has not moved
+yet.</p>
+<p><strong>Say it back.</strong> Without using the words <em>slot</em>, <em>ring</em> or <em>hash</em>, explain to
+a friend why Redis Cluster and Cassandra both survive a machine joining,
+while doing something completely different.</p>
+<details><summary>A good answer sounds like</summary>
+"Cassandra lets every client work the answer out alone, from a rule that does
+not mention how many machines there are. Redis Cluster keeps a fixed list of
+sixteen thousand pigeonholes that never grows or shrinks, and one boss
+publishes which machine is looking after which pigeonholes."
+</details>
+
+</blockquote>
+<h2 id="readme-16-what-should-you-try-yourself">16. What should you try yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, easiest first, from saying it back in your own
+words to designing placement for a 200-node store across three datacentres.
+Two of them are worth doing even if you skip everything else.</p>
+</blockquote>
+<p><strong><a href="notes.html#exercises">EXERCISES.md</a></strong> — eight rungs from &quot;explain it back&quot; to
+&quot;design the placement layer for a 200-node store across three datacentres&quot;.
+Answers in <strong><a href="notes.html#solutions">SOLUTIONS.md</a></strong>; try first.</p>
+<p>Two worth doing even if you skip the rest:</p>
+<ul>
+<li><strong>6.4</strong> — turn on planted bug 1 and run the suite. The test named after this
+lab's headline guarantee <strong>passes</strong>, while the bug destroys exactly that
+guarantee. Work out why before reading on. The answer changes how you write
+tests for invariants.</li>
+<li><strong>8.4</strong> — migrate a live 20-server memcached fleet from modulo to the ring
+without a miss storm. The naive cutover remaps <strong>94.9%</strong> of keys. That is
+precisely the disaster you are adopting the ring to avoid, suffered once on
+the way in.</li>
+</ul>
+<h2 id="readme-17-where-does-this-sit-and-what-should-you-learn-next">17. Where does this sit, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab sits downstream of caching and Redis, and
+upstream of Kafka, quorums, gossip and load balancing. Four ideas get
+confused with it constantly, and one sentence separates each.</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+  CA[caching&lt;br/&gt;learned] --&gt; CH
+  RD[redis&lt;br/&gt;learned] --&gt; CH
+  DRL[distributed-rate-limiting&lt;br/&gt;learned] --&gt; CH
+  DB[database-landscape&lt;br/&gt;learned] --&gt; CH
+  CH([**consistent-hashing**&lt;br/&gt;the machine count is&lt;br/&gt;not in the formula])
+  CH --&gt; KA[kafka&lt;br/&gt;partitions: the other answer]
+  CH --&gt; QU[quorums-and-replication&lt;br/&gt;what to do once&lt;br/&gt;r nodes hold a key]
+  CH --&gt; GO[gossip-protocols&lt;br/&gt;how the membership list&lt;br/&gt;gets around]
+  CH --&gt; LB[load-balancing&lt;br/&gt;the same problem for&lt;br/&gt;requests, not data]
+</pre>
+<p><strong>Commonly confused — the one sentence that separates each:</strong></p>
+<ul>
+<li><strong>Consistent hashing vs sharding.</strong> Sharding is the goal, which is splitting
+data across machines. Consistent hashing is one way to decide the split.</li>
+<li><strong>Consistent hashing vs Redis Cluster's hash slots.</strong> Slots are plain modulo
+over a count that never changes, plus a coordinator-published table. It is a
+different solution to the same problem, with opposite trade-offs.</li>
+<li><strong>Consistent hashing vs a hash table's buckets.</strong> A hash table rehashes
+everything when it grows, which is exactly the behaviour this exists to
+avoid.</li>
+<li><strong>Virtual nodes vs replicas.</strong> Virtual nodes are extra <em>positions</em> for one
+machine, to even out the load. Replicas are extra <em>copies</em> of data, for
+durability. They are unrelated, and confusingly some documentation calls
+virtual nodes &quot;replicas&quot;.</li>
+<li><strong>Consistent hashing vs rendezvous hashing.</strong> Same guarantees. Rendezvous
+scores every node per lookup instead of keeping a ring, so it is simpler and
+O(n).</li>
+<li><strong>Hash partitioning vs range partitioning.</strong> Hashing spreads evenly and
+destroys ordering. Ranges preserve ordering and invite hot spots.</li>
+</ul>
+<p><strong>Next:</strong></p>
+<div class="code"><pre><code>/learn kafka                    # partitions are the fixed-slot answer, and the
+                                # consumer-group rebalance is this lab&#x27;s F4 with teeth
+/learn gossip-protocols         # how the membership list every client depends on
+                                # actually propagates -- the input this lab assumed
+/learn quorums-and-replication  # once r nodes hold a key, who must answer a read
+/learn load-balancing           # the same placement question for live requests
+</code></pre></div>
+<h2 id="readme-18-glossary">18. Glossary</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every term in the lab, in the order you met it, with the
+one line that pins it down.</p>
+</blockquote>
+<p>In order of first appearance.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>in one line</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>remainder rule / modulo hashing</strong></td>
+  <td><code>hash(key) % numberOfMachines</code> — correct, balanced, and it moves ~everything when the count changes</td>
+</tr>
+<tr>
+  <td><strong>hash function</strong></td>
+  <td>turns a name into a number; must be deterministic everywhere and spread uniformly</td>
+</tr>
+<tr>
+  <td><strong>hash space / the ring</strong></td>
+  <td>the hash function's full output range, treated as a circle by wrapping the top round to the bottom</td>
+</tr>
+<tr>
+  <td><strong>node</strong></td>
+  <td>a machine that can hold data</td>
+</tr>
+<tr>
+  <td><strong>key</strong></td>
+  <td>the identifier of one item</td>
+</tr>
+<tr>
+  <td><strong>clockwise owner / successor</strong></td>
+  <td>the node whose position is the first at or after the key's, wrapping if there is none</td>
+</tr>
+<tr>
+  <td><strong>wrap</strong></td>
+  <td>the one line that turns a sorted array into a circle</td>
+</tr>
+<tr>
+  <td><strong>remapping fraction</strong></td>
+  <td>the share of keys whose owner changes when membership changes</td>
+</tr>
+<tr>
+  <td><strong>monotonicity</strong></td>
+  <td>adding a node moves keys only onto that node, never between two existing nodes</td>
+</tr>
+<tr>
+  <td><strong>virtual node / vnode / token</strong></td>
+  <td>one of the many positions a single machine occupies, so its share is an average rather than a lottery</td>
+</tr>
+<tr>
+  <td><strong>imbalance</strong></td>
+  <td>busiest node's load divided by the fair share; 1.00 is perfect</td>
+</tr>
+<tr>
+  <td><strong>weight</strong></td>
+  <td>a machine's share, expressed as its number of positions</td>
+</tr>
+<tr>
+  <td><strong>replication factor (r)</strong></td>
+  <td>how many distinct machines hold a copy of each key</td>
+</tr>
+<tr>
+  <td><strong>failure domain</strong></td>
+  <td>rack or datacentre — what &quot;distinct&quot; must really mean for replicas</td>
+</tr>
+<tr>
+  <td><strong>bounded loads</strong></td>
+  <td>a hard cap per node, with overflow walking clockwise; even, but stateful</td>
+</tr>
+<tr>
+  <td><strong>rendezvous hashing (HRW)</strong></td>
+  <td>score every node by <code>hash(key + node)</code>, take the highest; no ring, O(n)</td>
+</tr>
+<tr>
+  <td><strong>jump consistent hash</strong></td>
+  <td>Google's zero-memory scheme; near-perfect balance, cannot remove a middle bucket</td>
+</tr>
+<tr>
+  <td><strong>hot key</strong></td>
+  <td>one key taking a large share of traffic; no placement algorithm helps</td>
+</tr>
+<tr>
+  <td><strong>miss storm</strong></td>
+  <td>the cold-cache transient after keys move en masse</td>
+</tr>
+<tr>
+  <td><strong>membership propagation window</strong></td>
+  <td>the interval during which clients hold different node lists and disagree about owners</td>
+</tr>
+<tr>
+  <td><strong>ketama</strong></td>
+  <td>the memcached-world consistent hashing implementation; MD5-based, and a compatibility contract between client libraries</td>
+</tr>
+<tr>
+  <td><strong>hash slot</strong></td>
+  <td>a fixed, never-changing partition number (Redis Cluster's 16,384) assigned to nodes by a table — the alternative design</td>
+</tr>
+<tr>
+  <td><strong>range partitioning</strong></td>
+  <td>splitting by key order rather than by hash; preserves range queries, invites hot spots</td>
+</tr>
+<tr>
+  <td><strong>Maglev hashing</strong></td>
+  <td>Google's load-balancer table-based scheme, O(1) lookup with minimal disruption</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Where the numbers came from, which of them will change on
+your machine and which cannot, what the symbols mean, and how the pieces of
+this folder fit together.</p>
+</blockquote>
+<h3 id="readme-what-this-is">What this is</h3>
+<p>A lab that teaches consistent hashing by building it, alongside the four things
+people build instead. Everything above is demonstrated by runnable Java in
+<code>src/</code>, and every number quoted was measured by running it on this machine.</p>
+<h3 id="readme-what-is-in-the-folder">What is in the folder</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>file</th>
+  <th>what it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>the interactive ring, also published as <a href="https://claude.ai/code/artifact/4169af96-aa2e-4918-9d19-a10c74336747" target="_blank" rel="noopener">The Clockwise Rule</a></td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code></td>
+  <td>eight rungs, easiest first</td>
+</tr>
+<tr>
+  <td><code>SOLUTIONS.md</code></td>
+  <td>worked answers; try the exercises first</td>
+</tr>
+<tr>
+  <td><code>src/</code></td>
+  <td>seven Java files, listed in section 13</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-the-depth-layers">The depth layers</h3>
+<p>Each layer ends with a checkpoint that tells you what stopping there leaves you
+with.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>layer</th>
+  <th>sections</th>
+  <th>in the original numbering</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>beginner model</td>
+  <td>1–9</td>
+  <td>BEGINNER MODEL §1–9</td>
+</tr>
+<tr>
+  <td>intermediate model</td>
+  <td>10</td>
+  <td>INTERMEDIATE MODEL §10</td>
+</tr>
+<tr>
+  <td>engineering model</td>
+  <td>11–14</td>
+  <td>ENGINEERING MODEL §11–14</td>
+</tr>
+<tr>
+  <td>production model</td>
+  <td>15</td>
+  <td>PRODUCTION MODEL §15</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-the-numbers-came-from">Where the numbers came from</h3>
+<p>Every measured figure in this document came from the nine experiment runs in
+section 14, on this machine. Nothing was estimated, and nothing was copied from
+a paper.</p>
+<p>That matters for how you read them, because the figures split into two kinds.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>kind of number</th>
+  <th>example</th>
+  <th>will it change on your machine?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>how <em>much</em></td>
+  <td>75.0%, 4.74×, 0.138 µs, +483%</td>
+  <td>yes, a little; the shape will not</td>
+</tr>
+<tr>
+  <td>whether at all</td>
+  <td>the 0 in experiment 4's middle column, the seven idle machines in F6</td>
+  <td>no; these are consequences of the design</td>
+</tr>
+</tbody>
+</table></div>
+<p>The percentages, imbalance ratios and timings will vary a little on different
+hardware and with different random keys. The zeros will not. They are not
+measurements of this machine; they are properties of the algorithm.</p>
+<h3 id="readme-the-notation-in-one-place">The notation, in one place</h3>
+<p>Every symbol used above, with the words it stands for.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>symbol</th>
+  <th>in words</th>
+  <th>where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>n</code></td>
+  <td>how many machines there are right now</td>
+  <td>section 7</td>
+</tr>
+<tr>
+  <td><code>hash(key) % n</code></td>
+  <td>the key's hash divided by the machine count, keep the remainder</td>
+  <td>section 4</td>
+</tr>
+<tr>
+  <td><code>1/(n+1)</code></td>
+  <td>the floor: one share in n+1 must move when a machine joins</td>
+  <td>section 7</td>
+</tr>
+<tr>
+  <td><code>r</code></td>
+  <td>the replication factor: how many distinct machines hold a copy</td>
+  <td>section 10, break 3</td>
+</tr>
+<tr>
+  <td><code>c</code></td>
+  <td>the slack factor: how far above a fair share a machine may go</td>
+  <td>section 10, break 5</td>
+</tr>
+</tbody>
+</table></div>
+<p>And three more that describe how a quantity grows rather than what it is.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>symbol</th>
+  <th>in words</th>
+  <th>where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>1/√n</code></td>
+  <td>one over root n: how the wobble shrinks as you add positions</td>
+  <td>section 10, break 1</td>
+</tr>
+<tr>
+  <td><code>O(log(nodes × positions))</code></td>
+  <td>lookup time grows only with the logarithm of the number of positions</td>
+  <td>section 8</td>
+</tr>
+<tr>
+  <td><code>Θ(log n)</code></td>
+  <td>a position count that grows like the logarithm of the machine count</td>
+  <td>section 12</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-honest-limits">Honest limits</h3>
+<ul>
+<li>The ring here is a teaching implementation. It is correct and tested, and it
+is not tuned for production throughput.</li>
+<li><code>Ring</code> contains one disclosed latent bug, described in section 13, left in
+deliberately for exercise 6.6.</li>
+<li>The lab does not move data, does not propagate membership, and does not model
+racks or datacentres. Section 15 lists what real systems add.</li>
+<li>The visualization uses a small ring and a few hundred items so the movement
+is visible. Real rings are 64 bits wide and astronomically sparser, which is
+the first lie section 8 warns about.</li>
+</ul>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-consistent-hashing--exercises">Consistent hashing — exercises</h1>
+<p>Eight rungs, easiest first. Rungs 1–3 need only the README and the
+<a href="https://claude.ai/code/artifact/4169af96-aa2e-4918-9d19-a10c74336747" target="_blank" rel="noopener">visualization</a>.
+From rung 4 you are editing and running code.</p>
+<p>Answers in <strong><a href="notes.html#solutions">SOLUTIONS.md</a></strong> — attempt first. For rungs 7–8 the answer is
+a worked discussion, not a single output.</p>
+<div class="code"><pre><code class="language-bash">cd ~/Documents/Learning/35-consistent-hashing
+java src/Tests.java              # 22 scenario tests
+java src/Experiments.java N      # experiment N (1..9)
+java src/BrokenRing.java         # the three planted bugs
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> In one sentence that does <strong>not</strong> mention rings, circles or clockwise, say what
+is wrong with <code>hash(key) % numberOfMachines</code>. If your sentence contains the word &quot;slow&quot;
+or &quot;unbalanced&quot;, try again — both are false.</p>
+<p><strong>1.2</strong> Explain monotonicity to a colleague <strong>without using the word</strong>, and without
+describing the algorithm. Say only what is promised.</p>
+<p><strong>1.3</strong> Virtual nodes solve two different problems. Name both. Then say which one you
+would lead with in a design review, and why.</p>
+<p><strong>1.4</strong> &quot;Every client computes ownership alone, with no lookup&quot; is stated as a hard
+requirement rather than an optimisation. Why? What would you actually have built if you
+allowed yourself one lookup?</p>
+<p><strong>1.5</strong> You have already met <a href="../13-redis/notes.html#readme">redis</a>'s 16,384 hash slots. Redis Cluster does
+<strong>not</strong> use consistent hashing. Explain how <code>CRC16(key) % 16384</code> escapes the problem in
+§4, and what it costs to escape it that way.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> In the visualization, click any dot. From the screen alone: what is its position,
+which machine owns it, which machine would own it under modulo, and where does its
+clockwise walk end?</p>
+<p><strong>2.2</strong> In <code>src/Ring.java</code>, find the single expression that makes the ring a circle
+rather than a line. What happens without it — and is it a crash or something worse?</p>
+<p><strong>2.3</strong> In <code>src/Placements.java</code>, find the one line that is the entire bug this lab
+exists to explain. It is short.</p>
+<p><strong>2.4</strong> In the visualization, set positions to 1 and look at the load bars. Which machine
+has the biggest share? Now press Undo and Reset, then set it to 1 again. Could you have
+predicted the winner from the machine names? Should you be able to?</p>
+<p><strong>2.5</strong> Run <code>java src/Experiments.java 6</code>. Rendezvous hashing beats the ring on balance
+<em>and</em> needs no memory <em>and</em> needs no tuning. Find the column that explains why the ring
+is nonetheless what everybody ships.</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Commit to an answer, then run the check.</p>
+<p><strong>3.1</strong> A 100-machine cache becomes 101. What percentage of keys change owner, under
+modulo and under the ring? What is the smallest that percentage could possibly be?
+<em>Check:</em> <code>java src/Experiments.java 1</code>.</p>
+<p><strong>3.2</strong> 8 machines, one ring position each. One machine dies. Its keys are inherited by
+— how many machines? Which ones? <em>Check:</em> <code>java src/Experiments.java 3</code>.</p>
+<p><strong>3.3</strong> You <strong>add</strong> a machine. Can a key move from one existing machine to another
+existing machine? Answer for the ring and for modulo, and give the reason rather than
+the number. <em>Check:</em> <code>java src/Experiments.java 4</code>.</p>
+<p><strong>3.4</strong> The ring is healthy and the machine positions cover the whole 64-bit circle. You
+change only the key hash, to a 32-bit one. Predict the distribution across 8 machines
+before you look. <em>Check:</em> the test <code>a_poor_hash_clumps_keys_onto_a_few_machines</code>.</p>
+<p><strong>3.5</strong> You ask for 3 replicas from a 3-machine cluster with 200 positions each. What do
+you get back? Now ask for 4. What comes back, and should that be an error?
+<em>Check:</em> <code>replication_degrades_gracefully_when_r_exceeds_the_cluster</code>.</p>
+<p><strong>3.6</strong> During a membership change, half your clients know about the new machine and half
+do not. What fraction of the keyspace do the two halves disagree about, under each rule?
+<em>Check:</em> <code>java src/Experiments.java 9</code>.</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>For each: predict, then measure, then say <strong>which property moved — and did correctness
+change at all?</strong></p>
+<p><strong>4.1</strong> Experiment 2 sweeps the position count. Add runs at 2,000 and 5,000 positions.
+Predict the imbalance first. Then answer the real question: why does production sit at
+100–200 rather than 5,000, given that more is measurably better?</p>
+<p><strong>4.2</strong> Experiment 5 adds one machine mid-traffic. Change it to add <strong>three at once</strong>.
+Predict what happens to the ring's dip before running. Then answer: is adding three
+machines at once better or worse than adding one machine three times, and why?</p>
+<p><strong>4.3</strong> Experiment 6 compares strategies at 100 machines. Change it to 10, then to 1,000.
+Which strategy's position in the ranking changes, and which column changes it? At what
+cluster size would you switch your recommendation?</p>
+<p><strong>4.4</strong> In experiment 8, give one machine a weight of 20 while the others stay at 1.
+Does the ring still deliver proportional shares? Now drop the position count to 5 and try
+the same thing. What breaks, and why does that explain the &quot;weights need enough
+positions&quot; warning in §10?</p>
+<p><strong>4.5</strong> In <code>src/Ring.java</code>, change the virtual position naming from <code>node + &quot;#&quot; + i</code> to
+<code>node + &quot;-&quot; + i</code>. Every test still passes. Now explain, in terms of §11 F7, why this
+harmless-looking change would be a production incident.</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1 <code>Ring.ownedFraction(node)</code></strong> — return the share of the circle a machine owns,
+computed <strong>only from the arc widths</strong>, touching no keys. Then verify it predicts the
+measured key counts from experiment 2 to within a fraction of a percent. Why is it worth
+having a measure of balance that does not depend on your traffic?</p>
+<p><strong>5.2 Rack awareness.</strong> Extend <code>owners(key, r)</code> so the r machines are in r distinct
+<strong>racks</strong>, given a <code>Function&lt;String,String&gt; rackOf</code>. Then handle the hard part: what do
+you return when there are fewer than r racks, and why is silently returning fewer
+machines worse than either alternative?</p>
+<p><strong>5.3 <code>keysToMove(Ring before, Ring after)</code></strong> — the piece §11 F8 says is missing. Return
+the ranges of the circle whose owner changed, and which machine each must be streamed
+from and to. Then answer: while that data is in flight, what should a read for one of
+those keys do?</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><code>java src/BrokenRing.java</code> runs three planted bugs. For <strong>each</strong>, before reading the
+output, answer:</p>
+<ol>
+<li>What is the observable symptom?</li>
+<li><strong>Which test in <code>src/Tests.java</code> catches it?</strong> (Find it by name.)</li>
+<li>Which guarantee from README §12 does it break?</li>
+<li>Why would this be hard to find in production?</li>
+</ol>
+<div class="table"><table><thead>
+<tr>
+  <th>bug</th>
+  <th>the change</th>
+  <th>run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>machine positions come from its index in the list, not its name</td>
+  <td><code>java src/BrokenRing.java 1</code></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>the replica walk does not skip machines it already chose</td>
+  <td><code>java src/BrokenRing.java 2</code></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>the successor search clamps to the last position instead of wrapping</td>
+  <td><code>java src/BrokenRing.java 3</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>6.4 — the one that matters.</strong> Turn on bug 1 (<code>Ring.BUG_POSITIONS_FROM_INDEX = true</code>)
+and run the full suite. The monotonicity test — the one named after the lab's headline
+guarantee — <strong>passes</strong>. Work out why, then answer the general question: what does it
+tell you that a suite can contain a test named after the exact property a bug destroys,
+and still go green?</p>
+<p><strong>6.5</strong> Bug 3 misplaces 79.6% of keys on a 2-machine cluster and 0.0% on an 8×200 one.
+The existing test catches it only because it happens to use a sparse ring. Write a test
+that catches it <strong>regardless of ring density</strong> — one that tests the property rather than
+a symptom of it.</p>
+<p><strong>6.6</strong> All three planted bugs are caught by the suite. Invent a fourth that would <strong>not</strong>
+be — a change to <code>Ring.java</code> that is genuinely wrong and that all 22 tests accept. Then
+write the test that catches it. (Hint: look for a property no current test asserts, not
+for a cleverer bug.)</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1 — Survive the miss storm anyway.</strong> The ring shrinks the storm from ~99% of the
+cache to ~1/n. But 1/n of a 2 TB cache fleet is still 20 GB of cold keys arriving at your
+database in seconds. Design the rest of the answer. Consider: introducing the new machine
+gradually, pre-warming it, serving from the old owner during a grace period, and rate-
+limiting misses. For each, say what it costs and what it can still not protect you from.</p>
+<p><strong>7.2 — Be correct with a stale ring.</strong> §11 F4: for a window, your client's machine list
+is out of date. Design a client that stays correct anyway. Cover reads and writes
+separately — they need different answers — and say which of your mechanisms you would
+actually build first given a fixed budget.</p>
+<p><strong>7.3 — Move the data.</strong> §11 F8: placement is not migration. A machine joins. Write the
+sequence of steps that gets the data to its new owner such that <strong>no read ever returns
+&quot;not found&quot; for a key that exists</strong>. Then say what happens if the new machine dies
+halfway through, and what happens if a write arrives for a key mid-transfer.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — The placement layer.</strong> A 200-node object store, 3 datacentres, 4 PB, replication
+factor 3, objects averaging 400 KB. Design it: which strategy, how many virtual
+positions, how replicas are chosen across datacentres, how the membership list
+propagates, and what you alert on. Then say what changes if the node count is 20 instead
+of 200.</p>
+<p><strong>8.2 — The expansion.</strong> You are asked to add 50 nodes to a 200-node cluster &quot;this week&quot;.
+Walk through what actually happens hour by hour, using §11 F8 and F3. Then propose what
+you would do instead, and quantify why it is better.</p>
+<p><strong>8.3 — The reply.</strong> A colleague proposes moving to consistent hashing to fix a hot-key
+problem: one product ID is 30% of all cache traffic and its machine is at 95% CPU. Write
+the reply you would actually send. It must say plainly that this will not help, explain
+why in one sentence, and end with something that will.</p>
+<p><strong>8.4 — The migration.</strong> You run 20 memcached servers with <code>hash(key) % 20</code> in a client
+library you control. You want to move to consistent hashing <strong>without</strong> a cache-miss
+storm at the moment of the switch. Design the migration. (The naive cutover is a 95%
+miss storm — the very thing you are adopting consistent hashing to avoid.)</p>
+<p><strong>8.5 — The choice.</strong> Your company already runs etcd for other purposes. You need to
+shard a new 40-node service. Argue for consistent hashing, then argue for fixed slots
+plus an assignment table, then say which you would pick and what single fact would change
+your mind.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-consistent-hashing--solutions">Consistent hashing — solutions</h1>
+<p>Try the exercises first. Rungs 7–8 are worked discussions, not single answers.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> <em>&quot;It makes every item's location depend on the total number of machines, so
+changing that total changes almost every location at once.&quot;</em></p>
+<p>The trap in the question is real: modulo is not slow (0.051 µs, the fastest thing in the
+lab) and not unbalanced (1.07×, as good as anything else). It wins four of the five
+columns in §12's table. It loses one, and that one is the only one that matters.</p>
+<p><strong>1.2</strong> <em>&quot;Adding a machine will never disturb an item that is not moving to the new
+machine.&quot;</em> Or, operationally: <em>&quot;a machine joining cannot make any other machine's job
+change.&quot;</em></p>
+<p>The reason to be able to say this without the algorithm is that <strong>monotonicity is what
+you promise, and the ring is merely how you keep the promise</strong>. Rendezvous hashing keeps
+the same promise with no ring at all.</p>
+<p><strong>1.3</strong> Virtual nodes solve:</p>
+<ol>
+<li><strong>Steady-state balance</strong> — few random points cut a circle into wildly unequal gaps
+(4.74× at one position each, 1.06× at a hundred).</li>
+<li><strong>Failure blast radius</strong> — with one position each, a dead machine's entire share lands
+on one arbitrarily-chosen neighbour (+483% on the machine that happened to be next,
+which in the measured run was the <em>quietest</em> in the cluster).</li>
+</ol>
+<p><strong>Lead with the second.</strong> The first is a capacity-planning inconvenience; the second is
+the mechanism of a cascading failure, and it is the one a reviewer will not have thought
+of. It also answers &quot;why not just use 10 positions?&quot; — 10 fixes most of the balance and
+very little of the blast radius.</p>
+<p><strong>1.4</strong> Because a lookup would put a service on the path of <strong>every single data access in
+your entire system</strong>. That service is now a hard dependency with your full request rate
+pointed at it, it must be replicated, and you have to decide what happens when it is
+slow — at which point you have recreated a harder version of the problem you started
+with.</p>
+<p>If you did allow one lookup, you would build the <strong>fixed-slot design</strong> in §15: a table
+mapping slot → machine, published by a coordinator. That is a completely legitimate
+answer, and it is what Redis Cluster and Kafka chose. The point is that it is a different
+design with different costs, not a cheaper version of this one.</p>
+<p><strong>1.5</strong> <code>CRC16(key) % 16384</code> is modulo hashing — it has §4's disease in full. It escapes
+the consequences because <strong>16,384 never changes</strong>. The count in the formula is a
+constant, not a property of the cluster, so no cluster event can alter any key's slot.
+What varies instead is a separate table saying which machine owns each slot, and moving a
+slot is an explicit operation.</p>
+<p>The cost is a <strong>coordinator</strong>: something must own that table, agree on it, and publish
+it. Consistent hashing's entire selling point is not needing one. So the two designs are
+a trade of <em>coordination</em> for <em>control</em> — with a coordinator you get exact placement,
+hand-tunable rebalancing and no disagreement window (§11 F4); without one you get
+statistical balance and a window bounded by 1/n.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Whatever the panel says — the point is that it says all four without you doing
+any arithmetic. If you had to guess at &quot;which machine would own it under modulo&quot;, the
+page failed.</p>
+<p><strong>2.2</strong> <code>Ring.successorIndex</code>, the line <code>return lo == positions.length ? 0 : lo;</code>.</p>
+<p>Without it you get <strong>something worse than a crash</strong>: <code>BrokenRing</code> bug 3 clamps to the
+last index instead, so every key past the top of the ring is silently handed to whichever
+machine happens to sit at the end of the sorted array. No exception, no error, every
+client agreeing on the same wrong answer. And its severity depends on ring density —
+79.6% of keys misplaced on a 2-machine cluster, 0.0% at 8×200 — so it hides in
+production shape and appears in test shape.</p>
+<p><strong>2.3</strong> <code>Placements.Modulo.owner</code>:</p>
+<div class="code"><pre><code class="language-java">int i = (int) Math.floorMod(Hashing.hash64(key), nodes.size());
+</code></pre></div>
+<p><code>nodes.size()</code>. That is the whole thing.</p>
+<p><strong>2.4</strong> You can see which machine won, and <strong>no, you could not have predicted it, and you
+should not be able to.</strong> The winner is decided by where <code>hash(&quot;n3#0&quot;)</code> happens to fall
+relative to <code>hash(&quot;n5#0&quot;)</code> — an arbitrary consequence of the hash function with no
+meaning at all.</p>
+<p>That is worth noticing as a property rather than a curiosity: consistent hashing's
+balance is <strong>statistical</strong>, not designed. Nobody chose which machine gets the big slice,
+nobody can predict it, and it changes completely if you rename a machine. If you need
+placement you can reason about or control by hand, you want the fixed-slot design.</p>
+<p><strong>2.5</strong> The <code>lookup</code> column. Rendezvous scores every machine on every lookup, so it is
+O(machines) where the ring is O(log positions). Measured across cluster sizes:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>machines</th>
+  <th>ring</th>
+  <th>rendezvous</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>10</td>
+  <td>0.254 µs</td>
+  <td>0.384 µs</td>
+</tr>
+<tr>
+  <td>100</td>
+  <td>0.104 µs</td>
+  <td>3.462 µs</td>
+</tr>
+<tr>
+  <td>1,000</td>
+  <td>0.176 µs</td>
+  <td>34.179 µs</td>
+</tr>
+</tbody>
+</table></div>
+<p>At ten machines rendezvous costs 1.5× — irrelevant, and it is the better engineering
+choice for its simplicity. At a thousand it costs <strong>194×</strong> and is disqualifying. The ring
+won the mindshare because it is the one that keeps working as the cluster grows.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> Modulo <strong>99.0%</strong>, ring <strong>0.9%</strong>, and the floor is <strong>1.0%</strong> — one hundredth of the
+keys must move for 101 machines to share them evenly.</p>
+<p>The ring is <em>at</em> the floor. Modulo does a hundred times the work to achieve the same
+result, and the ratio gets worse as you grow: the waste is proportional to the cluster
+size.</p>
+<p><strong>3.2</strong> <strong>One machine inherits all of them</strong>, chosen by an accident of the circle rather
+than by who has capacity. Measured: n3's 7,996 keys all went to n7, taking it from 1,657
+keys to 9,653 — a +483% step change on the quietest machine in the cluster.</p>
+<p>With 200 positions each, all seven survivors share it and each takes a 10–19% bump.</p>
+<p><strong>3.3</strong> <strong>The ring: never. Modulo: constantly.</strong></p>
+<p>The reason, which is better than the number: a key's owner is the first machine
+clockwise. Inserting a new position can only place a new candidate <em>in front of</em> some
+keys — it cannot reorder machines that were already on the ring. So the only change
+possible is &quot;onto the newcomer&quot;.</p>
+<p>Measured: of the 181,668 keys modulo moved, <strong>163,679 went sideways</strong> between machines
+that had not changed at all.</p>
+<p><strong>3.4</strong> <strong>One machine gets everything and the other seven get zero.</strong></p>
+<div class="code"><pre><code>64-bit key hash: {n0=2636, n1=2385, n2=2539, n3=2378, n4=2546, n5=2509, n6=2349, n7=2658}
+32-bit key hash: {n0=0, n1=0, n2=0, n3=0, n4=0, n5=20000, n6=0, n7=0}
+</code></pre></div>
+<p>Nothing collided. A 32-bit value spans ~4×10⁹ and the ring spans ~1.8×10¹⁹, so every key
+lands in about one hundred-millionth of the circle and one machine's slice contains all
+of them. If you predicted &quot;somewhat lumpy&quot;, the thing to update is that this is a <strong>range
+mismatch</strong>, not a quality problem — a perfect hash of the wrong width fails identically.</p>
+<p><strong>3.5</strong> r=3 returns 3 machines. r=4 returns <strong>the same 3</strong> — not an error.</p>
+<div class="code"><pre><code>r=3 -&gt; [c, b, a]   r=4 -&gt; [c, b, a]
+</code></pre></div>
+<p>Silently returning fewer is defensible for a placement function, whose job is &quot;where does
+this belong&quot; rather than &quot;is your cluster big enough&quot;. But it is exactly the kind of
+quiet degradation that hides a misconfiguration: a cluster that shrank below your
+replication factor keeps working and keeps reporting success, while your actual
+durability has quietly dropped. Log it at minimum. See 5.2.</p>
+<p><strong>3.6</strong> Modulo <strong>90.8%</strong>, ring <strong>9.5%</strong>. Same propagation window, same everything else —
+the only difference is the blast radius, and it is exactly the remapping fraction from
+3.1.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Measured, 8 machines, 200,000 keys:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>positions</th>
+  <th>imbalance</th>
+  <th>ring entries</th>
+  <th>rebuild</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>200</td>
+  <td>1.070×</td>
+  <td>1,600</td>
+  <td>4.8 ms</td>
+</tr>
+<tr>
+  <td>500</td>
+  <td>1.024×</td>
+  <td>4,000</td>
+  <td>4.8 ms</td>
+</tr>
+<tr>
+  <td>2,000</td>
+  <td><strong>1.035×</strong></td>
+  <td>16,000</td>
+  <td>21.1 ms</td>
+</tr>
+<tr>
+  <td>5,000</td>
+  <td>1.009×</td>
+  <td>40,000</td>
+  <td>17.9 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Look at the 2,000 row: it is worse than the 500 row.</strong> That is not a measurement error
+and it is the most useful thing in this table. The guarantee is <em>statistical</em>, so the
+curve has noise in it, and past a few hundred positions you are deep in diminishing
+returns where the noise is larger than the trend. Chasing 1.02× to 1.01× is chasing
+something you cannot reliably observe.</p>
+<p>Why production sits at 100–200 anyway: <strong>rebuild cost</strong>. The ring is <code>machines × positions</code> entries, sorted on every membership change, in every client. At 1,000 machines
+× 200 that is 200,000 entries; at 5,000 positions it is 5,000,000. The rebuild time above
+already quadruples between 500 and 2,000. This is exactly why Cassandra moved its default
+from 256 to 16 and added a deliberate allocation algorithm — placing few positions <em>well</em>
+beats placing many at random.</p>
+<p>Correctness never moved. This dial is pure efficiency.</p>
+<p><strong>4.2</strong> Measured, from 10 machines:</p>
+<div class="code"><pre><code>+1 at once  -&gt;  9.4% moved   (floor  9.1%)
++3 at once  -&gt; 24.0% moved   (floor 23.1%)
+
+one at a time:  step 1 -&gt; 9.4%,  step 2 -&gt; 8.9%,  step 3 -&gt; 7.8%
+                26.1% of keys moved in TOTAL, for a net result of 24.0%
+</code></pre></div>
+<p><strong>Adding three at once moves less total data</strong> — 24.0% against 26.1% — because doing it
+incrementally makes some keys move twice, landing on machine A in step 1 and machine C in
+step 3. That is 2.1 percentage points of pure waste.</p>
+<p>But three separate steps produce <strong>three smaller storms</strong> (9.4%, 8.9%, 7.8%) instead of
+one 24% one, and you can pause between them. So the real answer is a genuine trade rather
+than a winner: <strong>batch if total transfer volume is your constraint (F8), stagger if the
+miss storm is (F3)</strong> — and for a cache it is almost always the storm, so stagger.</p>
+<p><strong>4.3</strong> See the table in 2.5. Only <strong>rendezvous</strong> moves in the ranking, and the <code>lookup</code>
+column moves it. It is competitive at 10 machines (0.384 µs vs the ring's 0.254 µs) and
+hopeless at 1,000 (34 µs).</p>
+<p>The crossover is somewhere around <strong>30–50 machines</strong>, but pick it by budget rather than
+by the graph: at 3 µs a lookup, a service doing 10 placement decisions per request has
+spent 30 µs on arithmetic, which is fine; at 34 µs it has spent a third of a millisecond,
+which is not.</p>
+<p><strong>4.4</strong> Measured, with weights 1, 1 and 20:</p>
+<div class="code"><pre><code>200 positions: small 0.90x  mid 0.99x  big 1.01x    (1.00 = exactly its weight)
+  5 positions: small 1.01x  mid 1.68x  big 0.97x
+</code></pre></div>
+<p>At 200 positions the weights hold well. At 5, &quot;mid&quot; gets <strong>68% more than its weight
+entitles it to</strong> — the ratios have stopped meaning anything.</p>
+<p>The reason: a machine's share is the sum of its gap widths, and a <em>ratio</em> between shares
+is only as precise as the number of samples underlying it. With 5 positions the small
+machines have 5 gaps each; their totals are dominated by luck, not by weight. Weighting
+does not need &quot;some&quot; positions, it needs enough for the law of large numbers to
+apply — which is the §10 warning, quantified.</p>
+<p><strong>4.5</strong> Every test passes because the ring is internally consistent either way. The
+positions are different, but they are <em>consistently</em> different — one client using <code>-</code>
+produces a perfectly valid ring.</p>
+<p>It is an incident because a client's ring is determined by three things — the hash
+function, the virtual-position naming format, and the position count — and <strong>two clients
+that differ on any of the three compute different owners for the same key</strong> (§11 F7).
+Ship this change to half your fleet and the two halves silently disagree about every key,
+permanently. Symptom: a hit ratio that halves with no other explanation, because each
+half keeps populating keys the other half cannot find.</p>
+<p>This is why memcached's ketama is a <em>compatibility contract</em> rather than an
+implementation detail, and why a change to any of the three is a fleet-wide coordinated
+deploy, not a refactor.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1</strong> <code>Ring.arcShare()</code> already does this; the exercise is to check it against reality.
+It should track the measured key counts closely, because the arc share <em>is</em> the
+probability a uniformly-hashed key lands on that machine.</p>
+<p>Why it is worth having: it measures balance <strong>without traffic</strong>. You can evaluate a
+proposed membership change — adding five nodes, removing a rack — before you make it,
+and you can detect a bad position count on an idle cluster. A metric that needs
+production traffic to reveal a problem is a metric that reveals it too late. It is also
+the honest way to separate the two causes of imbalance: if arc share is even but measured
+load is not, you do not have a ring problem, you have a hot key (F5).</p>
+<p><strong>5.2</strong> The walk becomes: collect nodes clockwise, skipping any whose <em>rack</em> is already
+represented.</p>
+<p>The hard part is the fallback, and there are three options:</p>
+<ul>
+<li><strong>Return fewer than r</strong> — silent, and it means your durability quietly dropped below
+what you configured, with everything still reporting success. This is 3.5's problem
+made worse.</li>
+<li><strong>Fail the write</strong> — loud and safe, and it turns a partial rack outage into a total
+write outage. Rarely what you want.</li>
+<li><strong>Degrade explicitly</strong> — place the remaining copies on distinct <em>nodes</em> even though the
+racks repeat, and <strong>emit a metric saying you did</strong>.</li>
+</ul>
+<p>The third is what production systems do (Cassandra's <code>NetworkTopologyStrategy</code> behaves
+this way), and the metric is not an afterthought — it is the whole point. The failure you
+are guarding against is not &quot;we cannot place the data&quot;, it is &quot;we placed the data less
+safely than you believe and nobody told you&quot;. Whichever you choose, the requirement is
+that it is <strong>visible</strong>.</p>
+<p><strong>5.3</strong> The ranges that changed owner are exactly the arcs between the new machine's
+positions and the position that preceded each of them. For each such arc, the data must
+stream from the machine that <em>used</em> to own it (the old successor) to the new one.</p>
+<p>While it is in flight, a read has three options and they are the design decision:</p>
+<ul>
+<li><strong>Read from the old owner until the transfer completes</strong> — correct, and it means the
+new machine's arrival changes nothing until it is ready. This is the right default.</li>
+<li><strong>Read from the new owner</strong> — fast to implement and returns &quot;not found&quot; for data that
+exists, which is data loss from the caller's point of view.</li>
+<li><strong>Read from both and merge</strong> — correct and doubles the read cost for the duration.</li>
+</ul>
+<p>The subtlety worth stating: <strong>the transfer is not finished when the last byte arrives</strong>,
+because writes kept happening during it. You need either a hand-off point where writes go
+to both owners, or a final catch-up pass over what changed while you were copying. This
+is why joining a Cassandra node is a multi-phase operation with an explicit state machine
+rather than a copy.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>bug</th>
+  <th>symptom</th>
+  <th>caught by</th>
+  <th>guarantee broken (§12)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1 — positions from the list index</td>
+  <td>removing one machine moves <strong>72.0%</strong> of keys; two clients that added machines in different orders disagree about <strong>100%</strong> of keys</td>
+  <td><code>ring_removal_moves_only_the_dead_machines_keys</code>, <code>two_clients_building_the_ring_separately_agree_on_every_key</code>, <code>with_many_vnodes_a_dead_machines_keys_spread_across_everyone</code></td>
+  <td>#1 monotonicity, #3 no coordination, #4 determinism</td>
+</tr>
+<tr>
+  <td>2 — replicas not distinct</td>
+  <td>45.0% of keys have two &quot;copies&quot; on one machine; 3.7% have all three</td>
+  <td><code>replication_returns_r_distinct_machines</code>, <code>replication_degrades_gracefully_when_r_exceeds_the_cluster</code></td>
+  <td>the r-distinct-nodes property</td>
+</tr>
+<tr>
+  <td>3 — no wrap</td>
+  <td>keys past the last position silently handed to the wrong machine; 79.6% at 2×1 positions, 0.0% at 8×200</td>
+  <td><code>ring_wraps_around_past_the_top_of_the_number_space</code></td>
+  <td>#4 determinism, and balance</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Why each is hard to find in production:</strong></p>
+<ul>
+<li><strong>Bug 1</strong> looks perfect in the operation you actually test. See 6.4.</li>
+<li><strong>Bug 2</strong> produces correct data. Reads work, writes work, nothing errors. You discover
+it the day a machine dies and takes the only copy of 3.7% of your keys. And a small
+test cluster <strong>cannot</strong> reveal it: with one position per machine the walk always lands
+on distinct machines, so the configuration you develop against is immune.</li>
+<li><strong>Bug 3</strong> never crashes and every client agrees on the same wrong answer, so no
+consistency check fires. Its severity is inversely proportional to ring density, which
+means it is loudest in your test environment and quietest in production — the exact
+opposite of the pattern people's instincts are tuned for.</li>
+</ul>
+<p><strong>6.4 — why the monotonicity test passes.</strong> Because the bug only bites when an index
+<strong>shifts</strong>, and appending a machine to the end of the list does not renumber anybody.
+<code>n10</code> becomes index 10; n0 through n9 keep indices 0 through 9; every existing machine's
+positions are unchanged; monotonicity holds perfectly.</p>
+<p>The bug appears on <strong>removal</strong> (every index after the gap shifts down) and on <strong>different
+insertion orders across clients</strong> (100% disagreement).</p>
+<p>What that tells you generally: <strong>a test named after a property does not test the
+property — it tests the property under one operation.</strong> The suite had a test called
+<code>ring_never_moves_a_key_between_two_existing_machines</code> and a bug that destroys exactly
+that guarantee, and they coexisted happily, because the test only ever added.</p>
+<p>The transferable habit: for every invariant, ask <em>which operations could violate this?</em>
+and cover each of them — not just the one that is easiest to write. Here that means add,
+remove, reorder, and rebuild-from-scratch, and the bug dies on three of the four.</p>
+<p><strong>6.5</strong> Test the property, not a symptom. The wrap is what makes the space circular, so
+assert circularity directly rather than hoping a key lands past the last position:</p>
+<div class="code"><pre><code class="language-java">static void the_space_is_a_circle_at_every_density(MiniRing unused) {
+    for (int[] cfg : new int[][]{{2,1},{4,1},{8,10},{8,200}}) {
+        Ring r = new Ring(cfg[1]);
+        for (int i = 0; i &lt; cfg[0]; i++) r.addNode(&quot;n&quot; + i);
+        List&lt;Object[]&gt; layout = r.layout();
+        long lastPos  = (Long) layout.get(layout.size() - 1)[0];
+        String first  = (String) layout.get(0)[1];
+        // Probe positions we KNOW are past the end, instead of hoping a key lands there.
+        for (long probe : new long[]{lastPos + 1, Long.MAX_VALUE, lastPos + 1000000L})
+            eq(&quot;a position past the last point wraps to the first machine, at &quot;
+               + cfg[0] + &quot;x&quot; + cfg[1], first, r.ownerOfPosition(probe));
+    }
+}
+</code></pre></div>
+<p>Two changes make it density-independent: it <strong>constructs</strong> the positions it wants to test
+instead of sampling keys and hoping, and it runs across densities so it cannot pass by
+being lucky about ring shape. (It needs a small <code>ownerOfPosition(long)</code> accessor, which
+is a one-line addition worth making — a test that has to route through the key hash is
+testing two things at once.)</p>
+<p><strong>6.6 — a fourth bug the suite would miss.</strong> The hint is the real answer: hunt for a
+property nothing asserts, not for a cleverer bug.</p>
+<p><strong>Worth reporting an attempt that failed</strong>, because it teaches more than the success. My
+first candidate was: sort the positions but build the parallel <code>ownerOf</code> array from the
+<em>unsorted</em> list, so every key gets a valid machine name that is simply the wrong one.
+The reasoning was that the suite only checks aggregates — counts, ratios, distributions —
+and a permutation preserves all of them.</p>
+<p>It does not survive contact:</p>
+<div class="code"><pre><code>   FAIL  ring_moves_only_about_one_nth_of_the_keys_when_a_machine_joins
+   FAIL  ring_never_moves_a_key_between_two_existing_machines
+   FAIL  ring_removal_moves_only_the_dead_machines_keys
+   FAIL  two_clients_building_the_ring_separately_agree_on_every_key
+   FAIL  with_many_vnodes_a_dead_machines_keys_spread_across_everyone
+   17 passed, 5 failed
+</code></pre></div>
+<p>Five tests, because the permutation is not stable: inserting a position shifts the
+mis-mapping for every entry after it, so the <em>membership-change</em> tests catch what the
+<em>steady-state</em> tests cannot see. That is a genuinely useful thing to learn about this
+suite — it is stronger than it looks, precisely because so many of its tests assert
+behaviour <em>across a change</em> rather than at rest.</p>
+<p><strong>A bug that does survive — and it is in <code>Ring.java</code> right now.</strong> <code>Ring</code> has two ways to
+add a machine: <code>addNode(name)</code> and <code>addNode(name, weight)</code>. The first does
+<code>weights.put(node, 1)</code>. So when a machine that was registered with a weight re-registers
+through the plain path — a heartbeat, a reconnect, a config reload, a node rejoining
+after a blip — <strong>its weight is silently reset to 1</strong>:</p>
+<div class="code"><pre><code>after setup            : small=41,841  big=158,159  (ratio 3.78x)
+after big re-registers : small=101,424  big=98,576  (ratio 0.97x)
+</code></pre></div>
+<p>Your 4× machine just became a 1× machine. Nothing throws, nothing logs, the ring stays
+perfectly valid and every client agrees on it. What you observe in production is that a
+large expensive box is mysteriously half-idle while the small ones run hot — with no
+event to correlate it against, because the re-registration was routine.</p>
+<p>All 22 tests pass, because <strong>not one of them adds the same machine twice.</strong> That is the
+uncovered property: the suite tests add, remove and rebuild, but never <em>re-add</em>.</p>
+<p>The test:</p>
+<div class="code"><pre><code class="language-java">static void re_registering_a_machine_keeps_its_weight() {
+    Ring r = new Ring(200);
+    r.addNode(&quot;small&quot;, 1);
+    r.addNode(&quot;big&quot;, 4);
+    Map&lt;String, Integer&gt; before = counts(r, KEYS);
+    r.addNode(&quot;big&quot;);                       // a heartbeat re-registers it
+    Map&lt;String, Integer&gt; after = counts(r, KEYS);
+    double ratioBefore = before.get(&quot;big&quot;) / (double) before.get(&quot;small&quot;);
+    double ratioAfter  = after.get(&quot;big&quot;)  / (double) after.get(&quot;small&quot;);
+    ok(&quot;a machine that re-registers keeps the weight it had (&quot; + ratioBefore
+       + &quot; -&gt; &quot; + ratioAfter + &quot;)&quot;, Math.abs(ratioAfter - ratioBefore) &lt; 0.5);
+}
+</code></pre></div>
+<p>And the fix is a design decision, not a one-liner: either <code>addNode(name)</code> preserves an
+existing weight (<code>weights.putIfAbsent</code>), or the single-argument overload is deleted so a
+caller must always state the weight. <strong>The second is better</strong> — the bug exists because two
+methods quietly disagree about what &quot;add&quot; means, and removing the ambiguity removes the
+whole class of mistake rather than this one instance of it.</p>
+<p><strong>The general lesson, which is the point of the rung:</strong> the bugs that survive a good
+suite are not the clever ones. They live in the <em>sequences of operations nobody wrote a
+test for</em>. This suite covers add, remove and rebuild thoroughly, and re-add not at all —
+so that is exactly where something was waiting.</p>
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<h3 id="solutions-71--surviving-the-miss-storm-anyway">7.1 — Surviving the miss storm anyway</h3>
+<p>The ring cuts the storm from ~99% to ~1/n. On a large fleet 1/n is still enormous, so:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>technique</th>
+  <th>what it buys</th>
+  <th>what it costs</th>
+  <th>what it cannot do</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Add nodes one at a time, with a pause</strong></td>
+  <td>turns one 24% storm into three ~9% ones (measured in 4.2)</td>
+  <td>slower expansion; ~2 points more total data movement</td>
+  <td>help if even 1/n exceeds your database's headroom</td>
+</tr>
+<tr>
+  <td><strong>Pre-warm the new node</strong> before it joins the ring</td>
+  <td>near-zero storm</td>
+  <td>you must know which keys it will own — computable from the ring in advance — and pay to fetch them</td>
+  <td>protect against an <em>unplanned</em> join, i.e. a node returning after a failure</td>
+</tr>
+<tr>
+  <td><strong>Serve from the previous owner during a grace period</strong></td>
+  <td>zero misses; the new node fills in behind</td>
+  <td>clients need two rings (old and new) and a rule for reading both</td>
+  <td>help if the previous owner is the one that died</td>
+</tr>
+<tr>
+  <td><strong>Rate-limit misses to the origin</strong> (single-flight, a queue, a circuit breaker)</td>
+  <td>hard ceiling on database load</td>
+  <td>some requests get slow or shed</td>
+  <td>keep your hit ratio up — it protects the database by sacrificing the request</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>What to build first:</strong> the last one, because it is the only one that bounds the damage
+from failures you did not plan, and because it protects you from every <em>other</em> cause of a
+miss storm too. Note that single-flight is already familiar from
+<a href="../11-caching/notes.html#readme">caching</a> — one expired hot key turning 200 concurrent readers into 200
+database calls is the same shape at a smaller scale.</p>
+<p>The honest summary: consistent hashing turns &quot;your database is about to fall over&quot; into
+&quot;your database will notice&quot;. That is a large improvement and it is not a guarantee.</p>
+<h3 id="solutions-72--being-correct-with-a-stale-ring">7.2 — Being correct with a stale ring</h3>
+<p>Reads and writes need different answers, which is the main insight.</p>
+<p><strong>Reads</strong> can be made correct cheaply: on a miss, <strong>also ask the machine the other
+plausible ring says</strong>. During a membership change a key has at most two candidate owners
+(the old successor and the new one), so a miss can fall back to the other before going to
+the origin. Cheap, bounded, and it converts the whole failure into a slightly slower read.</p>
+<p><strong>Writes</strong> cannot be patched this way — a write to the wrong owner is not detectably
+wrong, and it stays invisible until a reader who needed it comes looking. The options:</p>
+<ul>
+<li><strong>Write to both candidates</strong> during a membership change. Correct, doubles write cost,
+needs everyone to agree a change is in progress.</li>
+<li><strong>Version the ring</strong> and have the server reject writes carrying a stale version, so the
+client refreshes and retries. This is the fencing-token idea from
+<a href="../13-redis/notes.html#readme">redis</a>'s F7, applied to membership: the <em>receiver</em> checks, because only the
+receiver knows the truth.</li>
+<li><strong>Accept it</strong>, if the data is a cache and a lost write is a future miss.</li>
+</ul>
+<p><strong>What to build first on a fixed budget:</strong> ring versioning on writes. It is the only one
+that turns a silent wrong answer into a loud retry, and silence is the actual problem —
+extra latency you will find in a dashboard; a write that went to the wrong machine you
+will find in a customer complaint six weeks later.</p>
+<h3 id="solutions-73--moving-the-data">7.3 — Moving the data</h3>
+<p>A safe join, in order:</p>
+<ol>
+<li><strong>Announce the joiner as &quot;joining&quot;, not &quot;a member&quot;.</strong> It gets no reads and appears in
+no client's ring yet.</li>
+<li><strong>Compute what it will own</strong> — from the ring, in advance, which is exercise 5.3.</li>
+<li><strong>Stream those ranges</strong> from the current owners, throttled so it does not compete with
+live traffic.</li>
+<li><strong>Double-write</strong> during the transfer: writes to those ranges go to both the current
+owner and the joiner. Without this, everything you copied is stale by the time you
+finish.</li>
+<li><strong>Catch up</strong> on anything that changed before double-writing began.</li>
+<li><strong>Flip membership</strong>, so clients begin routing to the joiner.</li>
+<li><strong>Only now</strong> let the old owners drop the transferred ranges — and not immediately; keep
+them for a grace period so a client with a stale ring still gets an answer (7.2).</li>
+</ol>
+<p><strong>If the joiner dies halfway:</strong> nothing has been lost, because the old owners still hold
+everything and are still authoritative. This is why step 7 is last and why &quot;delete after
+transfer&quot; is a separate, delayed decision. The cost of getting the order wrong is
+permanent data loss; the cost of being conservative is disk.</p>
+<p><strong>If a write arrives mid-transfer:</strong> step 4 is the answer, and the ordering matters —
+start double-writing <em>before</em> you start copying, not after, or you have a window whose
+writes land only on a machine that is about to stop being the owner.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<h3 id="solutions-81--the-placement-layer">8.1 — The placement layer</h3>
+<p><strong>200 nodes, 3 DCs, 4 PB, r=3, 400 KB objects.</strong> That is ~10 billion objects and ~13 TB
+of primary data per node before replication.</p>
+<ul>
+<li><strong>Strategy: the ring.</strong> At 200 nodes rendezvous costs 3.5 µs per lookup (measured) and
+an object store makes placement decisions constantly. Fixed slots would also work well
+here and are worth considering if a coordinator already exists — see 8.5.</li>
+<li><strong>Positions: ~100–200 per node.</strong> 200 × 200 = 40,000 entries, which is nothing to hold
+and fast to rebuild. Do not go to 1,000: 4.1 shows the balance gain is inside the noise
+and the rebuild cost is not.</li>
+<li><strong>Replicas: one per datacentre</strong>, using the rack-aware walk from 5.2. With r=3 and 3
+DCs this is the natural mapping and it survives losing an entire DC. Do <em>not</em> just take
+the next three distinct nodes — they can easily be three nodes in one DC.</li>
+<li><strong>Membership: gossip</strong>, with an explicit version number on the list, because 7.2's
+write-side fix depends on being able to name a ring version.</li>
+<li><strong>Alerts:</strong> (1) per-node capacity as a ratio to the mean, above 1.3×; (2) any node
+receiving zero traffic — the loudest and only symptom of F6 and F7; (3) streaming
+backlog during membership changes; (4) how many distinct ring versions are live at
+once, which makes F4's window visible rather than inferred.</li>
+</ul>
+<p><strong>At 20 nodes instead of 200:</strong> switch to <strong>rendezvous</strong>. At that size its lookup cost is
+irrelevant (0.384 µs) and you delete the position count, the sorted array, the rebuild
+path and an entire class of tuning bug. Smaller clusters should use the simpler
+algorithm, and the reason they usually do not is that everyone reaches for the famous one.</p>
+<h3 id="solutions-82--adding-50-nodes-to-a-200-node-cluster-in-a-week">8.2 — Adding 50 nodes to a 200-node cluster in a week</h3>
+<p><strong>What actually happens if you do it at once.</strong> 50/250 = <strong>20% of the entire dataset</strong>
+must move — 800 TB at 4 PB. That streaming competes with live traffic for disk and
+network on both ends (F8), so latency rises for as long as it runs, which at any sane
+throttle is days. Meanwhile every cache in front of it takes a 20% cold hit at the moment
+membership flips (F3), and the membership change itself propagates over a longer window
+than usual because the list changed by a quarter (F4).</p>
+<p><strong>What to do instead:</strong> add them <strong>in batches of five, with the cluster fully settled
+between batches</strong>. Each batch moves ~2% instead of 20%.</p>
+<p>The quantified argument, from 4.2: incremental costs ~2 percentage points more total data
+movement, because some objects move twice. In exchange you get ten small, individually
+recoverable events instead of one large irreversible one — and critically, <strong>you can stop
+after batch three</strong> if latency degrades, which you cannot do halfway through a single
+20% rebalance.</p>
+<p>The sentence to say out loud to whoever asked for a week: the constraint is not the ring
+and not the machines, it is disk and network bandwidth against live traffic, and that
+does not care how many people want it done by Friday.</p>
+<h3 id="solutions-83--the-reply-about-the-hot-key">8.3 — The reply about the hot key</h3>
+<blockquote>
+<p>I don't think consistent hashing will help here, and I want to be clear about why
+before we spend a sprint on it. Every scheme we might switch to — the ring, rendezvous,
+jump hash — agrees that one key has exactly one owner. That agreement is the feature.
+So a single product ID that is 30% of traffic will still be 30% of traffic on one
+machine afterwards, and adding machines still will not help, because sharding
+distributes <em>keys</em> and we have a problem with <em>one</em> key.</p>
+<p>What will actually help, cheapest first. <strong>Put a small in-process cache in front of it</strong>
+with a one-second TTL — for a key this hot, one second of staleness collapses ~30% of
+our cache traffic to roughly one fetch per app server per second, and it is a few lines.
+If we need more, <strong>split the key</strong> into <code>product:X:0</code> through <code>product:X:9</code>, write to
+all ten and read from a random one; that spreads it across ten machines at the cost of
+ten times the write amplification for that key, which for a read-heavy product page is
+a good trade.</p>
+<p>Consistent hashing is still worth doing, for the reason we found last month — the
+miss storm when we scale the fleet. It is just a fix for a different problem, and I'd
+rather we adopted it for the one it actually solves. Shall I do the local cache this
+week and we look at the rest after?</p>
+</blockquote>
+<h3 id="solutions-84--migrating-from-modulo-without-a-storm">8.4 — Migrating from modulo without a storm</h3>
+<p>The trap: switching 20 servers from <code>% 20</code> to a ring in one deploy remaps ~95% of keys
+(measured: 20→ring is essentially a total reshuffle) — the exact storm you are adopting
+consistent hashing to prevent, suffered once on the way in.</p>
+<p><strong>The approach: read from both, write to the new, for one TTL.</strong></p>
+<ol>
+<li>Ship a client that computes <strong>both</strong> placements. Writes go to the ring's owner only.
+Reads try the ring's owner, and on a miss fall back to the modulo owner, and on a hit
+there, populate the ring's owner.</li>
+<li>Deploy that to the whole fleet. The dual-read makes the hit ratio hold flat — every
+key is found either where it is going or where it was.</li>
+<li><strong>Wait one full cache TTL</strong> (plus margin). By then every live key has been read at
+least once and re-populated at its new home, or expired.</li>
+<li>Ship a second client that drops the fallback.</li>
+</ol>
+<p>Cost: reads are slightly more expensive during the window, and memory usage roughly
+doubles for one TTL because keys exist in both places. Both are temporary and cheap.</p>
+<p><strong>Do not</strong> try to migrate the data directly. These are caches; the source of truth can
+regenerate them, and a read-through migration is self-healing where a copy is a
+distributed transaction you do not want. And pin the ring's three parameters (hash,
+position naming, position count) in the <em>first</em> deploy — if the two client versions
+disagree on any of them, you have shipped F7 into the middle of your migration.</p>
+<h3 id="solutions-85--consistent-hashing-vs-fixed-slots-with-etcd-already-running">8.5 — Consistent hashing vs fixed slots, with etcd already running</h3>
+<p><strong>For consistent hashing:</strong> no new dependency on the data path. Placement is a pure
+function, so a client with the machine list is never blocked, never waits, and etcd being
+slow or unavailable cannot stop a single request. Adding a node is one list entry.</p>
+<p><strong>For fixed slots + an assignment table:</strong> you already run etcd, so the coordinator is not
+a new cost — it is a thing you already operate, monitor and back up. In exchange you get
+<strong>exact</strong> placement rather than statistical: you can move one slot off a struggling node
+by hand, drain a node deliberately, place slots to satisfy a rule the hash cannot express
+(no two replicas in one rack, this tenant on those nodes), and you get <strong>no disagreement
+window</strong> because there is one authoritative table version (F4 disappears). Rebalancing
+stops being an emergent property and becomes an operation with a plan and a progress bar.</p>
+<p><strong>I would pick fixed slots</strong>, for 40 nodes with etcd already in place. The decisive
+argument is not performance — it is that during an incident you can <em>look at the table</em>
+and see exactly which node owns what, and <em>change it</em>. Consistent hashing's answer to
+&quot;why is node 17 hot?&quot; is &quot;the hash function decided that&quot;, which is true and useless at
+2 a.m.</p>
+<p><strong>The single fact that would change my mind:</strong> if the clients are not all ours — a
+polyglot fleet, third-party consumers, or anything embedded that we cannot redeploy on
+demand. Then the coordinator becomes a distribution problem across code we do not control,
+and the pure function that every client can compute independently wins on the spot.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../34-quorums-and-replication/notes.html"><small>← Lab 34</small>quorums-and-replication</a><a href="../36-partitioning-and-rebalancing/notes.html" style="text-align:right"><small>Lab 36 →</small>partitioning-and-rebalancing</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-problem-exist-at-all">1. Why does this problem exist at all?</a><a href="#readme-2-the-cloakroom-how-does-every-child-find-their-coat-with-nobody-to-ask">2. The cloakroom: how does every child find their coat with nobody to ask?</a><a href="#readme-3-what-does-a-reasonable-person-try-first">3. What does a reasonable person try first?</a><a href="#readme-4-why-does-the-remainder-rule-break-when-dev-goes-home">4. Why does the remainder rule break when Dev goes home?</a><a href="#readme-5-what-do-we-actually-need">5. What do we actually need?</a><a href="#readme-6-what-idea-fixes-it">6. What idea fixes it?</a><a href="#readme-7-what-do-engineers-call-all-these-things">7. What do engineers call all these things?</a><a href="#readme-8-what-two-pictures-should-you-carry-in-your-head">8. What two pictures should you carry in your head?</a><a href="#readme-9-can-you-watch-it-move">9. Can you watch it move?</a><a href="#readme-10-how-do-you-build-it-and-where-does-it-break-on-the-way">10. How do you build it, and where does it break on the way?</a><a href="#readme-11-what-goes-wrong-in-production-and-what-survives-each-time">11. What goes wrong in production, and what survives each time?</a><a href="#readme-12-what-is-guaranteed-what-is-not-and-what-did-it-cost">12. What is guaranteed, what is not, and what did it cost?</a><a href="#readme-13-what-does-the-code-look-like-and-where-is-the-line-that-matters">13. What does the code look like, and where is the line that matters?</a><a href="#readme-14-what-should-you-guess-before-you-press-run">14. What should you guess before you press run?</a><a href="#readme-15-what-do-real-systems-do-and-which-of-them-chose-something-else">15. What do real systems do, and which of them chose something else?</a><a href="#readme-16-what-should-you-try-yourself">16. What should you try yourself?</a><a href="#readme-17-where-does-this-sit-and-what-should-you-learn-next">17. Where does this sit, and what should you learn next?</a><a href="#readme-18-glossary">18. Glossary</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

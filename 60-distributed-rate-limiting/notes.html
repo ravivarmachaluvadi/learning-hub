@@ -1,0 +1,3555 @@
+<!doctype html>
+<html lang="en" data-hub-lab="60-distributed-rate-limiting">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>60. distributed-rate-limiting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 60 of 71 · Stage 7</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 60 · Running It In Production</p><article id="readme"><h1 id="readme-distributed-rate-limiting--one-promise-twenty-people-enforcing-it">Distributed Rate Limiting — one promise, twenty people enforcing it</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> An office gives every employee one free breakfast plate an
+hour, and Arjun behind the counter enforces it perfectly with a notebook. Then
+the office opens twenty counters, and Meera walks down the line taking a plate
+from every one of them. Nobody broke a rule. The rule simply stopped being
+enforceable the moment there was more than one clerk. Your rate limiter is
+Arjun: exactly right on one machine, and quietly letting through twenty times
+the limit on twenty. The fix is not a cleverer counting algorithm. It is
+deciding how out of date each clerk's view of the shared register book is
+allowed to be, and this lab prices every point on that dial.</p>
+</blockquote>
+<p>Run the twenty counters yourself in <a href="visualization.html"><code>visualization.html</code></a>:
+pick a coordination design, kill the store, watch the scoreboard. What this lab
+is, what it is not, and where every number came from is stage 19.</p>
+<hr />
+<h1 id="readme-beginner-model--stages-1-to-9">BEGINNER MODEL — stages 1 to 9</h1>
+<h2 id="readme-1-what-goes-wrong-if-nobody-builds-this">1. What goes wrong if nobody builds this?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Sending Asha a request costs a stranger nothing. Serving it
+costs Asha real money. So one stranger with a broken loop can spend everything
+she has, and the customers who did nothing wrong get nothing back.</p>
+</blockquote>
+<p>Asha runs an online payments service. Anyone on the internet can send it
+requests. Sending one costs the sender almost nothing. Serving one costs Asha a
+database query, a call out to the card network, and a slice of a CPU.</p>
+<p>That asymmetry is the whole problem.</p>
+<p>One caller with a bad <code>while</code> loop. One customer's misconfigured retry. One
+person trying to guess passwords. Any of the three, and Asha's service spends
+all of its capacity on them. Everyone else gets slow responses or errors, and
+everyone else is the customers who were behaving perfectly.</p>
+<p>Asha did not get attacked. She got <em>crowded out</em>.</p>
+<p>A rate limiter is the thing that says &quot;you, specifically, have had enough for
+now&quot; so that everyone else keeps working. Without one, four things happen, and
+none of them look like a security incident on the dashboard.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What Asha loses</th>
+  <th>What it looks like on an ordinary Tuesday</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The service itself</td>
+  <td>One bad client, and every customer sees timeouts</td>
+</tr>
+<tr>
+  <td>The budget</td>
+  <td>The cloud bill tracks abuse instead of business</td>
+</tr>
+<tr>
+  <td>Fairness</td>
+  <td>A paying customer's traffic is starved by a free one</td>
+</tr>
+<tr>
+  <td>A product</td>
+  <td>She cannot sell &quot;10,000 calls a month&quot; because she cannot enforce it</td>
+</tr>
+</tbody>
+</table></div>
+<p>That last row is the one people miss. A limit you cannot enforce is not a
+weaker promise. It is not a promise at all, so it cannot be sold, written into
+a contract, or defended when a customer complains.</p>
+<h2 id="readme-2-why-does-one-plate-an-hour-become-twenty">2. Why does one plate an hour become twenty?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A rule that one person can enforce with one notebook stops
+being a rule the moment two people are enforcing it from two notebooks.</p>
+</blockquote>
+<p>A large office gives every employee <strong>one free breakfast plate per hour</strong>.</p>
+<p>At the start there is one counter. <strong>Arjun</strong> stands behind it with a notebook.
+Someone walks up, Arjun looks up their name, sees whether they already took a
+plate this hour, and either hands one over and writes it down, or says &quot;come
+back later&quot;.</p>
+<p>This works perfectly. Arjun's notebook is the truth. Arjun is the only person
+who can change it. Nobody gets two plates.</p>
+<p>Then the office grows to 5,000 people. The queue at Arjun's counter is now
+forty minutes long. So the office does the obvious thing. It opens <strong>twenty
+counters</strong>, with twenty clerks, and puts <strong>Ben</strong> on the door to send each
+arriving person to whichever counter is free.</p>
+<p><strong>Meera</strong> works out what has happened before anyone else does. She takes a plate
+from Arjun. Then she walks to <strong>Bela</strong>'s counter and takes another. Then a third
+from the counter next to Bela's. Bela has no idea. Bela's notebook has never
+heard of Meera.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> <em>Twenty counters, twenty clerks, every clerk following the
+one-plate rule exactly. How many plates can Meera walk out with in one hour?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Twenty.</strong> One per counter, because each notebook is a separate memory of who
+has eaten.</p>
+<p>If you said one, you assumed the rule lives in the office. It does not. It
+lives in Arjun's notebook, and there are now twenty notebooks that have never
+spoken to each other.</p>
+<p>If you said &quot;somewhere between one and twenty, depending on luck&quot;, you are
+closer. You have also found the thing that makes this hard. The number depends
+on how Ben spreads people across counters, and stage 4 turns that into the
+second, nastier failure.</p>
+</details>
+
+</blockquote>
+<p>Twenty counters means twenty plates per hour per person, not one.</p>
+<p>Nobody wrote a bug. Every clerk followed the rule exactly. The rule itself
+stopped being enforceable the moment there was more than one clerk. Hold that
+sentence; it is the thesis of the whole lab.</p>
+<h2 id="readme-3-what-does-every-engineer-build-first">3. What does every engineer build first?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You keep the count in a variable inside your program. It is
+fast, it is correct, and it is correct for exactly as long as there is one
+program.</p>
+</blockquote>
+<p>The naive solution keeps the counter in the application, as a hash map from
+customer to a count, in memory, in the service process. It deserves that name
+kindly, because it is the right first move:</p>
+<div class="code"><pre><code>if (counts.get(customerId) &gt;= 100) return TOO_MANY_REQUESTS;
+counts.increment(customerId);
+</code></pre></div>
+<p>This is Arjun with his notebook, written in Java. No network call. Nanoseconds.
+No extra infrastructure to run, pay for, or page anybody about.</p>
+<p>It is genuinely correct and genuinely fast. It is the right answer for exactly
+as long as there is one process.</p>
+<h2 id="readme-4-what-breaks-the-moment-there-are-twenty-copies">4. What breaks the moment there are twenty copies?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You configured one hundred requests a minute. Your
+customers get two thousand, and the number changes every time the cluster
+grows.</p>
+</blockquote>
+<p>Asha is running for real, so she runs <strong>20 instances</strong> behind Ben the load
+balancer. The limit she configured is 100 requests per minute. The limit her
+customers actually experience is <strong>2,000 per minute</strong>, because each instance
+enforces 100 independently and Ben spreads each customer's traffic across all of
+them.</p>
+<p>That is the visible failure. Here is the deeper one:</p>
+<blockquote>
+<p><strong>The limit is a property of the whole system, but the state that enforces it
+lives inside one process.</strong></p>
+</blockquote>
+<p>And it gets worse in ways that are not just &quot;off by 20×&quot;. Read the middle
+column as the thing Asha would actually see happen.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What happens</th>
+  <th>What Asha sees</th>
+  <th>Why it is worse than the 20×</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Autoscaling takes 20 instances to 60 at peak</td>
+  <td>The effective limit silently triples</td>
+  <td>It triples at exactly the moment she most needed it to hold</td>
+</tr>
+<tr>
+  <td>A rolling deploy restarts every instance</td>
+  <td>In-memory counters gone, everyone gets a fresh 100</td>
+  <td>An abuser only has to wait for her next release</td>
+</tr>
+<tr>
+  <td>Sales asks for &quot;100 requests/minute&quot; in a contract</td>
+  <td>She cannot write it down honestly</td>
+  <td>The real number depends on deployment topology</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>🔮 Predict:</strong> <em>The obvious fix is to give each of the 20 instances a limit of
+5, so 20 × 5 = 100. Does that work?</em></p>
+<details><summary>Reveal</summary>
+
+<p>The ceiling becomes correct, and that is real progress — you will never exceed
+100 again. But you have created the opposite error.</p>
+<p>Ben does not send each customer's traffic evenly to all 20 instances. <strong>Priya</strong>
+sends 60 requests a minute, and 40 of them happen to land on instance 7.
+Instance 7 allows 5 and rejects 35, while the other 19 instances sit there
+holding 95 unused allowance with Priya's name on it.</p>
+<p>So Priya is told &quot;limit exceeded&quot; at 5% of the limit she was sold. You have
+traded <strong>over-admission</strong> (letting too many through) for <strong>under-admission</strong>
+(rejecting traffic you promised to serve).</p>
+<p>Under-admission is often the worse bug. Over-admission shows up as a capacity
+problem you can see on a graph. Under-admission shows up as a support ticket
+from a customer who is being lied to.</p>
+<p>If you said &quot;yes, that works&quot;, you were reasoning about the ceiling only. The
+ceiling is half the promise. The other half is that Priya gets what she paid
+for.</p>
+<p>Hold onto this pair. Meera getting twenty plates and Priya being turned away
+with plates going spare are the two ends of the axis the entire design lives on.</p>
+</details>
+
+<h2 id="readme-5-what-are-we-actually-asking-for-in-plain-words">5. What are we actually asking for, in plain words?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Many machines must keep one promise, on every request, fast
+enough that nobody notices, without becoming the thing that breaks.</p>
+</blockquote>
+<p>Say it in plain words, because everything after this is the pursuit of it:</p>
+<blockquote>
+<p><strong>Many independent machines must enforce one shared promise, on every single
+request, fast enough that nobody notices, and the enforcement must not itself
+become the thing that breaks.</strong></p>
+</blockquote>
+<p>Four clauses, and five sources of difficulty, because the last clause carries
+two. Read the right-hand column as &quot;why you cannot just do the obvious thing&quot;.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Clause</th>
+  <th>Why it is hard</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><em>many independent machines</em></td>
+  <td>The state is shared, so somebody has to coordinate</td>
+</tr>
+<tr>
+  <td><em>one shared promise</em></td>
+  <td>Coordination has to be correct, not approximately correct</td>
+</tr>
+<tr>
+  <td><em>on every single request</em></td>
+  <td>Whatever you build runs 100% of the time, at full traffic</td>
+</tr>
+<tr>
+  <td><em>fast enough</em></td>
+  <td>It sits in front of the user; every millisecond is added to every call</td>
+</tr>
+<tr>
+  <td><em>must not become the thing that breaks</em></td>
+  <td>It is now a dependency of everything. If it dies, does your API die with it?</td>
+</tr>
+</tbody>
+</table></div>
+<p>Notice the tension. Clause 2 pulls one way and clauses 3, 4 and 5 pull the
+other. Perfect coordination means Arjun walks to the shared book on every single
+plate. Walking on every plate is slow, expensive, and a new way for the whole
+counter to stop.</p>
+<h2 id="readme-6-what-is-the-one-idea-the-whole-design-turns-on">6. What is the one idea the whole design turns on?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The place that decides and the place that knows cannot be
+the same place. So every decision is made from a slightly old copy of the
+truth, and how old is a number you choose.</p>
+</blockquote>
+<blockquote>
+<p><strong>Separate the place where the decision is made from the place where the
+truth lives — and then choose, deliberately, how out-of-date each decision
+point is allowed to be.</strong></p>
+</blockquote>
+<p>That second half is the part people miss. There are many places where a decision
+happens: Arjun's counter, Bela's counter, eighteen more. There is one logical
+truth. They cannot be in the same place, so every clerk is working from a
+slightly old copy.</p>
+<p><strong>How old you let that copy get is a dial, not a bug.</strong> Turn it to zero and you
+get perfect enforcement at maximum cost and maximum fragility. Turn it up and
+you get cheap, fast, resilient enforcement that is slightly wrong.</p>
+<p>Distributed rate limiting at scale is choosing where on that dial to sit — per
+limit, not per system. Asha's billing limit and her abuse limit will sit at
+different points on the same dial, in the same cluster, on the same afternoon.</p>
+<p>Here is the road from here, and what you can do at the end of each stretch.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Stages</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–9</td>
+  <td>say why one machine's limiter breaks on twenty, and name both errors</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>10</td>
+  <td>design the system: size it, place it, key it, and coordinate it</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>11–12</td>
+  <td>defend it under failure and say which guarantee each break bends</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>13–15</td>
+  <td>say what real systems ship and what the on-call engineer watches</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-7-which-words-are-being-used-as-if-they-were-one">7. Which words are being used as if they were one?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Half a dozen different mechanisms all end with somebody
+being told no. They are not interchangeable, and knowing which is which is
+most of the design.</p>
+</blockquote>
+<p>This is the terminology stage, and it is deliberately not a dictionary. Each
+word below is a thing that has already happened to Arjun, Meera, Priya or Ben.
+The precise definitions are collected again in the glossary at stage 18.</p>
+<h3 id="readme-which-four-words-all-end-with-somebody-being-told-no">Which four words all end with somebody being told no?</h3>
+<p>A <strong>rate limit</strong> is a cap on how often someone may do something. Precisely: a
+maximum number of accepted operations per identity per unit of time. Asha's
+promise is that <code>merchant_42</code> may call <code>POST /payments</code> 100 times per minute,
+every minute, forever.</p>
+<p>The word exists to separate a cap on <em>rate</em> from a cap on <em>total</em>. A cap on the
+total is a <strong>quota</strong>: 100 ever, or 100 GB this month, and when it is gone it is
+gone. A rate refills. That difference decides whether an exhausted customer
+waits sixty seconds or opens a support ticket.</p>
+<p><strong>Throttling</strong> means slowing someone down rather than refusing them. Precisely:
+delaying or queueing the excess instead of rejecting it. The word exists because
+&quot;rate limit&quot; is casually used for both behaviours, and they fail in opposite
+ways. Rejecting is instant and pushes the problem to the client. Delaying keeps
+the request and spends your memory and the client's patience instead. Reject
+now, or accept and delay: that comes back as a real architectural choice in
+10.6.</p>
+<p><strong>Load shedding</strong> is dropping requests because <em>you</em> are struggling, whoever
+sent them. Precisely: rejecting traffic based on server health rather than on
+caller identity. Your <code>load-shedding</code> lab is Ben looking over his shoulder at
+the waiting room; a rate limiter is Ben checking a list. A rate limiter protects
+fairness between callers and is configured in advance. Load shedding protects
+survival and reacts to this second. You need both. A rate limiter alone will
+happily let 10,000 well-behaved customers, each inside their limit, collectively
+melt Asha's database.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Word</th>
+  <th>The question it asks</th>
+  <th>Where you have met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Rate limit</td>
+  <td>are you over your allowance for this minute?</td>
+  <td>stage 2, Arjun's notebook</td>
+</tr>
+<tr>
+  <td>Quota</td>
+  <td>have you used up your total for the period?</td>
+  <td>this section, and stage 18</td>
+</tr>
+<tr>
+  <td>Throttling</td>
+  <td>how do I slow you down instead of refusing you?</td>
+  <td>10.6, policer versus shaper</td>
+</tr>
+<tr>
+  <td>Load shedding</td>
+  <td>can I finish what I already have?</td>
+  <td>12, the thing this design cannot do</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-who-decides-and-where-does-the-truth-live">Who decides, and where does the truth live?</h3>
+<p>An <strong>enforcement point</strong> is the machine that actually says yes or no. Precisely:
+the component in the request path that evaluates the limit and can reject. Arjun
+is one. Bela is another. Each of Asha's 20 API gateway pods is one. The word
+exists because in a distributed limiter there are many of these and only one
+source of truth, and confusing the two is the central error of the whole
+subject.</p>
+<p>The <strong>counter store</strong>, also called the decision store, is the shared place that
+remembers how much everyone has used. Precisely: the datastore holding per-key
+limiter state, readable and writable by every enforcement point. In the office
+it is the register book. In Asha's system it is a Redis cluster holding
+<code>merchant_42:payments → {tokens: 37.2, lastRefill: …}</code>.</p>
+<p>A <strong>key</strong>, also called a limit dimension, is <em>who</em> the limit applies to.
+Precisely: the string identifying one independent bucket of allowance. In the
+office it is a person's name. The counting itself is trivial; almost all the
+design judgment is in choosing this string. <code>merchant_42</code> is one key,
+<code>merchant_42:POST /payments</code> is a different and narrower key, and both can exist
+at once with different limits. This gets its own stage:
+<a href="#readme-105-what-is-the-key-the-most-underrated-decision">10.5</a>.</p>
+<h3 id="readme-what-are-the-two-opposite-ways-to-be-wrong">What are the two opposite ways to be wrong?</h3>
+<p><strong>Over-admission</strong> is letting more through than you promised. Precisely: the
+true number accepted in some window exceeds the configured limit. It is Meera
+with twenty plates. Limit 100/min, 20 uncoordinated nodes, actual 2,000/min, so
+20× over-admission.</p>
+<p><strong>Under-admission</strong> is rejecting traffic you promised to serve. Precisely:
+rejecting a request while the global limit had unused allowance. It is Priya
+turned away at instance 7 while nineteen other instances hold her unused 95.</p>
+<p>Both words exist because they are <em>different failures with different victims</em>.
+Over-admission hurts Asha, in capacity and cost. Under-admission hurts Asha's
+customer, by breaking a promise. Every coordination design in stage 10 trades
+one against the other, and you cannot have neither.</p>
+<h3 id="readme-which-two-dials-does-the-rest-of-the-lab-turn">Which two dials does the rest of the lab turn?</h3>
+<p><strong>Fail-open or fail-closed</strong> is what an enforcement point does when the counter
+store is unreachable: let everyone in, or nobody. Kiran has gone home sick and
+the clerks must still serve breakfast. The term exists because there is no safe
+default. Fail-open on a limit that guards Asha's database turns a Redis blip
+into a stampede. Fail-closed on a limit that guards a nice-to-have turns the
+same blip into a total API outage.</p>
+<p>A <strong>hot key</strong> is one entry that everyone hammers. Precisely: a single key whose
+request rate exceeds what one store partition can serve, and a store partition
+is one CPU core. <strong>Dev</strong> is Asha's biggest merchant and does 8,000 rps by himself, and
+every one of those requests touches the one entry <code>merchant_42</code>. Sharding a
+datastore spreads <em>keys</em> across machines, so it does nothing at all for a single
+key. Stage 11's F3 is this failure with numbers on it.</p>
+<p>The <strong>staleness budget</strong> is how out-of-date a node's view is allowed to be.
+Precisely: the maximum age of the shared state a decision may be based on. This
+is the dial from stage 6, and naming it as an explicit number is the single most
+useful thing you can do in a design review for this system.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>The one-line version</th>
+  <th>Where the thing happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Enforcement point</td>
+  <td>the machine that says yes or no</td>
+  <td>stage 2, Arjun and Bela</td>
+</tr>
+<tr>
+  <td>Counter store</td>
+  <td>the shared book everyone reads</td>
+  <td>stage 8, Kiran in the middle of the room</td>
+</tr>
+<tr>
+  <td>Key</td>
+  <td>which bucket of allowance you spend from</td>
+  <td>10.5</td>
+</tr>
+<tr>
+  <td>Over-admission</td>
+  <td>more got through than you promised</td>
+  <td>stage 2, Meera's twenty plates</td>
+</tr>
+<tr>
+  <td>Under-admission</td>
+  <td>you refused someone who had allowance left</td>
+  <td>stage 4's reveal, Priya at instance 7</td>
+</tr>
+<tr>
+  <td>Staleness budget</td>
+  <td>how old a decision's information may be</td>
+  <td>stage 6, and 10.7 makes it a number</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-8-which-two-pictures-should-you-carry">8. Which two pictures should you carry?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One picture is twenty clerks and one register book in the
+middle of the room. The other is the same thing with three kinds of wire
+drawn separately, because those wires have completely different jobs.</p>
+</blockquote>
+<p>Carry both mental models. The first one you can hold in your head during an
+argument. The second one tells you which wire to change.</p>
+<h3 id="readme-what-does-the-simple-picture-look-like">What does the simple picture look like?</h3>
+<p>The office breakfast counter, grown up.</p>
+<p>Twenty clerks, each at their own counter, each able to hand out a plate. In the
+middle of the room <strong>Kiran</strong> sits with the one register book that records what
+everyone has taken. Every clerk can walk to Kiran. Walking takes time, and while
+Arjun is walking, the other nineteen are still serving people.</p>
+<p>Every design in this document is an answer to one question: <em>how often does a
+clerk walk to Kiran, and what do they do while they are not there?</em></p>
+<h3 id="readme-what-does-the-engineers-picture-look-like">What does the engineer's picture look like?</h3>
+<p>Same room, real names. Read the dotted lines first; they are the only part of
+this diagram that is genuinely up to you.</p>
+<pre class="mermaid">flowchart TD
+    C[&quot;Clients&lt;br/&gt;(many, untrusted)&quot;] --&gt; LB[&quot;Load balancer&lt;br/&gt;&lt;i&gt;Ben on the door&lt;/i&gt;&quot;]
+    LB --&gt; G1[&quot;Gateway node 1&lt;br/&gt;enforcement point&lt;br/&gt;&lt;i&gt;Arjun · local cached state&lt;/i&gt;&quot;]
+    LB --&gt; G2[&quot;Gateway node 2&lt;br/&gt;enforcement point&lt;br/&gt;&lt;i&gt;Bela · local cached state&lt;/i&gt;&quot;]
+    LB --&gt; G3[&quot;Gateway node N&lt;br/&gt;enforcement point&lt;br/&gt;&lt;i&gt;local cached state&lt;/i&gt;&quot;]
+    G1 -.-&gt;|&quot;coordination traffic&lt;br/&gt;(the design choice)&quot;| S[(&quot;Counter store&lt;br/&gt;&lt;b&gt;source of truth&lt;/b&gt;&lt;br/&gt;&lt;i&gt;Kiran&#x27;s book&lt;/i&gt;&quot;)]
+    G2 -.-&gt; S
+    G3 -.-&gt; S
+    G1 --&gt; B[Backend services]
+    G2 --&gt; B
+    G3 --&gt; B
+    R[&quot;Rules / config plane&lt;br/&gt;(who gets what limit)&quot;] -.-&gt;|pushed, cached| G1
+    R -.-&gt; G2
+    R -.-&gt; G3
+</pre>
+<p>Three planes live in that picture, and they are worth naming separately because
+they have completely different requirements.</p>
+<p>The <strong>data plane</strong> is client to gateway to backend. It carries every request,
+microseconds matter, and it must never be down.</p>
+<p>The <strong>coordination plane</strong> is gateway to counter store: the dotted lines to
+Kiran. <em>This is the entire subject of this lesson.</em> How much of it exists at all
+is your design.</p>
+<p>The <strong>control plane</strong> is rules to gateways: which customer has which limit. It
+changes rarely, is read constantly, must be cached locally, and must survive its
+own outage. <strong>Omar</strong> owns it, and 10.10 is his stage.</p>
+<h3 id="readme-how-do-the-two-pictures-map-onto-each-other">How do the two pictures map onto each other?</h3>
+<p>Three small tables rather than one long one, because these are three different
+kinds of thing. Start with the people and the places.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Breakfast counter</th>
+  <th>Engineering</th>
+  <th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>A clerk at a counter</td>
+  <td>Gateway node / enforcement point</td>
+  <td>Many of them; each can say no</td>
+</tr>
+<tr>
+  <td>The host at the door</td>
+  <td>Load balancer</td>
+  <td>Decides which clerk you get — and this matters more than it looks</td>
+</tr>
+<tr>
+  <td>Kiran's register book</td>
+  <td>Counter store (Redis)</td>
+  <td>The single logical truth</td>
+</tr>
+<tr>
+  <td>A clerk's own scratch notes</td>
+  <td>Node-local cached state</td>
+  <td>Fast, and always slightly wrong</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then the promise itself, and every way a clerk can stay in touch with Kiran.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Breakfast counter</th>
+  <th>Engineering</th>
+  <th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>&quot;One plate per person per hour&quot;</td>
+  <td>Limit + window</td>
+  <td>The promise</td>
+</tr>
+<tr>
+  <td>A person's name</td>
+  <td>Key</td>
+  <td>Which bucket of allowance</td>
+</tr>
+<tr>
+  <td>Walking to Kiran and back</td>
+  <td>Store round trip</td>
+  <td>~1 ms in-AZ, ~10 ms cross-AZ, ~80 ms cross-region</td>
+</tr>
+<tr>
+  <td>Taking a block of 10 tickets from Kiran at once</td>
+  <td>Batched lease</td>
+  <td>Fewer walks, some tickets wasted</td>
+</tr>
+<tr>
+  <td>Clerks shouting tallies across the room every 5s</td>
+  <td>Periodic sync / gossip</td>
+  <td>No walking at all, everyone slightly behind</td>
+</tr>
+</tbody>
+</table></div>
+<p>And finally the three ways the room goes wrong.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Breakfast counter</th>
+  <th>Engineering</th>
+  <th>Note</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Meera taking a plate at every counter</td>
+  <td>Over-admission</td>
+  <td>The stage-4 failure</td>
+</tr>
+<tr>
+  <td>A clerk turning someone away while another has spare plates</td>
+  <td>Under-admission</td>
+  <td>The stage-4 <em>reveal</em> failure</td>
+</tr>
+<tr>
+  <td>Kiran goes home sick</td>
+  <td>Counter store outage</td>
+  <td>Fail-open, fail-closed, or degrade</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-the-story-lie-to-you">Where does the story lie to you?</h3>
+<p>Four places. Each lie is a real design consideration that the office hides.</p>
+<p><strong>Walking is slow but reliable; networks fail silently.</strong> Arjun always comes
+back from Kiran's desk. A store call can hang for 30 seconds and then time out,
+which is far worse than a fast failure, because the request thread was held the
+whole time. In the office, coordination has a cost. In reality it has a cost
+<em>and</em> a failure mode, and the failure mode is what wakes Asha at 3am. Stage 11,
+F4 — and F2 is the one that actually takes her down.</p>
+<p><strong>Kiran is one person; Redis is one process per shard.</strong> That is nearly the same
+thing, for a different reason. The office makes the bottleneck look like a queue
+at the book. The real bottleneck is that a single key lives on a single core, so
+adding machines to a Redis cluster does nothing at all for Dev's flash sale.
+Stage 11, F3.</p>
+<p><strong>Everyone in the office shares one clock on the wall. Servers do not.</strong> Two
+nodes can disagree about what time it is by tens of milliseconds, or, when NTP
+misbehaves, by minutes. Every window-based limit depends on nodes agreeing where
+the window boundary is. Stage 11, F5.</p>
+<p><strong>People arriving at counters are independent. Requests are not.</strong> When Asha's
+backend slows down, clients time out and retry, so <em>rejected traffic comes
+straight back</em>. The office has no equivalent of a rejected person instantly
+rejoining the queue and bringing a friend. This is why the limiter's response
+format, <code>Retry-After</code> included, is a load-bearing part of the design rather than
+a nicety. Stage 11, F7.</p>
+<h2 id="readme-9-where-can-you-break-the-counter-yourself">9. Where can you break the counter yourself?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The page is a room full of clerks you can reconfigure. Pick
+a design, change how many clerks there are, then kill Kiran and watch what
+each fallback does to the numbers.</p>
+</blockquote>
+<p>Open <strong><a href="visualization.html"><code>visualization.html</code></a></strong> (also published as an
+artifact — link in the chat message).</p>
+<p>It is an architecture simulator, not an animation. You choose a coordination
+design, a number of gateway nodes, and a load-balancing policy. Traffic flows.
+The scoreboard shows the four numbers that decide every real design.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What the scoreboard shows</th>
+  <th>The question it answers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Admitted vs the promise</td>
+  <td>is it over-admitting, under-admitting, or exact?</td>
+</tr>
+<tr>
+  <td>Store operations per second</td>
+  <td>what does this design cost Kiran?</td>
+</tr>
+<tr>
+  <td>Added latency</td>
+  <td>what does it cost every single user request?</td>
+</tr>
+<tr>
+  <td>Behaviour when the store dies</td>
+  <td>press the button and find out</td>
+</tr>
+</tbody>
+</table></div>
+<p>Start with <em>&quot;Run the whole story&quot;</em>, which walks the seven designs in order with
+narration. Then go back and break things yourself. Before each scenario the page
+asks you to predict; predicting first is most of the value.</p>
+<blockquote>
+<p><strong>✅ CHECKPOINT — end of the BEGINNER model.</strong>
+You can now explain why a rate limiter that works on one machine stops working
+on twenty. You can name the two opposite ways it can be wrong, over-admission
+and under-admission. And you can say what the central trade is: how stale each
+enforcement point's view of the truth is allowed to be.
+<strong>Next:</strong> the actual design — requirements, capacity numbers, where the
+limiter physically sits, and the seven coordination options with their real
+costs.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>distributed</em>, <em>state</em> or
+<em>coordination</em>, explain to a friend why Asha's limiter was correct in staging
+and lets through twenty times the limit in production.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;In staging there was one clerk with one notebook, so the notebook was the
+truth. In production there are twenty clerks, and each one only remembers the
+people who came to <em>their</em> counter. Meera can eat twenty breakfasts because
+nobody in the room has the whole picture. Nothing is broken; there just is no
+longer a single place that knows the answer.&quot;</p>
+</details>
+
+</blockquote>
+<h1 id="readme-intermediate-model--stage-10">INTERMEDIATE MODEL — stage 10</h1>
+<h2 id="readme-10-how-would-you-actually-design-this">10. How would you actually design this?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Pin what it must do, work out how big it really is, and
+decide where it physically sits. Then spend almost all your time on the one
+hard part, which is how often a clerk walks to Kiran.</p>
+</blockquote>
+<p>We will build it the way Asha would in a design review. Requirements first,
+then the size of the thing, then its physical position, and then coordination,
+which is where the lesson actually lives.</p>
+<h3 id="readme-101-what-must-it-do-and-how-well">10.1 What must it do, and how well?</h3>
+<p>A worked example makes every later number concrete. Ours is Asha's <strong>payments
+API</strong>.</p>
+<p>Five things it must do:</p>
+<ol>
+<li>Reject requests that exceed a configured limit, with <code>429 Too Many Requests</code>.</li>
+<li>Let Omar configure limits per identity, per endpoint group, and per plan tier
+(free / standard / enterprise), taking effect within about a minute of being
+changed.</li>
+<li>Apply several limits to one request at once (per-merchant AND per-endpoint
+AND per-IP) and reject if <strong>any</strong> of them is exceeded.</li>
+<li>Tell a rejected client <em>when</em> to come back (<code>Retry-After</code>), and let a
+succeeding client see how much it has left (<code>X-RateLimit-Remaining</code>).</li>
+<li>Charge expensive endpoints more. A bulk report is not one unit of work, so
+limits are spent in weighted <strong>cost</strong>, not raw request count.</li>
+</ol>
+<p>Now the numbers Asha has to commit to, which is where the design is actually
+decided. The third row is the one people forget to ask about.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Requirement</th>
+  <th>Target</th>
+  <th>Why this number</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Added latency</td>
+  <td><strong>p99 &lt; 5 ms</strong></td>
+  <td>The API's own p99 budget is 150 ms; the limiter runs on every call and must be invisible</td>
+</tr>
+<tr>
+  <td>Availability</td>
+  <td><strong>higher than the service it protects</strong></td>
+  <td>It is in the path of 100% of traffic. If it is less available than the API, it <em>is</em> the API's availability</td>
+</tr>
+<tr>
+  <td>Accuracy</td>
+  <td><strong>exact for billing limits, ±5% acceptable for abuse limits</strong></td>
+  <td>Different limits genuinely deserve different answers — see 10.7</td>
+</tr>
+<tr>
+  <td>Throughput</td>
+  <td><strong>40,000 rps peak</strong></td>
+  <td>Derived below</td>
+</tr>
+<tr>
+  <td>Scale-out</td>
+  <td>Adding gateway nodes must not change the effective limit</td>
+  <td>The stage-4 failure, stated as a requirement</td>
+</tr>
+</tbody>
+</table></div>
+<p>That accuracy row unlocks the whole design. &quot;How accurate does this limit need
+to be?&quot; is a product question, not an engineering one. Asha will get a different
+answer for Priya's billing limit than for Dev's abuse limit, in the same system,
+on the same day.</p>
+<h3 id="readme-102-how-big-is-this-thing-really">10.2 How big is this thing, really?</h3>
+<p>Rough numbers, done out loud, because they decide the architecture.</p>
+<p>Start with traffic.</p>
+<div class="code"><pre><code>1 billion API calls/day
+  ÷ 86,400 s              = ~11,600 rps average
+  × 3.5 peak-to-average   = ~40,000 rps peak
+</code></pre></div>
+<p>Each request is checked against 3 limit dimensions (merchant, endpoint, IP), so
+the coordination plane sees three times the request rate:</p>
+<div class="code"><pre><code>40,000 rps × 3 dimensions = ~120,000 counter checks/sec at peak
+</code></pre></div>
+<p>Now state size, which is the surprise.</p>
+<div class="code"><pre><code>2,000,000 merchants total
+  ~150,000 active in any peak minute
+  × 3 dimensions          = ~450,000 live counters
+  × ~120 bytes each       (token bucket = 2 numbers, plus key + store overhead)
+                          = ~54 MB
+</code></pre></div>
+<p>Even if Asha keeps <em>every</em> merchant resident, 2M × 3 × 120 B is about <strong>720
+MB</strong>. That fits in one commodity machine's RAM with room to spare.</p>
+<p><strong>🔮 Predict:</strong> <em>Which one forces Asha into a distributed store first: memory,
+or throughput?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Throughput. Memory is never the constraint here, and this inverts how people
+instinctively design it.</strong></p>
+<p>If you said memory, you were reasoning by analogy with every other data store
+you have built, where &quot;two million customers&quot; means shard it. Here the entire
+working set is 54 MB, and the entire keyspace is 720 MB. One machine holds it.</p>
+<blockquote>
+<p><strong>The single most useful thing to notice in this whole document: memory is
+never the constraint. Throughput and latency are.</strong></p>
+<p>Asha is not building a big distributed database. She is building a very small,
+very hot one. That is why the answer is a Redis-shaped thing and not a
+Cassandra-shaped thing, and why every hard problem below is about <em>access</em>,
+not <em>storage</em>.</p>
+</details>
+
+</blockquote>
+<p>That conclusion decides the store. A single Redis shard is single-threaded and
+realistically serves <strong>~50,000 scripted operations/sec</strong>, because an atomic
+limiter check is a small Lua script rather than a bare <code>GET</code>. So 120,000
+checks/sec needs at least 3 shards for raw throughput, and Asha would run ~6 for
+headroom and failover.</p>
+<p>Then the latency budget, which is the other half of the same story. Read the
+right-hand column against the 5 ms target from 10.1.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Hop</th>
+  <th>Typical p99</th>
+  <th>Fits in a 5 ms budget?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Same-host (sidecar / in-process)</td>
+  <td>~0.05 ms</td>
+  <td>Trivially</td>
+</tr>
+<tr>
+  <td>Same availability zone</td>
+  <td>~1–2 ms</td>
+  <td>Yes, with room for one call</td>
+</tr>
+<tr>
+  <td>Cross-AZ</td>
+  <td>~5–10 ms</td>
+  <td>No — already blows the budget</td>
+</tr>
+<tr>
+  <td>Cross-region</td>
+  <td>~70–150 ms</td>
+  <td>Absolutely not</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two conclusions fall straight out of that table, and they are structural rather
+than a matter of taste.</p>
+<p><strong>One store call per request is affordable, but only one, and only in-AZ.</strong> Any
+design needing two round trips is dead on arrival, which quietly kills the most
+obvious design in 10.7.</p>
+<p><strong>Cross-region coordination on the hot path is impossible.</strong> Not slow.
+Impossible. This is why every global limit is really a set of regional limits.
+See 10.9.</p>
+<h3 id="readme-103-where-does-the-limiter-physically-live">10.3 Where does the limiter physically live?</h3>
+<blockquote>
+<p>Before any algorithm, decide the physical placement. It determines how many
+enforcement points exist, and therefore how bad the coordination problem is.</p>
+</blockquote>
+<p>Five places it could go, from the client's machine to deep inside the service.</p>
+<pre class="mermaid">flowchart TB
+    subgraph P1[&quot;① In the client SDK&quot;]
+        direction LR
+        c1[Client] --&gt; c2[limit check]
+    end
+    subgraph P2[&quot;② At the edge / CDN / L7 load balancer&quot;]
+        direction LR
+        e1[Client] --&gt; e2[Edge PoP] --&gt; e3[Origin]
+    end
+    subgraph P3[&quot;③ In the API gateway&quot;]
+        direction LR
+        g1[Client] --&gt; g2[Gateway] --&gt; g3[Services]
+    end
+    subgraph P4[&quot;④ In a sidecar next to each service&quot;]
+        direction LR
+        s1[Service] --&gt; s2[Sidecar] --&gt; s3[Store]
+    end
+    subgraph P5[&quot;⑤ In the service code itself&quot;]
+        direction LR
+        v1[Service + library] --&gt; v2[Store]
+    end
+</pre>
+<p>The second column is the one that matters: it is the number of Arjuns.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Placement</th>
+  <th>Enforcement points</th>
+  <th>Protects</th>
+  <th>Fatal weakness</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>① Client SDK</td>
+  <td>Every client</td>
+  <td>Nothing you control</td>
+  <td>The client is the attacker. Useful only as politeness — a well-behaved SDK backing off — never as enforcement</td>
+</tr>
+<tr>
+  <td>② Edge / CDN</td>
+  <td>100s of PoPs worldwide</td>
+  <td>Everything, including your bandwidth bill</td>
+  <td>Coordination across PoPs is cross-region → impossible on the hot path. Must be approximate</td>
+</tr>
+<tr>
+  <td>③ API gateway</td>
+  <td>10s of nodes, one region</td>
+  <td>All services behind it</td>
+  <td>Cannot see limits that depend on service-internal facts (e.g. &quot;this merchant's balance is low&quot;)</td>
+</tr>
+<tr>
+  <td>④ Sidecar</td>
+  <td>One per service instance</td>
+  <td>Per-service limits, including service-to-service</td>
+  <td>Most enforcement points of any option → the hardest coordination</td>
+</tr>
+<tr>
+  <td>⑤ Service library</td>
+  <td>One per instance</td>
+  <td>Just that service</td>
+  <td>Duplicated in every service, in every language, redeployed to change</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Asha's choice: ③ the API gateway, with ② at the edge for crude volumetric
+protection.</strong> Three reasons.</p>
+<p>The gateway is already in the path, already terminates TLS, already
+authenticates. So it already knows <em>who</em> the caller is, which is exactly what a
+key needs. Doing the check anywhere earlier means doing it before you know the
+identity, which limits you to IP-based limits.</p>
+<p>There are tens of gateway nodes, not hundreds. Twenty Arjuns is a hard
+coordination problem. Six hundred is an intractable one.</p>
+<p>The edge tier is not trying to be accurate. Its job is to absorb the 10-Gbps
+garbage flood so it never reaches the gateway. Crude and approximate is the
+correct answer there.</p>
+<p>That gives a general rule worth stating out loud: <strong>layer your limiters, and let
+each layer be as accurate as its position allows.</strong> Edge is approximate and
+huge. Gateway is accurate and per-customer. Service is precise and narrow.</p>
+<h3 id="readme-104-what-happens-to-one-request-step-by-step">10.4 What happens to one request, step by step?</h3>
+<blockquote>
+<p><strong>Read the note in the middle of the diagram.</strong> Everything above it is
+bookkeeping; that one step is the subject of 10.7.</p>
+</blockquote>
+<pre class="mermaid">sequenceDiagram
+    participant C as Client
+    participant G as Gateway node
+    participant R as Rules cache (local)
+    participant S as Counter store
+    participant B as Backend
+
+    C-&gt;&gt;G: POST /payments (API key)
+    G-&gt;&gt;G: authenticate → merchant_42, plan=standard
+    G-&gt;&gt;R: which limits apply?
+    R--&gt;&gt;G: [merchant:100/min, endpoint:30k/s global, ip:1000/min]
+    Note over G,S: the coordination step — the subject of 10.7
+    G-&gt;&gt;S: check &amp; consume all 3 keys (one atomic call)
+    S--&gt;&gt;G: allowed, remaining=37, retryAfter=0
+    alt allowed
+        G-&gt;&gt;B: forward request
+        B--&gt;&gt;G: 201 Created
+        G--&gt;&gt;C: 201 + X-RateLimit-Remaining: 37
+    else rejected
+        G--&gt;&gt;C: 429 + Retry-After: 12
+    end
+</pre>
+<p>Two details there are easy to skim past and expensive to get wrong.</p>
+<p><strong>The rules lookup is local.</strong> It is served from an in-memory cache on the
+gateway, and it must never be a network call. Omar's control plane, and why that
+cache must outlive its own source, is 10.10.</p>
+<p><strong>All three limits are checked in one call, not three.</strong> Three round trips would
+triple both the latency and the load on Kiran. Worse, it would leave a
+partial-consumption bug: if limits 1 and 2 pass and limit 3 fails, you have
+already spent quota from 1 and 2 on a request you then rejected. Check them
+together, consume only if all pass.</p>
+<h3 id="readme-105-what-is-the-key-the-most-underrated-decision">10.5 What is the key? (the most underrated decision)</h3>
+<blockquote>
+<p><strong>In one breath:</strong> The counting is a hundred lines of code. The string you
+count <em>against</em> is where real systems go wrong, and almost nobody discusses
+it.</p>
+</blockquote>
+<p>A key is the string identifying one independent allowance. In the office it is
+the name Arjun looks up. Here are the candidates, with the way each one fails.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Key</th>
+  <th>Good for</th>
+  <th>Fails at</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>IP address</td>
+  <td>Anonymous endpoints, crude abuse control</td>
+  <td>50,000 users behind one corporate NAT share a limit; an attacker with a botnet has 50,000 keys. Both errors at once</td>
+</tr>
+<tr>
+  <td>API key / merchant ID</td>
+  <td>Everything after authentication</td>
+  <td>Requires the caller to be authenticated first — useless for login and signup endpoints</td>
+</tr>
+<tr>
+  <td>User ID</td>
+  <td>Per-human fairness</td>
+  <td>A single merchant's server-side integration is one API key and many users</td>
+</tr>
+<tr>
+  <td>API key + endpoint group</td>
+  <td>Stopping one expensive endpoint from eating the whole allowance</td>
+  <td>More keys, more counters, more configuration to explain</td>
+</tr>
+<tr>
+  <td>Global (one key for an endpoint)</td>
+  <td>Protecting a specific fragile downstream</td>
+  <td>It is a hot key by construction — every request touches it. See F3</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three rules follow, and each of them came from a real incident.</p>
+<p><strong>Limit on the most specific identity you can authenticate, and fall back
+outward.</strong> Authenticated merchant, then API key, then IP, in that order.
+Anything keyed on IP is both too coarse and too easy to evade, so use it only
+where you genuinely have nothing better. That means the unauthenticated
+endpoints, and nothing else.</p>
+<p><strong>Login endpoints need two keys at once.</strong> Key on IP, which stops one host
+trying many accounts, <em>and</em> on the target username, which stops a botnet trying
+one account. Either alone is trivially bypassed. This is the single most common
+rate-limiting design bug in production systems.</p>
+<p><strong>Charge by cost, not by count.</strong> &quot;1,000 requests/minute&quot; means something wildly
+different for <code>GET /ping</code> and <code>POST /bulk-settlement</code>. Give each endpoint a
+weight and let one request consume 20 units. Otherwise the limit does not
+correlate with the thing you were actually protecting.</p>
+<p><strong>🔮 Predict:</strong> <em>Asha's limit is keyed on the API key. Dev's integration is
+deployed across 12 of his own servers, all sharing one API key. He complains
+that his traffic is being rejected even though &quot;each server is well under the
+limit&quot;. Whose bug is this?</em></p>
+<details><summary>Reveal</summary>
+
+<p>Nobody's — it is a <em>key granularity</em> mismatch, and it is a product conversation,
+not an engineering one.</p>
+<p>If you said &quot;Dev's, he should shard his own traffic&quot;, you are technically right
+and commercially wrong. If you said &quot;Asha's, the limiter is broken&quot;, look again:
+it is enforcing exactly what was sold.</p>
+<p>The limit is per API key, which is exactly what Asha sold him. Dev's mental
+model is per server. The system is behaving as specified; the specification does
+not match how the customer deployed.</p>
+<p>The available fixes are all product decisions, which is why this belongs in a
+design doc:</p>
+<ul>
+<li>Let Dev mint sub-keys, one per server, each with its own allowance. Clean, and
+it makes key granularity match deployment granularity.</li>
+<li>Raise the limit on that key and let him self-distribute. Simple, but Asha has
+now lost the ability to protect against <em>his</em> runaway server.</li>
+<li>Charge by cost, so his cheap health-check traffic stops consuming the same
+allowance as his expensive calls.</li>
+</ul>
+<p>The engineering lesson: <strong>the key is a contract with the customer about how they
+may deploy.</strong> Choose it knowing that, and document it. A limiter whose key
+granularity surprises the customer generates support load forever, no matter how
+correct the counting is.</p>
+</details>
+
+<h3 id="readme-106-which-counting-algorithm">10.6 Which counting algorithm?</h3>
+<blockquote>
+<p><strong>In one breath:</strong> Six ways to count the same thing. They differ in how much
+they remember per person and in what they do at the edge of a window, and only
+one of those differences changes your architecture.</p>
+</blockquote>
+<p>At this altitude these are six short stories rather than a lecture. Imagine each
+one as a different rule written on the front of Arjun's notebook. The runnable
+side-by-side is <a href="#readme-appendix-a--the-algorithm-layer-optional">Appendix A</a> if you
+want it.</p>
+<p><strong>Fixed window.</strong> Arjun counts plates per clock hour and resets on the hour.
+Meera learns the reset time, takes ten plates at 10:59 and ten more at 11:01,
+and walks away with <strong>2× the limit</strong> across the boundary. Two numbers of state,
+and an exploitable, predictable flaw.</p>
+<p><strong>Sliding log.</strong> Arjun writes down the exact time of every plate and counts
+backwards one hour on each request. Perfectly exact, and the notebook now grows
+with <em>traffic</em> rather than with people. Measured at our scale in E2, that is
+about 74 GB.</p>
+<p><strong>Sliding counter.</strong> Arjun keeps this hour's count, last hour's count, and how
+far into this hour we are, then blends them as if last hour's plates were spread
+evenly. Three numbers, and about 0.003% of decisions come out wrong. That is
+Cloudflare's published figure, and it is a good general default.</p>
+<p><strong>Token bucket.</strong> Arjun keeps a bowl of tokens that refills at a steady drip.
+Each plate spends one token; an empty bowl means come back later. Two numbers,
+and burst is an explicit dial you can set separately from the rate.</p>
+<p><strong>Leaky bucket, as a queue.</strong> Instead of refusing Meera, Arjun puts her in a
+line that empties at a fixed pace. The output is perfectly smooth and nobody is
+rejected, but a queue is unbounded latency wearing a disguise.</p>
+<p><strong>GCRA.</strong> The same decisions as the token bucket, stored as a single number: the
+earliest time the next plate is allowed. One number of state, and much harder to
+explain in a code review. Redis's <code>CL.THROTTLE</code> uses it.</p>
+<p>Now the one comparison table. The last column is the sentence you would actually
+say in a design review.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Algorithm</th>
+  <th>State per key</th>
+  <th>Notable flaw</th>
+  <th>Use when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Fixed window</td>
+  <td>2 numbers</td>
+  <td>Allows <strong>2× the limit</strong> across a boundary; the bug is exploitable and predictable</td>
+  <td>Never for real limits; fine for rough metrics</td>
+</tr>
+<tr>
+  <td>Sliding log</td>
+  <td><strong>1 timestamp per request</strong></td>
+  <td>Exact, but memory grows with <em>traffic</em> — about 74 GB at our scale</td>
+  <td>Small key counts, audit-grade accuracy</td>
+</tr>
+<tr>
+  <td>Sliding counter</td>
+  <td>3 numbers</td>
+  <td>Approximates the previous window as evenly spread; ~0.003% of decisions wrong</td>
+  <td>A good general default</td>
+</tr>
+<tr>
+  <td><strong>Token bucket</strong></td>
+  <td>2 numbers</td>
+  <td>Explicit, controllable burst — which must be tuned separately from rate</td>
+  <td><strong>The production default</strong></td>
+</tr>
+<tr>
+  <td>Leaky bucket (queue)</td>
+  <td>queue</td>
+  <td>Zero burst and a perfectly smooth output; it is a <em>shaper</em>, so it adds unbounded latency instead of rejecting</td>
+  <td>Outbound traffic to a partner who will ban you for bursting</td>
+</tr>
+<tr>
+  <td>GCRA</td>
+  <td><strong>1 number</strong></td>
+  <td>Same decisions as token bucket, harder to explain in a code review</td>
+  <td>Extreme key counts; Redis <code>CL.THROTTLE</code> uses it</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Asha picks the token bucket</strong> for the gateway, for three architectural reasons
+rather than mathematical ones.</p>
+<p>Its state is 2 numbers with no per-request growth, so a trip to Kiran carries a
+fixed tiny payload no matter how much traffic a key has seen.</p>
+<p>Its refill is computed lazily from a timestamp. There is no background timer
+sweeping millions of keys, which means a key that goes quiet costs nothing and
+can simply be evicted by TTL.</p>
+<p><strong>Burst is a separate, explicit dial from rate.</strong> That matters for real
+customers. &quot;100/minute, but you may spend 20 of them at once&quot; is a sentence Asha
+can put in documentation. That sentence is the difference between a limiter that
+works for bursty integrations and one that generates tickets.</p>
+<p>One distinction from those six stories changes your architecture, so carry it
+forward.</p>
+<p>A <strong>policer</strong> answers yes or no immediately and rejects the excess. It protects
+your backend and pushes the problem to the client, who must retry.</p>
+<p>A <strong>shaper</strong> accepts the request and releases it later at a steady pace. It
+protects the <em>downstream</em> and pushes the problem into latency and memory.</p>
+<p>Police your public edge, because you can tell strangers to retry. Shape your
+outbound calls to partners, because you cannot ask a card network to retry, and
+it will suspend you for bursting.</p>
+<h3 id="readme-107-coordination--how-often-does-a-clerk-walk-to-kiran">10.7 Coordination — how often does a clerk walk to Kiran?</h3>
+<blockquote>
+<p><strong>In one breath:</strong> Twenty clerks, one book. Every design below is a different
+answer to how often a clerk walks over, and what they do while they are away.</p>
+</blockquote>
+<p>Everything so far was setup. This is the design.</p>
+<p>We have 20 gateway nodes, twenty Arjuns, and one logical truth. We will build it
+the way you would actually arrive at it: start with what a smart engineer tries
+first, and let each version break.</p>
+<p>Throughout, the scoreboard is four numbers: <strong>accuracy · store load · added
+latency · behaviour when Kiran goes home.</strong></p>
+<hr />
+<h4 id="readme-v1--what-if-every-clerk-enforces-the-whole-limit">v1 — what if every clerk enforces the whole limit?</h4>
+<p>This is not a design. It is what you get by accident, and it is stage 4.</p>
+<p>Twenty nodes each enforce 100/min, so the customer gets <strong>2,000/min</strong>, and the
+number changes the moment autoscaling changes the node count.</p>
+<p>It is unusable for any limit that is a promise. It is genuinely fine for exactly
+one thing: a crude per-node safety valve, such as &quot;no node will ever process
+more than 5,000 rps regardless of who is asking&quot;. There, the per-node number
+<em>is</em> the thing you meant.</p>
+<h4 id="readme-v2--what-if-each-clerk-gets-one-twentieth">v2 — what if each clerk gets one twentieth?</h4>
+<p>Give each node <code>limit ÷ N</code>. The ceiling is now correct. Asha will never exceed
+100 again.</p>
+<p>And as stage 4 already showed, the floor collapses. Ben does not spread traffic
+evenly, so Priya hits the wall at a fraction of her real limit while unused
+allowance sits idle on nodes she never reached.</p>
+<p>It also breaks on autoscaling. N changes, so every node's share must change,
+which means every node needs to know the current cluster size. You have
+accidentally created a coordination problem inside the design whose entire
+selling point was having no coordination.</p>
+<p>This works only when you can guarantee even distribution <em>and</em> a stable node
+count. That is rarer than it sounds.</p>
+<h4 id="readme-v3--what-if-the-clerks-share-kirans-book-read-decide-write">v3 — what if the clerks share Kiran's book: read, decide, write?</h4>
+<p>Now the obvious real fix. Put the counter in Redis. Every node reads it, decides
+locally, and writes it back.</p>
+<p>Watch what two clerks do when there is one token left.</p>
+<pre class="mermaid">sequenceDiagram
+    participant N1 as Node 1 (Arjun)
+    participant N2 as Node 2 (Bela)
+    participant S as Redis (Kiran)
+    Note over S: tokens = 1  (one left!)
+    N1-&gt;&gt;S: GET merchant_42
+    S--&gt;&gt;N1: tokens = 1
+    N2-&gt;&gt;S: GET merchant_42
+    S--&gt;&gt;N2: tokens = 1
+    Note over N1,N2: both nodes now believe they hold the last token
+    N1-&gt;&gt;S: SET tokens = 0
+    N2-&gt;&gt;S: SET tokens = 0
+    Note over S: two requests admitted, one token spent
+</pre>
+<p><strong>🔮 Predict:</strong> <em>At 40,000 rps with a 1 ms one-way hop to the store, roughly how
+often does that overlap happen?</em></p>
+<details><summary>Reveal</summary>
+
+<p>Constantly. It is the normal case, not an edge case.</p>
+<p>If you guessed &quot;rarely, only under contention&quot;, you are picturing the office,
+where two clerks reaching the book at the same instant is a coincidence. At
+these speeds it is not a coincidence; it is the steady state.</p>
+<p>The window of vulnerability runs from the moment the read lands to the moment
+the write lands: the read's return trip plus the write's outbound trip, so about
+<strong>2 ms</strong> here. At 40,000 rps that means roughly <strong>80 requests are inside the
+window at any moment</strong>, every one of them reading the same counter value and
+spending the same tokens. For a hot key, essentially every decision is made from
+a stale read.</p>
+<p>This is why &quot;we'll just put the counter in Redis&quot; is not a solution by itself.
+The store being shared does not make the operation atomic. The read and the
+write are two separate trips, and <em>the gap between them is where the limit
+leaks</em>.</p>
+<p>Worse, it is a bug that scales with success. It is invisible in staging at 10
+rps and severe in production at 40,000.</p>
+</details>
+
+<p>So v3 is broken. It is also twice as slow as it needs to be, at two round trips
+per request, which 10.2 already ruled out.</p>
+<h4 id="readme-v4--what-if-kiran-makes-the-decision-himself">v4 — what if Kiran makes the decision himself?</h4>
+<p>The fix for the gap is to remove the gap. Send the <em>decision</em> to Kiran instead
+of fetching his data to the counter. In Redis that is a Lua script, or
+<code>CL.THROTTLE</code> from the redis-cell module. The script reads, refills, decides and
+writes, and no other client ever observes an intermediate state.</p>
+<p>One round trip. No race. Exact enforcement across all 20 nodes.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Scoreboard number</th>
+  <th>v4's answer</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Accuracy</td>
+  <td><strong>Exact</strong></td>
+</tr>
+<tr>
+  <td>Store load</td>
+  <td>120,000 ops/s — <em>the full traffic rate</em></td>
+</tr>
+<tr>
+  <td>Added latency</td>
+  <td>+1 round trip (~2 ms p99 in-AZ)</td>
+</tr>
+<tr>
+  <td>Store dies</td>
+  <td>Every request must decide alone — see F1</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>This is the correct baseline, and for a great many systems it is also the
+final answer.</strong> Do not skip past it looking for something cleverer. If 120k
+ops/s fits your store and 2 ms fits your budget, you are done, and everything
+below buys efficiency at the cost of accuracy.</p>
+<p>Two problems stop it being the answer for Asha.</p>
+<h4 id="readme-v5--does-sharding-fix-devs-flash-sale">v5 — does sharding fix Dev's flash sale?</h4>
+<p>The first problem is raw volume. 120,000 ops/s exceeds one Redis shard's ~50k,
+so we shard: keys are hashed across 6 shards, and each shard owns a slice of the
+keyspace.</p>
+<p>That fixes aggregate throughput. It does nothing whatsoever for the limit
+<code>endpoint:POST /payments</code>, Asha's global 30,000 rps cap. That is <strong>one key</strong>, one
+key hashes to <strong>one shard</strong>, and one shard is <strong>one CPU core</strong>. Every request in
+the system touches it. Dev's flash sale is the same shape: one merchant, one
+key, all the traffic.</p>
+<blockquote>
+<p><strong>Sharding spreads keys across machines. A hot key is one key. Adding machines
+cannot help it.</strong> This is the single most important thing to understand about
+scaling a counter store, and it catches everyone who assumes &quot;we're on a
+cluster&quot; means &quot;we scale&quot;.</p>
+</blockquote>
+<p>The fix is to split the key itself. Replace <code>endpoint:POST /payments</code> with 16
+sub-keys <code>…#0</code> through <code>…#15</code>, each carrying 1/16th of the limit, and have each
+node pick one at random per request.</p>
+<p>Notice what that is. It is <strong>v2's static division, applied to the store instead
+of the nodes</strong>, with exactly v2's weakness back in miniature. A sub-bucket can
+be exhausted by chance while its siblings have room, so you under-admit
+slightly. The error shrinks as traffic grows, because the random spread evens
+out, which is convenient: hot keys are by definition the ones with lots of
+traffic.</p>
+<p>Sub-key splitting is necessary for any global or per-endpoint limit. Use the
+smallest number of sub-keys that fits under one core's capacity, because every
+extra sub-key adds under-admission.</p>
+<h4 id="readme-v6--what-if-a-clerk-takes-twenty-tickets-at-once">v6 — what if a clerk takes twenty tickets at once?</h4>
+<p>The second problem is cost. Even sharded, Asha is doing 120,000 store operations
+per second and adding 2 ms to every request. Both are pure overhead.</p>
+<p>So change what Arjun asks for. He does not ask Kiran for one token. He
+atomically takes a <strong>lease</strong>, which is a block of say 20 tokens. Then he serves
+the next 20 requests at his own counter with no walk at all.</p>
+<p>Store load drops by roughly the batch size. Latency drops to near zero for 19
+requests out of every 20.</p>
+<p><strong>🔮 Predict:</strong> <em>What does a node do with leased tokens it has not spent when
+the traffic moves elsewhere?</em></p>
+<details><summary>Reveal</summary>
+
+<p>It strands them, and this is the design's real cost.</p>
+<p>Arjun takes 20 tokens, serves 3 requests, and then Ben starts sending that
+customer to other counters. Those 17 tokens are <em>already deducted from Kiran's
+book</em>. The store believes they are spent. Bela is told there is no allowance
+left while 17 units of it sit unused on a counter nobody is walking to.</p>
+<p>If you said &quot;they just go back&quot;, that is what you must <em>build</em>: a <strong>TTL on the
+lease</strong>, so unspent tokens expire and return to the pool after, say, 1 second.
+That bounds the damage but does not remove it. During that second the quota
+really is unavailable.</p>
+<p>Net effect: <strong>v6 under-admits.</strong> Worst-case stranded quota is roughly <code>N × batch</code>, so 20 nodes × 20 tokens = 400 units in flight. If the limit is 100/min,
+that is catastrophic. If the limit is 30,000/s, it is noise.</p>
+<p>The rule this gives you: <strong>batch size must be small relative to the limit.</strong>
+Leases work beautifully for high limits and are unusable for low ones.</p>
+<p>There is a second, sneakier cost. On a key that is <em>already saturated</em>, a node
+asks for a batch, is granted zero, and has burned a round trip to be told no.
+Every rejected request costs a full store call, exactly when the store is
+busiest. Production systems fix this with a short negative cache: &quot;this key was
+exhausted 50 ms ago, don't ask again yet&quot;.</p>
+</details>
+
+<h4 id="readme-v7--what-if-nobody-walks-to-kiran-at-all">v7 — what if nobody walks to Kiran at all?</h4>
+<p>The last step. Nodes stop calling the store per request <em>or</em> per batch. Each
+node counts locally and, every <code>T</code> milliseconds, publishes what it spent and
+learns the global total. The clerks shout their tallies across the room instead
+of walking.</p>
+<p>Hot path: <strong>zero network calls, zero added latency.</strong> Store load no longer
+depends on traffic at all.</p>
+<p>The error is whatever the nodes collectively spend while out of touch:</p>
+<div class="code"><pre><code>worst-case over-admission  ≈  N × (per-node rate for that key) × T
+</code></pre></div>
+<p>Put Asha's numbers in it. The right-hand column says what each number is.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Quantity</th>
+  <th>Value</th>
+  <th>In words</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>N</td>
+  <td>20</td>
+  <td>gateway nodes, all counting locally</td>
+</tr>
+<tr>
+  <td>per-node rate</td>
+  <td>300 rps</td>
+  <td>a key doing 6,000 rps, spread over 20 nodes</td>
+</tr>
+<tr>
+  <td>T</td>
+  <td>500 ms</td>
+  <td>how long a node goes without telling anyone</td>
+</tr>
+<tr>
+  <td>overshoot</td>
+  <td><strong>3,000 requests</strong></td>
+  <td>20 × 300 × 0.5, admitted above the promise</td>
+</tr>
+<tr>
+  <td>as a share of a 30,000/s limit</td>
+  <td>10%</td>
+  <td>fine for an abuse limit, not for a billing one</td>
+</tr>
+</tbody>
+</table></div>
+<p>Turn the dial the other way. T = 100 ms gives 600 requests of overshoot, which
+is 2%, at five times the store load. <strong>That is the staleness budget from stage
+6, made numeric.</strong></p>
+<p><strong>🔮 Predict:</strong> <em>v7's store load is &quot;N nodes × their active keys ÷ T&quot;. Asha has
+450,000 live counters and 20 nodes. Sync every 1 second. What is the store load
+— and is v7 actually cheaper than v4's 120,000 ops/s?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>20 × 450,000 ÷ 1 s = 9,000,000 ops/s.</strong> Seventy-five times <em>worse</em> than the
+per-request design it was supposed to improve on.</p>
+<p>If you said &quot;much cheaper, it takes the store off the hot path&quot;, you had the
+right mechanism and the wrong denominator. Taking the store off the hot path
+means the cost no longer scales with requests. It now scales with <em>keys</em>, and
+Asha has 450,000 of those.</p>
+<p>This is the trap in v7, and it is the insight that produces the real
+architecture. Look at where each design's cost actually comes from.</p>
+<p><strong>v4, per-request,</strong> costs one trip per request. Priya's key, seen twice a
+minute, costs two trips a minute. Cheap, and exact.</p>
+<p><strong>v6 and v7, local plus sync,</strong> cost a trip per key per node per interval,
+whether that key saw a million requests or one. Cheap only if the key is busy.</p>
+<p>They are cheap in <strong>opposite regimes</strong>. So do not choose between them. Apply
+each to the keys it suits.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Key class</th>
+  <th>Share of keys</th>
+  <th>Share of traffic</th>
+  <th>Design</th>
+  <th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Cold</strong> (&lt; 1 rps)</td>
+  <td>~99.9%</td>
+  <td>~40%</td>
+  <td>v4 central atomic</td>
+  <td>Few requests each, so per-request cost is tiny — and you get exactness free</td>
+</tr>
+<tr>
+  <td><strong>Hot</strong> (&gt; 100 rps)</td>
+  <td>~0.1% (a few hundred keys)</td>
+  <td>~60%</td>
+  <td>v7 local + periodic sync</td>
+  <td>Huge traffic, so per-request cost is unaffordable; few keys, so sync cost is trivial</td>
+</tr>
+</tbody>
+</table></div>
+<p>Run the numbers with Dev and the other 199 busiest keys treated as hot:</p>
+<div class="code"><pre><code>hot:  20 nodes × 200 keys ÷ 0.5 s   =   8,000 ops/s
+cold: 120,000 × 40%                 =  48,000 ops/s
+                                       ------------
+total                                  56,000 ops/s   (was 120,000)
+</code></pre></div>
+<p>Store load halved. Hot-key contention gone. Added latency removed from the
+majority of traffic. And the long tail of customers still gets <strong>exact</strong>
+enforcement: Priya and two million others, the ones with small limits where
+accuracy matters most.</p>
+<p>That two-tier split is the production architecture. It is also why &quot;which
+algorithm should I use?&quot; is the wrong question. The interesting decision is
+which keys get which <em>coordination</em> design.</p>
+</details>
+
+<h4 id="readme-what-if-you-never-need-to-coordinate--can-you-route-the-key-to-one-owner">What if you never need to coordinate — can you route the key to one owner?</h4>
+<p>Worth naming explicitly, because it is the cheapest correct answer whenever it
+is available.</p>
+<p>Suppose Ben stops sending people to whichever counter is free, and instead sends
+them by name: everyone whose name starts with M always goes to Bela. In
+engineering terms, the load balancer routes by <strong>hash of the rate-limit key</strong>,
+so every request for <code>merchant_42</code> always reaches gateway node 7.</p>
+<p>Node 7 then has complete, exact, local state for that merchant. No store. No
+coordination. No added latency. The distributed problem simply does not exist.</p>
+<pre class="mermaid">flowchart TD
+    C[Clients] --&gt; LB[&quot;Router&lt;br/&gt;hash(merchant_id) → node&quot;]
+    LB --&gt;|merchant_42| N7[&quot;Node 7&lt;br/&gt;&lt;b&gt;owns&lt;/b&gt; merchant_42&lt;br/&gt;exact local state&quot;]
+    LB --&gt;|merchant_99| N3[&quot;Node 3&lt;br/&gt;&lt;b&gt;owns&lt;/b&gt; merchant_99&quot;]
+    N7 --&gt; B[Backend]
+    N3 --&gt; B
+</pre>
+<p>The costs are real, and they are structural rather than incidental.</p>
+<p><strong>You must control the routing layer, and you can only hash on one dimension.</strong>
+Asha needs three simultaneous limits: merchant, endpoint and IP. You cannot
+route by all three at once, so at best this covers one of them.</p>
+<p><strong>The owning node is a hot spot.</strong> Dev's entire flash sale now lands on one
+node.</p>
+<p><strong>Scaling or losing a node reshuffles ownership.</strong> During the reshuffle two
+nodes briefly both think they own a key. That is a short over-admission window
+on a scale-up under load, which is exactly the event when you least want one.</p>
+<p><strong>Node 7 dying loses that merchant's counter state entirely.</strong></p>
+<p>Owner routing is excellent for a single dominant dimension in a system where you
+own the router. This is essentially how partitioned stream processors handle
+per-key state. It is not sufficient alone for a multi-dimensional public API.</p>
+<h4 id="readme-what-does-the-scoreboard-say">What does the scoreboard say?</h4>
+<p>Everything above, at Asha's scale: 40k rps, 20 nodes, 450k live counters, 120k
+checks/s. First, what each design costs and how wrong it is.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Design</th>
+  <th>Accuracy</th>
+  <th>Store ops/s</th>
+  <th>Added latency</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>v1 independent</td>
+  <td>up to <strong>20× over</strong></td>
+  <td>0</td>
+  <td>0</td>
+</tr>
+<tr>
+  <td>v2 divided</td>
+  <td>up to <strong>20× under</strong></td>
+  <td>0</td>
+  <td>0</td>
+</tr>
+<tr>
+  <td>v3 read-modify-write</td>
+  <td>leaks under load</td>
+  <td>120,000</td>
+  <td>+4 ms</td>
+</tr>
+<tr>
+  <td>v4 central atomic</td>
+  <td><strong>exact</strong></td>
+  <td>120,000</td>
+  <td>+2 ms</td>
+</tr>
+<tr>
+  <td>v5 sharded atomic</td>
+  <td>~exact</td>
+  <td>120,000 spread</td>
+  <td>+2 ms</td>
+</tr>
+<tr>
+  <td>v6 batched lease</td>
+  <td>under (≤ N×batch)</td>
+  <td>6,000</td>
+  <td>~0.1 ms</td>
+</tr>
+<tr>
+  <td>v7 periodic sync</td>
+  <td>over (bounded by N·r·T)</td>
+  <td>N × keys ÷ T</td>
+  <td><strong>0</strong></td>
+</tr>
+<tr>
+  <td>owner routing</td>
+  <td>exact per key</td>
+  <td>0</td>
+  <td>0</td>
+</tr>
+</tbody>
+</table></div>
+<p>Then what happens when Kiran goes home, and the sentence you would say about
+each design in a review.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Design</th>
+  <th>On store outage</th>
+  <th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>v1 independent</td>
+  <td>unaffected</td>
+  <td>Per-node safety valves only</td>
+</tr>
+<tr>
+  <td>v2 divided</td>
+  <td>unaffected</td>
+  <td>Needs even traffic + fixed N</td>
+</tr>
+<tr>
+  <td>v3 read-modify-write</td>
+  <td>—</td>
+  <td><strong>Never.</strong> Broken and slow</td>
+</tr>
+<tr>
+  <td>v4 central atomic</td>
+  <td>must degrade</td>
+  <td><strong>The correct default</strong></td>
+</tr>
+<tr>
+  <td>v5 sharded atomic</td>
+  <td>must degrade</td>
+  <td>Required for hot/global keys</td>
+</tr>
+<tr>
+  <td>v6 batched lease</td>
+  <td>degrades gracefully</td>
+  <td>High limits only</td>
+</tr>
+<tr>
+  <td>v7 periodic sync</td>
+  <td>degrades gracefully</td>
+  <td>Hot keys only</td>
+</tr>
+<tr>
+  <td>owner routing</td>
+  <td>unaffected</td>
+  <td>One dimension, you own the router</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The design Asha ships:</strong> v5, sharded central atomic, as the default for the
+long tail, and v7, local with a 500 ms sync, automatically promoted for keys
+that cross a traffic threshold. The tier decision is made per key, and
+re-evaluated continuously.</p>
+<h3 id="readme-108-which-store-can-actually-do-this">10.8 Which store can actually do this?</h3>
+<blockquote>
+<p><strong>In one breath:</strong> The store must answer in under a millisecond, decide
+without help, forget things by itself — and it does not need to survive a
+restart.</p>
+</blockquote>
+<p>The requirements are unusual, and they rule out most databases.</p>
+<p>It needs <strong>sub-millisecond p99</strong>, so it is in-memory. It needs <strong>atomic
+read-decide-write</strong>, so it needs server-side scripting or a purpose-built
+command. It needs <strong>automatic expiry</strong>, because 450k live counters out of 6M
+possible means dead keys must evict themselves, and TTL is not optional.</p>
+<p><strong>🔮 Predict:</strong> <em>Does the counter store need to be durable — that is, must it
+survive its own restart with the counters intact?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>No, and this is the counter-intuitive one.</strong></p>
+<p>If you said yes, you were treating the counters as data. They are not; they are
+a fact about the last sixty seconds, and in sixty seconds they are worthless.</p>
+<p>Losing the counters means everyone briefly gets a fresh allowance. That is a
+minor, self-healing accuracy incident. Paying for durability on the hot path of
+100% of your traffic, to protect data that expires in a minute, is a bad trade.</p>
+<p>The consequence is concrete: <strong>run Redis without persistence and treat it as
+expendable.</strong> No AOF fsync on the hot path. Replicate for availability, not for
+durability. If Asha loses a shard, she loses those counters, and the correct
+response is a metric, not a page.</p>
+</details>
+
+<p>With those four requirements in hand, the candidates sort themselves out.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Candidate</th>
+  <th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Redis / Valkey</strong></td>
+  <td>The default. In-memory, Lua for atomicity, native TTL, <code>CL.THROTTLE</code> if you want GCRA built in</td>
+</tr>
+<tr>
+  <td>Memcached</td>
+  <td><code>incr</code> is atomic but there is no scripting, so a token bucket cannot be done in one operation</td>
+</tr>
+<tr>
+  <td>Relational DB</td>
+  <td>Atomicity yes, sub-millisecond at 120k writes/s no. Also: this is the fastest way to turn a rate limiter into an outage</td>
+</tr>
+<tr>
+  <td>Cassandra / Dynamo</td>
+  <td>Wrong shape entirely — quorum writes cost more latency than your whole budget, and eventual consistency defeats the purpose</td>
+</tr>
+<tr>
+  <td>A dedicated service (gRPC)</td>
+  <td>What Envoy's RLS does. Adds a hop but centralises the logic and lets you batch. Sensible at large scale</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-109-can-a-limit-be-global-across-regions">10.9 Can a limit be global across regions?</h3>
+<blockquote>
+<p><strong>In one breath:</strong> No, not in real time. Physics already decided this in
+10.2's latency table, so pick which kind of approximate you want.</p>
+</blockquote>
+<p>Cross-region coordination on the hot path is impossible, so a &quot;global&quot; limit
+cannot be globally enforced as it happens. Asha chooses one of three, and she
+chooses per limit.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Approach</th>
+  <th>How</th>
+  <th>Accuracy</th>
+  <th>Use for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Independent regional limits</strong></td>
+  <td>Each region enforces the full limit locally</td>
+  <td>Total = limit × regions</td>
+  <td>Abuse protection, where the point is per-region capacity anyway</td>
+</tr>
+<tr>
+  <td><strong>Split the limit</strong></td>
+  <td>Each region gets a fixed share (US 60%, EU 40%)</td>
+  <td>Correct ceiling, under-admits when traffic shifts</td>
+  <td>Predictable geographic traffic</td>
+</tr>
+<tr>
+  <td><strong>Async global reconciliation</strong></td>
+  <td>Regions enforce locally, stream counts to a global aggregator, which adjusts each region's share every few seconds</td>
+  <td>Converges; wrong during the lag window</td>
+  <td>Billing-adjacent limits that must be <em>roughly</em> globally correct</td>
+</tr>
+</tbody>
+</table></div>
+<p>The honest position, and the one to say out loud in a design review: <strong>a global
+limit enforced across regions is always approximate.</strong></p>
+<p>If a limit genuinely must be exact and global, it cannot be enforced at the
+edge. It must move to whatever single-region component already serialises the
+operation, which is usually the database write that actually performs the
+action. Rate limiting is not the right tool for a hard global invariant. A
+transaction is.</p>
+<h3 id="readme-1010-who-decides-who-gets-what-limit">10.10 Who decides who gets what limit?</h3>
+<blockquote>
+<p><strong>In one breath:</strong> Omar's rules are a separate system with a separate failure
+mode, and the gateway must keep working when that system is down.</p>
+</blockquote>
+<p>The limits themselves, which merchant gets what, do not live with the counters.
+They live in Omar's control plane.</p>
+<pre class="mermaid">flowchart TD
+    A[&quot;Admin / API&lt;br/&gt;Omar sets limits&quot;] --&gt; DB[(Rules DB)]
+    DB --&gt; PUB[&quot;Publisher&lt;br/&gt;versioned snapshot&quot;]
+    PUB -.-&gt;|&quot;push / poll every ~30s&quot;| G1[&quot;Gateway&lt;br/&gt;in-memory rules cache&quot;]
+    PUB -.-&gt; G2[&quot;Gateway&lt;br/&gt;in-memory rules cache&quot;]
+    G1 --&gt; D{&quot;decision&quot;}
+</pre>
+<p>Three rules, each learned the hard way.</p>
+<p><strong>The rules cache is in memory on every gateway, and it never expires on
+failure.</strong> If Omar's service is down, gateways keep using the last snapshot they
+have, forever. A config system outage must not become a traffic outage. Stale
+limits are almost always better than no limits.</p>
+<p><strong>Snapshots are versioned and applied atomically.</strong> Half-applied rule sets
+produce inconsistent enforcement across nodes, which is impossible to debug
+because the answer depends on which node you hit.</p>
+<p><strong>Ship a hardcoded default.</strong> A brand-new gateway that cannot reach the rules
+service on startup must still enforce <em>something</em> sane, rather than starting up
+fully open.</p>
+<h3 id="readme-1011-what-does-the-client-see-when-you-say-no">10.11 What does the client see when you say no?</h3>
+<blockquote>
+<p><strong>In one breath:</strong> The rejection is part of the design, because it decides
+whether rejected traffic goes away or comes straight back with friends.</p>
+</blockquote>
+<div class="code"><pre><code class="language-http">HTTP/1.1 429 Too Many Requests
+Retry-After: 12
+RateLimit-Limit: 100
+RateLimit-Remaining: 0
+RateLimit-Reset: 12
+</code></pre></div>
+<p>Four things in that little block are load-bearing.</p>
+<p><strong>Send <code>429</code>, not <code>503</code>.</strong> <code>503</code> means <em>you</em> are broken, and it tells
+well-behaved clients and load balancers to retry aggressively and possibly mark
+you unhealthy. <code>429</code> means <em>they</em> are over their allowance.</p>
+<p><strong><code>Retry-After</code> must be honest.</strong> If Asha says 12 seconds and is still rejecting
+at 12 seconds, every rejected client retries in lockstep. She has then built a
+synchronised retry storm, with her own header as the synchroniser. Compute it
+from the actual limiter state — when will there genuinely be a token? — and
+expect clients to add jitter.</p>
+<p><strong>Send the headers on success too.</strong> Priya, who can see she has 4 of 100 left,
+can slow herself down. A client that only learns at rejection cannot.</p>
+<p><strong>Return which limit was hit</strong> when several apply. &quot;Rate limited&quot; with no
+indication of <em>which</em> limit is unactionable, and it generates support tickets
+that Asha will answer by reading logs.</p>
+<blockquote>
+<p><strong>✅ CHECKPOINT — end of the INTERMEDIATE model.</strong>
+You can now design the system: state the requirements, size it, place the
+limiter, and choose the key and algorithm. Then the real skill: pick a
+coordination design per key class with the cost of each one in front of you.
+<strong>Next:</strong> what breaks in production, and which guarantees survive each break.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Asha's colleague proposes &quot;sync every node's counts every
+second, it takes the store off the hot path&quot;. In your own words, and without
+using the word <em>staleness</em>, say why that made things seventy-five times worse
+rather than better.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;Talking once per request costs you one message for each request. Shouting
+your tallies across the room every second costs you one message per <em>customer
+name</em>, per clerk, every second — even for the names nobody asked about. There
+are 450,000 names and twenty clerks, and almost all of those names get one or
+two visits a minute. So the shouting is only cheaper for the handful of names
+that are genuinely busy, which is exactly why we do it for those and nothing
+else.&quot;</p>
+</details>
+
+</blockquote>
+<h1 id="readme-engineering-model--stages-11-to-12">ENGINEERING MODEL — stages 11 to 12</h1>
+<h2 id="readme-11-what-are-the-eight-ways-this-breaks">11. What are the eight ways this breaks?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The happy path was the easy half. Here are the eight things
+that actually happen to Asha's limiter, and the one that takes her down is not
+the one anybody expects.</p>
+</blockquote>
+<p>Each failure below is a short story: how it starts, what Asha sees, and what she
+ships to survive it. The whole catalogue is compared in one table at the end of
+the stage.</p>
+<h3 id="readme-f1--what-happens-when-the-counter-store-goes-down">F1 — what happens when the counter store goes down?</h3>
+<p>Kiran goes home sick. In engineering terms: the Redis primary fails, a failover
+takes 8 seconds, or a network rule change makes the store unreachable from one
+availability zone.</p>
+<p><strong>Watch it:</strong> in the visualization, choose <em>v4 central atomic</em>, then press <strong>Kill
+the store</strong> and try each fallback.</p>
+<p>Every enforcement point loses the truth at the same moment. Arjun and Bela and
+eighteen others are all suddenly holding notebooks with no register book behind
+them. There is no correct answer here, only three choices with different
+victims.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Fallback</th>
+  <th>Behaviour</th>
+  <th>Consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Fail open</strong></td>
+  <td>Allow everything</td>
+  <td>Your API stays up and your backend takes 100% unfiltered traffic — including whatever abuse the limiter was suppressing. A Redis blip becomes a database outage</td>
+</tr>
+<tr>
+  <td><strong>Fail closed</strong></td>
+  <td>Reject everything</td>
+  <td>Total API outage caused by a component that is not on the critical path of doing any actual work</td>
+</tr>
+<tr>
+  <td><strong>Degrade to local</strong></td>
+  <td>Each node falls back to <code>limit ÷ N</code> locally</td>
+  <td>Neither correct nor catastrophic — you keep serving, roughly within the intended envelope</td>
+</tr>
+</tbody>
+</table></div>
+<p>Degrade-to-local keeps the ceiling roughly holding: Meera will not get twenty
+plates. It loses exactness, and it loses fairness across nodes, because v2's
+skew problem comes back for the duration and Priya starts seeing rejections she
+has not earned.</p>
+<p>Degrade to local is the standard answer, and Asha chooses the fallback <strong>per
+limit, not per system</strong>. A limit protecting a fragile downstream should fail
+closed <em>for that endpoint only</em>. A limit that exists for billing fairness should
+fail open, because she can reconcile money later, but she cannot un-reject a
+customer's payment. Write the fallback into Omar's rule definition alongside the
+limit, so it is a product decision that somebody reviewed, and not a global
+default nobody remembers choosing.</p>
+<h3 id="readme-f2--why-is-a-slow-store-worse-than-a-dead-one">F2 — why is a slow store worse than a dead one?</h3>
+<p>Kiran does not go home. Kiran gets slow. Somebody runs a <code>KEYS</code> command from a
+debugging session, or a big key expires, or memory pressure triggers eviction.
+The store does not fail. It answers in 400 ms instead of 1 ms.</p>
+<p><strong>🔮 Predict:</strong> <em>Which is worse for Asha's API: the store being down for two
+minutes, or the store answering in 400 ms for two minutes?</em></p>
+<details><summary>Reveal</summary>
+
+<p><strong>Slow is far worse, and it is the single most common way a rate limiter becomes
+the outage it was built to prevent.</strong></p>
+<p>If you said &quot;down is worse, at least slow is still working&quot;, follow the threads.
+Every gateway request now waits 400 ms on the limiter. Request threads pile up.
+The gateway's connection pool exhausts. Requests that would have been <em>allowed</em>
+start failing, not because of the limit, but because the thing checking the
+limit is holding them. Clients time out and retry, doubling load. Asha's service
+is now down, and the component that took it down is the one whose entire job was
+to protect it.</p>
+<blockquote>
+<p><strong>Slow is more dangerous than down.</strong> Down is detected in milliseconds and
+triggers your fallback. Slow keeps the failure invisible while it consumes
+every resource you have.</p>
+</blockquote>
+<p>The bitter part: limit accuracy is perfect throughout. The limiter is enforcing
+beautifully. What it lost was availability, which was the entire point of having
+it.</p>
+</details>
+
+<p>Asha ships all four of these, not one of them.</p>
+<p>An <strong>aggressive timeout on the limiter call</strong> of 5–10 ms, not the library
+default. A timeout is treated exactly like F1's outage, and takes the fallback
+path.</p>
+<p>A <strong>circuit breaker</strong>. After N consecutive timeouts, stop calling the store
+entirely for a few seconds and run degraded. This also stops her adding load to
+a store that is already struggling.</p>
+<p>A <strong>bulkhead</strong>: a bounded, separate connection pool for limiter calls, so
+exhausting it cannot starve everything else.</p>
+<p>An <strong>alert on limiter latency and fallback rate</strong>, not just on store uptime. The
+dashboard question is &quot;what fraction of decisions were made without the store?&quot;
+That number going from 0% to 3% is the earliest signal she gets.</p>
+<h3 id="readme-f3--what-happens-when-one-key-gets-all-the-traffic">F3 — what happens when one key gets all the traffic?</h3>
+<p>Dev runs a flash sale and does 15% of Asha's traffic by himself. Or the global
+limit <code>endpoint:POST /payments</code> is touched by every request in the system, which
+it is, by construction.</p>
+<p><strong>Watch it:</strong> in the visualization, set <em>Traffic shape → one dominant key</em> and
+compare store load per shard.</p>
+<p>One key lives on one shard, which lives on one core. Adding shards does nothing.
+That core saturates, its latency climbs, and F2 follows it down.</p>
+<p>The limit itself stays correct the whole time. What Asha loses is the ability to
+scale by adding machines: for that key she has hit a hard ceiling, and no
+purchase order fixes it.</p>
+<p>The fix is either v5's sub-key split into <code>k</code> buckets of <code>limit ÷ k</code>, which
+reintroduces a little under-admission, or promotion to the local-plus-sync tier.
+Promotion stops the key touching the store per request at all. Detect hot keys
+continuously, as a top-N by request rate sampled at the gateway, and promote
+them <strong>automatically</strong>. A design that requires a human to notice a hot key will
+not survive its first flash sale.</p>
+<h3 id="readme-f4--what-happens-when-the-cluster-resizes">F4 — what happens when the cluster resizes?</h3>
+<p>Autoscaling adds 20 gateway nodes during a traffic spike. Or a deploy rolls, and
+for ninety seconds Asha is briefly running 40.</p>
+<p>Anything with a per-node share is now instantly wrong. v2's <code>limit ÷ N</code> is
+dividing by a stale N, so it is either over-admitting, when nodes think N is
+smaller than it is, or under-admitting. v7's error bound <code>N × r × T</code> grows with
+N precisely when traffic is highest.</p>
+<p>Central atomic, v4 and v5, keeps <em>everything</em> through this, and that is its
+quiet superiority. Kiran does not care how many clerks are in the room. Any
+node-share design instead loses the ceiling itself, at exactly the worst moment.</p>
+<p>So prefer designs that are indifferent to N. Where you cannot, derive N from the
+service registry rather than from configuration, and accept that during a scale
+event the limit is approximate. This is a strong argument for keeping the long
+tail on v4: <strong>your accuracy should not depend on your deployment topology</strong>,
+which was the original complaint back in stage 4.</p>
+<h3 id="readme-f5--what-happens-when-the-clocks-disagree">F5 — what happens when the clocks disagree?</h3>
+<p>NTP drifts. A VM pauses for a live migration. Two nodes handle a leap second
+differently. Arjun's watch and Bela's watch now disagree by 50 ms, or, when
+something is genuinely broken, by minutes.</p>
+<p>What that costs depends entirely on <em>where time is read</em>, which is why this
+failure sorts the designs so cleanly.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Where time is read</th>
+  <th>What clock skew does</th>
+  <th>Which designs</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Inside the store</td>
+  <td>Nothing. All nodes implicitly agree, because only one clock is consulted</td>
+  <td>v4, v5</td>
+</tr>
+<tr>
+  <td>On each node</td>
+  <td>A node running 5 minutes fast believes far more time has elapsed, refills buckets that should be empty, and hands out free allowance</td>
+  <td>v1, v2, v6, v7</td>
+</tr>
+<tr>
+  <td>At a window boundary</td>
+  <td>Nodes disagree about where the boundary is, so the doubling bug fires at several different moments and smears over-admission across a wider interval</td>
+  <td>any fixed-window algorithm</td>
+</tr>
+</tbody>
+</table></div>
+<p>That top row is an underrated advantage of central atomic, and it is rarely
+mentioned in design reviews.</p>
+<p>Each node still orders its own events correctly. What Asha loses is the global
+limit, silently. There is no error, no log line, just more traffic admitted than
+she configured.</p>
+<p>Read time in one place wherever possible, and let that place be the store.
+Monitor clock offset as a first-class metric on every gateway and alert on it.
+Prefer <strong>monotonic</strong> clocks for measuring elapsed time locally, because a wall
+clock can jump backwards, and a negative elapsed time in a refill calculation
+produces spectacular results.</p>
+<h3 id="readme-f6--what-happens-to-quota-a-dead-node-was-holding">F6 — what happens to quota a dead node was holding?</h3>
+<p>Arjun takes 20 tickets from Kiran and is then hit by a bus. In v6 terms: a node
+has leased 20 tokens and is killed.</p>
+<p>Kiran's book already decremented those 20. Nobody will ever spend them. Every
+other node sees less allowance than actually exists. Repeat that across a
+rolling deploy, and a meaningful slice of every customer's limit simply
+evaporates.</p>
+<p>The ceiling survives — this failure never over-admits. The floor does not. Priya
+is rejected below her limit, and the cause is invisible both to her and to Asha.</p>
+<p>Three remedies. Keep lease TTLs short, about 1 second, sized so stranded quota
+stays small relative to the limit. Return the unused lease on graceful shutdown.
+And never use leases for small limits, where <code>N × batch</code> is a large fraction of
+the limit in the first place.</p>
+<h3 id="readme-f7--how-does-an-honest-looking-retry-after-build-a-retry-storm">F7 — how does an honest-looking <code>Retry-After</code> build a retry storm?</h3>
+<p>Asha rejects Priya and tells her when to come back. The retry time is computed
+loosely: rounded to the next window, or a fixed constant, or off by a hair.</p>
+<p>It goes wrong in two different ways.</p>
+<p><strong>Too early, even slightly.</strong> Priya obeys the header exactly, retries at that
+microsecond, and is rejected again, because the token had not <em>quite</em> arrived.
+She retries again. Asha has created a client that is polling her as fast as her
+own header permits. Her logs will show Priya as an abusive client, when Priya is
+in fact the only one doing exactly what she was asked.</p>
+<p>This is not hypothetical. The algorithm appendix's own test
+<code>retry_after_is_honest_for_every_limiter</code> failed until floating-point slack was
+added to the comparison, because <code>elapsed × rate</code> does not land exactly on
+integer token counts in binary floating point. A limiter can be arithmetically
+wrong by 4 × 10⁻¹⁰ tokens and produce a production retry storm.</p>
+<p><strong>Identical for everyone.</strong> Every rejected client is told &quot;retry in 12 seconds&quot;,
+so all of them retry in the same millisecond. Asha's own header is now a
+synchroniser, converting scattered load into a coordinated spike, once every 12
+seconds, forever.</p>
+<p>The limit is still enforced perfectly through all of this. What is lost is the
+<em>purpose</em> of the limit, because total load goes up rather than down: rejected
+traffic returns immediately and in lockstep.</p>
+<p>So compute <code>Retry-After</code> from real limiter state — when will there actually be a
+token? — round <strong>up</strong> and never down, add server-side jitter so clients are
+spread rather than synchronised, and document exponential backoff for SDK
+authors. Rejecting a request is cheap. Rejecting the same request forty times a
+second is not.</p>
+<h3 id="readme-f8--what-does-one-bad-rule-do">F8 — what does one bad rule do?</h3>
+<p>Omar sets a limit to <code>0</code>. Or he ships a rule set with the wrong plan-tier
+mapping. Or the publisher pushes a half-written snapshot.</p>
+<p>The result is instant, total, correctly-implemented rejection of legitimate
+traffic. Every guarantee in stage 12 holds. Nothing is broken. The business is
+down.</p>
+<p>That is what makes this failure so effective: there is no technical guarantee to
+lose, and nothing on the failure dashboards to find.</p>
+<p>Asha's defences are all in Omar's plane. Validate rules on write, so a limit of
+<code>0</code> requires an explicit override flag. Version snapshots and make rollback a
+single fast operation. Roll new rule sets out gradually and watch the rejection
+rate. And run a <strong>shadow mode</strong>: evaluate a new rule, log what it <em>would</em> have
+rejected, and enforce nothing.</p>
+<p>Shadow mode is the highest-value feature in a rate-limiting control plane, and
+it is almost always built after the first incident rather than before it.</p>
+<h3 id="readme-what-do-the-eight-failures-look-like-side-by-side">What do the eight failures look like side by side?</h3>
+<p>Read the last two columns together. The pattern that matters is that no failure
+loses everything, and no failure loses nothing.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Failure</th>
+  <th>What it costs Asha</th>
+  <th>Guarantee kept</th>
+  <th>Guarantee lost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1 store down</td>
+  <td>a forced choice between three victims</td>
+  <td>the ceiling roughly holds, under degrade-to-local</td>
+  <td>exactness, and fairness across nodes</td>
+</tr>
+<tr>
+  <td>F2 store slow</td>
+  <td>the API itself, via thread exhaustion</td>
+  <td>limit accuracy, ironically perfect</td>
+  <td>availability, which was the whole point</td>
+</tr>
+<tr>
+  <td>F3 hot key</td>
+  <td>one saturated core, then F2</td>
+  <td>correctness of the limit itself</td>
+  <td>the ability to scale by adding machines</td>
+</tr>
+<tr>
+  <td>F4 cluster resizes</td>
+  <td>the ceiling, during a scale-up under load</td>
+  <td>everything, if you are on v4 or v5</td>
+  <td>the ceiling, on any node-share design</td>
+</tr>
+<tr>
+  <td>F5 clock skew</td>
+  <td>free allowance nobody asked for</td>
+  <td>relative ordering on any single node</td>
+  <td>the global limit, silently</td>
+</tr>
+<tr>
+  <td>F6 node dies with a lease</td>
+  <td>a slice of every customer's limit</td>
+  <td>the ceiling — this never over-admits</td>
+  <td>the floor, invisibly to everyone</td>
+</tr>
+<tr>
+  <td>F7 dishonest <code>Retry-After</code></td>
+  <td>more total load than you started with</td>
+  <td>the limit is still enforced</td>
+  <td>the <em>purpose</em> of enforcing it</td>
+</tr>
+<tr>
+  <td>F8 bad rule</td>
+  <td>the business, with everything working</td>
+  <td>all of them</td>
+  <td>nothing technical; only the service</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-12-what-can-you-promise-and-what-can-you-not">12. What can you promise, and what can you not?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> With a sharded atomic store you can promise the ceiling
+holds no matter how many machines you run. You cannot promise fairness, global
+exactness, ordering, or protection from everyone behaving well at once.</p>
+</blockquote>
+<h3 id="readme-what-is-guaranteed">What is guaranteed?</h3>
+<p>With sharded central atomic, v4 and v5, Asha can put four things in writing.</p>
+<p><strong>The ceiling holds.</strong> In any window, admitted ≤ limit + burst, regardless of how
+many gateway nodes exist or how Ben distributes traffic across them.</p>
+<p><strong>Atomicity.</strong> No two requests can both consume the same last unit of allowance.
+The decision and the state update are one indivisible step, which is exactly what
+v3 did not have.</p>
+<p><strong>Independence.</strong> Dev's traffic cannot consume Priya's allowance. One key's
+counter is one key's counter.</p>
+<p><strong>Node-count independence.</strong> The enforced limit does not change when Asha scales,
+deploys, or loses a node.</p>
+<h3 id="readme-what-is-explicitly-not-guaranteed">What is explicitly not guaranteed?</h3>
+<p>These are the sentences to say out loud in a design review, before somebody
+assumes the opposite.</p>
+<p><strong>Fairness within a key.</strong> If Dev's allowance is 100/min, the limiter says
+nothing about <em>which</em> 100 requests get through. A tight retry loop will
+systematically beat a polite client to the tokens.</p>
+<p><strong>Global exactness across regions.</strong> Physically impossible on the hot path. See
+10.9.</p>
+<p><strong>Exactness during any degradation.</strong> A store outage, a store timeout, a cluster
+resize or clock skew each move you onto a fallback path that is approximate by
+design.</p>
+<p><strong>Ordering.</strong> A limiter is not a queue. Requests are not served in arrival order,
+and nothing is preserved for later.</p>
+<p><strong>Protection from aggregate load.</strong> Ten thousand customers, each perfectly within
+their individual limits, can still overwhelm Asha. Per-key limits do not sum to a
+system limit. That needs load shedding as a separate mechanism, and it is the
+most common gap in otherwise well-designed systems.</p>
+<h3 id="readme-what-did-you-trade-away-and-for-what">What did you trade away, and for what?</h3>
+<p>Every row here is a deliberate purchase, made in the stage named in the last
+column.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>You gave up</th>
+  <th>To get</th>
+  <th>Where</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Zero added latency</td>
+  <td>Exactness across nodes</td>
+  <td>v4: +1 round trip on every request</td>
+</tr>
+<tr>
+  <td>Exactness</td>
+  <td>Zero latency and low store load</td>
+  <td>v7: bounded over-admission on hot keys</td>
+</tr>
+<tr>
+  <td>Some of the customer's allowance</td>
+  <td>Fewer store calls</td>
+  <td>v6: stranded lease quota</td>
+</tr>
+<tr>
+  <td>Perfect enforcement during failures</td>
+  <td>Staying available at all</td>
+  <td>F1's degrade-to-local</td>
+</tr>
+<tr>
+  <td>A globally exact limit</td>
+  <td>Being able to run in more than one region</td>
+  <td>10.9</td>
+</tr>
+</tbody>
+</table></div>
+<p>The failure mode of an inexperienced design is not choosing wrong. It is not
+noticing that a choice was made.</p>
+<h3 id="readme-where-is-the-safety-versus-liveness-line-here">Where is the safety-versus-liveness line here?</h3>
+<p><strong>Safety</strong> means nothing bad happens: the limit is never exceeded. Central atomic
+gives Asha this unconditionally.</p>
+<p><strong>Liveness</strong> means something good eventually happens: allowed requests actually
+get served. Fail-closed preserves safety and destroys liveness. Fail-open does
+the reverse.</p>
+<p>F1's fallback decision is precisely a choice of which one to sacrifice during a
+partition. That is the same shape as the trade you saw in the
+<a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> lab, applied to your own infrastructure rather
+than to a database. This time you are the database, and Kiran is the replica you
+cannot reach.</p>
+<blockquote>
+<p><strong>✅ CHECKPOINT — end of the ENGINEERING model.</strong>
+You can now defend the design under pressure: name what each failure costs,
+which guarantee it bends, and what you would monitor to see it happening.
+<strong>Next:</strong> how real systems do it, and what this document has left out.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> A reviewer says &quot;just make the limiter fail closed, then it
+can never be wrong.&quot; Answer them in your own words, without using the words
+<em>safety</em> or <em>liveness</em>.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;Failing closed means that when we cannot reach the counter book, we refuse
+everybody. The limit is then never exceeded, which is true and useless: we
+have turned a broken register book into a total outage, and the register book
+was never doing the actual work. What we want instead is for each clerk to
+fall back to a small local share — not exactly right, but still serving. And
+which way we fall is a decision per limit: refuse-everybody is right for the
+limit guarding a fragile downstream, and let-everybody-through is right for
+the one that only decides who gets billed.&quot;</p>
+</details>
+
+</blockquote>
+<h1 id="readme-production-model--stages-13-to-15">PRODUCTION MODEL — stages 13 to 15</h1>
+<h2 id="readme-13-why-is-there-no-code-at-this-altitude">13. Why is there no code at this altitude?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> A simulated cluster would teach you the simulation, not the
+design. The layer underneath it does have code, and it is worth an hour.</p>
+</blockquote>
+<p>At the architecture level this lab has none, deliberately. Twenty simulated
+gateway nodes in Java would be a program about Java.</p>
+<p>What <em>does</em> exist, from an earlier session, is the layer underneath: all six
+counting algorithms implemented side by side, with tests and experiments. It is
+optional, and it is genuinely good for turning 10.6's six stories into something
+you have watched behave. See
+<a href="#readme-appendix-a--the-algorithm-layer-optional">Appendix A</a>.</p>
+<h2 id="readme-14-what-do-the-algorithms-do-when-you-actually-run-them">14. What do the algorithms do when you actually run them?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three questions about counting, each with a number that
+surprises people, and each worth guessing before you look.</p>
+</blockquote>
+<p>These run against the algorithm appendix, so they answer <em>algorithm</em> questions
+rather than coordination questions. Every block of output below is real, copied
+from an actual run rather than described.</p>
+<div class="code"><pre><code class="language-bash">cd 60-distributed-rate-limiting
+java src/Experiments.java     # the four experiments
+java src/LimiterTest.java     # 12 tests, all passing
+</code></pre></div>
+<p><strong>🔮 Predict (E1):</strong> <em>Limit is 10 per second. What is the most a client can
+actually get through in some one-second stretch, under fixed window? Under a
+token bucket with burst 10?</em></p>
+<details><summary>Reveal — what the run printed</summary>
+
+<div class="code"><pre><code>algorithm             greedy client boundary-timed     WORST CASE   verdict
+                      (every 10 ms) (saves for flip)  (max of both)
+----------------------------------------------------------------------------
+fixed-window                     10             20             20   2.0x over
+sliding-log                      10             10             10   holds the limit
+sliding-counter                  10             10             10   holds the limit
+token-bucket b=10                19             10             19   1.9x over
+token-bucket b=1                 10              1             10   holds the limit
+gcra b=10                        19             10             19   1.9x over
+</code></pre></div>
+<p>Two things worth carrying into a design review.</p>
+<p>Fixed window is only beaten by a client that <em>knows</em> where the boundary is, so
+the middle column is the attacker's column and the real one. Meera has to learn
+the clock.</p>
+<p>And the token bucket goes over too, at 1.9×, which is not a bug. <code>burst</code> is
+permission to exceed the average rate, and <code>burst = limit</code> is permission to
+double it. If you predicted &quot;the token bucket holds at 10&quot;, that is the
+assumption to correct. Asha's &quot;100 per minute&quot; limit, with a burst of 100, means
+a client may legitimately send 199 in some minute.</p>
+</details>
+
+<p><strong>🔮 Predict (E2):</strong> <em>Which algorithm's memory depends on traffic rather than on
+the number of keys, and how bad does that get?</em></p>
+<details><summary>Reveal — at 1M keys</summary>
+
+<div class="code"><pre><code>sliding-log      per-key state grows with requests   →  74.5 GB
+sliding-counter  3 numbers                           → 228.9 MB
+token-bucket     2 numbers                           → 152.6 MB
+gcra             1 number                            →  76.3 MB
+</code></pre></div>
+<p>The sliding log is the only exact algorithm here and the only one that stores a
+timestamp per request. That is the trade in one line, and it is why exactness is
+bought at the algorithm layer only for small key counts.</p>
+<p>If you expected the differences to be small, look at the ratio: the exact
+algorithm costs about a thousand times the memory of the cheapest one that is
+nearly as good.</p>
+</details>
+
+<p><strong>🔮 Predict (E3):</strong> <em>A 200-request thundering herd hits a 50/s limit. Compare a
+policer (token bucket) with a shaper (leaky-bucket queue) — which one is
+&quot;better&quot;?</em></p>
+<details><summary>Reveal — what the run printed</summary>
+
+<div class="code"><pre><code>token bucket (POLICER, burst 50):
+   50 admitted in the same instant, 150 rejected outright
+   → backend sees a 50× spike; 150 users see an error
+
+leaky bucket (SHAPER, queue 200):
+   200 accepted, 0 dropped; the last one is forwarded at t = 3,980 ms
+   → backend sees a perfectly flat 50/s; 0 users see an error,
+     but the unluckiest user waits 4 seconds
+</code></pre></div>
+<p>Neither is better, and if you picked one you probably picked the shaper, because
+zero errors reads as zero harm. A queue is unbounded latency wearing a disguise.
+The unluckiest user waited four seconds for a payment.</p>
+<p>This is exactly why 10.6 says police the public edge and shape your outbound
+calls to partners.</p>
+</details>
+
+<h2 id="readme-15-what-does-a-real-deployment-look-like">15. What does a real deployment look like?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every box in this lab has a product name behind it, four
+dashboards tell Asha what is happening, and six dials let her move between the
+designs without redeploying.</p>
+</blockquote>
+<h3 id="readme-what-are-the-real-products-behind-each-box">What are the real products behind each box?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>This design</th>
+  <th>Real implementation</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Enforcement point</td>
+  <td>&quot;gateway node&quot;</td>
+  <td>Envoy + <code>ratelimit</code> filter, Nginx <code>limit_req</code>, Kong, AWS API Gateway usage plans, Cloudflare Rate Limiting Rules</td>
+</tr>
+<tr>
+  <td>Decision service</td>
+  <td>&quot;the store&quot;</td>
+  <td>Envoy's <a href="https://github.com/envoyproxy/ratelimit" target="_blank" rel="noopener">RLS</a> gRPC service over Redis; or Redis directly via Lua / <code>CL.THROTTLE</code> (redis-cell, which is GCRA)</td>
+</tr>
+<tr>
+  <td>Local + sync tier</td>
+  <td>v7</td>
+  <td>Google's Doorman (per-client capacity leases), Cloudflare's counter propagation between PoPs, Stripe's tiered limiters</td>
+</tr>
+<tr>
+  <td>Control plane</td>
+  <td>&quot;rules cache&quot;</td>
+  <td>Envoy xDS pushing config, or a versioned snapshot in S3 polled by every node</td>
+</tr>
+<tr>
+  <td>Edge tier</td>
+  <td>&quot;crude volumetric&quot;</td>
+  <td>Cloudflare / Akamai / AWS Shield, absorbing volumetric floods before origin</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-did-this-document-deliberately-leave-out">What did this document deliberately leave out?</h3>
+<p>Seven pieces of real work that a production system needs and this lesson skipped.
+Each one names what handles it instead.</p>
+<p><strong>Distributed quota accounting for billing.</strong> Rate limits are approximate;
+invoices are not. Real systems keep a <em>separate</em>, durable, exact usage ledger fed
+asynchronously, never the limiter's counters. See
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> and
+<a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>.</p>
+<p><strong>Authentication and identity resolution.</strong> We assumed the gateway already knows
+the caller. Resolving an API key to a merchant and a plan is itself a cached
+lookup with its own failure modes.</p>
+<p><strong>Warm-up and cold start.</strong> A fresh gateway node with empty local state behaves
+differently for its first few seconds, which is significant during a scale-up.</p>
+<p><strong>Adaptive and concurrency-based limits.</strong> A fixed rate limit is a guess about
+capacity. Systems like Netflix's <code>concurrency-limits</code> derive the limit from
+observed latency, which is a TCP-congestion-control-shaped idea, instead of from
+a config file.</p>
+<p><strong>Priority and graceful degradation.</strong> When over the limit, reject the health
+checks and analytics calls before the payments.</p>
+<p><strong>Security of the limiter itself.</strong> If a limit is keyed on a header the client
+controls, the limit is optional. Key only on values you derived server-side.</p>
+<p><strong>Cost accounting for the store.</strong> 120k ops/s of managed Redis is a real line
+item, so the design choice in 10.7 is partly a budget decision.</p>
+<h3 id="readme-what-does-an-on-call-engineer-actually-watch">What does an on-call engineer actually watch?</h3>
+<p>Four dashboards, in the order Asha would look at them during an incident.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>Dashboard</th>
+  <th>What a change in it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>Rejection rate by limit and by key class</td>
+  <td>A step change is either an attack or a bad rule (F8). The two look identical for the first minute; the question that separates them is whether the change lines up with a config deployment</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Limiter decision latency, p50/p99/p999</td>
+  <td>The earliest possible signal of F2, and it moves before anything else does</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>Fallback rate — decisions made without the store</td>
+  <td>Should be 0. Anything above 0 means you are running approximate and do not know it</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>Top-N keys by request rate</td>
+  <td>Your hot key list (F3), and your best early warning of an emerging abuse pattern</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-dials-can-you-turn-and-what-does-each-cost">Which dials can you turn, and what does each cost?</h3>
+<p>Every row is a way to move along the same axis: over-admission on one side,
+under-admission and cost on the other.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Dial</th>
+  <th>Turn it up</th>
+  <th>Turn it down</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Sync period <code>T</code> (v7)</td>
+  <td>Less store load, more over-admission</td>
+  <td>Tighter accuracy, more store load</td>
+</tr>
+<tr>
+  <td>Batch size (v6)</td>
+  <td>Fewer round trips, more stranded quota</td>
+  <td>Tighter accuracy, more round trips</td>
+</tr>
+<tr>
+  <td>Burst</td>
+  <td>Bursty clients work, backend sees spikes</td>
+  <td>Smooth backend, legitimate spikes rejected</td>
+</tr>
+<tr>
+  <td>Sub-key count <code>k</code> (v5)</td>
+  <td>Hot key spread thinner, more under-admission</td>
+  <td>Less under-admission, hotter shard</td>
+</tr>
+<tr>
+  <td>Hot/cold threshold</td>
+  <td>More keys exact, higher store load</td>
+  <td>Lower store load, more keys approximate</td>
+</tr>
+<tr>
+  <td>Store call timeout</td>
+  <td>Fewer false fallbacks, more F2 exposure</td>
+  <td>Better outage isolation, more spurious degradation</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>✅ CHECKPOINT — end of the PRODUCTION model.</strong>
+You can now name the real product behind every box in the architecture. You
+can say what goes on the on-call dashboard, and why in that order. And you can
+turn any of the six dials while saying out loud who pays for it.
+<strong>Next:</strong> the exercises, the map of what this connects to, and the words.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Asha's dashboard shows the fallback rate moving from 0% to
+3%, and nothing else has changed. Explain to a new on-call engineer what that
+number is and why it is the one to act on.</p>
+<details><summary>A good answer sounds like</summary>
+
+<p>&quot;Three percent of our limit decisions were made without asking the shared
+counter — the clerk guessed instead of walking to the book. Nothing is down and
+no alarm has fired, because we deliberately keep serving when the book is
+unreachable. But it means the store is either failing or getting slow for some
+of our calls, and slow is the failure that ends with our own API falling over.
+So we look at limiter latency next, and we treat 3% as the early warning it
+is, not as a rounding error.&quot;</p>
+</details>
+
+</blockquote>
+<h2 id="readme-16-where-do-you-practise-this">16. Where do you practise this?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight rungs, from &quot;say it in your own words&quot; to designing
+the whole thing across three regions.</p>
+</blockquote>
+<p>See <strong><a href="notes.html#exercises">EXERCISES.md</a></strong> — eight rungs from &quot;explain it in your own
+words&quot; to a full multi-region design prompt. Answers are in
+<strong><a href="notes.html#solutions">SOLUTIONS.md</a></strong>; attempt first.</p>
+<p>Rungs 1 to 4 need only this document and the visualization. Rungs 5 to 8 are
+design work, the kind of thing Asha would actually write in a doc or say at a
+whiteboard.</p>
+<h2 id="readme-17-what-does-this-connect-to-and-what-should-you-learn-next">17. What does this connect to, and what should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> This lab is four labs you have already done, pointed at
+your own infrastructure, and it opens four more.</p>
+</blockquote>
+<p>Here is the knowledge map: what fed into this lab on the left, and the next
+steps it unlocks on the right.</p>
+<pre class="mermaid">flowchart TB
+    subgraph PRE[&quot;you already know this&quot;]
+        CAP[&quot;cap-theorem&lt;br/&gt;&lt;i&gt;the fallback choice in F1&lt;/i&gt;&quot;]
+        CACHE[&quot;caching&lt;br/&gt;&lt;i&gt;local state = a cache of the truth&lt;/i&gt;&quot;]
+        SAP[&quot;software-architecture-patterns&lt;br/&gt;&lt;i&gt;timeout · breaker · bulkhead · shedding&lt;/i&gt;&quot;]
+        COMM[&quot;communication-protocols&lt;br/&gt;&lt;i&gt;429 · Retry-After · retry storms&lt;/i&gt;&quot;]
+    end
+    subgraph THIS[&quot;this lab&quot;]
+        RL[&quot;&lt;b&gt;distributed rate limiting&lt;/b&gt;&lt;br/&gt;many enforcement points,&lt;br/&gt;one promise, a staleness dial&quot;]
+    end
+    subgraph NEXT[&quot;what it opens up&quot;]
+        CH[&quot;consistent-hashing&lt;br/&gt;&lt;i&gt;how owner-routing actually works&lt;/i&gt;&quot;]
+        LS[&quot;load-shedding&lt;br/&gt;&lt;i&gt;the thing rate limiting can&#x27;t do&lt;/i&gt;&quot;]
+        LB[&quot;load-balancing&quot;]
+        REDIS[&quot;redis&quot;]
+    end
+    CAP --&gt; RL
+    CACHE --&gt; RL
+    SAP --&gt; RL
+    COMM --&gt; RL
+    RL --&gt; CH
+    RL --&gt; LS
+    RL --&gt; LB
+    RL --&gt; REDIS
+</pre>
+<h3 id="readme-which-labs-does-this-build-on">Which labs does this build on?</h3>
+<p><strong><a href="../24-cap-theorem/notes.html#readme">cap-theorem</a></strong> — F1's fail-open versus fail-closed
+decision is the CAP trade-off applied to your own infrastructure. During a
+partition between gateway and store you choose consistency (fail closed, refuse
+to answer) or availability (fail open, answer possibly wrongly). Same choice, and
+this time you are the database.</p>
+<p><strong><a href="../11-caching/notes.html#readme">caching</a></strong> — every local design here is a cache of the counter
+store, and stage 6's staleness budget is that lab's consistency window with a
+different name. That lab's stampede, where 200 readers hit one expired key and
+produced 200 database calls, is F3's hot key in a different costume.</p>
+<p><strong><a href="../06-software-architecture-patterns/notes.html#readme">software-architecture-patterns</a></strong> —
+that lab listed rate limiting as one resilience pattern in a family. This lab is
+that one bullet point expanded. It needed four of its siblings to survive F2:
+timeout, circuit breaker, bulkhead and load shedding.</p>
+<p><strong><a href="../02-communication-protocols/notes.html#readme">communication-protocols</a></strong> — the timeout,
+retry and idempotency atom from that lab is what F7 is about. Asha's
+<code>Retry-After</code> is an input to somebody else's retry policy.</p>
+<p><strong><a href="../12-http-caching/notes.html#readme">http-caching</a></strong> — the same insight as 10.10's rules
+plane: a cached copy that keeps serving when its source is unreachable is a
+feature, not a bug.</p>
+<h3 id="readme-what-is-this-commonly-confused-with">What is this commonly confused with?</h3>
+<p>Five neighbours, and the one sentence that separates each from rate limiting.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Neighbour</th>
+  <th>The sentence that separates it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Load shedding</td>
+  <td>Rate limiting rejects based on <em>who you are</em> and is configured in advance; load shedding rejects based on <em>how the server feels right now</em>. You need both; neither substitutes for the other</td>
+</tr>
+<tr>
+  <td>Throttling</td>
+  <td>Usually means <em>delaying</em> rather than <em>rejecting</em>; that is a shaper, and it converts a rejection into latency plus memory</td>
+</tr>
+<tr>
+  <td>Backpressure</td>
+  <td>A signal flowing <em>backwards</em> from an overloaded consumer to a producer to slow it down; rate limiting is a <em>unilateral</em> cap applied at the front door with no negotiation</td>
+</tr>
+<tr>
+  <td>A circuit breaker</td>
+  <td>Protects <em>you</em> from a failing <em>dependency</em>; a rate limiter protects your dependency from <em>callers</em>. Opposite directions</td>
+</tr>
+<tr>
+  <td>Admission control / quotas</td>
+  <td>A quota is a cap on a <em>total</em> (100 GB this month); a rate limit is a cap on a <em>rate</em> (100 per minute, forever)</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-should-you-learn-next">What should you learn next?</h3>
+<div class="code"><pre><code>/learn consistent-hashing     ← how owner-routing and shard assignment really work;
+                                also the missing piece under caching and sharding
+/learn load-shedding          ← the guarantee stage 12 says rate limiting cannot give you
+/learn redis                  ← the store this whole design assumes; Lua atomicity,
+                                single-threaded model, cluster mode, eviction
+/learn load-balancing         ← the box in every diagram here that we treated as a given
+/learn idempotency-keys       ← what makes the retries this system provokes safe
+</code></pre></div>
+<h2 id="readme-18-what-does-each-word-mean">18. What does each word mean?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every word below is something that already happened to
+Arjun, Meera, Priya, Dev or Kiran. The last column says where.</p>
+</blockquote>
+<p>The glossary is grouped by theme rather than by first appearance, so that words
+which are easy to confuse sit next to each other.</p>
+<h3 id="readme-what-are-the-words-for-the-promise-itself">What are the words for the promise itself?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Rate limit</td>
+  <td>A cap on accepted operations per identity per unit of time</td>
+  <td>stage 2, Arjun's one plate an hour</td>
+</tr>
+<tr>
+  <td>Quota</td>
+  <td>A cap on a <em>total</em> rather than a rate (100 GB this month)</td>
+  <td>stage 7</td>
+</tr>
+<tr>
+  <td>Throttling</td>
+  <td>Delaying excess requests rather than rejecting them</td>
+  <td>stage 7, and 10.6's shaper</td>
+</tr>
+<tr>
+  <td>Load shedding</td>
+  <td>Rejecting traffic because the server is struggling, regardless of caller</td>
+  <td>stage 7, and stage 12's gap</td>
+</tr>
+<tr>
+  <td>Window</td>
+  <td>The time span a limit is counted over</td>
+  <td>10.6, fixed versus sliding</td>
+</tr>
+<tr>
+  <td>Burst</td>
+  <td>Saved-up allowance that may be spent at once, above the average rate</td>
+  <td>10.6, and E1's 1.9×</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-are-the-words-for-the-machinery">What are the words for the machinery?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Enforcement point</td>
+  <td>A machine that actually evaluates the limit and can say no</td>
+  <td>stage 2, twenty clerks</td>
+</tr>
+<tr>
+  <td>Counter store</td>
+  <td>The shared datastore holding per-key limiter state; the source of truth</td>
+  <td>stage 8, Kiran's register book</td>
+</tr>
+<tr>
+  <td>Key / limit dimension</td>
+  <td>The string identifying one independent bucket of allowance</td>
+  <td>10.5</td>
+</tr>
+<tr>
+  <td>Data / coordination / control plane</td>
+  <td>Request path · gateway↔store traffic · rule distribution</td>
+  <td>stage 8</td>
+</tr>
+<tr>
+  <td>Cost weighting</td>
+  <td>Charging expensive endpoints more than one unit of quota</td>
+  <td>10.5's third rule</td>
+</tr>
+<tr>
+  <td>Staleness budget</td>
+  <td>How out-of-date an enforcement point's view of the truth may be</td>
+  <td>stage 6, priced in 10.7</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-are-the-words-for-the-ways-of-counting">What are the words for the ways of counting?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Fixed window</td>
+  <td>Count per calendar interval; allows 2× across a boundary</td>
+  <td>10.6, and E1's 2.0×</td>
+</tr>
+<tr>
+  <td>Sliding log</td>
+  <td>One timestamp per request; exact, and memory grows with traffic</td>
+  <td>10.6, and E2's 74.5 GB</td>
+</tr>
+<tr>
+  <td>Sliding counter</td>
+  <td>Weighted blend of this and the previous window; ~0.003% error</td>
+  <td>10.6</td>
+</tr>
+<tr>
+  <td>Token bucket</td>
+  <td>Tokens drip in at a rate, requests spend them; burst is explicit</td>
+  <td>10.6, Asha's choice</td>
+</tr>
+<tr>
+  <td>Leaky bucket</td>
+  <td>The same machine inverted; as a queue it is a shaper</td>
+  <td>10.6, and E3's 4-second wait</td>
+</tr>
+<tr>
+  <td>GCRA</td>
+  <td>Token-bucket behaviour stored as a single &quot;next allowed time&quot; number</td>
+  <td>10.6, Redis <code>CL.THROTTLE</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-are-the-words-for-being-wrong-in-each-direction">What are the words for being wrong in each direction?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Policer</td>
+  <td>Answers yes/no immediately and rejects the excess</td>
+  <td>10.6, the public edge</td>
+</tr>
+<tr>
+  <td>Shaper</td>
+  <td>Accepts and releases later at a steady pace; trades rejection for latency</td>
+  <td>10.6, outbound to partners</td>
+</tr>
+<tr>
+  <td>Over-admission</td>
+  <td>Letting more through than the limit promised</td>
+  <td>stage 2, Meera's twenty plates</td>
+</tr>
+<tr>
+  <td>Under-admission</td>
+  <td>Rejecting a request while global allowance was actually available</td>
+  <td>stage 4's reveal, Priya at instance 7</td>
+</tr>
+<tr>
+  <td>Hot key</td>
+  <td>One key whose traffic exceeds what a single store partition can serve</td>
+  <td>F3, Dev's flash sale</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-are-the-words-for-coordination">What are the words for coordination?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Read-modify-write</td>
+  <td>Fetch, decide locally, write back — two trips, with a race in the gap</td>
+  <td>v3</td>
+</tr>
+<tr>
+  <td>Lost update</td>
+  <td>Two nodes read the same value and both write, so one update vanishes</td>
+  <td>v3's sequence diagram</td>
+</tr>
+<tr>
+  <td>Atomic operation</td>
+  <td>Read-decide-write executed at the store with no observable middle</td>
+  <td>v4</td>
+</tr>
+<tr>
+  <td>Lua script / <code>CL.THROTTLE</code></td>
+  <td>How Redis provides that atomicity in practice</td>
+  <td>v4, and 10.8</td>
+</tr>
+<tr>
+  <td>Sharding</td>
+  <td>Spreading <em>keys</em> across store partitions; no help for a single hot key</td>
+  <td>v5</td>
+</tr>
+<tr>
+  <td>Sub-key splitting</td>
+  <td>Splitting one hot key into <code>k</code> buckets of <code>limit ÷ k</code></td>
+  <td>v5, and F3's fix</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-are-the-words-for-avoiding-coordination">What are the words for avoiding coordination?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Lease / batch</td>
+  <td>Taking a block of allowance to spend locally without further calls</td>
+  <td>v6</td>
+</tr>
+<tr>
+  <td>Stranded quota</td>
+  <td>Leased allowance a node never spent and nobody else could use</td>
+  <td>v6's reveal, and F6</td>
+</tr>
+<tr>
+  <td>Periodic sync</td>
+  <td>Nodes count locally and exchange totals every <code>T</code>; zero hot-path latency</td>
+  <td>v7</td>
+</tr>
+<tr>
+  <td>Owner routing</td>
+  <td>Hashing the limit key to one node so its state is exact and local</td>
+  <td>10.7's sidestep</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-are-the-words-for-surviving-failure">What are the words for surviving failure?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>One line</th>
+  <th>Where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Fail-open / fail-closed</td>
+  <td>Allow-all / reject-all when the counter store is unreachable</td>
+  <td>F1</td>
+</tr>
+<tr>
+  <td>Circuit breaker</td>
+  <td>Stop calling a failing dependency for a while</td>
+  <td>F2</td>
+</tr>
+<tr>
+  <td>Bulkhead</td>
+  <td>An isolated resource pool so one dependency cannot starve the rest</td>
+  <td>F2</td>
+</tr>
+<tr>
+  <td>Shadow mode</td>
+  <td>Evaluate a new rule and log what it <em>would</em> reject, without enforcing</td>
+  <td>F8, Omar's plane</td>
+</tr>
+<tr>
+  <td><code>429</code> / <code>Retry-After</code></td>
+  <td>The rejection status code, and the honest &quot;come back at&quot; hint</td>
+  <td>10.11</td>
+</tr>
+<tr>
+  <td>Retry storm</td>
+  <td>Synchronised client retries turning a rejection into a bigger spike</td>
+  <td>F7</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-19-about-this-lab--where-did-everything-in-it-come-from">19. About this lab — where did everything in it come from?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One architecture document, one simulator, one exercise
+ladder, and one runnable appendix that produced the measured numbers in stage
+14.</p>
+</blockquote>
+<h3 id="readme-what-is-this-lab-and-what-is-it-not">What is this lab, and what is it not?</h3>
+<p><strong>What this lab is.</strong> An architecture lesson. We design the <em>system</em>: where the
+limiter sits, what talks to what, where the state lives, how it survives
+failure, and what it costs. We deliberately stay above the code.</p>
+<p><strong>What this lab is not.</strong> An implementation. The counting algorithms that sit
+underneath the architecture have their own runnable appendix in <code>src/</code>, below.
+You do not need it to follow this document.</p>
+<p><strong>Depth layers.</strong> BEGINNER (stages 1–9) → INTERMEDIATE (stage 10) → ENGINEERING
+(stages 11–12) → PRODUCTION (stages 13–15). There is a checkpoint at each
+transition telling you what you can do at that point, and a Say-it-back box that
+asks you to prove it.</p>
+<h3 id="readme-what-is-this-lab-made-of">What is this lab made of?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>this document — 19 stages, four depth layers, the terminology stage at 7 and the glossary at 18</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td>the architecture simulator: seven coordination designs, adjustable node count and router policy, and a kill-the-store button; also published as an artifact, link in the chat message</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code></td>
+  <td>eight rungs, from explaining it in plain words to a three-region design</td>
+</tr>
+<tr>
+  <td><code>SOLUTIONS.md</code></td>
+  <td>worked answers, discussion-style for the design rungs</td>
+</tr>
+<tr>
+  <td><code>src/</code></td>
+  <td>the algorithm appendix — six counting algorithms, one interface, no build tool</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-how-were-the-numbers-produced">How were the numbers produced?</h3>
+<p>Every architecture figure in stages 10 to 12 is arithmetic done out loud from the
+capacity assumptions in 10.2, and the working is shown where the number appears.
+They are estimates on stated assumptions, not measurements.</p>
+<p>The figures in stage 14 are different. They are real output, copied from a run of
+the algorithm appendix on this machine:</p>
+<div class="code"><pre><code class="language-bash">java src/LimiterTest.java     # 12 scenario-named tests  → 12 passed, 0 failed
+java src/Experiments.java     # the four measured experiments quoted in stage 14
+</code></pre></div>
+<p>Both commands were run for this document and their real output is quoted in
+stage 14. Verified in the same pass: the <code>Algorithms.java</code> comments referring to
+&quot;README stage 11, failure F7&quot; and &quot;stage 10.6&quot; point at
+<a href="#readme-f7--how-does-an-honest-looking-retry-after-build-a-retry-storm">F7</a> and
+<a href="#readme-105-what-is-the-key-the-most-underrated-decision">10.5/10.6</a> in this document.</p>
+<p>The store latency figures are the usual published ranges for cloud networks
+rather than measurements taken here. That covers roughly 1 ms in-AZ, 10 ms
+cross-AZ, 80 ms cross-region, and 10.2's p99 table. Cloudflare's ~0.003% sliding
+counter error is their published figure.</p>
+<h3 id="readme-where-does-this-sit-among-your-other-labs">Where does this sit among your other labs?</h3>
+<p>This is the HLD layer of the subject. The correctness argument in stage 12 is
+deliberately about promises rather than proofs, because the interesting
+correctness question here is a product question: which limits deserve exactness.</p>
+<p>Your <code>load-shedding</code> lab picks up the one guarantee stage 12 says this design
+cannot give you, and it separates rate limit, quota, throttling, load shedding
+and backpressure at more length than stage 7 does. Your <code>queueing-theory</code> lab
+explains why the boundary this limiter defends is a cliff and not a slope.</p>
+<h3 id="readme-appendix-a--the-algorithm-layer-optional">Appendix A — the algorithm layer (optional)</h3>
+<p>Built in an earlier session; kept because it makes 10.6's six stories concrete.
+It is the <strong>low-level</strong> counterpart to this document: six algorithms, one
+interface, no dependencies, no build tool.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it holds</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>src/Limiter.java</code></td>
+  <td>The shared interface. Time and key are <em>arguments</em>, which is what makes every experiment deterministic and instant</td>
+</tr>
+<tr>
+  <td><code>src/Algorithms.java</code></td>
+  <td>All six algorithms side by side, so the state-size trade is visible in one screen</td>
+</tr>
+<tr>
+  <td><code>src/LimiterTest.java</code></td>
+  <td>Tests named after claims — two of them assert the fixed-window bug <em>on purpose</em></td>
+</tr>
+<tr>
+  <td><code>src/Experiments.java</code></td>
+  <td>The measured numbers quoted in stage 14</td>
+</tr>
+</tbody>
+</table></div>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--distributed-rate-limiter-hld">Exercises — Distributed Rate Limiter (HLD)</h1>
+<p>Eight rungs, easiest first. Rungs 1–4 need only <code>README.md</code> and
+<code>visualization.html</code>. Rungs 5–8 are design work — the kind of thing you would
+actually write in a doc or say at a whiteboard.</p>
+<p>Answers in <a href="notes.html#solutions">SOLUTIONS.md</a>. Attempt first; the rungs above 5 have
+no single right answer, so the &quot;solution&quot; there is a worked discussion you can
+argue with.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> In your own words, with no jargon at all: why does a rate limiter that
+works perfectly on one server stop working when you run twenty of them?</p>
+<p><strong>1.2</strong> Name the two opposite ways a distributed rate limiter can be wrong.
+For each: who is harmed, and which one is more likely to reach you as a support
+ticket rather than as a graph?</p>
+<p><strong>1.3</strong> Complete this sentence in one line: <em>&quot;Distributed rate limiting is
+fundamentally a decision about ______.&quot;</em></p>
+<p><strong>1.4</strong> A colleague says &quot;we'll just put the counter in Redis, then it's
+shared, so it's correct.&quot; What is wrong with that sentence?</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p>Open <code>visualization.html</code>.</p>
+<p><strong>2.1</strong> Select <strong>v4 (atomic at the store)</strong>. Point at the three planes from the
+README's engineering model on the screen: which lines are the data plane, which
+are the coordination plane, and which plane is not drawn at all — and why not?</p>
+<p><strong>2.2</strong> Switch to <strong>v1</strong> and then <strong>v7</strong>. In each, look at the caption under
+each gateway's bar. What is each gateway actually storing, and why does v7's
+number keep resetting?</p>
+<p><strong>2.3</strong> With v5 selected, the store shows several small bars. What does one bar
+represent, and what is each one's individual limit when the sub-key count is 4
+and the promise is 60/s?</p>
+<p><strong>2.4</strong> Set the design to <strong>v6</strong> and read the store-ops number. Compare it with
+v4's. Now explain where the requests that are <em>not</em> producing store operations
+are being decided.</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Commit to an answer before you touch the page.</p>
+<p><strong>3.1</strong> Design <strong>v1</strong>, 1 gateway, round robin. You slide the node count from 1
+to 8. Predict the admitted-per-second number at 8 nodes, and predict what
+happens to store operations. Then run it.</p>
+<p><strong>3.2</strong> Design <strong>v2</strong>, 4 gateways, round robin — it is holding at 60/s
+exactly. You change the router to <strong>sticky</strong>. Predict the new admitted number
+before you switch.</p>
+<p><strong>3.3</strong> Design <strong>v7</strong> with a 1000 ms sync interval. Predict what happens to
+(a) admitted/s and (b) store ops/s when you drag the interval down to 100 ms.
+Predict the <em>direction and rough magnitude</em> of both.</p>
+<p><strong>3.4</strong> Design <strong>v3</strong>, 180 rps, store hop 1 ms. It looks nearly correct. Now
+predict what happens when you drag the store hop to 12 ms — and explain the
+mechanism before you look.</p>
+<p><strong>3.5</strong> Design <strong>v4</strong>. Press <strong>Kill the store</strong> with the fallback set to
+<em>degrade</em>. Predict admitted/s. Then predict it again for <em>fail open</em> and <em>fail
+closed</em>.</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Find a combination of design + router policy that gives <strong>exact
+enforcement with zero coordination traffic and zero added latency</strong>. It exists.
+Having found it, name the three costs the README lists for it, and say why it
+cannot be the only mechanism for our payments API.</p>
+<p><strong>4.2</strong> Set v7 and find the largest sync interval that still holds the promise
+within about 15% at 180 rps and 4 gateways. Now double the traffic to 360 rps
+without changing the interval. What happens, and what does that tell you about
+sizing a sync interval from a single load test?</p>
+<p><strong>4.3</strong> Set v6 and raise the lease batch from 2 to 30 while watching store ops
+and admitted/s. Describe the shape of the trade you just traced out. At what
+point does raising it stop helping?</p>
+<p><strong>4.4</strong> Break v5 deliberately: set the sub-key count to 8 with the promise at
+60/s and traffic at 80 rps. Why does under-admission appear at <em>low</em> traffic
+and disappear at high traffic? What does that imply about when it is safe to
+split a key?</p>
+<hr />
+<h2 id="exercises-rung-5--specify">Rung 5 — Specify</h2>
+<p>Produce concrete design artifacts. Write them out; do not just think them.</p>
+<p><strong>5.1</strong> Write the contract for the single atomic store operation in v4. Specify
+exactly: its inputs, its outputs, what state it reads and writes, and the one
+property it must guarantee. Two of the outputs exist only so the gateway can
+build an honest HTTP response — name them and say why they cannot be computed
+by the gateway itself.</p>
+<p><strong>5.2</strong> Design the rule schema for the control plane (10.10). It must express:
+who the limit applies to, the limit and window, the burst, cost weights per
+endpoint group, the fallback behaviour when the store is unreachable, and
+whether the rule is enforcing or in shadow mode. Write it as YAML or JSON with
+one realistic filled-in example.</p>
+<p><strong>5.3</strong> Specify the hot/cold tier promotion policy from stage 10.7: what
+signal is measured, at what grain, over what period, what the promotion and
+demotion thresholds are, and what happens to in-flight state at the moment a
+key is promoted. Name one way a naive version of this policy oscillates.</p>
+<hr />
+<h2 id="exercises-rung-6--debug-a-design">Rung 6 — Debug a design</h2>
+<p>Each of these is a description of a real production symptom. Find the design
+flaw, name which README failure it corresponds to, and give the fix.</p>
+<p><strong>6.1</strong> &quot;Our limiter is exact in staging and lets through roughly 3× the limit
+in production. The code is identical. Redis is healthy in both.&quot;</p>
+<p><strong>6.2</strong> &quot;Rate limiting works fine. But every Tuesday at 14:00 our API latency
+p99 goes from 90 ms to 2.5 seconds for about four minutes, and then recovers.
+Redis reports no errors and no downtime the whole time.&quot;</p>
+<p><strong>6.3</strong> &quot;We limit login attempts to 5 per minute per IP address. An attacker
+tried 400,000 passwords against one account last night and we never rejected a
+single request.&quot;</p>
+<p><strong>6.4</strong> &quot;We told customers 'retry after 30 seconds' when rate limited. Our
+total inbound request volume went <em>up</em> 40% after we shipped the limiter.&quot;</p>
+<p><strong>6.5</strong> &quot;We deployed a new rule that lowered a plan tier's limit. Half our
+gateway nodes enforced the new limit and half enforced the old one for about
+ninety minutes. Customers reported that whether a request succeeded seemed
+random.&quot;</p>
+<hr />
+<h2 id="exercises-rung-7--handle-a-failure-the-design-does-not-survive">Rung 7 — Handle a failure the design does not survive</h2>
+<p><strong>7.1</strong> Our design promotes hot keys to the local-plus-sync tier (v7). A
+gateway node in that tier is killed mid-second, having spent 40 requests of
+allowance it never published to the store. Describe exactly what the other
+gateways now believe, whether the resulting error is over- or under-admission,
+and propose two mechanisms that bound the damage. State the cost of each.</p>
+<p><strong>7.2</strong> Extend the design so that a customer whose traffic is rejected can tell
+<em>which</em> of the three simultaneous limits (merchant, endpoint, IP) they hit —
+without leaking information that helps an attacker map your limits. What must
+the store operation return, and what must the gateway suppress?</p>
+<p><strong>7.3</strong> The design assumes the gateway knows the caller's identity. Design the
+limiting strategy for your <strong>unauthenticated</strong> endpoints (signup, login,
+password reset), where you have no API key. State your keys, why each one alone
+is insufficient, and what an attacker with 50,000 IP addresses does to your
+scheme.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1 — The main one.</strong> Design the rate limiter for a payments API serving
+<strong>three regions</strong> (US, EU, India), 80,000 rps peak globally, 3 million
+merchants, with these product commitments:</p>
+<ul>
+<li>Enterprise merchants buy a contractual limit that must be <strong>globally</strong>
+accurate to within 1%.</li>
+<li>Free-tier merchants get 100 requests/minute, and accuracy there matters far
+less than cost.</li>
+<li>A single global cap of 25,000 rps on <code>POST /payments</code> protects a card-network
+integration that will suspend you if you exceed it.</li>
+</ul>
+<p>Produce: the architecture, the coordination design <strong>per limit class</strong> with
+justification, your capacity numbers, the failure behaviour for each class,
+and the four things you would put on the on-call dashboard. State explicitly
+which of the three commitments you cannot fully meet and what you would
+negotiate instead.</p>
+<p><strong>8.2</strong> Your company is moving from 20 gateway nodes in one region to a
+cell-based architecture: 50 independent cells, each with its own gateway pool
+and its own Redis, and a router that maps each merchant to exactly one cell.
+Which parts of this lab's design survive unchanged, which become unnecessary,
+and which new problem does the cell router create that did not exist before?</p>
+<p><strong>8.3</strong> Argue the opposite case: write the three-paragraph argument for
+<strong>not</strong> building any of this — for using your API gateway's built-in
+per-node rate limiting and accepting the N× error. Be specific about the
+scale, the limit values, and the business context in which that is genuinely
+the right engineering decision.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<p>Rungs 1–4 have right answers. Rungs 5–8 are design work — what follows is a
+worked position you should be able to argue with, not a marking scheme.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Because the limiter's memory lives inside one process. Each server
+counts only the requests it personally handled, and none of them can see the
+others, so twenty servers enforcing &quot;100 per minute&quot; each let 100 through and
+the customer gets 2,000. Nobody wrote a bug — the rule simply stopped being
+enforceable the moment there was more than one enforcer.</p>
+<p><strong>1.2</strong> <em>Over-admission</em> — more gets through than you promised. Victim: you
+(capacity, cost, the thing the limit was protecting). Shows up as a graph.
+<em>Under-admission</em> — you reject requests while allowance was actually
+available. Victim: your customer. Shows up as a <strong>support ticket</strong>, because
+from their side you are simply lying about the limit you sold them, and every
+dashboard you own says the limiter is working perfectly.</p>
+<p><strong>1.3</strong> &quot;…how out-of-date each enforcement point's view of the shared truth is
+allowed to be.&quot; (Anything equivalent to <em>the staleness dial</em> is right.)</p>
+<p><strong>1.4</strong> Sharing the <em>data</em> is not the same as sharing the <em>decision</em>. If each
+node reads the counter, decides locally, and writes it back, then every node
+that reads during the gap between another node's read and write sees the same
+stale value and spends the same tokens. Correctness requires the decision to
+happen in one indivisible step at the store — not merely for the number to be
+stored there.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Data plane = the solid grey lines (clients → router → gateways →
+backend). Coordination plane = the dashed violet lines from each gateway down
+to the counter store. The <strong>control plane</strong> (rules: who gets what limit) is not
+drawn, because the simulator holds the limit fixed at 60/s — there is nothing
+to distribute. In production it is the third set of arrows and it fails
+independently of the other two (README F8).</p>
+<p><strong>2.2</strong> v1: each gateway stores a complete token bucket for the full limit —
+its bar is its own private allowance, and there are N of them. v7: each gateway
+stores <em>what it believes the whole world has spent this second</em> — the count it
+last learned, plus its own spending since. It resets every second because v7 is
+counting inside a fixed one-second window; at the window boundary everyone's
+count goes back to zero.</p>
+<p><strong>2.3</strong> One bar is one sub-key: an independent bucket carrying a fraction of
+the promise. With 4 sub-keys and a 60/s promise, each carries <strong>15/s</strong>. A
+request picks one at random, so a request can be rejected by an exhausted
+sub-key while another sub-key still has room.</p>
+<p><strong>2.4</strong> v6 shows roughly a third of v4's store operations (measured: ~62/s
+against ~180/s at 180 rps). The requests producing no store operation are being
+decided <strong>entirely locally</strong>, out of the block of tokens the gateway already
+leased. A gateway only talks to the store when its lease runs dry — plus a short
+&quot;this key was empty a moment ago&quot; pause so a saturated key does not cost a
+round trip per rejection.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> Admitted goes to roughly <strong>8 × 60 = 480/s</strong>, capped by whatever traffic
+you are actually offering (at 180 rps you will simply see all 180 admitted —
+the limit has effectively stopped existing). Store operations stay at <strong>zero</strong>,
+which is the point: this design is free precisely because it is wrong.</p>
+<p><strong>3.2</strong> From 60/s to about <strong>15/s</strong>. Sticky sends every request for this key to
+one gateway, and that gateway is only permitted limit ÷ 4. The other three hold
+45/s of allowance that no request will ever reach. Note the asymmetry with 3.1:
+the same routing change that <em>fixes</em> v1 completely <em>destroys</em> v2.</p>
+<p><strong>3.3</strong> (a) Admitted drops sharply toward the promise — from around 175/s at
+1000 ms to roughly 70/s at 100 ms. (b) Store ops rise by the same factor,
+roughly 4/s to 40/s. Ten times the coordination buys you about ten times less
+error. That is the entire trade, and it is linear.</p>
+<p><strong>3.4</strong> Admitted climbs steeply. The mechanism: the write lands <code>2 × hop</code>
+milliseconds after the read, and every request arriving inside that window
+reads the same stale counter. The number of requests in the window is
+<code>rps × 2 × hop</code>, so at 180 rps and a 1 ms hop about 0.4 requests overlap
+(almost no leak), while at 12 ms about 4.3 overlap and each of them spends
+tokens the others already spent. <strong>The bug's severity is the product of your
+latency and your traffic</strong> — which is exactly why it is invisible in staging.</p>
+<p><strong>3.5</strong> <em>Degrade</em>: about <strong>60/s</strong> under round robin, because limit ÷ N happens
+to add up when traffic is even — switch the router to skewed and it collapses.
+<em>Fail open</em>: <strong>all 180/s</strong>; the limiter has stopped existing. <em>Fail closed</em>:
+<strong>0/s</strong>; a perfectly-enforced total outage.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> <strong>v1 (no coordination) + sticky routing.</strong> Every request for the key
+reaches the same gateway, so that gateway's local state is complete and exact.
+This is key-owner routing. Its three costs: (i) you must own the router and can
+only hash on <strong>one</strong> dimension, so it cannot serve three simultaneous limits;
+(ii) the owning gateway becomes a hot spot for your biggest customer; (iii)
+scaling or losing a node reshuffles ownership, and during the reshuffle two
+nodes briefly both believe they own the key — an over-admission window on
+exactly the event (a scale-up under load) when you least want one. Node death
+also loses that key's counter outright.</p>
+<p><strong>4.2</strong> You will find something in the 150–300 ms region holds within ~15%.
+Then doubling the traffic pushes it back out of tolerance, because the error is
+<code>N × per-node rate × T</code> — it is <strong>proportional to traffic</strong>, and your load test
+fixed the traffic. The lesson: a sync interval tuned at one traffic level is
+not a constant, it is a point measurement. Size it from your <em>peak</em> rate for
+that key, or make it adaptive.</p>
+<p><strong>4.3</strong> You trace a curve of diminishing returns. Store ops fall roughly as
+<code>1/batch</code> — big gains from 2 to 10, small ones from 20 to 30 — while
+under-admission grows roughly linearly with <code>N × batch</code> as stranded allowance.
+It stops helping once the batch is large enough that a gateway routinely fails
+to spend it before the lease expires; past that you are paying accuracy for
+savings you no longer receive. Rule of thumb from the README: batch must stay
+small relative to the limit, which is why leases are for large limits only.</p>
+<p><strong>4.4</strong> Because sub-key splitting costs accuracy through <strong>variance</strong>, and
+variance only shows when the sub-keys are near their capacity rather than far
+past it. At 80 rps against a 60/s promise split 8 ways, each sub-key gets
+about 10 requests/s against a 7.5/s allowance — close enough that random
+arrival lumpiness leaves one sub-key rejecting while another has unspent
+tokens, and its buffer (burst ÷ 8) is too small to smooth it out. At very high
+traffic every sub-key is permanently saturated, so each simply admits its full
+7.5/s and the total is exact.</p>
+<p>The implication is uncomfortable and worth stating in a design review:
+<strong>splitting a key degrades accuracy precisely in the regime where the customer
+is near their limit</strong> — which is the only regime they notice. It is safe when
+the key is genuinely, continuously saturated, and that is exactly what &quot;hot
+key&quot; means. Split hot keys; do not split ordinary ones.</p>
+<hr />
+<h2 id="solutions-rung-5--specify">Rung 5 — Specify</h2>
+<h3 id="solutions-51-the-atomic-store-operation">5.1 The atomic store operation</h3>
+<div class="code"><pre><code>CHECK_AND_CONSUME(keys[], costs[], now, limits[], bursts[]) -&gt; Decision
+
+reads   : for each key, {tokens, lastRefillAt}
+writes  : for each key, {tokens, lastRefillAt}   — only if ALL keys pass
+returns : allowed        : bool
+          blockedBy      : key name or null
+          retryAfterMicros : int
+          remaining[]    : per key
+
+GUARANTEE: the whole read → refill → decide → write sequence is indivisible.
+No other caller may observe or modify any of these keys in between.
+</code></pre></div>
+<p>Three points that carry the design:</p>
+<ul>
+<li><strong>All keys in one call, consume only if all pass.</strong> Checking the three
+dimensions in three calls triples latency and store load, and leaves you
+consuming quota from limits 1 and 2 for a request that limit 3 rejected.</li>
+<li><strong><code>now</code> is supplied by the store, not the caller.</strong> That is what makes the
+design immune to clock skew (F5) — one clock is consulted, so all gateways
+implicitly agree.</li>
+<li><strong><code>retryAfterMicros</code> and <code>remaining</code> are the two outputs that exist purely
+for the HTTP response</strong>, and the gateway cannot compute them itself: both
+depend on the post-decision state of a counter that the gateway does not hold
+and that other gateways are concurrently changing. Computing them
+gateway-side is how you get a dishonest <code>Retry-After</code> and the retry storm in
+F7.</li>
+</ul>
+<h3 id="solutions-52-rule-schema">5.2 Rule schema</h3>
+<div class="code"><pre><code class="language-yaml">rule:
+  id: rl.merchant.payments.standard
+  version: 47                      # snapshots are versioned and applied atomically
+  match:
+    plan: standard
+    endpointGroup: payments-write
+  key: [merchant_id, endpoint_group]   # the identity this allowance belongs to
+  limit: 100
+  window: 1m
+  burst: 20                        # tuned separately from rate, and documented to customers
+  costs:                           # a request is not one unit of work
+    default: 1
+    POST /payments/bulk: 20
+    GET  /payments/{id}: 1
+  onStoreUnavailable: degrade_local   # degrade_local | fail_open | fail_closed
+  mode: enforce                    # enforce | shadow
+  response:
+    exposeLimitName: true          # false for security limits (see 7.2)
+</code></pre></div>
+<p><code>onStoreUnavailable</code> sits <strong>inside the rule</strong> on purpose. F1 has no globally
+correct answer: a limit guarding a fragile downstream should fail closed, one
+that exists for billing fairness should fail open. Making it a per-rule field
+turns it into a reviewed product decision instead of a global default nobody
+remembers choosing.</p>
+<h3 id="solutions-53-hotcold-promotion-policy">5.3 Hot/cold promotion policy</h3>
+<ul>
+<li><strong>Signal:</strong> requests per second for a given key, measured <strong>per gateway</strong> and
+summed at the store during the periodic sync (you already have that channel).</li>
+<li><strong>Grain:</strong> the full rate-limit key, not the merchant — <code>merchant_42</code> may be
+cold while <code>endpoint:POST /payments</code> is scorching.</li>
+<li><strong>Window:</strong> a 10-second sliding rate, so a single burst does not promote.</li>
+<li><strong>Thresholds:</strong> promote above 100 rps; demote below 25 rps. The gap is
+deliberate.</li>
+<li><strong>At the moment of promotion:</strong> the key's authoritative counter must be
+<em>drained into</em> the new scheme, not duplicated. Concretely: the store marks
+the key <code>hot</code> with an effective-from timestamp; gateways that see the flag
+stop per-request calls and begin syncing; the store's counter continues to be
+the aggregation point, so nothing is double-counted. The dangerous window is
+gateways learning the flag at different times — during it, some are per-request
+and some are syncing, which is <em>safe</em> (both are conservative) but briefly
+under-admits.</li>
+<li><strong>How a naive version oscillates:</strong> with a single threshold, promoting a key
+removes per-request store traffic, which is the very signal you were
+measuring — so the key looks cold again, gets demoted, becomes hot, and
+flaps. The gap between promote and demote thresholds (hysteresis) plus
+measuring rate at the <em>gateway</em> rather than at the store are what prevent it.</li>
+</ul>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<p><strong>6.1 — &quot;exact in staging, 3× in production.&quot;</strong> There are exactly two
+candidates, and they are distinguishable.</p>
+<ol>
+<li><em>Node count</em> — staging runs one instance, production runs several, and the
+design has no coordination (README v1). The over-admission factor would equal
+the instance count and would be <strong>flat with traffic</strong>.</li>
+<li><em>The read-modify-write race</em> (v3). Over-admission is
+<code>rps × 2 × store-hop</code> shaped, so it would <strong>grow with traffic</strong> and vanish
+overnight.</li>
+</ol>
+<p>Tell them apart in one query: plot the over-admission factor against request
+rate. Flat → it is your topology; rising → it is the race. Also check store
+operations per request: two ops per request means a read and a separate write,
+which is the race by construction. The fix for (1) is to coordinate at all; for
+(2) it is to move the decision into the store as one atomic script — not a
+bigger Redis.</p>
+<p><strong>6.2 — Tuesday 14:00, latency 90 ms → 2.5 s, no Redis errors.</strong> This is F2:
+the store is not down, it is <em>slow</em>, and slow is more dangerous than down. A
+weekly scheduled job (an analytics scan, a <code>KEYS</code> sweep, a background save,
+bulk key expiry) is blocking Redis's single thread. Every gateway request now
+blocks on the limiter, request threads pile up, and requests that would have
+been <em>allowed</em> start failing.</p>
+<p>The fix is four things, not one: an aggressive timeout on the limiter call
+(5–10 ms, treated exactly like an outage); a circuit breaker so you stop adding
+load to a struggling store; a bulkhead so the limiter's connection pool cannot
+starve everything else; and alerting on <strong>limiter latency and fallback rate</strong>
+rather than on store uptime — uptime was green the whole time.</p>
+<p><strong>6.3 — 400,000 password attempts, never rejected.</strong> The key is wrong, not the
+counting. Limiting login by IP alone means an attacker with a botnet has as
+many allowances as they have addresses; 400,000 attempts spread over 100,000
+hosts is 4 each, comfortably under 5/minute. This is README 10.5, rule 2: login
+needs <strong>two keys at once</strong> — per source IP <em>and</em> per target username. The IP key
+stops one host trying many accounts; the username key stops many hosts trying
+one account. Either alone is trivially bypassed, and this is the single most
+common rate-limiting design bug in production.</p>
+<p><strong>6.4 — total volume went UP 40% after shipping the limiter.</strong> F7. Two
+mechanisms, probably both: a fixed 30-second <code>Retry-After</code> given to every
+rejected client turns scattered load into a synchronised spike every 30 seconds
+(your own header is the synchroniser); and if the retry time is even slightly
+early, obedient clients retry, get rejected again, and poll you as fast as you
+permit. Check also that you are returning <code>429</code> and not <code>503</code> — <code>503</code> tells
+well-behaved clients and load balancers that <em>you</em> are broken, which triggers
+aggressive retries and health-check failures. Fix: compute the retry time from
+real limiter state, round up, add server-side jitter, and document exponential
+backoff.</p>
+<p><strong>6.5 — half the nodes on the new rule for ninety minutes.</strong> F8, control plane.
+The rule set is being distributed without versioning or atomic application, so
+nodes converge at their own pace and there is no way to see which node is on
+which version. The customer's experience depends on which gateway they land
+on — which is why it looked random. Fix: versioned snapshots applied
+atomically, a per-node &quot;current rule version&quot; metric so divergence is visible,
+gradual rollout watched against rejection rate, single-operation rollback, and
+shadow mode so a new rule's effect is measured before it is enforced.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1 — a hot-tier gateway dies holding 40 unpublished spends.</strong> The other
+gateways believe the global count for that key is 40 lower than it really is,
+so they will admit roughly 40 extra requests before the window rolls. The error
+is <strong>over-admission</strong>, and it is silent.</p>
+<p>Two mechanisms that bound it:</p>
+<ul>
+<li><strong>Shorten the sync interval.</strong> Damage is linear in <code>T</code>, so halving the
+interval halves the worst case. Cost: proportionally more store load, paid
+continuously to insure against a rare event.</li>
+<li><strong>Publish before spending</strong> — reserve the allowance at the store, then spend
+it locally. A death now strands reserved-but-unspent quota instead of hiding
+spent-but-unpublished quota, converting over-admission into under-admission.
+Cost: this is v6, so you inherit v6's latency on the reserve path and its
+stranded-quota problem, and you have chosen which error you prefer rather
+than eliminating error.</li>
+</ul>
+<p>A third, cheaper partial measure: cap what any one gateway may spend between
+syncs at <code>limit ÷ N</code>, which bounds the worst case regardless of <code>T</code>. It
+reintroduces v2's under-admission whenever traffic is uneven.</p>
+<p><strong>7.2 — telling the customer which limit they hit.</strong> The store operation must
+return <code>blockedBy</code> (which key failed) plus that key's own reset time, since
+only the store knows both. The gateway then applies a disclosure policy, which
+comes from the rule's <code>exposeLimitName</code> field:</p>
+<ul>
+<li><strong>Limits the customer owns</strong> (their merchant limit, their plan's endpoint
+limit): name it and return its <code>Retry-After</code>. This is actionable and reduces
+support load.</li>
+<li><strong>Security limits</strong> (per-IP, per-username login limits, global endpoint
+caps): return a generic <code>429</code> with no limit name, no remaining count, and a
+jittered retry hint. Naming them lets an attacker calibrate — they learn the
+exact threshold, the exact window, and whether they have found the right
+dimension to spread across.</li>
+<li><strong>Never</strong> return <code>RateLimit-Remaining</code> for a limit you would not name; the
+header leaks the same information more precisely.</li>
+</ul>
+<p><strong>7.3 — unauthenticated endpoints.</strong> You have no API key, so:</p>
+<ul>
+<li><strong>Key on the source IP</strong> — stops one host enumerating many accounts. Useless
+against a botnet, and it punishes large NATs, where thousands of legitimate
+users share one address.</li>
+<li><strong>Key on the target identifier</strong> (the username or email being logged into /
+reset) — stops many hosts attacking one account. Useless against <em>spraying</em>,
+where the attacker tries one common password against a million different
+accounts, touching each username once.</li>
+<li><strong>Therefore also key on the endpoint globally</strong> — a cap on total failed
+logins per minute across the whole system. This is the only key that catches
+spraying, and it is a hot key by construction, so it needs sub-key splitting.</li>
+</ul>
+<p>An attacker with 50,000 IP addresses defeats the first key completely and is
+unaffected by the second unless they concentrate on one account. What actually
+stops them is the third key plus escalation that is not rate limiting at all:
+proof-of-work or CAPTCHA once the global failure rate is anomalous, account
+lockout with out-of-band recovery, and credential-stuffing detection on
+password reuse. <strong>State the limit of the tool honestly</strong>: rate limiting raises
+the cost of abuse, it does not prevent a determined distributed attacker, and
+a design review that claims otherwise is wrong.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<h3 id="solutions-81-three-region-payments-limiter">8.1 Three-region payments limiter</h3>
+<p><strong>Shape of the answer: three limit classes, three different coordination
+designs. Anyone who proposes one mechanism for all three has not read the
+requirements.</strong></p>
+<p><strong>Capacity.</strong> 80,000 rps global peak, split roughly US 45% / EU 35% / IN 20% →
+36k / 28k / 16k rps. Three dimensions per request → ~108k / 84k / 48k counter
+checks/s regionally. Three million merchants × 3 dimensions × ~120 B ≈ 1.1 GB
+if fully resident — again, <strong>memory is not the constraint</strong>; the 108k checks/s
+against a ~50k-per-shard ceiling is, so US needs ≥3 shards for throughput and
+would run ~6.</p>
+<p><strong>Class 1 — free tier, 100/min, 3M merchants.</strong> Cold keys: a handful of
+requests each. Per-request atomic at the regional store (v4/v5). It is exact,
+and exactness is nearly free here because the traffic per key is tiny.
+For the global-versus-regional problem, use <strong>home-region pinning</strong>: a merchant
+is assigned a home region and their traffic is routed there, so their counter
+is single-region and genuinely exact. Merchants who genuinely send from
+everywhere are the exception and can be reconciled as Class 2.
+Fallback: <code>fail_open</code>. Accuracy here matters far less than availability, and
+these are the customers you least want to break.</p>
+<p><strong>Class 2 — enterprise, contractual, globally accurate to 1%.</strong> Do <strong>not</strong>
+attempt to count globally in real time; cross-region round trips are 70–150 ms
+and the latency budget is 5 ms. Instead <strong>split the quota into regional shares
+and reallocate the shares asynchronously</strong>: a global controller collects each
+region's consumption every 1–2 s and re-divides the limit in proportion to
+observed demand, holding ~10% back as an unallocated reserve for sudden shifts.</p>
+<p>The key property: <strong>shares always sum to the limit, so the ceiling can never be
+exceeded</strong> — the error is one-sided (under-admission) and appears only when
+demand shifts between regions faster than the controller reallocates. Within a
+region, each share is enforced by atomic per-request checks, so it is exact.
+Fallback: <code>degrade_local</code> to the last-known share, which stays safe because
+shares sum correctly even when the controller is unreachable.</p>
+<p><strong>Class 3 — the 25,000 rps global cap on <code>POST /payments</code>.</strong> This is an
+external contract with a penalty, so treat the ceiling as inviolable and buy
+safety with under-admission. Fixed regional shares (say 11,250 / 8,750 / 5,000)
+reallocated by the same controller as Class 2, but with a <strong>safety margin</strong> —
+allocate 23,000 of the 25,000 and keep 2,000 permanently unissued. Inside each
+region this is one hot key by construction, so split it into sub-keys per
+stage 10.7 / F3.</p>
+<p>One addition the other classes do not need: <strong>shape rather than police the
+outbound leg</strong>. You cannot ask a card network to retry, and it will suspend you
+for bursting, so the calls leaving your system toward it go through a
+leaky-bucket queue that emits at a steady rate. Police the front door, shape
+the back door.</p>
+<p><strong>What you cannot fully meet, and what to negotiate.</strong> The enterprise 1% global
+accuracy commitment is not achievable as an instantaneous guarantee: a customer
+that abruptly moves all traffic from EU to US will be under-admitted for the
+duration of one reallocation cycle, and a controller partition freezes the
+shares entirely. Negotiate the contract into a form you can actually honour:
+define the limit as <strong>measured over a rolling 60-second window</strong> rather than
+instantaneously, state the regional-share model in the contract, and commit to
+never <em>exceeding</em> the limit (which you genuinely can) rather than always
+reaching it.</p>
+<p><strong>On-call dashboard, in the order you would read it during an incident:</strong>
+rejection rate split by limit class; limiter decision latency p99/p999;
+fallback rate (fraction of decisions made without the store — should be zero);
+and share-reallocation lag together with top-N keys by rate.</p>
+<h3 id="solutions-82-moving-to-50-cells">8.2 Moving to 50 cells</h3>
+<p><strong>Survives unchanged:</strong> the algorithm choice (token bucket), key design and the
+cost-weighting scheme, the response contract, the control plane and its shadow
+mode, and the per-rule fallback policy. Inside a cell you still run several
+gateway nodes against one store, so the whole v4/v5 discussion applies at cell
+scale — with a much smaller N, which makes degrade-to-local far more accurate.</p>
+<p><strong>Becomes unnecessary:</strong> cross-region reconciliation for merchant-scoped limits.
+If a merchant maps to exactly one cell, their counter is exact by construction
+— this is key-owner routing promoted to an architectural principle, and it is
+the single biggest benefit of the move.</p>
+<p><strong>The new problem the cell router creates:</strong> it is now a stateful, critical
+component in front of everything, and merchant→cell assignment is authoritative
+state that must be consistent across every router instance. Two consequences.
+First, <strong>rebalancing a merchant between cells</strong> (for capacity, or when a cell is
+drained) creates a window in which two cells hold counter state for the same
+merchant and both enforce the full limit — a 2× over-admission window on
+exactly the operation you perform under load. You need an explicit handover:
+freeze in the old cell, drain, then activate in the new one, accepting brief
+under-admission instead of over-admission. Second, <strong>endpoint-global limits get
+worse, not better</strong>: the 25,000 rps cap must now be divided 50 ways instead of
+3, so each cell holds 500 rps and the under-admission from static division
+becomes severe. Those limits need their own aggregation path that does not
+follow the cell boundary.</p>
+<h3 id="solutions-83-the-argument-for-not-building-any-of-this">8.3 The argument for not building any of this</h3>
+<p><em>Scale.</em> We serve 400 rps at peak across three application instances. Our
+limits exist to stop a single misbehaving integration from saturating our
+database — they are safety valves, not products. Nobody has bought a
+contractual rate limit, and no number in our configuration was derived from
+anything more rigorous than &quot;this feels like more than any sane client would
+send&quot;.</p>
+<p><em>The error is smaller than the uncertainty.</em> With three instances, an
+uncoordinated limiter is wrong by 3×. But the limit itself is a guess with at
+least that much slack in it, so a 3× error on a number we invented is not a
+correctness problem — it is a rounding difference. Setting each instance's
+limit to a third of the intended figure and accepting the routing skew costs us
+nothing we can measure, and our load balancer's distribution is even enough that
+the skew stays small at this instance count.</p>
+<p><em>What we would be buying.</em> A shared counter store is a new hot dependency in
+the path of 100% of our traffic, with sub-millisecond latency requirements, its
+own failure modes, its own on-call burden, and a well-documented tendency to
+take down the service it was installed to protect when it gets slow rather than
+down. We would be adding a component whose worst day is worse than the problem
+it solves. Use the gateway's built-in per-node limiting, write the assumption
+down in an ADR, and revisit it the day we sell a customer a number — because
+that is the day the limit stops being a guess and starts being a promise.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../59-load-balancing/notes.html"><small>← Lab 59</small>load-balancing</a><a href="../61-work-pressure-and-deadlines/notes.html" style="text-align:right"><small>Lab 61 →</small>work-pressure-and-deadlines</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-what-goes-wrong-if-nobody-builds-this">1. What goes wrong if nobody builds this?</a><a href="#readme-2-why-does-one-plate-an-hour-become-twenty">2. Why does one plate an hour become twenty?</a><a href="#readme-3-what-does-every-engineer-build-first">3. What does every engineer build first?</a><a href="#readme-4-what-breaks-the-moment-there-are-twenty-copies">4. What breaks the moment there are twenty copies?</a><a href="#readme-5-what-are-we-actually-asking-for-in-plain-words">5. What are we actually asking for, in plain words?</a><a href="#readme-6-what-is-the-one-idea-the-whole-design-turns-on">6. What is the one idea the whole design turns on?</a><a href="#readme-7-which-words-are-being-used-as-if-they-were-one">7. Which words are being used as if they were one?</a><a href="#readme-8-which-two-pictures-should-you-carry">8. Which two pictures should you carry?</a><a href="#readme-9-where-can-you-break-the-counter-yourself">9. Where can you break the counter yourself?</a><a href="#readme-10-how-would-you-actually-design-this">10. How would you actually design this?</a><a href="#readme-11-what-are-the-eight-ways-this-breaks">11. What are the eight ways this breaks?</a><a href="#readme-12-what-can-you-promise-and-what-can-you-not">12. What can you promise, and what can you not?</a><a href="#readme-13-why-is-there-no-code-at-this-altitude">13. Why is there no code at this altitude?</a><a href="#readme-14-what-do-the-algorithms-do-when-you-actually-run-them">14. What do the algorithms do when you actually run them?</a><a href="#readme-15-what-does-a-real-deployment-look-like">15. What does a real deployment look like?</a><a href="#readme-16-where-do-you-practise-this">16. Where do you practise this?</a><a href="#readme-17-what-does-this-connect-to-and-what-should-you-learn-next">17. What does this connect to, and what should you learn next?</a><a href="#readme-18-what-does-each-word-mean">18. What does each word mean?</a><a href="#readme-19-about-this-lab--where-did-everything-in-it-come-from">19. About this lab — where did everything in it come from?</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,123 @@
+<!doctype html>
+<!--
+  data-rcv-mounted="true": the "Raw Code Highlight" Chrome extension replaces EVERY page opened from
+  disk (file://) with a plain-text code view, HTML pages included, and skips pages already carrying
+  this marker. It keeps the tool usable when opened by double-click. Harmless everywhere else.
+-->
+<html lang="en" data-rcv-mounted="true">
+<head>
+  <meta charset="utf-8">
+  <meta name="robots" content="noindex">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UI Learning Tool</title>
+  <meta name="description" content="Learn HTML, CSS and JavaScript with live previews of every element, attribute, property and value.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%234353c9'/%3E%3Ctext x='16' y='21' font-family='monospace' font-size='13' font-weight='700' fill='white' text-anchor='middle'%3E%26lt;/%26gt;%3C/text%3E%3C/svg%3E">
+  <script>
+    /* Apply a forced light/dark theme before the first paint, so the page never flashes. */
+    try { var t = localStorage.getItem('uilt.theme'); if (t === '"light"' || t === '"dark"') document.documentElement.setAttribute('data-theme', JSON.parse(t)); } catch (e) {}
+  </script>
+  <link rel="stylesheet" href="vendor/codemirror/codemirror.min.css">
+  <link rel="stylesheet" href="vendor/codemirror/addon/hint/show-hint.min.css">
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <a class="visually-hidden" href="#view">Skip to content</a>
+  <header class="topbar">
+    <a class="brand" href="#/" aria-label="UI Learning Tool - home"><span class="brand-mark" aria-hidden="true">&lt;/&gt;</span><span class="brand-text">UI Learning Tool</span></a>
+    <nav class="tabs" aria-label="Sections">
+      <a href="#/lessons" data-section="lessons">Lessons</a>
+      <a href="#/recreate" data-section="recreate">Recreate</a>
+      <a href="#/recipes" data-section="recipes">Recipes</a>
+      <a href="#/html" data-section="html">HTML</a>
+      <a href="#/css" data-section="css">CSS</a>
+      <a href="#/js" data-section="js">JavaScript</a>
+      <a href="#/explain" data-section="explain">Explainers</a>
+      <a href="#/playground" data-section="playground">Playground</a>
+      <a href="#/glossary" data-section="glossary">Glossary</a>
+    </nav>
+    <button class="icon-btn" id="search-btn" type="button" aria-label="Search (Ctrl+K)">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/></svg>
+      <span class="search-hint">Ctrl K</span>
+    </button>
+    <button class="icon-btn" id="theme-btn" type="button" aria-label="Switch light or dark theme"></button>
+    <button class="icon-btn" id="full-btn" type="button" aria-label="Full screen" aria-pressed="false"></button>
+  </header>
+
+  <main id="view" class="view" tabindex="-1"></main>
+
+  <dialog class="search-dialog" id="search-dialog" aria-label="Search">
+    <form method="dialog">
+      <input class="input" id="search-input" type="search" autocomplete="off" spellcheck="false"
+             placeholder="Search elements, attributes, CSS properties, values, lessons…" aria-label="Search">
+      <div class="search-results" id="search-results" role="listbox" aria-label="Search results"></div>
+    </form>
+  </dialog>
+
+  <!-- Code editor library (CodeMirror 5, kept in vendor/ so everything works offline) -->
+  <script src="vendor/codemirror/codemirror.min.js"></script>
+  <script src="vendor/codemirror/mode/xml/xml.min.js"></script>
+  <script src="vendor/codemirror/mode/javascript/javascript.min.js"></script>
+  <script src="vendor/codemirror/mode/css/css.min.js"></script>
+  <script src="vendor/codemirror/mode/htmlmixed/htmlmixed.min.js"></script>
+  <script src="vendor/codemirror/mode/clike/clike.min.js"></script>
+  <script src="vendor/codemirror/addon/fold/xml-fold.min.js"></script>
+  <script src="vendor/codemirror/addon/edit/closetag.min.js"></script>
+  <script src="vendor/codemirror/addon/edit/closebrackets.min.js"></script>
+  <script src="vendor/codemirror/addon/edit/matchbrackets.min.js"></script>
+  <script src="vendor/codemirror/addon/selection/active-line.min.js"></script>
+  <script src="vendor/codemirror/addon/comment/comment.min.js"></script>
+  <script src="vendor/codemirror/addon/hint/show-hint.min.js"></script>
+  <script src="vendor/codemirror/addon/hint/xml-hint.min.js"></script>
+  <script src="vendor/codemirror/addon/hint/html-hint.min.js"></script>
+  <script src="vendor/codemirror/addon/hint/css-hint.min.js"></script>
+  <script src="vendor/codemirror/addon/hint/javascript-hint.min.js"></script>
+  <script src="vendor/codemirror/addon/runmode/runmode.min.js"></script>
+  <script src="vendor/js-beautify/beautifier.min.js"></script>
+
+  <!-- The app: core toolkit first, then data, then the screens, then start-up -->
+  <script src="js/core.js"></script>
+  <script src="js/preview.js"></script>
+  <script src="js/editor.js"></script>
+  <script src="js/css-model.js"></script>
+  <script src="js/editor-assist.js"></script>
+  <script src="js/emmet.js"></script>
+  <script src="js/layout.js"></script>
+
+  <script src="data/html-global-attrs.js"></script>
+  <script src="data/html-1-document.js"></script>
+  <script src="data/html-2-text.js"></script>
+  <script src="data/html-3-lists-media-tables.js"></script>
+  <script src="data/html-4-forms.js"></script>
+  <script src="data/css-0-shared.js"></script>
+  <script src="data/css-1-box-color.js"></script>
+  <script src="data/css-2-text.js"></script>
+  <script src="data/css-3-layout.js"></script>
+  <script src="data/css-4-effects.js"></script>
+  <script src="data/css-conditions.js"></script>
+  <script src="data/js-topics.js"></script>
+  <script src="data/lessons-html.js"></script>
+  <script src="data/lessons-css.js"></script>
+  <script src="data/lessons-js.js"></script>
+  <script src="data/quizzes.js"></script>
+  <script src="data/recreate.js"></script>
+  <script src="data/recipes.js"></script>
+  <script src="data/glossary.js"></script>
+  <script src="data/templates.js"></script>
+
+  <script src="js/views/common.js"></script>
+  <script src="js/views/home.js"></script>
+  <script src="js/views/html-ref.js"></script>
+  <script src="js/views/css-ref.js"></script>
+  <script src="js/views/js-ref.js"></script>
+  <script src="js/views/props-panel.js"></script>
+  <script src="js/views/playground.js"></script>
+  <script src="js/views/explainers.js"></script>
+  <script src="js/views/explainers-js.js"></script>
+  <script src="js/views/quiz.js"></script>
+  <script src="js/views/lessons.js"></script>
+  <script src="js/views/recreate.js"></script>
+  <script src="js/views/recipes.js"></script>
+  <script src="js/views/glossary.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

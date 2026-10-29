@@ -1,0 +1,1162 @@
+<!doctype html>
+<html lang="en" data-hub-lab="28-eventual-consistency">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>28. eventual-consistency</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 28 of 71 · Stage 4</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 28 · Why Distribution Is Hard</p><article id="readme"><h1 id="readme-eventual-consistency--the-weakest-promise-that-still-means-something">Eventual Consistency — the weakest promise that still means something</h1>
+<p>You have spent ten labs buying <strong>stronger</strong> guarantees: overlap ([quorums-and-replication]),
+one agreed order ([raft]), real-time recency ([linearizability]), cause-before-effect
+([causal-consistency]), convergence-by-construction ([crdts]). This lab is about the thing
+all of those were upgrades <strong>from</strong> — the two words at the bottom of every vendor page:
+<em>eventually consistent</em>.</p>
+<p>The surprise of the lab: those words are not a weak version of &quot;consistent&quot;. They are a
+<strong>different kind of statement altogether</strong> — a promise about a future limit that says
+<em>nothing checkable about any present moment</em> — and knowing exactly where its edges are is
+what separates &quot;we use Cassandra&quot; from &quot;we know what Cassandra promised us&quot;.</p>
+<blockquote>
+<p><strong>Depth layers:</strong> BEGINNER (stages 1–9) → INTERMEDIATE (stage 10) →
+ENGINEERING (stages 11–12) → PRODUCTION (stage 13). Checkpoints mark each transition.</p>
+</blockquote>
+<hr />
+<h2 id="readme-1-why--two-words-that-decide-real-designs">1. WHY — two words that decide real designs</h2>
+<p>Somewhere in your system's documentation right now sits the sentence <em>&quot;reads are
+eventually consistent.&quot;</em> On the strength of those two words you must decide: can the
+password-change screen read from this? The shopping cart? The account balance? If nobody
+pins down what the words actually promise, engineers fail in <strong>both directions</strong>: they
+over-trust it (build a read-modify-write on it and silently lose customer data — no error,
+no log line), or they under-trust it (route every read to the leader &quot;to be safe&quot; and pay
+double latency and half availability for reads that never needed it). Both failures are
+common, both are expensive, and both come from treating &quot;eventually consistent&quot; as a vibe
+instead of a contract.</p>
+<h2 id="readme-2-problem--the-two-noticeboards-of-deodar">2. PROBLEM — the two noticeboards of Deodar</h2>
+<p>The village of Deodar has two public noticeboards: one in the <strong>north square</strong>, one in the
+<strong>south square</strong>. Villagers post notices on whichever board is nearest, and read whichever
+board is nearest. Every evening, a volunteer named <strong>Kavi</strong> walks between the squares and
+copies notices from each board onto the other.</p>
+<p>At 9:00 on Tuesday, <strong>Tara</strong> pins a notice to the north board: <em>&quot;Market moved to Sunday.&quot;</em>
+At 9:05, <strong>Ben</strong> reads the south board. It still says <em>&quot;Market on Saturday&quot;</em> — Kavi hasn't
+walked yet. Ben plans his week around a fact that is five minutes out of date.</p>
+<p>Ben complains to the parish council. The council decides to print a <strong>promise</strong> at the top
+of each board, so readers know exactly how much to trust what they see. The whole lab is
+the council trying to write that sentence honestly.</p>
+<h2 id="readme-3-naive-solution--promise-the-boards-always-match">3. NAIVE SOLUTION — promise the boards always match</h2>
+<p>The council's first draft: <em>&quot;Both boards always show the same notices.&quot;</em></p>
+<p>To keep that promise, a notice can't appear on one board until it is on both. So Tara,
+pinning her notice in the north square, must wait while a runner carries it south and
+returns with confirmation — and if the road between the squares is flooded, <strong>nobody can
+post anything anywhere</strong> until it drains. You have seen this exact trade before, measured:
+this is the coordinated corner of [cap-theorem] — the [causal-consistency] lab measured
+it: a linearizable store answered <strong>0 requests on the minority side of a partition</strong>
+while the available design answered 600/600. The council refuses: the boards must stay useful when
+the road is flooded. Posting and reading must always work, locally, immediately.</p>
+<p>So the council swings to the weakest wording it can think of:</p>
+<blockquote>
+<p><em>&quot;The two boards will eventually show the same notices.&quot;</em></p>
+</blockquote>
+<p>It sounds humble and honest. Now watch it fall apart.</p>
+<h2 id="readme-4-failure--the-humble-promise-forbids-nothing">4. FAILURE — the humble promise forbids nothing</h2>
+<p>Check the draft against four situations. <strong>Every one of them satisfies the promise as
+written</strong>, and a reader would call every one of them broken:</p>
+<ul>
+<li><strong>The lazy week.</strong> Kavi skips his rounds for eight days. The south board shows nothing
+new all week. Has the promise been broken? No — <em>&quot;eventually&quot;</em> names no deadline. It is
+compatible with an hour, a week, a decade.</li>
+<li><strong>Time runs backwards.</strong> Ben reads the north board at 9:10 and sees Tara's new notice.
+He walks south, reads at 9:20, and sees the <em>old</em> state of the world. The promise says
+nothing about one reader's experience across boards. Perfectly compatible.</li>
+<li><strong>The contradiction.</strong> At 9:00 Tara posts <em>&quot;market → Sunday&quot;</em> on the north board; at
+9:02 the market master posts <em>&quot;market cancelled&quot;</em> on the south board. The boards will
+&quot;eventually show the same notices&quot; — <strong>which one?</strong> The promise doesn't say. If both
+boards eventually settle on Tara's out-of-date notice and the cancellation quietly
+vanishes, the promise as written is <em>satisfied</em>.</li>
+</ul>
+<p>And the fourth situation is the sneakiest, so look at it slowly:</p>
+<ul>
+<li><strong>The unbreakable promise.</strong> Suppose the council secretly never intends to sync the
+boards again. On Wednesday a villager accuses them: &quot;you broke your promise!&quot; The
+council answers: <em>&quot;not yet — wait longer.&quot;</em> On Thursday: <em>&quot;wait longer.&quot;</em> <strong>There is no
+moment at which the accusation can ever be proven</strong>, because at every finite moment the
+promised event is still allowed to be in the future.</li>
+</ul>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Three stores each claim &quot;eventual consistency.&quot; Store A returned a
+3-year-old value for a key written yesterday. Store B showed reader X the new value,
+then showed reader Y (who asked <em>later</em>) the old value. Store C's two replicas have
+both been idle and reachable for a month and still disagree. Which stores have
+<em>provably</em> broken the claim?</p>
+<details><summary>Reveal</summary>
+Only **C** — and only because it has been *quiescent* (no new writes) with working
+communication for a long time and still disagrees; convergence-after-updates-stop is
+the one thing the claim contains, and C's month of idle disagreement is (informally)
+the witness. A's staleness is legal: no deadline was ever promised. B's time-travel is
+legal: nothing about the order of different readers' views was promised — that would be
+[linearizability]'s real-time rule, a different and much more expensive contract.
+Strictly speaking even C is only "violated in the limit" — a lawyer can still say
+"wait longer" — which is exactly the unfalsifiability problem stage 6 names.
+</details>
+
+</blockquote>
+<p>The deeper problem the council has discovered: <strong>their promise talks only about a future
+limit, and never about any present moment.</strong> A reader standing in front of a board <em>now</em>
+gets nothing from it. Any promise with teeth must either constrain the present (expensive,
+as stage 3 showed) — or be honest that it doesn't, and say precisely what it <em>does</em>
+constrain.</p>
+<h2 id="readme-5-the-real-requirement--what-the-sentence-must-contain-to-be-non-vacuous">5. THE REAL REQUIREMENT — what the sentence must contain to be non-vacuous</h2>
+<p>For &quot;the boards will eventually agree&quot; to mean anything at all, two clauses have to be
+true underneath it, and the council should write both down:</p>
+<ol>
+<li><strong>Delivery clause</strong> — every notice, once posted, keeps being carried toward every
+board <strong>until it arrives</strong>, no matter what. Kavi's rounds must never permanently stop;
+a lost copy must be re-carried. Not &quot;we tried once&quot;.</li>
+<li><strong>Decision clause</strong> — two boards that have received <strong>the same set of notices</strong> must
+display <strong>the same thing</strong>. What a board shows must be a <em>function of the set it has
+received</em>, never of the order or number of times deliveries happened to arrive.</li>
+</ol>
+<p>Clause 1 makes &quot;eventually&quot; arrive; clause 2 makes &quot;consistent&quot; mean one agreed answer
+when it does. Everything else a reader might want — a deadline, no-time-travel for one
+reader, cause before effect, a say in <em>which</em> conflicting notice wins — is a <strong>separate,
+stronger promise with its own separate price</strong>, and you have already bought each of them
+in a previous lab. This lab is what you get when you buy none of them.</p>
+<h2 id="readme-6-key-idea--a-promise-about-the-limit-not-the-path">6. KEY IDEA — a promise about the limit, not the path</h2>
+<blockquote>
+<p><strong>Eventual consistency:</strong> if updates to an item stop, then eventually all replicas
+converge to the same value for it — and until then, a read may return anything a past
+state could justify.</p>
+</blockquote>
+<p>One sentence, three consequences, and the three consequences are the rest of this lab:</p>
+<ol>
+<li><strong>It is a liveness property, so no finite observation can ever falsify it.</strong> Every
+&quot;violation&quot; you catch can be answered with &quot;wait longer&quot;. You can <em>test</em> a safety
+property by exhibiting one bad state; eventual consistency has no bad state to
+exhibit.</li>
+<li><strong>It is silent about what value wins.</strong> &quot;Converge&quot; names an agreement, not an answer.
+Some <em>resolver</em> — a rule choosing among concurrent writes — must be supplied, and the
+resolver, not the promise, decides whether your data survives.</li>
+<li><strong>Everything that makes it usable in practice is un-promised.</strong> Real systems are
+usually fresh within milliseconds — but that number lives in measurements and dashboards,
+never in the contract. Engineering an eventually-consistent system means engineering
+its <em>un-promised</em> behavior.</li>
+</ol>
+<h2 id="readme-7-terminology--the-professional-names">7. TERMINOLOGY — the professional names</h2>
+<p>Now that you have felt each idea, its industry name. Load-bearing terms get the full
+treatment; the rest get a line.</p>
+<p><strong>Eventual consistency (EC).</strong> Plain: &quot;if you stop changing it and wait, everyone will
+agree on it.&quot; Technical: in an execution where updates to an object cease, there is a
+point after which all reads of that object at all replicas return the same value (Werner
+Vogels' formulation, from the Dynamo lineage). The term exists to name the <em>weakest</em>
+replication contract worth advertising — the one that promises convergence and nothing
+else. Example: Tara's notice, five minutes old on the north board only, with Kavi's
+evening round guaranteeing the south board catches up. Connects to: this is the floor
+under everything on the [linearizability] / [causal-consistency] ladder.</p>
+<p><strong>Safety vs liveness (applied to consistency contracts).</strong> Plain: &quot;nothing bad ever
+happens&quot; vs &quot;something good eventually happens.&quot; Technical (Alpern &amp; Schneider): a safety
+property is one whose every violation has a <strong>finite witness</strong> — a prefix of the execution
+after which no continuation can repair it; a liveness property is one no finite prefix can
+ever violate. You met the pair in [raft] as two things a protocol can lose independently;
+here it classifies <em>promises</em>: linearizability is safety (one bad read is a witness —
+that's how the linearizability lab's checker could return verdicts), <strong>eventual consistency
+is (almost) pure liveness</strong> — which is why no checker for it can exist in the same sense,
+and why the visualization's EC judge has no red light at finite time. The term pair exists
+because these two kinds of promise are <em>verified, monitored, and broken in categorically
+different ways</em>. Example: the council's &quot;wait longer&quot; defense is the definition of
+liveness in one line.</p>
+<p><strong>Convergence.</strong> Plain: ending up equal. Technical here: the <em>decision clause</em> — replica
+state is a deterministic function of the set of updates received. You saw convergence
+engineered to perfection in [crdts]; this lab names the minimum version every EC system
+needs, CRDT or not.</p>
+<p><strong>Quiescence.</strong> Plain: the writes have stopped. Technical: a period with no new updates,
+which is the <em>only</em> condition under which classic EC promises anything observable.
+&quot;Quiescent consistency&quot; is the academic name for exactly this guarantee-shape. The term
+exists because the promise is conditional and the condition needs a name — production
+systems are never quiescent, which is the sharpest single criticism of the contract.</p>
+<p><strong>Staleness, t-visibility, k-staleness.</strong> Plain: how old the value you read is. Technical:
+a read is <em>t-stale</em> if it returns a value overwritten more than <em>t</em> ago; <strong>t-visibility</strong>
+is the probability that a read issued <em>t</em> after a write's acknowledgment returns it;
+<strong>k-staleness</strong> counts versions behind instead of time behind. These terms exist because
+&quot;eventually&quot; is unbounded <em>in the contract</em> but tightly distributed <em>in reality</em>, and you
+need words for the reality. Example: &quot;at t = 100 ms after ack, 99.9% of reads return the
+new value&quot; is a t-visibility statement.</p>
+<p><strong>PBS — Probabilistically Bounded Staleness</strong> (Bailis et al., 2012). Plain: measuring
+&quot;eventually&quot; and reporting it as a distribution. Technical: a model + measurement method
+predicting t-visibility for Dynamo-style quorum stores from their replication delays. The
+paper's headline (paper-reported, not re-measured here): for production-like LinkedIn/
+Yammer latency traces with N=3, R=W=1, reads were fresh with 99.9% probability within
+<strong>tens of milliseconds</strong> of a write — i.e. &quot;eventual&quot; in the contract, &quot;milliseconds&quot; in
+the measurement. The term exists because it turned an argument (&quot;EC is fine!&quot; / &quot;EC is
+reckless!&quot;) into a number you can put an SLO on.</p>
+<p><strong>Consistency window.</strong> You've used this term since [cqrs]; it now has edges: the interval
+between a write's acknowledgment and the moment every replica would serve it — the window
+inside which all of stage 4's legal weirdness lives. Its width is a <em>measured, moving</em>
+quantity (PBS measures exactly this), never a promised one.</p>
+<p><strong>BASE.</strong> Basically Available, Soft state, Eventually consistent — the 1997 acronym
+(Fox et al.) coined as the deliberate opposite of ACID. One line each: <em>basically
+available</em> = requests get answers even during partitions (the 600/600 side of
+[cap-theorem]); <em>soft state</em> = a replica's local state may be revised later without any
+client asking (your value can change under you as convergence runs); <em>eventually
+consistent</em> = this lab. Minor term, big marketing career.</p>
+<p><strong>Resolver / conflict-resolution policy.</strong> The rule that makes the decision clause
+deterministic when writes were concurrent. Not new machinery to you — LWW, version-vector
+siblings, CRDT joins, all measured in [quorums-and-replication] and [crdts] — but this lab
+names their shared <em>job</em>: the resolver is the part of an EC system that decides <strong>what</strong>
+&quot;the same value&quot; ends up being, and therefore which writes die.</p>
+<p><strong>Anti-entropy, read repair, hinted handoff</strong> — known from [gossip-protocols] and
+[quorums-and-replication]; here they get their collective job title: the <strong>delivery
+clause's machinery</strong>. One-line refreshers where used.</p>
+<h2 id="readme-8-mental-models">8. MENTAL MODELS</h2>
+<p><strong>Simple model (carry this one):</strong> two noticeboards and an evening courier. The promise
+printed on each board reads: <em>&quot;What you see here was true at some point. If everyone
+stops posting, the boards will match after the courier's next full round. We do not say
+when notices arrive, which of two same-day notices survives, or what you'll see if you
+walk from one square to the other.&quot;</em> Every honest EC vendor page is a paraphrase of that
+paragraph.</p>
+<p><strong>Engineering model (reason with this one):</strong> each replica <em>i</em> holds a set <strong>Sᵢ</strong> of
+received updates and displays <strong>resolve(Sᵢ)</strong> for a deterministic function <code>resolve</code>.
+A background process forever moves updates between replicas so that every update
+eventually lands in every set. Eventual consistency = <strong>(delivery: ∀ update u accepted at
+any replica, ∀ replica i, eventually u ∈ Sᵢ) ∧ (decision: Sᵢ = Sⱼ ⇒ resolve(Sᵢ) =
+resolve(Sⱼ))</strong>. Reads return <code>resolve(Sᵢ)</code> of whichever replica you happened to hit — no
+clause relates that to any other read, any wall clock, or any cause.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Story</th>
+  <th>Engineering model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>A noticeboard</td>
+  <td>A replica's set Sᵢ</td>
+</tr>
+<tr>
+  <td>Pinning a notice</td>
+  <td>Accepting an update locally, ack immediately</td>
+</tr>
+<tr>
+  <td>Kavi's evening round</td>
+  <td>An anti-entropy cycle</td>
+</tr>
+<tr>
+  <td>What the board displays</td>
+  <td>resolve(Sᵢ)</td>
+</tr>
+<tr>
+  <td>Two same-day contradictory notices</td>
+  <td>Concurrent updates — resolver decides</td>
+</tr>
+<tr>
+  <td>&quot;The boards will eventually match&quot;</td>
+  <td>Delivery clause + decision clause</td>
+</tr>
+<tr>
+  <td>Reading whichever board is nearest</td>
+  <td>No routing/session guarantee</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Where the analogy breaks</strong> — three places, each hiding a real hazard:</p>
+<ol>
+<li><strong>Kavi is scheduled and visible; anti-entropy is neither.</strong> If Kavi skips a week, the
+village notices a missing volunteer. If a repair daemon silently dies or falls behind,
+<em>nothing in the contract</em> — and often nothing in the system — makes a sound. The
+delivery clause is the half of EC that operationally rots (stage 11, F5).</li>
+<li><strong>Noticeboards accumulate; registers overwrite.</strong> Deodar's boards can show <em>both</em>
+contradictory notices side by side. A key-value register must show <strong>one</strong> value, so
+convergence includes <em>choosing a loser</em> — the analogy has no place where data
+silently dies, but LWW does (stage 11, F3).</li>
+<li><strong>A villager stands in one square; a client hops replicas mid-session.</strong> The story
+makes &quot;one reader, one board&quot; feel natural, which quietly imports a session guarantee
+the contract does not contain. Real load balancers send your next read anywhere —
+[causal-consistency] measured a roaming client missing <strong>its own write 334/500 times</strong>
+over a correctly-working store.</li>
+</ol>
+<h2 id="readme-9-visualization--the-weakest-promise">9. VISUALIZATION — &quot;The Weakest Promise&quot;</h2>
+<p>Open <strong><code>visualization.html</code></strong> (also published as an artifact:
+<a href="https://claude.ai/code/artifact/a134ee1f-49c6-4130-abe8-44d450c28ba3" target="_blank" rel="noopener">https://claude.ai/code/artifact/a134ee1f-49c6-4130-abe8-44d450c28ba3</a>).
+It is a two-noticeboard village grown to three replicas, with the one thing Deodar never
+had: a <strong>panel of judges</strong> that watches every read and rules on four different promises
+simultaneously.</p>
+<p>What to look at, in order:</p>
+<ul>
+<li><strong>Three replica cards</strong> (R1, R2, R3): each shows its received-update set Sᵢ <em>and</em> what
+it currently serves — the two halves of the engineering model, kept visibly separate.</li>
+<li><strong>The judges panel</strong> — the page's whole point. Four judges score the same run:
+<strong>Eventual Consistency</strong>, <strong>Read-Your-Writes</strong>, <strong>Monotonic Reads</strong>, <strong>No Lost
+Updates</strong>. The EC judge is special: <em>it has no red light during a run</em>. It can only say
+&quot;cannot be violated yet — liveness&quot; while writes flow, and reach a verdict when you
+press <strong>Stop &amp; settle</strong> (quiescence: writes freeze, anti-entropy runs to a fixpoint,
+and the judge rules on the limit). Watching the other judges turn red while the EC
+judge stays serenely gray <em>is stage 4 rendered as UI</em>.</li>
+<li><strong>The staleness meter</strong> per replica — how many ticks behind the newest acknowledged
+write it is serving — and a histogram of read staleness: the <em>measured</em> consistency
+window (the PBS idea) sitting right next to the <em>contract</em> that refuses to mention it.</li>
+<li><strong>Controls that change the promise, not just the run:</strong> the resolver (arrival-order /
+last-write-wins / keep-all-siblings), per-replica clock skew, sync cadence, partition,
+and client routing (sticky vs random) — each one is a stage of this doc as a switch.</li>
+</ul>
+<p>Six <strong>predict-then-run</strong> scenario cards reproduce this doc's failure stories; the page
+asks for your prediction before running each. Do scenarios 1–3 after stage 10, and 4–6
+after stage 11.</p>
+<blockquote>
+<p>✅ <strong>CHECKPOINT — beginner model complete.</strong> You can now say what &quot;eventually
+consistent&quot; does and does not promise, and why no test can catch a violation in finite
+time. Next: the two machines that make the promise true — and how each one fails.</p>
+</blockquote>
+<hr />
+<h2 id="readme-10-actual-mechanism--building-the-two-clauses">10. ACTUAL MECHANISM — building the two clauses</h2>
+<p>The engineering model needs two machines: one to make <strong>delivery</strong> true (updates reach
+every replica), one to make the <strong>decision</strong> deterministic (same set ⇒ same value). Build
+the obvious version of each, watch it break, and let the break force the real design.</p>
+<h3 id="readme-101-delivery-v1-forward-each-write-to-the-peers-once">10.1 Delivery v1: forward each write to the peers, once</h3>
+<p>A replica accepts a write, acks the client, and sends one copy to each peer. Three
+network facts you have already measured each kill it in a different way:</p>
+<ul>
+<li><strong>Loss.</strong> The forwarded copy dies; nobody retries; that update <strong>never</strong> arrives — the
+delivery clause is broken <em>silently and permanently</em>. [gossip-protocols] measured the
+shape: a rumor-mongering stop rule left <strong>9 of 1,000 nodes never informed and never
+able to recover</strong>. One lost packet ≠ a late update; it's a <em>forever</em> hole unless
+something keeps re-offering old updates.</li>
+<li><strong>Duplication.</strong> Retries (the fix for loss) deliver copies twice. If applying an
+update twice differs from applying it once, replicas drift: [crdts] measured a
+sum-instead-of-max merge reading <strong>11 where the truth was 2</strong> after ten deliveries.</li>
+<li><strong>Reorder.</strong> Two writes take different routes and arrive at different replicas in
+opposite orders — routine, not exotic: [causal-consistency] measured apply-on-arrival
+designs anomalous in <strong>160/300 runs</strong> with a single slow route.</li>
+</ul>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Replica R1 receives write <em>a</em> then <em>b</em>; replica R2 receives <em>b</em> then
+<em>a</em>. Both use the rule &quot;newest arrival wins.&quot; Both have now received the same set
+{a, b}. Kavi runs anti-entropy forever between them, always re-offering both updates.
+Do they converge?</p>
+<details><summary>Reveal</summary>
+**No — never.** R1 serves *b* (it arrived last there), R2 serves *a*. Every
+anti-entropy round re-offers updates the other side has already received, so sets never
+change, so nothing ever changes. Same set, different value: the **decision clause** is
+broken, and unlike a liveness miss this one has a finite witness — it is the one way an
+EC store is *provably* broken (viz scenario 4). "Newest arrival" made the display a
+function of the *delivery history* instead of the *set*.
+</details>
+
+</blockquote>
+<h3 id="readme-102-the-fixes-the-failures-force">10.2 The fixes the failures force</h3>
+<p>Loss forces <strong>repetition</strong> (keep offering until acknowledged-as-present); repetition
+forces <strong>idempotence</strong> (receiving what you already have must change nothing); reorder
+forces <strong>order-independence</strong> (the outcome must not depend on arrival sequence). You met
+this exact triple as the [crdts] merge laws and the [gossip-protocols] join rule —
+here is why they are not a CRDT luxury but the <em>minimum</em> for any eventually-consistent
+store: they are the decision clause restated as algebra.</p>
+<p><strong>Delivery v2 — anti-entropy:</strong> on a cadence, replicas pair up, compare what they hold
+(a Merkle digest, so comparing is cheap — [quorums-and-replication]), and transfer the
+difference; receipt goes through a merge that is idempotent and order-free. Because every
+round re-compares <em>everything held</em>, no single lost message can permanently orphan an
+update — loss only delays. Riders on top, both known, now placed: <strong>read repair</strong>
+(when a coordinator reads several replicas and sees one behind, fix it in passing —
+opportunistic, only touches what is read: measured fixing <strong>100 of 200</strong> stale keys) and
+<strong>hinted handoff</strong> (a stand-in holds writes for a dead replica and forwards later —
+best-effort, the hint holder can die with the only copy).</p>
+<h3 id="readme-103-the-decision-machine-three-resolvers-three-prices">10.3 The decision machine: three resolvers, three prices</h3>
+<p>Concurrent writes are the case the set alone can't settle: {a, b} with neither a nor b
+&quot;later&quot; by any causal measure ([causal-consistency]'s ∥). Someone must pick. All three
+industrial answers are already in your vocabulary; the new frame is what each does to
+the <strong>decision clause</strong>:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Resolver</th>
+  <th>How it decides</th>
+  <th>Price, measured previously</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Last-write-wins</strong></td>
+  <td>Total order from (timestamp, replica-id); biggest wins</td>
+  <td>Concurrent writes <em>die silently</em>: <strong>1000/1000</strong> discarded ([quorums-and-replication]); a clock 60 s fast destroyed <strong>1000/1000 genuinely-newer</strong> writes ([crdts]) — your clock IS the resolver</td>
+</tr>
+<tr>
+  <td><strong>Version vectors + siblings</strong></td>
+  <td>Partial order; dominated versions dropped, concurrent ones <strong>all kept</strong>; the app merges at read</td>
+  <td>Nothing dies, but every reader inherits a merge decision; sibling counts must be watched (Riak)</td>
+</tr>
+<tr>
+  <td><strong>CRDT join</strong></td>
+  <td>The data type's lattice join is the resolver</td>
+  <td>Convergence <em>and</em> no lost updates by construction (= SEC), paid in metadata: <strong>50 records per visible cart item</strong> ([crdts])</td>
+</tr>
+</tbody>
+</table></div>
+<p>The one-sentence summary worth keeping: <strong>the EC contract promises an agreement;
+the resolver decides who loses; picking a resolver is picking which of your writes are
+allowed to die.</strong></p>
+<h3 id="readme-104-a-worked-trace-lww-converging-onto-a-lie">10.4 A worked trace: LWW converging onto a lie</h3>
+<p>Concrete values, one step per line; derive each from the rules above. Three replicas,
+one key <code>market</code>, LWW resolver, R2's wall clock <strong>+60 s</strong> fast. (Same setup as viz
+scenario 3.)</p>
+<div class="code"><pre><code>t=0    all replicas: market = &quot;Saturday&quot; @ ts=1000
+t=10   Ben  → R2:  write &quot;cancelled&quot;      R2 stamps ts = 10 + 60 = 1070   ack
+t=25   Tara → R1:  write &quot;moved to Sunday&quot; R1 stamps ts = 25               ack
+       (Tara wrote 15 s AFTER Ben; real-world-later; ts smaller: 25 &lt; 1070)
+t=30   anti-entropy R1↔R2: sets now equal {Sat@1000, cancel@1070, Sunday@25}
+       resolve = max ts → both serve &quot;cancelled&quot;
+t=40   anti-entropy R2↔R3: R3 catches up → serves &quot;cancelled&quot;
+t=∞    quiescent, all replicas identical: &quot;cancelled&quot;.  Tara&#x27;s write is gone.
+</code></pre></div>
+<p>Every clause of the contract is satisfied — delivery worked, decision was deterministic,
+convergence happened, fast. The system will pass every eventual-consistency check forever.
+<strong>Converged and wrong are compatible</strong>, and no clause you bought says otherwise. (What
+<em>would</em> have saved Tara's write: a resolver that refuses to lose concurrent writes —
+siblings or a CRDT — or a store with a stronger contract that orders the writes by
+something real.)</p>
+<h3 id="readme-105-when-is-eventually-measuring-the-window">10.5 When is &quot;eventually&quot;? Measuring the window</h3>
+<p>The contract refuses a number, but the machinery implies a distribution, and you already
+know its two terms: propagation cadence and pairing math. From [gossip-protocols]:
+push-pull anti-entropy at fanout 3 converges <strong>500 nodes in ~8.3 rounds</strong>, and even 80%
+packet loss only stretches it <strong>4.3×</strong> — delays, never breaks. So staleness ≈ (rounds
+needed × cadence) + luck, and <em>that</em> — not the contract — is what you measure: issue a
+write, read it back from each replica, record the delay, plot the distribution
+(t-visibility). This is PBS as an operational practice, and it is the answer to the
+stage-1 dilemma: you don't decide &quot;is EC okay for the cart page&quot; from the contract
+(which says nothing); you decide it from the measured window (usually milliseconds)
+plus the cost of the window's <em>tail</em> (stage 11).</p>
+<blockquote>
+<p>✅ <strong>CHECKPOINT — intermediate model complete.</strong> You can now build the promise: an
+always-running re-offering sync + an idempotent, order-free, deterministic resolver —
+and you know the window is a measured distribution, not a clause. Next: the ways the
+machine and its contract fail people.</p>
+</blockquote>
+<hr />
+<h2 id="readme-11-failure-scenarios--seven-ways-to-get-hurt-only-one-of-which-is-a-breach">11. FAILURE SCENARIOS — seven ways to get hurt, only one of which is a breach</h2>
+<p>For each: how to create it → where to watch it → what happened and why → what the system
+does → which guarantee held / which was lost → how it shows up in production. Notice the
+running theme: <strong>F1–F3 and F5–F7 break users while satisfying the contract</strong>; only F4
+breaks the contract itself.</p>
+<p><strong>F1 — The stale read after ack.</strong> Create: write to R1, immediately read from R3 before
+any sync (viz: any write, then read another replica; scenario 2). What happened: the ack
+meant &quot;accepted at one replica&quot;, never &quot;visible everywhere&quot; — the consistency window is
+open. System response: none needed; converges on the next sync. Held: EC. Lost: nothing
+that was promised — only what the reader <em>assumed</em>. Production face: the #1 ticket
+pattern — &quot;I updated my profile and the app still shows the old photo&quot;; handled with
+session routing (below) or by measuring the window and confirming it's small.</p>
+<p><strong>F2 — Time runs backwards for one reader.</strong> Create: random routing; read R1 (fresh),
+then R3 (behind) — viz scenario 2. Why: no clause links two reads, even by the same
+client. Held: EC. Lost: <strong>monotonic reads</strong> — never promised, but humans assume it so
+deeply that its absence reads as data loss (&quot;my edit vanished!… no wait, it's back&quot;).
+The fix is <em>routing, not storage</em> — sticky sessions, or a session token carried by the
+client: [causal-consistency] measured the token taking a roaming client's anomalies from
+<strong>3759 / 1611 / 356 / 726 to 0 / 0 / 0 / 0</strong> (its four session guarantees). Production
+face: intermittent &quot;flickering&quot; bug reports that no server-side log will ever reproduce;
+the on-call move is to ask <em>which</em> guarantee the flow assumed (RYW? monotonic?) and add
+that guarantee, not to abandon EC.</p>
+<p><strong>F3 — Converged onto a lie (LWW + skew).</strong> Create: stage 10.4's trace; viz scenario 3
+(skew slider +60 on one replica, two writes, settle). Why: LWW's total order is
+manufactured from clocks, and clocks answer a question (&quot;what time is it?&quot;) that is not
+the question (&quot;which write should win?&quot;). System response: converges promptly, looks
+perfect. Held: EC, delivery, decision — all of it. Lost: a <strong>write</strong>, silently — and no
+monitor watching <em>consistency</em> will ever fire; only a monitor watching <em>clock skew</em>
+can warn you. Production face: Cassandra's default is exactly this (LWW per cell,
+microsecond timestamps, writer's clock); the operational rule it forces: NTP monitoring
+with eviction is a <em>data-integrity</em> control there, not a nicety ([hybrid-logical-clocks]
+measured what dishonest clocks do to every downstream timestamp).</p>
+<p><strong>F4 — Same set, different answer: the one true breach.</strong> Create: arrival-order resolver</p>
+<ul>
+<li>opposite delivery orders (stage 10.1's prediction; viz scenario 4 — resolver switch to
+&quot;arrival order&quot;). Why: the displayed value depends on delivery history, so no amount of
+re-syncing changes anything: <strong>permanent divergence with a finite witness</strong> — the only
+failure in this list a checker could ever prove. Held: nothing worth the name. Lost: the
+decision clause = EC itself. Production face: hand-rolled &quot;sync&quot; code that applies
+whatever arrives (&quot;it'll sort itself out&quot;) — the classic home-grown-replication bug;
+also any resolver that consults local non-replicated state. The audit question for any
+sync design you review: <em>&quot;is what a replica serves a pure function of the set of updates
+it has received?&quot;</em> If no, it is not eventually consistent, whatever the README says.</li>
+</ul>
+<p><strong>F5 — &quot;Eventually&quot; never comes: the rotting delivery clause.</strong> Create: viz — turn sync
+cadence to &quot;off&quot; mid-run; nothing turns red (the EC judge just says &quot;not yet…&quot; — that's
+the trap). Why: the delivery clause is a <em>forever</em> obligation with no finite deadline, so
+its death produces <strong>no event, no error, no failed request</strong> — reads keep answering,
+writes keep acking, entropy silently accumulates. Held: technically unfalsifiable-not-yet.
+Lost: the promise's entire practical value. Production face: the most under-monitored
+failure in AP systems — a dead repair daemon, a backlogged replication queue growing
+without bound (the [quorums-and-replication] lag-is-a-queue result: apply rate &lt; write
+rate ⇒ unbounded). The alarms that catch it are <em>liveness</em> alarms: replication-lag age,
+time-since-last-successful-repair, oldest-undelivered-update age — you must alarm on
+<strong>the machinery's heartbeat</strong>, because the contract offers nothing to alarm on.</p>
+<p><strong>F6 — The dead rise: deletion meets delayed delivery.</strong> Create (hand trace, and
+[quorums-and-replication]/[crdts] both prepared this): delete a key → delete is stored
+as a <strong>tombstone</strong> (a &quot;this died&quot; record that must itself replicate) → tombstone is
+garbage-collected after its grace window → a replica that was unreachable <em>longer than
+the window</em> comes back carrying the pre-delete value → anti-entropy sees a value the
+others lack and dutifully <strong>re-spreads it: the deleted data resurrects everywhere</strong>. Why:
+GC destroyed the only evidence that the value was outdated, and the delivery machinery
+cannot distinguish &quot;old data you deleted&quot; from &quot;new data you're missing&quot;. Held: EC (it
+converges — onto the resurrected value!). Lost: the delete. Production face: Cassandra's
+<code>gc_grace_seconds</code> (default 10 days) and its <strong>hard operational law</strong> — every node must
+complete repair within the grace window, or don't re-admit it; same reason [crdts] rule
+says never restore a CRDT replica from backup into a live cluster.</p>
+<p><strong>F7 — Read-modify-write on an EC read.</strong> Create: read balance from a stale replica,
+compute, write back (pencil exercise 5.2). Why: the read carried no promise of currency,
+and the write-back <strong>overwrites newer state the reader never saw</strong> — this is the
+[linearizability] lab's 87%-lost increment with the extra twist that <em>distribution makes
+the window bigger</em>. Held: EC. Lost: updates, at whatever rate you have concurrency.
+Production face: any &quot;fetch, edit, save&quot; flow against an eventually-consistent read path;
+the fixes are the whole [optimistic-vs-pessimistic-locking] lab (conditional writes,
+versions) or routing the read strongly — EC reads are for <em>display</em>, never for
+<em>decisions</em>, unless the write path is conditional.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Your monitoring shows zero divergent replicas for 30 straight days.
+Which of these can you conclude? (a) the store is eventually consistent, (b) the
+anti-entropy machinery is working, (c) the consistency window is small, (d) none of
+these.</p>
+<details><summary>Reveal</summary>
+**(d)** — and the reason is the falsifying-query rule wearing a distributed-systems
+costume. "Zero divergence observed" is compatible with: divergence you didn't sample
+(the check reads a quorum that happens to overlap), a window your probe never lands in
+(the [linearizability] lab measured a broken design showing **0 violations in 600 calm
+runs**), and — worst — a dead repair daemon with divergence accumulating in keys nobody
+reads (F5: a pass on an unexercised dataset). To conclude (b) you monitor the machinery
+itself; to conclude (c) you measure t-visibility with injected probes *under injected
+network stress* — the "calm network proves nothing" lesson, now on its fourth lab.
+</details>
+
+</blockquote>
+<h2 id="readme-12-correctness--what-you-hold-what-you-traded-where-it-sits">12. CORRECTNESS — what you hold, what you traded, where it sits</h2>
+<p><strong>Guaranteed</strong> (by EC + a lawful resolver): convergence at quiescence; availability of
+every read and write during partitions (the [causal-consistency] 600/600 side of CAP);
+no coordination on any request path; and — if and only if the resolver is a pure function
+of the set — determinism of the limit.</p>
+<p><strong>Explicitly NOT guaranteed, each refused by name:</strong> any bound on staleness (no deadline
+clause); recency (no real-time clause — [linearizability]'s whole right column); any two
+reads agreeing, even the same client's (no session clauses); cause before effect (no
+causal clause — a comment can surface before its post, [causal-consistency]'s opening
+wound); survival of concurrent writes (resolver's choice, F3); <strong>any cross-replica
+invariant</strong> — the [crdts] bank measured it: two partitioned warehouses each honoring
+&quot;stock ≥ 0&quot; locally merged to <strong>−2</strong>; an invariant needs a referee who can say <em>no</em>, and
+EC's definition is the absence of that referee ([raft] is its price).</p>
+<p><strong>The trade, stated once:</strong> you sold every safety clause about the path to buy liveness
+plus availability plus latency. Whether that sale was smart is a <em>per-flow</em> question —
+display flows usually yes, decision flows usually no (F7).</p>
+<p><strong>The formal seam of the lab:</strong> classic EC is a <strong>liveness</strong> property — unfalsifiable,
+untestable, un-alarmable directly (F5). <strong>Strong eventual consistency</strong> ([crdts]) is the
+<em>safety</em> upgrade of the same idea: &quot;same set ⇒ same state, immediately&quot; has a finite
+witness (exhibit two replicas, equal sets, different states), which is exactly why the
+crdts lab could <em>fuzz its laws on 50,000 generated states</em> while this lab's central
+property cannot be tested at all — only its companions (session guarantees, bounds,
+machinery heartbeats) can. When someone says &quot;we tested that our system is eventually
+consistent&quot;, the true translations are: they tested convergence <em>under quiescence in
+finite scenarios</em>, or they tested SEC. The distinction is worth a design-review question.</p>
+<p><strong>The ladder, with this lab as its floor</strong> (strength increases downward; each rung =
+the floor + named extra clauses):</p>
+<pre class="mermaid">graph TD
+    EC[&quot;EVENTUAL CONSISTENCY — this lab\nconverge at quiescence; nothing about the path&quot;]
+    SG[&quot;+ session guarantees (RYW, monotonic reads/writes, WFR)\nthe path looks sane to EACH client — routing/tokens&quot;]
+    CC[&quot;+ causal — cause before effect for EVERYONE\n= all four session guarantees, transitively&quot;]
+    CCP[&quot;causal+ — causal AND convergent conflict handling&quot;]
+    SEC[&quot;SEC — same set ⇒ same state, immediately\nliveness clause upgraded to safety (CRDTs)&quot;]
+    LIN[&quot;linearizability — single-copy illusion, real time\nevery clause; pay with CAP&#x27;s availability&quot;]
+    EC --&gt; SG --&gt; CC --&gt; CCP
+    EC --&gt; SEC
+    CC --&gt; LIN
+</pre>
+<p>(SEC strengthens the <em>decision</em> clause; the session/causal chain strengthens the <em>path</em>;
+linearizability strengthens both plus real time. Azure Cosmos DB literally sells this
+diagram as a menu — strong / bounded staleness / session / consistent prefix / eventual —
+and <strong>bounded staleness</strong> is the one rung you haven't met by name: EC plus a hard ceiling
+&quot;never more than K versions or T seconds behind&quot;, the contract-ification of stage 10.5's
+measured window.)</p>
+<blockquote>
+<p>✅ <strong>CHECKPOINT — engineering model complete.</strong> You can classify any consistency claim
+by which clauses it adds to this floor, say which failures are breaches vs surprises,
+and name why EC itself is untestable while SEC is not. Next: where you already run this
+in production without calling it that.</p>
+</blockquote>
+<hr />
+<h2 id="readme-13-production--you-have-been-running-this-for-years">13. PRODUCTION — you have been running this for years</h2>
+<p><strong>The confession first: the most-deployed eventually-consistent system in your world is
+an ordinary SQL read replica.</strong> Postgres/MySQL async replication + a read-routing layer
+(<code>@Transactional(readOnly = true)</code> steering to the replica) is <em>exactly</em> this lab: ack at
+the primary (delivery clause = the WAL shipper — with resolver trivial, since a single
+primary orders all writes, replicas replay one log: no concurrent-write problem, only
+staleness), consistency window = replication lag, F1/F2/F7 all live and biting, and the
+lag gauge is the delivery-clause heartbeat. Every trap in stage 11 has a Java-shop
+costume: the saved-form-then-list-shows-old-row bug is F1; &quot;sometimes the row flickers
+back&quot; is F2 (a pool with two replicas); reading the replica inside a payment decision is
+F7. [isolation-levels]' warning gets its third repetition: <em>a stale replica produces
+symptoms identical to read skew and no isolation level touches it.</em></p>
+<p><strong>The Dynamo lineage</strong> (Cassandra, Riak, Voldemort — the systems the term was coined
+for): everything in this doc composed — sloppy quorums + hinted handoff (delivery),
+read repair + scheduled anti-entropy with Merkle trees (delivery), LWW <em>or</em> vector-clock
+siblings (decision; Cassandra chose LWW and inherited F3, Riak chose siblings and later
+CRDTs), tombstones + <code>gc_grace_seconds</code> (F6), tunable R/W/N per request
+([quorums-and-replication]'s dial — &quot;eventual&quot; is the R+W≤N region of that lab's table).
+Operational reality Cassandra makes explicit: <strong>anti-entropy is an operator
+responsibility</strong> — <code>nodetool repair</code> must complete within the grace window on every node;
+&quot;we run Cassandra&quot; means &quot;we run a repair schedule&quot;, and the F5 alarm
+(time-since-last-repair) is a first-class pager.</p>
+<p><strong>DynamoDB</strong> prices this lab: an eventually-consistent read costs <strong>half</strong> a strongly
+consistent one — the CAP trade as a line item. <strong>DNS</strong> is the planet-scale specimen:
+TTL-bounded staleness, no session anything, converges by expiry — and everyone accepts
+it because the <em>data</em> (name→address) tolerates staleness, which is the real lesson of
+choosing EC: it's a property you match to data, not a belief. <strong>S3</strong> is the cautionary
+tale in reverse: eventually-consistent overwrite-reads from 2006, then in <strong>December
+2020</strong> made strongly consistent — after 14 years of every S3-backed data lake carrying
+list-after-write workarounds. The vendor moved the contract because <em>customers kept
+building F1/F7 bugs</em>; when the platform can afford the stronger clause, un-promised
+behavior that users depend on eventually gets promised (Hyrum's law, priced).</p>
+<p><strong>What the on-call engineer actually watches</strong> (the whole stage-11 list, as a runbook):
+replication/apply <strong>lag age</strong> per replica and repair <strong>backlog age</strong> (F5 — the liveness
+heartbeats; alarm on age, not on rate); <strong>clock skew</strong> with eviction if LWW anywhere
+(F3); <strong>sibling counts</strong> if vectors (decision-machine backpressure); <strong>t-visibility
+probes under injected latency</strong> for the window SLO (F1, and the 11.7 falsifying-query
+lesson); tombstone/GC schedule compliance (F6). And the two questions for any incident
+in an EC system: <em>which un-promised guarantee did this flow silently assume?</em> and <em>is
+the delivery machinery alive?</em></p>
+<p><strong>What the noticeboard model omitted</strong> (each a real subsystem): Merkle-tree digests
+(comparing sets cheaply at scale); hinted handoff's failure modes; membership — <em>who</em> the
+replicas even are, gossiped, [gossip-protocols]; per-key sharding of the whole story,
+[consistent-hashing]; backpressure when anti-entropy competes with foreground traffic;
+security of the sync channel; and cross-key anything ([distributed-transactions] is the
+other end of that road).</p>
+<hr />
+<h2 id="readme-14-exercises">14. EXERCISES</h2>
+<p>Eight rungs in <strong><code>EXERCISES.md</code></strong> — explain, identify (in the viz), predict, modify,
+trace, spot-the-flaw, handle-failure, and a 3-datacenter design rung. Attempt before
+opening <strong><code>SOLUTIONS.md</code></strong>; rungs 7–8 are graded as design discussions, not answers.</p>
+<h2 id="readme-15-knowledge-map--next-steps">15. KNOWLEDGE MAP &amp; NEXT STEPS</h2>
+<pre class="mermaid">graph LR
+    subgraph PRE[&quot;prerequisites — all learned&quot;]
+        CAP[cap-theorem]
+        QR[quorums-and-replication]
+        GP[gossip-protocols]
+        CRDT[crdts]
+        CAUS[causal-consistency]
+        LIN[linearizability]
+    end
+    EC((eventual-consistency))
+    CAP --&gt; EC
+    QR --&gt; EC
+    GP --&gt; EC
+    CRDT --&gt; EC
+    CAUS --&gt; EC
+    LIN --&gt; EC
+    EC -.confused with.-&gt; SEC[&quot;SEC: same set ⇒ same state NOW — safety, testable;&lt;br&gt;EC promises only the quiescent limit — liveness&quot;]
+    EC -.confused with.-&gt; BS[&quot;bounded staleness: EC + a promised ceiling;&lt;br&gt;EC&#x27;s ceiling is measured, never promised&quot;]
+    EC --&gt; J[jepsen? — testing the untestable via its companions]
+    EC --&gt; PR[partitioning-and-rebalancing?]
+    EC --&gt; CDC[change-data-capture? — EC pipelines between stores]
+    EC --&gt; LFS[local-first-software? — EC as a feature, not a compromise]
+</pre>
+<p>Commonly confused, one sentence each: <strong>EC vs SEC</strong> — SEC removes &quot;eventually&quot; from the
+decision half (same set ⇒ same state <em>immediately</em>), turning liveness into testable
+safety. <strong>EC vs causal</strong> — causal constrains the <em>path</em> (order of visibility), EC only
+the <em>limit</em>. <strong>EC vs bounded staleness</strong> — bounded staleness signs a number; EC measures
+one but signs nothing. <strong>&quot;Eventually consistent&quot; vs &quot;inconsistent&quot;</strong> — EC systems are
+<em>converging</em> by construction; a system with a broken decision clause (F4) is simply
+broken, not &quot;eventually consistent, sort of&quot;.</p>
+<p>Ready to type next: <code>/learn jepsen</code> (how you test systems whose central promise is
+untestable), <code>/learn change-data-capture</code> (the EC pipeline you build between two strong
+stores), <code>/learn local-first-software</code> (EC chosen on purpose, client-side),
+<code>/learn partitioning-and-rebalancing</code>.</p>
+<h2 id="readme-16-glossary">16. GLOSSARY</h2>
+<p>In order of appearance; terms carried from prior labs marked ↩.</p>
+<ul>
+<li><strong>eventual consistency (EC)</strong> — if updates stop, all replicas eventually serve the same
+value; nothing promised before that point.</li>
+<li><strong>consistency window</strong> ↩([cqrs], now with edges) — the interval between a write's ack and
+its visibility everywhere; measured, never promised.</li>
+<li><strong>safety property</strong> ↩([raft], sharpened) — &quot;nothing bad ever happens&quot;; every violation
+has a finite witness, so it is testable.</li>
+<li><strong>liveness property</strong> ↩ — &quot;something good eventually happens&quot;; no finite observation can
+violate it, so it is untestable and must be monitored via its machinery.</li>
+<li><strong>quiescence</strong> — a period with no new updates; the only condition under which classic EC
+promises anything observable.</li>
+<li><strong>quiescent consistency</strong> — the academic name for &quot;converged whenever quiescent&quot;.</li>
+<li><strong>convergence / decision clause</strong> — replica output is a deterministic function of the
+set of updates received.</li>
+<li><strong>delivery clause</strong> — every update keeps being propagated until present at every
+replica; a forever-obligation.</li>
+<li><strong>staleness</strong> — how far behind an acknowledged write a served value is.</li>
+<li><strong>t-visibility</strong> — probability a read issued t after a write's ack returns it.</li>
+<li><strong>k-staleness</strong> — staleness counted in versions rather than time.</li>
+<li><strong>PBS (probabilistically bounded staleness)</strong> — modeling/measuring t-visibility as a
+distribution; &quot;eventual&quot; turned into an SLO-able number.</li>
+<li><strong>BASE</strong> — Basically Available, Soft state, Eventually consistent; the anti-ACID
+acronym.</li>
+<li><strong>soft state</strong> — replica state that may be revised by convergence without any client
+writing.</li>
+<li><strong>resolver / conflict-resolution policy</strong> — the deterministic rule choosing among
+concurrent updates; decides which writes die.</li>
+<li><strong>arrival-order resolver</strong> — the broken resolver (output depends on delivery history);
+produces provable divergence (F4).</li>
+<li><strong>last-write-wins (LWW)</strong> ↩ — resolver by (timestamp, id); silently drops concurrent
+and clock-disadvantaged writes.</li>
+<li><strong>siblings / version vectors</strong> ↩ — resolver that keeps all concurrent versions for the
+app to merge.</li>
+<li><strong>anti-entropy</strong> ↩ — cadenced compare-and-merge between replicas; the delivery clause's
+workhorse.</li>
+<li><strong>read repair</strong> ↩ — opportunistic fixing of stale replicas during reads.</li>
+<li><strong>hinted handoff</strong> ↩ — best-effort buffering of writes for an absent replica.</li>
+<li><strong>tombstone / gc_grace_seconds</strong> ↩ — deletion marker and its GC window; F6 lives here.</li>
+<li><strong>resurrection</strong> — deleted data re-spread by anti-entropy after tombstone GC.</li>
+<li><strong>session guarantees</strong> ↩ — RYW / monotonic reads / monotonic writes / WFR; path
+promises added per-client by routing or tokens.</li>
+<li><strong>bounded staleness</strong> — EC plus a promised ceiling (≤ K versions or T seconds behind).</li>
+<li><strong>strong eventual consistency (SEC)</strong> ↩ — same set ⇒ same state immediately; the safety
+upgrade of EC's decision clause.</li>
+<li><strong>tunable consistency</strong> ↩ — per-request R/W dials; EC is the R+W≤N region.</li>
+<li><strong>t-visibility probe</strong> — synthetic write-then-read-everywhere measurement of the window.</li>
+</ul>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises--eventual-consistency">Exercises — eventual consistency</h1>
+<p>Pencil-and-paper and visualization only. Attempt each rung before opening
+<code>SOLUTIONS.md</code>. The visualization is <code>visualization.html</code>; scenario numbers refer
+to its predict-then-run cards.</p>
+<hr />
+<h2 id="exercises-rung-1--explain-no-notation">Rung 1 — Explain (no notation)</h2>
+<p><strong>1.1</strong> State the eventual-consistency promise in your own words, then name its two
+clauses and say which one is about <em>time</em> and which is about <em>agreement</em>.</p>
+<p><strong>1.2</strong> A product manager says: &quot;QA ran the app for a week and never saw a stale
+read, so the store is consistent.&quot; Explain, in words a PM will accept, what that
+week of green actually proved and what it cannot prove.</p>
+<p><strong>1.3</strong> The visualization's EC judge has no red light while writes flow, yet the
+Monotonic-reads judge can turn red instantly. Explain the difference in one
+paragraph without using the words &quot;safety&quot; or &quot;liveness&quot; — then say which word
+names which judge.</p>
+<h2 id="exercises-rung-2--identify-in-the-visualization">Rung 2 — Identify (in the visualization)</h2>
+<p><strong>2.1</strong> Reset the page. Point at (name the panel): where the <em>delivery clause's</em>
+work is visible, where the <em>decision clause's</em> work is visible, and where the
+<em>measured-but-never-promised</em> number lives.</p>
+<p><strong>2.2</strong> Run scenario 3 to the end. Click the chip for &quot;market moved to Sunday&quot; in
+any board's <strong>Holds</strong> list. Its inspector shows a &quot;had seen&quot; list. What in that
+list proves the LWW overwrite was <strong>not</strong> a knowing (causal) replacement — and
+therefore counts as a lost update?</p>
+<p><strong>2.3</strong> In scenario 4's end state, each board's <strong>Holds</strong> row is identical and the
+<strong>Displays</strong> rows differ. Which clause of the engineering model does that pair of
+rows witness against?</p>
+<h2 id="exercises-rung-3--predict-commit-before-checking">Rung 3 — Predict (commit before checking)</h2>
+<p>For each setup, predict every judge's state, then reproduce it in the
+visualization and check.</p>
+<p><strong>3.1</strong> Flood R3. Ben (home R3, sticky) reads twice, ten seconds apart, while Asha
+posts twice on R1. Which judges object?</p>
+<p><strong>3.2</strong> Asha (home R1) posts a notice, then sets routing to <em>random</em> and reads
+three times. What is the worst sequence of judge outcomes possible, and what is
+the best? What single change makes the worst impossible?</p>
+<p><strong>3.3</strong> Cadence 6, forwarding ON, no flood, no skew. Asha posts at t=1. What is
+the largest number of seconds R3 can remain behind, and which two mechanisms race
+to close the gap?</p>
+<h2 id="exercises-rung-4--modify-what-breaks-and-which-property-is-lost">Rung 4 — Modify (what breaks, and which property is lost)</h2>
+<p><strong>4.1</strong> Turn forwarding OFF and cadence to <em>never</em>, then post and read normally.
+Nothing turns red. Which clause is now false, why does no judge notice, and what —
+in a production system — is the <em>only</em> kind of signal that can notice it?</p>
+<p><strong>4.2</strong> Set ALL three skew sliders to +60 (every clock equally fast). Re-run
+scenario 3's story by hand (Ben posts on R2, Asha posts 15 s later on R1, settle).
+Does the genuinely-newer write still lose? What does this tell you about
+<em>absolute</em> vs <em>relative</em> clock error under LWW?</p>
+<p><strong>4.3</strong> Suppose sync rounds only copied in one direction (R1 → others, never back).
+Which clause breaks, for which writes, and what real-world misconfiguration does
+this correspond to?</p>
+<h2 id="exercises-rung-5--trace-by-hand">Rung 5 — Trace by hand</h2>
+<p>LWW resolver. Skews: R1 +0, R2 −30, R3 +0. Cadence: sync round at t=10 and t=20,
+all pairs. Forwarding OFF. All boards start with <code>u0 &quot;Saturday&quot; ts=0</code>.</p>
+<div class="code"><pre><code>t=2   Asha posts &quot;Sunday&quot;    at R1
+t=4   Ben  posts &quot;cancelled&quot; at R2
+t=6   Ben  reads R2
+t=12  Ben  reads R3
+t=20  (after the sync) settle
+</code></pre></div>
+<p>Write down: each write's stamped ts; what each read returns; each board's set and
+displayed value after the t=10 round; the settled value; and the Lost-updates
+judge's ruling with its reason. Then reproduce in the visualization (set skew
+R2=−30, cadence off, use <strong>Sync now</strong> at the right moments) and compare.</p>
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p>A team describes their hand-rolled replicated key-value store:</p>
+<blockquote>
+<p>&quot;Each replica keeps, per key, only the current value and its timestamp.
+Anti-entropy exchanges current values; the receiver keeps whichever timestamp
+is larger. Deletes are handled by removing the row — no need to waste space on
+dead keys. It's eventually consistent: same inputs, same max, deterministic.&quot;</p>
+</blockquote>
+<p>There is a planted flaw. Construct a concrete run (replicas, timestamps, one
+delete, one sync) where a key the user deleted <strong>comes back on every replica</strong>,
+name the missing mechanism, and say which prior lab's term this is. Then answer:
+is the resulting system still <em>eventually consistent</em> by the definition — and why
+is that answer itself the most instructive part?</p>
+<h2 id="exercises-rung-7--handle-failure-design-on-paper">Rung 7 — Handle failure (design on paper)</h2>
+<p><strong>7.1</strong> The contract offers nothing to alarm on (rung 4.1). Design the monitoring
+page for a Dynamo-style store so that every failure mode F1–F6 from the README has
+a signal that fires <em>before a customer does</em>. For each alarm say what it measures,
+why a simple &quot;compare replicas, alert on divergence&quot; check misses the failure it
+covers, and which alarm is the falsifying query for &quot;our store is healthy&quot;.</p>
+<p><strong>7.2</strong> Extend the noticeboard design so deletes are safe: what must a delete
+store, how long must it live, what rule ties its lifetime to the repair schedule,
+and what happens to a board that was cut off longer than that lifetime?</p>
+<h2 id="exercises-rung-8--design-production-scale">Rung 8 — Design (production scale)</h2>
+<p>Your product runs in 3 regions, 80 ms apart. Four flows: (a) profile-photo
+display, (b) shopping cart (add/remove across devices), (c) password change with
+&quot;log out everywhere&quot;, (d) account-balance display next to a &quot;withdraw&quot; button.</p>
+<p>For each flow choose a contract from the ladder (EC / EC + session guarantees /
+bounded staleness / causal+ / SEC / strong), a resolver where one applies, and the
+read/write path. State which flows must never make a <em>decision</em> from an EC read
+and what the write path needs instead; give the staleness SLO you would sign for
+(a) and how you would measure it honestly; and name the one flow where choosing
+strong consistency everywhere would be the actual design error.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions--eventual-consistency">Solutions — eventual consistency</h1>
+<p>Rungs 7–8 are worked design discussions, not single correct answers.</p>
+<hr />
+<h2 id="solutions-rung-1">Rung 1</h2>
+<p><strong>1.1</strong> &quot;If everyone stops writing and you wait long enough, every replica ends up
+serving the same value; until then, no promises.&quot; Clause 1 — <strong>delivery</strong> (every
+update keeps being propagated until it is everywhere) is the <em>time</em> half: it makes
+&quot;eventually&quot; arrive. Clause 2 — <strong>decision</strong> (replicas holding the same set of
+updates must serve the same thing) is the <em>agreement</em> half: it makes the arrival
+mean one answer.</p>
+<p><strong>1.2</strong> The week proved: under last week's load and last week's network, the
+window was small enough that nobody looked through it. It cannot prove the
+guarantee, because the promise is about an unbounded future (&quot;eventually&quot;) and the
+dangerous behaviors live in conditions QA didn't create: the [linearizability] lab
+measured a design with <em>no</em> guarantee showing <strong>0 violations in 600 calm runs</strong>
+and 109/600 under network jitter. Green under calm conditions is a statement about
+the conditions, not the store. What to tell the PM: &quot;we measured the window, and
+we know which flows are safe <em>because of the measurement</em>, not because of the
+week of green.&quot;</p>
+<p><strong>1.3</strong> The Monotonic-reads judge can point at a <em>finished thing that already went
+wrong</em>: read A saw a notice, read B (later, same person) hit a board that has
+never heard of it — no future event can un-happen that pair. The EC judge's
+promise is about what will <em>eventually</em> be true; at any moment you accuse it, the
+future in which it comes true is still allowed, so the accusation can never be
+proven from what has happened so far. The first kind of promise is called
+<strong>safety</strong> (finite witness), the second <strong>liveness</strong> (no finite witness).</p>
+<h2 id="solutions-rung-2">Rung 2</h2>
+<p><strong>2.1</strong> Delivery clause: the <strong>&quot;Copies on the road&quot;</strong> strip plus the sync-round
+lines in the event log — that's the machinery making &quot;eventually&quot; arrive.
+Decision clause: each replica card's <strong>Holds vs Displays</strong> pair — the set, and the
+resolver's function of the set. The measured-but-never-promised number: the
+<strong>staleness histogram</strong> (and each board's staleness bar) — the consistency window
+as data.</p>
+<p><strong>2.2</strong> Its &quot;had seen&quot; list contains only the old Saturday notice — <strong>not</strong> Ben's
+&quot;market cancelled&quot;. So Asha, posting &quot;Sunday&quot;, never observed &quot;cancelled&quot;: the two
+writes are concurrent, and LWW's timestamp order between them is manufactured, not
+causal. A write is only <em>knowingly</em> replaced when some later write's &quot;had seen&quot;
+list includes it; &quot;Sunday&quot; (the write that dies in scenario 3) appears in no
+later write's context — which is exactly the Lost-updates judge's rule for
+calling it lost rather than superseded.</p>
+<p><strong>2.3</strong> The decision clause: <em>same set ⇒ same display</em>. Identical <strong>Holds</strong> rows
+with different <strong>Displays</strong> rows are the finite witness that the display is a
+function of arrival history rather than of the set — the one provable breach of
+eventual consistency.</p>
+<h2 id="solutions-rung-3">Rung 3</h2>
+<p><strong>3.1</strong> <strong>No judge objects — that is the answer.</strong> Ben reads the same board twice
+(sticky): a board's own set only grows, so monotonic reads holds; he wrote
+nothing, so read-your-writes holds; EC is open; lost-updates pending. He is
+arbitrarily stale the entire time and every session judge is green. Lesson:
+session guarantees are about <em>self-coherence</em>, not freshness — a consistently
+stale reader violates nothing. (Freshness lives in the staleness meter, i.e. in
+measurement.)</p>
+<p><strong>3.2</strong> Worst: first read hits a fresh board (say R1), later reads hit boards the
+write hasn't reached — the first miss is a <strong>read-your-writes</strong> violation and,
+because she'd already <em>seen</em> her write, also a <strong>monotonic-reads</strong> violation; with
+three random reads she can collect several of each. Best: all reads land on R1
+(or after the 2 s forward window) — zero violations. The single change: sticky
+routing (in real systems: session affinity or a session token, the
+[causal-consistency] lab's 3759→0 result). Storage untouched in both worlds.</p>
+<p><strong>3.3</strong> With forwarding healthy the gap closes in <strong>2 s</strong> (travel time). The two
+racing mechanisms: v1 forwarding (fast, gives up after one try) and the cadenced
+sync round (slow, re-offers everything). The number that matters operationally is
+the <em>fallback</em>: if the forward dies, staleness runs until the next round — so the
+cadence you configure is your staleness ceiling <strong>under failure</strong>, which is how
+you should choose it.</p>
+<h2 id="solutions-rung-4">Rung 4</h2>
+<p><strong>4.1</strong> The delivery clause is now false — &quot;eventually&quot; will never arrive. No
+judge notices because every judge rules on <em>events</em> (reads, settlements), and a
+liveness breach produces no event: reads still answer, writes still ack, nothing
+diverges <em>visibly</em> unless someone happens to read a behind replica and even that
+is legal. The only signal that can notice: monitoring the <strong>machinery itself</strong> —
+time since last successful sync round, replication backlog <em>age</em>, an injected
+write-then-read-everywhere probe. Alarm on heartbeats, because the contract has
+no pulse.</p>
+<p><strong>4.2</strong> With every clock +60, Ben's write stamps ts = 60 and Asha's later write
+stamps ts = 75 — <strong>the genuinely-newer write now wins</strong>. LWW ordering depends
+only on <em>relative</em> skew; a uniform absolute error is harmless to who-beats-whom.
+(It is not harmless generally: anything comparing stamps to real time — TTLs,
+&quot;as of 5 p.m.&quot; reads, cross-system merges — inherits the +60 lie; the
+[hybrid-logical-clocks] lab's drift-bound story is this distinction at full
+depth.) The scenario-3 disaster needs clocks that disagree <em>with each other</em>.</p>
+<p><strong>4.3</strong> Writes accepted at R2 or R3 can never reach R1 (once their one forward is
+lost, nothing re-offers them to R1) — the delivery clause is broken for exactly
+the writes that don't originate at the hub. Real-world costume: one-way
+hub-and-spoke repair (&quot;we only repair from the primary DC&quot;), or a firewall/ACL
+that lets sync traffic flow one direction. With forwarding on it is <em>masked</em> —
+everything looks fine until the first lost forward, which is the worst kind of
+misconfiguration: one that only acts under failure.</p>
+<h2 id="solutions-rung-5">Rung 5</h2>
+<p>Stamps: &quot;Sunday&quot; at R1, t=2, skew 0 → <strong>ts 2</strong>. &quot;cancelled&quot; at R2, t=4, skew −30
+→ <strong>ts −26</strong>.</p>
+<ul>
+<li><strong>t=6, Ben reads R2.</strong> R2 holds {Saturday ts0, cancelled ts−26}. LWW takes the
+max: <strong>&quot;Saturday&quot; wins — ts 0 beats ts −26.</strong> Ben's own board refuses to display
+the write it just accepted: the slow clock stamped his notice <em>into the past</em>,
+where it loses even to the ancient default. (Read-your-writes is <em>technically</em>
+satisfied — his write is in the set — the resolver just out-voted it.)</li>
+<li><strong>t=10 sync round.</strong> All pairs exchange; every board now holds
+{Saturday ts0, Sunday ts2, cancelled ts−26} and displays <strong>&quot;Sunday&quot;</strong> (ts 2).</li>
+<li><strong>t=12, Ben reads R3:</strong> &quot;Sunday&quot;. No monotonic violation — R3's set contains
+everything Ben had seen.</li>
+<li><strong>t=20 sync (nothing to copy), settle:</strong> converged on <strong>&quot;Sunday&quot;</strong> —
+EC judge: KEPT. <strong>Lost-updates judge: &quot;cancelled&quot; died</strong> — it is displayed
+nowhere and appears in no later write's context (nobody who wrote afterwards
+had seen it), so it was dropped unknowingly by the resolver.</li>
+</ul>
+<p>The wrinkle worth keeping: a <em>slow</em> clock is as dangerous as a fast one — it
+doesn't delay your writes, it <strong>back-dates</strong> them into defeat.</p>
+<h2 id="solutions-rung-6">Rung 6</h2>
+<p>The run: all three replicas hold <code>k = v, ts 5</code>. User deletes <code>k</code> on R1 → R1
+removes the row. Next anti-entropy: R2 offers <code>(k, v, ts 5)</code>; R1 has <em>no row</em> for
+<code>k</code>, so there is nothing to compare against — &quot;missing key&quot; looks identical to
+&quot;key I never heard of&quot;, and R1 adopts <code>v</code> again. One round later every replica
+has <code>k = v</code> back: <strong>the delete is undone everywhere, permanently.</strong></p>
+<p>Missing mechanism: a delete must be <strong>data, not absence</strong> — a <strong>tombstone</strong>
+(<code>k = ⟨deleted⟩, ts 9</code>) that replicates and competes in LWW like any write, plus
+a GC grace window and the repair-deadline rule (rung 7.2). Prior-lab terms:
+tombstone and <code>gc_grace_seconds</code> from [quorums-and-replication]/[btree-and-lsm],
+and the resurrection story is README F6.</p>
+<p>Is it still eventually consistent? <strong>Yes</strong> — and that is the instructive part.
+The state is a deterministic function of the update set, replicas converge, every
+clause holds. The delete was never an <em>update</em> in the system's model, so the
+contract cannot see it. &quot;Eventually consistent&quot; certifies convergence over the
+updates the design chose to represent; it says nothing about whether your intent
+was represented at all.</p>
+<h2 id="solutions-rung-7-worked-discussion">Rung 7 (worked discussion)</h2>
+<p><strong>7.1</strong> A monitoring page that beats the customer to each failure:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Failure</th>
+  <th>Signal</th>
+  <th>Why &quot;compare replicas, alert on divergence&quot; misses it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1 window too wide</td>
+  <td><strong>Injected t-visibility probes</strong>: canary write, read back from every replica, plot the delay distribution; run some probes with injected latency/faults</td>
+  <td>A compare check samples instants and exercised keys; the probe measures the window itself, tail included</td>
+</tr>
+<tr>
+  <td>F2 non-monotonic sessions</td>
+  <td>Enforce affinity/session tokens and alert on token-validation failures; optionally a roaming canary client</td>
+  <td>Divergence between replicas is <em>normal</em> here; the failure is in routing, which replica comparison never sees</td>
+</tr>
+<tr>
+  <td>F3 LWW clock loss</td>
+  <td><strong>Clock-skew gauge per node</strong> (NTP offset) with alert + eviction</td>
+  <td>The store converges <em>promptly and wrong</em> — there is no divergence to find; only the clock reveals the danger</td>
+</tr>
+<tr>
+  <td>F4 non-deterministic resolver</td>
+  <td>Periodic assertion: same content digest ⇒ same served value, across replicas</td>
+  <td>Plain divergence checks that only compare <em>stored</em> data pass; you must compare digest AND what is served</td>
+</tr>
+<tr>
+  <td>F5 dead machinery</td>
+  <td><strong>Age</strong> alarms: time since last successful repair round per range; backlog age (not size); oldest-undelivered-update age</td>
+  <td>Divergence accumulates in keys nobody reads and the comparer may sample none of them; a dead daemon with a quiet workload compares clean</td>
+</tr>
+<tr>
+  <td>F6 resurrection risk</td>
+  <td>Node-down duration vs GC grace; repair-completion-within-window compliance; block re-admission past the deadline</td>
+  <td>Nothing diverges until <em>after</em> GC has destroyed the evidence — by then the check confirms the resurrected value as &quot;consistent&quot;</td>
+</tr>
+</tbody>
+</table></div>
+<p>The falsifying query for &quot;our store is healthy&quot;: the <strong>t-visibility probe under
+injected network stress</strong>. Every other green is compatible with a calm network
+doing you a favor — the lesson measured four labs running ([linearizability]'s
+0/600-when-calm), now applied to operations.</p>
+<p><strong>7.2</strong> A delete becomes a tombstone write with its own timestamp, replicated and
+resolved like any update. Its lifetime must exceed <em>(longest guaranteed interval
+between completed full sync rounds) + (longest replica outage you will tolerate
+re-admitting)</em>. The rule that ties them: <strong>every board must complete a full sync
+round within the tombstone lifetime — a board cut off longer forfeits its set</strong>:
+it re-enters empty and re-syncs from the others (the bootstrap rule, same as
+[crdts]' never-restore-from-backup). Cassandra ships exactly this contract as
+<code>gc_grace_seconds</code> + &quot;repair every node within gc_grace&quot;.</p>
+<h2 id="solutions-rung-8-worked-discussion">Rung 8 (worked discussion)</h2>
+<ul>
+<li><strong>(a) Profile-photo display:</strong> EC + <strong>session token</strong> (read-your-writes for the
+author — the one person who notices staleness), LWW register resolver (conflict
+= same user racing themselves; losing one is acceptable). SLO: sign something
+like &quot;99.9% of reads fresh within 1 s cross-region&quot;, and measure it with canary
+probes <em>including fault-injected runs</em>, not with production complaint counts.</li>
+<li><strong>(b) Shopping cart:</strong> <strong>SEC — an OR-Set CRDT</strong>, add-wins. The [crdts] lab
+measured why: 2P-set re-add fails 0/100, OR-set 100/100, and merge survives any
+delivery disorder. Cart taps must work during partitions and merge across
+devices; refusing a cart add to get serializability is the wrong trade — this
+is the flow where <strong>strong-everywhere is the design error</strong> (80 ms × quorum on
+every tap, and unavailability during partitions, protecting data whose
+conflicts merge trivially).</li>
+<li><strong>(c) Password change + &quot;log out everywhere&quot;:</strong> the credential record needs a
+<strong>strong (linearizable) write and read path</strong> — single ordering authority
+(leader/consensus-backed, or a single-region primary). &quot;Log out everywhere&quot; is
+a cross-replica invariant, and the [crdts] warehouse (−2 flour) is the proof
+that no coordination-free design can enforce one. Practical shape: strong
+store for credentials/sessions + revocation events pushed to validators;
+validators may cache with a <em>bounded</em> staleness only if the product accepts
+&quot;logged out within T&quot; — and that T goes in the contract, not in a wish.</li>
+<li><strong>(d) Balance next to &quot;withdraw&quot;:</strong> split the flow. The <em>display</em> may be EC or
+bounded-staleness <strong>with honesty</strong> (&quot;as of 12:01&quot;). The <em>withdraw decision</em>
+must never be computed from an EC read (README F7): the write path enforces the
+invariant — a conditional/serializable debit at the strong ledger
+([optimistic-vs-pessimistic-locking]'s conditional write, or a real
+transaction). An EC balance read + unconditional debit is the textbook silent
+money-loser.</li>
+</ul>
+<p>Grading yourself: full marks is not the strongest contract everywhere — it is a
+<em>different</em> contract per flow, each justified by what the data tolerates, plus
+the two honesty artifacts: a measured staleness SLO, and an explicit list of
+flows forbidden from deciding on EC reads.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../27-linearizability-vs-serializability/notes.html"><small>← Lab 27</small>linearizability-vs-serializability</a><a href="../29-causal-consistency/notes.html" style="text-align:right"><small>Lab 29 →</small>causal-consistency</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why--two-words-that-decide-real-designs">1. WHY — two words that decide real designs</a><a href="#readme-2-problem--the-two-noticeboards-of-deodar">2. PROBLEM — the two noticeboards of Deodar</a><a href="#readme-3-naive-solution--promise-the-boards-always-match">3. NAIVE SOLUTION — promise the boards always match</a><a href="#readme-4-failure--the-humble-promise-forbids-nothing">4. FAILURE — the humble promise forbids nothing</a><a href="#readme-5-the-real-requirement--what-the-sentence-must-contain-to-be-non-vacuous">5. THE REAL REQUIREMENT — what the sentence must contain to be non-vacuous</a><a href="#readme-6-key-idea--a-promise-about-the-limit-not-the-path">6. KEY IDEA — a promise about the limit, not the path</a><a href="#readme-7-terminology--the-professional-names">7. TERMINOLOGY — the professional names</a><a href="#readme-8-mental-models">8. MENTAL MODELS</a><a href="#readme-9-visualization--the-weakest-promise">9. VISUALIZATION — &quot;The Weakest Promise&quot;</a><a href="#readme-10-actual-mechanism--building-the-two-clauses">10. ACTUAL MECHANISM — building the two clauses</a><a href="#readme-11-failure-scenarios--seven-ways-to-get-hurt-only-one-of-which-is-a-breach">11. FAILURE SCENARIOS — seven ways to get hurt, only one of which is a breach</a><a href="#readme-12-correctness--what-you-hold-what-you-traded-where-it-sits">12. CORRECTNESS — what you hold, what you traded, where it sits</a><a href="#readme-13-production--you-have-been-running-this-for-years">13. PRODUCTION — you have been running this for years</a><a href="#readme-14-exercises">14. EXERCISES</a><a href="#readme-15-knowledge-map--next-steps">15. KNOWLEDGE MAP &amp; NEXT STEPS</a><a href="#readme-16-glossary">16. GLOSSARY</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

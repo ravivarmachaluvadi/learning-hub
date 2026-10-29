@@ -1,0 +1,616 @@
+<!doctype html>
+<html lang="en" data-hub-lab="20-scoped-values">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>20. scoped-values</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 20 of 71 · Stage 3</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 20 · The JVM Underneath: One Machine, Many Threads</p><article id="readme"><h1 id="readme-scoped-values--a-learning-lab">Scoped Values — a learning lab</h1>
+<p><em>From &quot;never heard of it&quot; to reading JEP 506 comfortably. <code>ScopedValue</code> is
+<strong>final</strong> in this machine's JDK 25 — no preview flags except where a demo
+touches <code>StructuredTaskScope</code>. All quoted output is real, from <code>./run.sh</code>.
+Third lab in an arc: <a href="../18-java-virtual-threads/notes.html#readme">java-virtual-threads</a> made
+threads cheap, <a href="../19-structured-concurrency/notes.html#readme">structured-concurrency</a> organized
+them into trees — this lab is how <em>data</em> travels down those trees.</em></p>
+<hr />
+<h2 id="readme-1-why-does-this-exist">1. Why does this exist?</h2>
+<p>Almost every server has &quot;ambient&quot; facts about the current request — who is
+calling, the request id for logs, the tenant, the transaction. Threading them
+through every method signature is unbearable, so Java offered <code>ThreadLocal</code>:
+a per-thread pocket any code can read. But <code>ThreadLocal</code> was designed in
+1997 for a world of few, long-lived, pooled threads — and in today's world
+(millions of short-lived virtual threads, thread-per-request) its three
+design mistakes — anyone can overwrite it, it lives forever until manually
+removed, and it's expensive to inherit — became bugs, leaks, and memory
+cost. <code>ScopedValue</code> is the redesign: same &quot;ambient data&quot; job, with the
+mistakes made impossible rather than discouraged.</p>
+<h2 id="readme-2-the-problem-as-a-story">2. The problem, as a story</h2>
+<p>A hospital gives every visitor a colored badge at the front desk: the badge
+says which patient you're visiting. Every ward you walk into simply reads
+the badge — you never repeat yourself. Now imagine the badges work like
+sticky notes anyone can rewrite: a nurse in radiology scribbles a different
+patient on yours (it was convenient for one errand and she forgot to change
+it back). You walk on; every subsequent ward now trusts the wrong note. And
+when you leave, the badge stays on your coat — tomorrow, whoever borrows the
+coat walks the hospital as <em>you</em>.</p>
+<p>The badge idea is right — context you carry, wards that just read it. What's
+broken is that the badge is <strong>writable by everyone</strong> and <strong>nobody is forced
+to take it off</strong>.</p>
+<h2 id="readme-3-the-naive-solution">3. The naive solution</h2>
+<p>Java's classic badge is <code>ThreadLocal</code>:</p>
+<div class="code"><pre><code class="language-java">static final ThreadLocal&lt;String&gt; CURRENT_USER = new ThreadLocal&lt;&gt;();
+// top of request:            CURRENT_USER.set(&quot;alice&quot;);
+// anywhere deeper:           CURRENT_USER.get();
+// end of request (please!):  CURRENT_USER.remove();
+</code></pre></div>
+<h2 id="readme-4-why-that-fails">4. Why that fails</h2>
+<p>Run <code>./run.sh leak</code> — the coat-borrowing scene, live (real output):</p>
+<div class="code"><pre><code>[request A] set CURRENT_USER=alice on pool-1-thread-1
+[request A] ...does its work, returns. Oops: nobody called remove().
+[request B] on pool-1-thread-1 — who am I? CURRENT_USER=alice
+[request B] I never logged in as alice! Request A&#x27;s identity LEAKED into me.
+</code></pre></div>
+<p><code>ThreadLocal</code>'s three structural mistakes, named:</p>
+<ol>
+<li><strong>Unbounded mutability.</strong> <code>set()</code> is callable from anywhere, any time.
+You cannot look at code and know what the value is — anything below (or
+before) you may have overwritten it. Data flows <em>sideways</em> invisibly.</li>
+<li><strong>Unbounded lifetime.</strong> The value lives until <code>remove()</code> — a manual,
+forgettable act (our demo &quot;refactored it away&quot;). On a pooled thread the
+stale value greets the next request: the identity-leak bug class. At
+virtual-thread scale it's also memory: a million threads × one forgotten
+cache each.</li>
+<li><strong>Expensive inheritance.</strong> <code>InheritableThreadLocal</code> must deep-copy the
+parent's table at <em>every</em> thread creation (the child might mutate it) —
+painful when <a href="../19-structured-concurrency/notes.html#readme">structured concurrency</a> forks
+threads by the dozen per request.</li>
+</ol>
+<h2 id="readme-5-the-key-idea">5. The key idea</h2>
+<p><strong>Bind the value to a region of the call stack, not to the thread.</strong> A
+scoped value is written exactly once, at the top, together with the block of
+code allowed to see it; everything called from that block can read it;
+when the block exits — normally or by exception — the binding is simply
+gone. Immutable while bound + lifetime = block lifetime: mistakes 1 and 2
+have no spelling, and 3 becomes free (nobody can mutate, so children share
+the parent's bindings by pointer).</p>
+<h2 id="readme-6-the-vocabulary">6. The vocabulary</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Plain-English meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Scoped value</strong></td>
+  <td>The <em>key</em>: a <code>static final ScopedValue&lt;T&gt;</code> field. Itself holds nothing — think &quot;badge slot&quot;.</td>
+</tr>
+<tr>
+  <td><strong>Binding</strong></td>
+  <td>The association key→value, alive only while its block runs.</td>
+</tr>
+<tr>
+  <td><strong><code>where(key, value)</code></strong></td>
+  <td>Prepares a binding; returns a <strong>carrier</strong> (a bundle of one or more bindings).</td>
+</tr>
+<tr>
+  <td><strong>Carrier</strong></td>
+  <td>The fluent bundle: <code>where(A,1).where(B,2)</code> binds several values for one block.</td>
+</tr>
+<tr>
+  <td><strong><code>run(block)</code> / <code>call(block)</code></strong></td>
+  <td>Executes the block <em>inside</em> the bindings (<code>call</code> returns a result). This is the only way a binding comes to exist.</td>
+</tr>
+<tr>
+  <td><strong>Dynamic scope</strong></td>
+  <td>What the block can see: everything it <em>calls</em>, however deep — not just its own braces.</td>
+</tr>
+<tr>
+  <td><strong>Rebinding</strong></td>
+  <td>Nesting a new <code>where</code> for the same key: shadows the outer value for the inner block only.</td>
+</tr>
+<tr>
+  <td><strong>Unbound</strong></td>
+  <td>No enclosing block bound the key: <code>get()</code> throws, <code>orElse(x)</code> answers <code>x</code>, <code>isBound()</code> says which.</td>
+</tr>
+<tr>
+  <td><strong>Inheritance</strong></td>
+  <td>Bindings flow into <code>StructuredTaskScope.fork()</code> children automatically — and into hand-started threads <em>not at all</em>.</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-7-the-mental-model">7. The mental model</h2>
+<blockquote>
+<p><strong>A scoped value is an invisible parameter passed to every call beneath
+the binding.</strong> Imagine every method under <code>where(USER,&quot;ravi&quot;).run(...)</code>
+silently gaining a final parameter <code>user=&quot;ravi&quot;</code>. That's why it can't
+change (parameters are what they were passed as), why it disappears when
+the stack unwinds (parameters die with the call), why rebinding shadows
+(an inner call passed a different argument), and why structured forks
+inherit (they're calls too — just sideways ones).</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+    subgraph B[&quot;where(USER, ravi).run( ... )   — binding alive in here&quot;]
+        H[&quot;handleRequest()&quot;] --&gt; V[&quot;validate()&quot;]
+        V --&gt; R[&quot;repository()  — USER.get() → ravi&quot;]
+        V --&gt; F[&quot;scope.fork(...)  — inherited: ravi&quot;]
+        R --&gt; W[&quot;where(USER, system).run( ... )&quot;]
+        W --&gt; A[&quot;auditWrite()  — USER.get() → system&quot;]
+    end
+    OUT[&quot;code before/after the block — USER unbound: get() throws&quot;]
+</pre>
+<h2 id="readme-8-see-it-move">8. See it move</h2>
+<ul>
+<li><strong>Interactive page</strong> — <code>visualization.html</code> (published copy:
+<a href="https://claude.ai/code/artifact/c14fbd9c-4e43-4ca6-82f1-379ac313dd46" target="_blank" rel="noopener">https://claude.ai/code/artifact/c14fbd9c-4e43-4ca6-82f1-379ac313dd46</a>): watch bindings appear and vanish with stack frames, shadow
+on rebinding, leak in ThreadLocal mode, and flow into forks. The story
+buttons narrate each scene.</li>
+<li><strong>Demo 1</strong> (<code>./run.sh basic</code>) — the core loop in 30 lines: bound → three
+layers deep → gone, <code>NoSuchElementException</code> outside.</li>
+</ul>
+<h2 id="readme-9-the-actual-mechanism">9. The actual mechanism</h2>
+<p>The canonical shape:</p>
+<div class="code"><pre><code class="language-java">static final ScopedValue&lt;String&gt; REQUEST_ID = ScopedValue.newInstance(); // the key
+
+ScopedValue.where(REQUEST_ID, &quot;req-7f3a&quot;)     // 1. prepare binding(s) → carrier
+           .where(USER, &quot;ravi&quot;)               //    (as many as you need)
+           .run(() -&gt; handleRequest());       // 2. the block that can see them
+
+// ...three layers down, no parameters passed:
+String id = REQUEST_ID.get();                 // 3. read: &quot;req-7f3a&quot;
+String theme = THEME.orElse(&quot;default&quot;);       // 4. optional context
+</code></pre></div>
+<p>Step by step, with the worked example from Demo 1:</p>
+<ol>
+<li><strong>The key is a constant, the value is not stored in it.</strong> <code>REQUEST_ID</code>
+is just an identity (typically <code>static final</code>). Two requests bind it to
+different strings <em>at the same time</em> on different threads without
+touching each other (test <code>each_thread_sees_only_its_own_binding</code>).</li>
+<li><strong><code>where(...)</code> builds a carrier</strong> — an immutable list of (key, value)
+pairs. Nothing is visible yet.</li>
+<li><strong><code>run</code>/<code>call</code> pushes the bindings and executes the block.</strong> Internally
+the JVM keeps a small immutable chain of binding frames tied to the
+stack; <code>get()</code> walks it (with a per-thread cache making reads a few
+nanoseconds — faster than <code>ThreadLocal.get()</code>'s hash lookup).</li>
+<li><strong>Reads anywhere below.</strong> <code>get()</code> if the context is mandatory — unbound
+is a <em>bug</em> and throws <code>NoSuchElementException: ScopedValue not bound</code>;
+<code>orElse</code>/<code>orElseThrow</code>/<code>isBound</code> when it's optional.</li>
+<li><strong>Rebinding = nesting.</strong> <code>where(USER,&quot;system&quot;).run(audit)</code> inside the
+request shadows <code>USER</code> for exactly that call; the outer value is not
+modified, merely covered (Demo 2 — including the exception path: the
+outer value is back with no <code>finally</code> anywhere).</li>
+<li><strong>Exit = erasure.</strong> However the block ends, the frames pop with the
+stack. There is no <code>remove()</code>, because there is nothing left to remove.</li>
+<li><strong>Forks inherit by reference.</strong> <code>StructuredTaskScope.fork()</code> children
+run <em>within</em> the parent's dynamic scope, so they see its bindings — and
+because bindings are immutable, &quot;inheriting&quot; is copying one pointer,
+not a table (<a href="../19-structured-concurrency/notes.html#readme">structured-concurrency</a>
+guarantees the child can't outlive the binding). Hand-started threads
+(<code>Thread.ofVirtual().start(...)</code>) inherit <strong>nothing</strong> — the JVM can't
+bound their lifetime (Demo 4 shows both, side by side).</li>
+</ol>
+<h2 id="readme-10-failure-scenarios--where-this-bites">10. Failure scenarios — where this bites</h2>
+<p><strong>(a) The async escape (the big one).</strong> A lambda submitted to an executor
+runs <em>later, on another thread</em> — outside the dynamic scope. Reading a
+scoped value there throws. Real output from <code>src/BrokenAudit.java</code>:</p>
+<div class="code"><pre><code>Exception in thread &quot;pool-1-thread-1&quot; java.util.NoSuchElementException: ScopedValue not bound
+</code></pre></div>
+<p>The fix is a discipline: <strong>capture at submit time, not at run time</strong> —
+<code>String id = REQUEST_ID.get(); pool.execute(() -&gt; write(id));</code>. Exercise D1
+makes you do it. (Note ThreadLocal here doesn't fail loudly — it silently
+reads <code>null</code> or a stale value. Failing loudly is the feature.)</p>
+<p><strong>(b) Mutable payloads.</strong> The <em>binding</em> is immutable; a bound
+<code>ArrayList</code> is still mutable, and deep code can <code>add()</code> to it — sideways
+data flow smuggled back in (test
+<code>the_binding_is_immutable_but_the_object_it_names_is_not</code> demonstrates it).
+Bind records, <code>List.of</code>, unmodifiable views.</p>
+<p><strong>(c) Expecting inheritance where there is none.</strong> Bindings don't reach
+hand-started threads, <code>CompletableFuture.supplyAsync</code> pool threads, or
+timers. Only structured forks. If work must carry context elsewhere, pass
+it explicitly (see a).</p>
+<p><strong>(d) Rebinding is not mutation.</strong> You cannot &quot;update&quot; a value for code
+<em>above</em> you or <em>beside</em> you — only for code you call. Designs that used
+<code>ThreadLocal</code> as a writable scratchpad (accumulating state across layers)
+do not port; they need a real parameter or return value. This is by design:
+scoped values are for <em>sharing downward</em>, not <em>communicating upward</em>.</p>
+<p><strong>(e) Deep recursion + <code>where</code> per frame</strong> builds a long binding chain;
+the read cache keeps common reads fast, but don't bind inside tight loops —
+bind once around them.</p>
+<h2 id="readme-11-what-is-guaranteed-and-what-is-not">11. What is guaranteed, and what is not</h2>
+<p><strong>Guaranteed:</strong> while a block runs, every <code>get()</code> in it sees exactly the
+value its nearest enclosing <code>where</code> bound — no code anywhere can change
+that from outside; the binding is gone on every exit path (return, throw,
+even <code>Error</code>); per-thread isolation; structured forks see the parent's
+bindings; reads are cheap and allocation-free.</p>
+<p><strong>Not guaranteed / not provided:</strong> no mutation, no <code>set()</code>, no
+communicating results upward; no inheritance into unstructured threads; no
+protection against mutating a bound <em>object</em> (10b); no persistence beyond
+the block — nothing to read after the request, by design.</p>
+<p><strong>The trade:</strong> you give up write-anywhere flexibility and get local
+reasoning — the value at any point is determined by the enclosing <code>where</code>,
+readable directly from the source code, the way a final parameter is.</p>
+<h2 id="readme-12-the-code-in-this-lab">12. The code in this lab</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>src/BasicFlow.java</code></td>
+  <td>Bind at the top, read three layers down; unbound = exception; <code>orElse</code>.</td>
+</tr>
+<tr>
+  <td><code>src/Rebinding.java</code></td>
+  <td>Shadow for a sub-call; auto-restore, even through an exception.</td>
+</tr>
+<tr>
+  <td><code>src/ThreadLocalLeak.java</code></td>
+  <td>The disease: request B wakes up as <code>alice</code> on a pooled thread.</td>
+</tr>
+<tr>
+  <td><code>src/Inheritance.java</code></td>
+  <td>Structured forks inherit; hand-started threads don't.</td>
+</tr>
+<tr>
+  <td><code>src/ScenarioTests.java</code></td>
+  <td>11 scenario tests: every rule in §9–§11.</td>
+</tr>
+<tr>
+  <td><code>src/P1.java</code>, <code>src/BrokenAudit.java</code></td>
+  <td>Exercise files (predict puzzle; the async-escape crash).</td>
+</tr>
+</tbody>
+</table></div>
+<h2 id="readme-13-run-the-experiments">13. Run the experiments</h2>
+<div class="code"><pre><code class="language-bash">./run.sh basic     # the canonical shape
+./run.sh rebind    # shadowing and restoration
+./run.sh leak      # the ThreadLocal identity leak, live
+./run.sh inherit   # who inherits bindings (preview flags: StructuredTaskScope only)
+./run.sh test      # 11 scenario tests
+./run.sh all
+</code></pre></div>
+<h2 id="readme-14-from-this-lab-to-production">14. From this lab to production</h2>
+<ul>
+<li><strong>Status:</strong> final since JDK 25 (JEP 506) — usable in production today,
+unlike <code>StructuredTaskScope</code> (still preview).</li>
+<li><strong>Migration reality:</strong> the ecosystem's context plumbing —
+<code>SecurityContextHolder</code>, MDC in Logback/Log4j, OpenTelemetry
+<code>Context</code>, Micrometer context-propagation — is ThreadLocal-based today;
+frameworks are migrating gradually. New <em>application</em> code with a clear
+request boundary is where you adopt ScopedValue now.</li>
+<li><strong>The adoption pattern:</strong> one <code>RequestContext</code> record bound at the filter/
+interceptor at the top of each request, read by logging, auditing, and
+authorization below — replacing a fistful of separate ThreadLocals.</li>
+<li><strong>Fit with the stack:</strong> thread-per-request on virtual threads binds at
+the top of each request; structured fan-out inherits it for free — the
+three labs in this arc are one architecture.</li>
+<li><strong>Async boundaries</strong> (queues, schedulers, reactive pipelines) remain
+explicit-capture territory (§10a) — ScopedValue deliberately does not
+follow work across them.</li>
+<li><strong>Diagnostics:</strong> an unbound read failing with a stack trace at the exact
+wrong <code>get()</code> is your friend; contrast with ThreadLocal's silent <code>null</code>
+that surfaces three services later.</li>
+</ul>
+<h2 id="readme-15-exercises">15. Exercises</h2>
+<p>See <a href="notes.html#exercises"><code>EXERCISES.md</code></a>; answers in <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>.</p>
+<h2 id="readme-16-scoped-values-vs-the-neighbors">16. Scoped values vs. the neighbors</h2>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th><code>ScopedValue</code></th>
+  <th><code>ThreadLocal</code></th>
+  <th><code>InheritableThreadLocal</code></th>
+  <th>Explicit parameters</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Mutable after binding</td>
+  <td>no — that's the point</td>
+  <td>yes, from anywhere</td>
+  <td>yes</td>
+  <td>n/a</td>
+</tr>
+<tr>
+  <td>Lifetime</td>
+  <td>the block, enforced</td>
+  <td>until <code>remove()</code>, manual</td>
+  <td>until <code>remove()</code></td>
+  <td>the call</td>
+</tr>
+<tr>
+  <td>Child threads</td>
+  <td>structured forks only, by reference</td>
+  <td>none</td>
+  <td>all, by copy (cost!)</td>
+  <td>n/a</td>
+</tr>
+<tr>
+  <td>Unbound read</td>
+  <td>throws (loud)</td>
+  <td><code>null</code> (silent)</td>
+  <td><code>null</code></td>
+  <td>compile error (loudest)</td>
+</tr>
+<tr>
+  <td>Best for</td>
+  <td>ambient per-request context</td>
+  <td>legacy code; JDK &lt;21</td>
+  <td>avoid</td>
+  <td>few values, few layers</td>
+</tr>
+</tbody>
+</table></div>
+<p>Rule of thumb: a value 2–3 layers deep → just pass the parameter. A value
+read in 20 places across every layer of a request → ScopedValue. ThreadLocal
+→ only where a framework hands you no better hook.</p>
+<h2 id="readme-17-where-to-go-next">17. Where to go next</h2>
+<pre class="mermaid">flowchart TD
+    VT[&quot;java-virtual-threads ✓&quot;] --&gt; SC[&quot;structured-concurrency ✓&quot;]
+    SC --&gt; SV[&quot;scoped-values (this lab)&quot;]
+    VT --&gt; SV
+    SV --&gt; MDC[&quot;/learn distributed-tracing — trace ids: this idea across services&quot;]
+    SV --&gt; DS[&quot;/learn dynamic-scoping — the 60-year-old Lisp idea underneath&quot;]
+    SV --&gt; CTX[&quot;/learn reactive-context-propagation — the same problem in the other paradigm&quot;]
+</pre>
+<p><em>Read next from the source: JEP 506 (scoped values) — and its &quot;Motivation&quot;
+section, which is this README's §4 with the JDK team's own war stories.</em></p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-exercises">Exercises</h1>
+<p><strong>Predict</strong> (reason before running), <strong>modify</strong> (change a demo, explain),
+<strong>debug</strong> (find and fix the planted bug). Answers in
+<a href="notes.html#solutions"><code>SOLUTIONS.md</code></a> — commit to answers in writing first.</p>
+<hr />
+<h2 id="exercises-predict">Predict</h2>
+<p><strong>P1 — the four prints.</strong>
+<span class="missing" title="Not in the hub: src/P1.java is in the lab folder on your laptop"><code>src/P1.java</code></span> binds <code>CTX</code> to <code>&quot;A&quot;</code>, then inside: rebinds to
+<code>&quot;B&quot;</code> for one print, prints again, starts a bare virtual thread that prints
+<code>CTX.orElse(&quot;none&quot;)</code>, and finally — outside everything — prints
+<code>CTX.orElse(&quot;none&quot;)</code> once more. Write down all four outputs, then:</p>
+<div class="code"><pre><code class="language-bash">java src/P1.java
+</code></pre></div>
+<p><strong>P2 — same shape, ThreadLocal.</strong>
+Without running: rewrite P1's four prints in your head with a <code>ThreadLocal</code>
+(<code>set(&quot;A&quot;)</code>, <code>set(&quot;B&quot;)</code> + restore, bare thread, after). Which of the four
+outputs change? Which line of the ThreadLocal version is the one a refactor
+will eventually delete, and what is the blast radius when it happens?</p>
+<hr />
+<h2 id="exercises-modify">Modify</h2>
+<p><strong>M1 — break the restoration (try to).</strong>
+In <code>src/Rebinding.java</code>, try to make the &quot;audit write&quot; leave <code>USER</code> as
+<code>&quot;system&quot;</code> for the rest of the request — using only the public <code>ScopedValue</code>
+API, no reflection. How far do you get? What does your failure prove about
+where the value of a scoped value can be determined from?</p>
+<p><strong>M2 — make the fork outlive the binding (try to).</strong>
+In <code>src/Inheritance.java</code>, the structured fork inherits <code>REQUEST_ID</code>. Try to
+arrange for that forked child to still be running <em>after</em> the
+<code>ScopedValue.where(...).run(...)</code> block has exited, so it would read a dead
+binding. Which mechanism from the structured-concurrency lab stops you, and
+at exactly which line?</p>
+<p><strong>M3 — the mutable payload smuggle.</strong>
+Change <code>BasicFlow</code> to bind a <code>new ArrayList&lt;&gt;(List.of(&quot;a&quot;))</code> and have the
+deepest layer <code>add(&quot;smuggled&quot;)</code> to it. It works (the test
+<code>the_binding_is_immutable_but_the_object_it_names_is_not</code> says so). Now
+state precisely which guarantee ScopedValue kept and which desirable
+property <em>you</em> violated — and the one-word fix.</p>
+<hr />
+<h2 id="exercises-debug">Debug</h2>
+<p><strong>D1 — the audit log that crashes in production.</strong>
+<code>java src/BrokenAudit.java</code> — the request queues an audit write on a
+background executor; it crashes with
+<code>NoSuchElementException: ScopedValue not bound</code>. Explain the exact timeline
+(when does the binding die? when does the lambda run?), then fix it
+<strong>without</strong> making the audit write synchronous and without introducing a
+ThreadLocal. One line changes and one line is added. Why is this crash
+<em>better</em> than what the ThreadLocal version of the same bug does?</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-solutions">Solutions</h1>
+<h2 id="solutions-p1--b-a-none-none">P1 — B, A, none, none</h2>
+<ol>
+<li><code>&quot;B&quot;</code> — the inner <code>where</code> shadows <code>&quot;A&quot;</code> for exactly that block.</li>
+<li><code>&quot;A&quot;</code> — shadow gone with the inner block; nothing to restore because
+nothing was overwritten.</li>
+<li><code>&quot;none&quot;</code> — a hand-started thread is outside the dynamic scope; bindings
+do not follow it (only structured forks inherit).</li>
+<li><code>&quot;none&quot;</code> — outside the block the binding no longer exists.</li>
+</ol>
+<h2 id="solutions-p2--outputs-3-and-4-change-the-doomed-line-is-the-restore">P2 — outputs 3 and 4 change; the doomed line is the restore</h2>
+<p>With ThreadLocal: (1) <code>&quot;B&quot;</code>, (2) <code>&quot;A&quot;</code> <em>only if</em> the code faithfully did
+<code>String old = TL.get(); TL.set(&quot;B&quot;); try {...} finally { TL.set(old); }</code>,
+(3) <code>null</code> (no inheritance for plain <code>ThreadLocal</code> — or, with
+<code>InheritableThreadLocal</code>, <code>&quot;A&quot;</code>: a copy taken at thread creation), and
+(4) <strong><code>&quot;A&quot;</code> — still bound!</strong> The value survives the &quot;request&quot; until someone
+calls <code>remove()</code>. The doomed line is the <code>finally { TL.set(old); }</code> /
+<code>remove()</code> — delete it and every later reader of the thread sees stale
+identity, silently: the leak from <code>./run.sh leak</code>.</p>
+<h2 id="solutions-m1--you-cant-and-thats-the-theorem">M1 — you can't, and that's the theorem</h2>
+<p>Everything you can legally do — another <code>where(...).run(...)</code> inside the
+audit block — only affects code <em>called from</em> that block, and unwinds with
+it. There is no operation whose effect survives its own block: no <code>set</code>, no
+carrier you can &quot;apply&quot; without wrapping a block. Your failure proves the
+central property: <strong>the value at any point in the code is decided solely by
+the nearest enclosing <code>where</code> in the source</strong> — readable statically, like a
+final parameter, never by a distant caller's leftover action.</p>
+<h2 id="solutions-m2--scopejoin-and-the-close-guarantee-behind-it">M2 — <code>scope.join()</code> (and the close guarantee behind it)</h2>
+<p>Every escape you try hits the same wall: the fork was created inside
+<code>try (var scope = ...)</code>, and the structured-concurrency close guarantee —
+&quot;nothing outlives the scope block&quot; — means the child is finished or
+cancelled before the <code>try</code> exits, which happens <em>before</em> the
+<code>where(...).run(...)</code> block exits (the scope is nested inside the binding).
+Concretely you're stopped at <code>scope.join()</code> /the implicit <code>close()</code>. This
+nesting-discipline is exactly <em>why</em> inheritance-by-reference is safe to
+offer at all: JEP 506 leans on JEP 505's lifetime guarantee.</p>
+<h2 id="solutions-m3--the-binding-held-immutability-of-the-payload-was-yours-to-keep">M3 — the binding held; immutability of the payload was yours to keep</h2>
+<p>ScopedValue guaranteed: the <em>association</em> <code>ITEMS → that list object* never changed; nobody rebound it. You violated: the payload's immutability — deep code mutated shared state through the binding, reintroducing invisible sideways data flow (the very disease of ThreadLocal-as-scratchpad). The one-word fix: **</code>List.copyOf`** (bind an immutable snapshot — records and
+unmodifiable views generally).</p>
+<h2 id="solutions-d1--capture-at-submit-time-not-at-run-time">D1 — capture at submit time, not at run time</h2>
+<p>Timeline: the binding for <code>req-7f3a</code> exists only while
+<code>ScopedValue.where(...).run(handleRequest)</code> is on the main thread's stack.
+<code>handleRequest</code> <em>queues</em> the lambda and returns; the block exits; the
+binding is erased. ~150 ms later the audit thread runs the lambda and calls
+<code>REQUEST_ID.get()</code> — on a different thread, after the scope died: doubly
+unbound → <code>NoSuchElementException</code>.</p>
+<p>Fix — read while the binding is alive, close over the <em>value</em>:</p>
+<div class="code"><pre><code class="language-java">static void handleRequest() {
+    String id = REQUEST_ID.get();                       // ADDED: capture now
+    System.out.println(&quot;handling &quot; + id + &quot;; queueing audit write...&quot;);
+    auditPool.execute(() -&gt;
+        System.out.println(&quot;audit: writing entry for &quot; + id));   // CHANGED: use the captured value
+}
+</code></pre></div>
+<p>Still asynchronous, no ThreadLocal, and correct forever.</p>
+<p>Why the loud crash is better: the ThreadLocal version of this bug doesn't
+throw — <code>get()</code> on the audit thread quietly returns <code>null</code> (or a <em>previous
+request's id</em> if the pool thread is contaminated), and you discover it weeks
+later in corrupted audit rows. The <code>NoSuchElementException</code> points at the
+exact line, the first time it runs.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../19-structured-concurrency/notes.html"><small>← Lab 19</small>structured-concurrency</a><a href="../21-java-version-features/notes.html" style="text-align:right"><small>Lab 21 →</small>java-version-features</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-does-this-exist">1. Why does this exist?</a><a href="#readme-2-the-problem-as-a-story">2. The problem, as a story</a><a href="#readme-3-the-naive-solution">3. The naive solution</a><a href="#readme-4-why-that-fails">4. Why that fails</a><a href="#readme-5-the-key-idea">5. The key idea</a><a href="#readme-6-the-vocabulary">6. The vocabulary</a><a href="#readme-7-the-mental-model">7. The mental model</a><a href="#readme-8-see-it-move">8. See it move</a><a href="#readme-9-the-actual-mechanism">9. The actual mechanism</a><a href="#readme-10-failure-scenarios--where-this-bites">10. Failure scenarios — where this bites</a><a href="#readme-11-what-is-guaranteed-and-what-is-not">11. What is guaranteed, and what is not</a><a href="#readme-12-the-code-in-this-lab">12. The code in this lab</a><a href="#readme-13-run-the-experiments">13. Run the experiments</a><a href="#readme-14-from-this-lab-to-production">14. From this lab to production</a><a href="#readme-15-exercises">15. Exercises</a><a href="#readme-16-scoped-values-vs-the-neighbors">16. Scoped values vs. the neighbors</a><a href="#readme-17-where-to-go-next">17. Where to go next</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

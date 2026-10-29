@@ -1,0 +1,3363 @@
+<!doctype html>
+<html lang="en" data-hub-lab="13-redis">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>13. redis</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 13 of 71 · Stage 2</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 13 · One Machine, Done Right</p><article id="readme"><h1 id="readme-redis--the-database-that-does-one-thing-at-a-time">Redis — the database that does one thing at a time</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Twenty children need to change the same jars of sweets all
+day long. When Arjun and Bina reach for the samosa jar at the same moment,
+one sale quietly disappears and nobody is told. So the school puts Meera
+behind a counter, and nobody is allowed to touch a jar again. You shout what
+you want done, Meera does the whole thing alone, and only then does she
+listen to the next child. That one rule is Redis, and the same sentence gives
+you its best promise and its worst outage.</p>
+</blockquote>
+<p>Watch the one thread work at <a href="visualization.html"><code>visualization.html</code></a> or <a href="https://claude.ai/code/artifact/492e3d97-6221-482d-847c-8ee9302ece13" target="_blank" rel="noopener">https://claude.ai/code/artifact/492e3d97-6221-482d-847c-8ee9302ece13</a>.
+How this lab was built, where its numbers came from, and where it sits next to your other labs is in <a href="#readme-19-about-this-lab">section 19</a>.</p>
+<hr />
+<h2 id="readme-1-why-cant-twenty-machines-just-share-one-number">1. Why can't twenty machines just share one number?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Some facts change every second and are needed by every
+machine at once. Keep such a fact in one machine's memory and the other
+nineteen cannot see it. Put it in your main database and every touch pays for
+permanence you never asked for.</p>
+</blockquote>
+<p>Asha runs an online tuck-shop business. Her application does not run on one
+machine. It runs on twenty, behind a load balancer, and any request can land on
+any of them. Priya's click lands on server 3. Omar's click lands on server 17.
+Neither of them chose.</p>
+<p>Most of the time that is fine, because most facts live in the database. A
+customer's address does not change while you are reading it.</p>
+<p>But some facts are <strong>shared, change constantly, and are needed in
+microseconds</strong>. Read the middle column of this table: it is what makes each of
+these facts different from an address.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The fact Asha needs</th>
+  <th>Why it cannot sit on one server</th>
+  <th>What goes wrong if it does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>how many requests this API key made in the last minute</td>
+  <td>all twenty servers must count into the same total</td>
+  <td>the limit is enforced twenty times over</td>
+</tr>
+<tr>
+  <td>what is in this shopper's basket</td>
+  <td>the shopper's next click lands elsewhere</td>
+  <td>the basket looks empty on the checkout page</td>
+</tr>
+<tr>
+  <td>which worker currently owns this job</td>
+  <td>whoever claims it must be visible to the rest</td>
+  <td>two workers do the same job</td>
+</tr>
+<tr>
+  <td>who is in the top ten this week</td>
+  <td>every score changes the same ordered list</td>
+  <td>ten different leaderboards, one per server</td>
+</tr>
+</tbody>
+</table></div>
+<p>So put those facts in one place. Which place?</p>
+<p>Put such a fact in one server's memory and the other nineteen cannot see it.
+That is not a subtle failure. Server 3 counts, server 17 does not, and the
+number is wrong by a factor of twenty.</p>
+<p>Put it in the main database instead and something slower goes wrong. Every read
+and every write now travels through machinery built to make facts <em>permanent
+and correct forever</em>. Indexes. Transactions. Row locks. Disk flushes. None of
+that is what Asha needs here, and all of it is exactly what makes the trip
+slow. Worse, under contention those row locks make her twenty servers queue up
+behind each other. The database was protecting her from a problem she did not
+have, and charging her for it on every operation.</p>
+<p>If nobody solves this, you get the concrete failures you have already met. A
+rate limiter that lets through twenty times its limit. A shopping basket that
+loses an item when two tabs are open. A job picked up twice by two workers.</p>
+<p>Redis is the thing that fills that hole. What follows is how. More usefully, it
+is also what that costs.</p>
+<hr />
+<h2 id="readme-2-what-does-the-tuck-shop-need-that-a-cupboard-cannot-give">2. What does the tuck shop need that a cupboard cannot give?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three jars, twenty children, and constant change. The jars
+must be somewhere everybody can reach, and reaching them must take a second
+rather than a minute.</p>
+</blockquote>
+<p>Forget servers for a while. A school has a tuck shop. Along one wall stand
+labelled jars:</p>
+<ul>
+<li>a jar holding <strong>one number</strong> — how many samosas have been sold today</li>
+<li>a jar holding <strong>tokens in the order they were dropped in</strong> — the queue for the
+sandwich toaster</li>
+<li>a jar holding <strong>names with scores</strong> — this week's chess ladder</li>
+</ul>
+<p>Twenty children need to change what is in those jars, constantly, all day.
+Arjun sells a samosa and the count must go up. Bina joins the toaster queue.
+Chetan wins a chess game and their score must go up by one.</p>
+<p>Two demands come out of that, and they pull in opposite directions.</p>
+<p>The jars must be <strong>in the room where everyone can reach them</strong>. A jar in the
+staff room, behind a locked door, is a jar nobody can use during break.</p>
+<p>And getting to them <strong>must take a second, not a minute</strong>. If Arjun has to fill
+in a form to touch the samosa jar, he will stop counting samosas.</p>
+<p>Hold on to those three jars. Every mechanism in this lab is something that
+happens to one of them.</p>
+<hr />
+<h2 id="readme-3-what-does-a-reasonable-person-try-first">3. What does a reasonable person try first?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Open shelves. Anybody walks up, takes a jar down, changes
+it, puts it back. It is fast, simple, and everybody can do it at once.</p>
+</blockquote>
+<p>No counter. No shopkeeper. No rules.</p>
+<p>Arjun walks up, takes the samosa jar down, changes what is inside, and puts it
+back. So does everybody else, whenever they like.</p>
+<p>This is fast. It is simple. Everyone can do it at once, so nobody waits.</p>
+<p>It is also exactly what your code does every single time it reads a value from
+a shared store, changes it in your own process, and writes it back. Read,
+modify, write. Three separate moments, and the store has no idea they were
+meant to belong together.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Arjun and Bina both sell a samosa in the same second. Before
+you read section 4, say out loud what the jar will hold afterwards, and how
+anybody would find out.</p>
+<details><summary>Reveal</summary>
+
+<p>The jar will hold <strong>6</strong> when two sales happened, and the honest answer to
+&quot;how would anybody find out&quot; is that nobody does. Section 4 walks the four
+moments that produce that, and then shows why the obvious fix is worse than
+it looks.</p>
+<p>If you said &quot;the jar says 7, the shop is fine&quot;, you are assuming the two
+children took turns. Nothing in an open shelf makes them take turns.</p>
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-4-why-does-the-open-shelf-lose-a-sale">4. Why does the open shelf lose a sale?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Two children read the same number, both add one to what
+they read, and both write back the same answer. One of the two sales is gone,
+and no error is ever raised.</p>
+</blockquote>
+<p>Arjun and Bina each sell a samosa at the same moment. The jar says <strong>5</strong>.</p>
+<p>Read the last column: it is what the jar actually holds after each step.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>time</th>
+  <th>Arjun</th>
+  <th>Bina</th>
+  <th>the jar says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>takes the jar down, reads <strong>5</strong></td>
+  <td></td>
+  <td>5</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td></td>
+  <td>takes the jar down, reads <strong>5</strong></td>
+  <td>5</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>writes <strong>6</strong>, puts it back</td>
+  <td></td>
+  <td>6</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td></td>
+  <td>writes <strong>6</strong>, puts it back</td>
+  <td>6</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>🔮 Predict:</strong> two samosas were sold. What does the jar say, and who finds out
+that anything went wrong?</p>
+<details><summary>Reveal</summary>
+
+<p>The jar says <strong>6</strong>. One sale has vanished.</p>
+<p>And the answer to the second half is the genuinely alarming part: <strong>nobody finds
+out</strong>. There is no error, no exception, no conflict, no log line. Both children
+did exactly what they were told to do and both believe they succeeded. The only
+evidence is that the number is quietly wrong, and it will stay quietly wrong
+forever.</p>
+<p>This is called a <strong>lost update</strong>, and you met it in the
+<a href="../60-distributed-rate-limiting/notes.html#readme">distributed-rate-limiting</a> lab as the reason
+twenty uncoordinated gateways turn &quot;100 per minute&quot; into 2,000 per minute.</p>
+</details>
+
+</blockquote>
+<p>So the school reaches for the obvious fix. Put a padlock on the shelf. A child
+takes the key, does their business, and returns the key. Now nothing is lost,
+because only one child can be at the shelf at a time.</p>
+<p>Look at what the padlock cost, though. Three separate bills arrive.</p>
+<ul>
+<li><strong>Three trips instead of one.</strong> Get the key, read-and-write, return the key.
+If the shelf is across a field, you just tripled the walking.</li>
+<li><strong>One child at a time, for the whole shelf.</strong> Bina wants the chess jar and
+Arjun has the samosa jar. Irrelevant. There is one padlock, so Bina waits for
+a jar she does not care about.</li>
+<li><strong>A child who takes the key and goes home stops the shop forever.</strong> Somebody
+must now decide how long is too long to hold a key, and be wrong about it.
+You saw this exact shape in <a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a>: after
+voting yes, a participant holds its locks and cannot decide alone if the
+coordinator dies.</li>
+</ul>
+<p>So the padlock trades one silent bug for three loud problems. That is not
+nothing. A loud problem is better than a silent one. But we can do better than
+either.</p>
+<hr />
+<h2 id="readme-5-what-exactly-must-we-guarantee">5. What exactly must we guarantee?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> No change may ever vanish, nobody may have to hold a key or
+walk three times, and the whole thing must be about as quick as shouting
+across a room.</p>
+</blockquote>
+<p>Before any solution, state the target plainly. This is the promise the rest of
+the lesson is chasing.</p>
+<blockquote>
+<p>Any of the twenty children must be able to change a shared jar such that
+<strong>(a)</strong> no change can ever be silently lost, <strong>(b)</strong> the child does not have to
+hold a key or make three trips, and <strong>(c)</strong> the whole thing takes about as long
+as shouting across a room.</p>
+</blockquote>
+<p>Everything in the rest of this lesson is the pursuit of those three, for Arjun,
+for Bina, for Chetan and for Asha's twenty servers. And every strange detail of
+Redis's design is a scar from something that went wrong on the way.</p>
+<p>Here is the road, so you know where you are on it. Each layer ends with a
+checkpoint that tells you what stopping there leaves you with.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner model</td>
+  <td>1–9</td>
+  <td>say why Redis exists and why the single thread is the mechanism</td>
+</tr>
+<tr>
+  <td>Intermediate model</td>
+  <td>10</td>
+  <td>follow a command from socket bytes to hash table and back</td>
+</tr>
+<tr>
+  <td>Engineering model</td>
+  <td>11–14</td>
+  <td>name which promise each failure bends, and the mitigation</td>
+</tr>
+<tr>
+  <td>Production model</td>
+  <td>15</td>
+  <td>run one, watch the right numbers, and know when not to</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-6-what-if-nobody-is-allowed-to-touch-the-jars">6. What if nobody is allowed to touch the jars?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Put one shopkeeper behind a counter. Children shout what
+they want done. She does the whole thing alone and finishes before she listens
+again, so there is no gap for anybody to slip into.</p>
+</blockquote>
+<p>Meera stands behind a counter. The jars are behind her. The children never
+touch a jar again.</p>
+<p>Instead Arjun shouts an <strong>instruction</strong>: <em>&quot;add one to the samosa jar.&quot;</em> Meera
+does the whole thing alone. She takes the jar down, reads 5, writes 6, puts it
+back, and calls out &quot;6&quot;. Only <em>then</em> does she turn to the next child.</p>
+<p>Bina is next in line, and she shouts the same instruction. Meera reads 6 and
+writes 7. Two sales, two increments, no loss. Nothing clever happened. Bina
+simply could not read the jar while Meera was holding it, because Bina is not
+allowed to hold jars at all.</p>
+<p>Two separate inventions are hiding in those paragraphs, and it is worth pulling
+them apart, because people usually only notice the first.</p>
+<p>The first is that <strong>the instruction says what you want done, not &quot;give me the
+jar&quot;</strong>. That is only possible because Meera knows what <em>kind</em> of thing is in
+each jar. You can say &quot;add one&quot; about the samosa jar and &quot;add a token to the
+end&quot; about the queue jar, and she knows which of those makes sense where.</p>
+<p>The second is that <strong>there is exactly one Meera, finishing each instruction
+before starting the next</strong>.</p>
+<p>The second one is what makes Arjun and Bina's lost sale <em>impossible</em>. Not a
+padlock. An absence of simultaneity. There is no gap between the read and the
+write for anyone to slip into, because during that gap Meera is not listening
+to anyone.</p>
+<p>This is Redis. Everything else in this document is a consequence of that
+sentence, including all the bad parts. Hold that thought, because in section 11
+you will watch the same sentence cause the most common Redis outage there is.</p>
+<hr />
+<h2 id="readme-7-what-are-these-things-called-now-that-you-have-felt-them">7. What are these things called, now that you have felt them?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six words, and you have already met the thing each one
+names. A store with one way in, jars in the room rather than the basement, one
+shopkeeper, an instruction nobody can interrupt, jars whose kind is known, and
+the cost of shouting.</p>
+</blockquote>
+<p>You have earned all of these. Each one names something that already happened to
+Arjun, Bina, Chetan or Meera. So each gets the story first, the plain sentence
+second, and the real name last.</p>
+<h3 id="readme-what-is-a-keyvalue-store">What is a key–value store?</h3>
+<p>The wall of jars is a very large box of labelled things. You put a thing in
+under a name. You get it back by that name. That is the entire arrangement.</p>
+<p>In plain words: the only way in is the label. Engineers call the label the
+<strong>key</strong> and the thing the <strong>value</strong>, and a store built this way a <strong>key–value
+store</strong>. Its only index is the primary key. There is no query planner, no
+<code>WHERE</code>, no join. <code>GET user:42</code> is the entire query language.</p>
+<p>The word exists to mark the contrast with a <em>relational</em> store, which lets you
+ask questions the designer never anticipated. That flexibility is not free, and
+a relational store pays for it on every single operation. A key–value store
+gives it up on purpose. The <a href="../04-database-landscape/notes.html#readme">database-landscape</a> lab
+called this &quot;an opinionated bet on one access pattern&quot;. Redis's bet is <em>&quot;you
+already know the key.&quot;</em></p>
+<p>You can see the bet in two lines. <code>SET cart:7 &quot;3 items&quot;</code> puts the basket in.
+<code>GET cart:7</code> takes it out. There is no way to ask &quot;which carts have 3 items&quot;
+without looking at every key, one at a time.</p>
+<h3 id="readme-why-does-in-memory-change-everything-else">Why does &quot;in-memory&quot; change everything else?</h3>
+<p>The jars are on the shelf in the room. They are not in the basement warehouse.
+Arjun can reach one while he is still talking to a customer.</p>
+<p>In plain words: the whole working set of data lives in the machine's fast
+memory. Engineers call that <strong>in-memory</strong>, and they mean it strictly. The disk
+is used only to <em>recover</em> after a restart. It is never used to serve a read.</p>
+<p>That is the sharpest difference from every disk-based database, and it is worth
+saying the contrast precisely. Postgres keeps a cache in memory and the truth on
+disk. Redis keeps the truth in memory and a <em>recovery record</em> on disk. Those are
+opposite arrangements of the same two parts.</p>
+<p>Two consequences follow immediately. Redis is fast because nothing waits for a
+disk. And your dataset must fit in memory, which is why &quot;how much RAM&quot; is the
+first question anybody asks about a Redis deployment.</p>
+<p>The <a href="../11-caching/notes.html#readme">caching</a> lab taught that a cache is a bounded copy whose
+truth lives elsewhere. So here is a correction worth carrying: <strong>Redis is not,
+by definition, a cache.</strong> It is frequently <em>used</em> as one. It can equally be the
+source of truth for data you would be very sad to lose. Which of the two it is
+for you is a decision you make, not a property of the software. You make that
+decision by choosing the persistence and eviction settings you will meet in
+section 11.</p>
+<h3 id="readme-what-does-single-threaded-actually-claim">What does &quot;single-threaded&quot; actually claim?</h3>
+<p>One Meera. One instruction at a time. Each one finished before the next begins.</p>
+<p>In plain words: all commands run on one worker, each running to completion
+before the next is taken off the queue. Engineers call this <strong>single-threaded
+command execution</strong>, and every word of that phrase is load-bearing.</p>
+<p>The careful part is <em>command execution</em>, and the precision matters. &quot;Redis is
+single-threaded&quot; is the most over-simplified sentence in the field. Modern Redis
+uses other threads for several jobs. Flushing to disk. Freeing very large
+values. Since version 6, optionally, reading and writing sockets. What has never
+been parallel, and is the thing actually being claimed, is the part that
+<strong>touches your data</strong>.</p>
+<p>You built the machinery for this already. In
+<a href="../03-io-multiplexing/notes.html#readme">io-multiplexing</a> you learned how one thread can serve
+thousands of connections by handing the whole set to the kernel and sleeping
+until something is ready. Redis is that lesson applied to a database. The same
+<code>epoll</code> or <code>kqueue</code> loop you built, with a hash table behind it.</p>
+<h3 id="readme-which-atomic-does-redis-mean">Which &quot;atomic&quot; does Redis mean?</h3>
+<p>Meera's increment either fully happened or it did not. Nobody ever saw the
+samosa jar mid-count.</p>
+<p>In plain words: while one instruction is being carried out, no other instruction
+can look at the half-finished state. Engineers call that <strong>atomic</strong>, and here
+the word means something narrower than you may expect. A single Redis command is
+indivisible <em>with respect to other commands</em>. No other command can observe or
+interleave with its intermediate state.</p>
+<p>This one genuinely trips people up, because you already know two <em>different</em>
+things called atomicity. Read the last column: it says what does the work in
+each case.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>what it promises</th>
+  <th>how it is achieved</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Redis atomicity</strong></td>
+  <td>no other <strong>command</strong> interleaves</td>
+  <td>there is one thread</td>
+</tr>
+<tr>
+  <td><strong>ACID atomicity</strong> (databases)</td>
+  <td>all-or-nothing across a <strong>transaction</strong>, with rollback</td>
+  <td>undo logs</td>
+</tr>
+<tr>
+  <td><strong>JMM atomicity</strong> (<a href="../17-java-memory-model/notes.html#readme">java-memory-model</a>)</td>
+  <td>no other <strong>thread</strong> sees a torn read</td>
+  <td>CPU instructions, <code>volatile</code>, <code>AtomicLong</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Redis gives you the first row. It does <strong>not</strong> give you the second. A Redis
+&quot;transaction&quot; cannot roll back, which section 12 covers in detail. Confusing
+those two rows is the single most common Redis mistake in production code.</p>
+<p>Concretely: <code>INCR visits</code> reads 5, computes 6, writes 6. Between that read and
+that write, no other client's command runs. That is the whole guarantee. It is
+also enough to make Arjun and Bina's lost sale impossible.</p>
+<h3 id="readme-why-is-the-shopkeeper-knows-the-jar-the-whole-trick">Why is &quot;the shopkeeper knows the jar&quot; the whole trick?</h3>
+<p>Meera knows the samosa jar holds a number and the toaster jar holds a queue. So
+&quot;add one&quot; and &quot;add a token to the end&quot; are both instructions she can carry out.</p>
+<p>In plain words: the server knows what kind of thing each value is. Engineers
+call that kind the value's <strong>data type</strong>, and each type has commands that only
+make sense for it.</p>
+<p>This is the whole difference between Redis and a plain cache like memcached.
+Memcached stores opaque bytes. It has no idea a value is a number. So &quot;add one
+to the counter&quot; <em>must</em> be get-modify-set inside your client, with exactly the
+gap that lost Arjun's sale. Because Redis knows the value is a number, <code>INCR</code>
+can exist as one command, and the gap disappears.</p>
+<p>Say that again, because it is the load-bearing sentence of the whole lab. <strong>The
+data types are not a convenience feature. They are the mechanism by which the
+atomicity guarantee is delivered to you.</strong></p>
+<p>Five types carry almost all real usage. Each one is a jar of a different shape.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Type</th>
+  <th>The jar it is</th>
+  <th>What it holds</th>
+  <th>One command only it makes sense for</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>string</td>
+  <td>the samosa jar</td>
+  <td>one value: text, bytes, or a number</td>
+  <td><code>INCR visits</code></td>
+</tr>
+<tr>
+  <td>list</td>
+  <td>the toaster queue</td>
+  <td>items in the order they were put in</td>
+  <td><code>LPUSH jobs &quot;email&quot;</code></td>
+</tr>
+<tr>
+  <td>hash</td>
+  <td>a jar with labelled compartments</td>
+  <td>named fields under one key</td>
+  <td><code>HGET user:1 name</code></td>
+</tr>
+<tr>
+  <td>set</td>
+  <td>a jar of unique tokens</td>
+  <td>members, no duplicates, no order</td>
+  <td><code>SADD seen:today arjun</code></td>
+</tr>
+<tr>
+  <td>sorted set</td>
+  <td>the chess ladder</td>
+  <td>members, each with a score, kept in score order</td>
+  <td><code>ZINCRBY leaderboard 1 chetan</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>Real Redis adds four more jars. They are not exotic, and two of them appear
+later in this lab.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Type</th>
+  <th>What it is for</th>
+  <th>Where it shows up here</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>stream</td>
+  <td>an append-only log with consumer groups and acknowledgements</td>
+  <td>the fix for Pub/Sub's lost messages, section 11</td>
+</tr>
+<tr>
+  <td>bitmap</td>
+  <td>one bit per position in a string, for dense flags</td>
+  <td>production omissions, section 15</td>
+</tr>
+<tr>
+  <td>HyperLogLog</td>
+  <td>an approximate count of distinct things, in tiny fixed memory</td>
+  <td>production omissions, section 15</td>
+</tr>
+<tr>
+  <td>geo</td>
+  <td>coordinates with radius search, built on sorted sets</td>
+  <td>production omissions, section 15</td>
+</tr>
+</tbody>
+</table></div>
+<p>The type is enforced, not advisory. Try <code>GET</code> on a list and the server refuses
+with <code>WRONGTYPE</code>, which the test <code>wrong_type_operation_is_refused</code> pins down.</p>
+<h3 id="readme-why-does-shouting-cost-more-than-the-work">Why does shouting cost more than the work?</h3>
+<p>Arjun's instruction takes Meera almost no time at all. Walking to the counter
+and waiting for her answer takes far longer than the work itself.</p>
+<p>In plain words: the journey there and back dominates. Engineers call one
+request travelling out plus one reply travelling back a <strong>round trip</strong>. Sending
+many requests without waiting for each reply, then collecting the replies in
+order, is <strong>pipelining</strong>.</p>
+<p>The word matters because Redis commands are so fast that the network dominates,
+and that reverses the usual intuition about what to optimise. You know the
+general shape from
+<a href="../02-communication-protocols/notes.html#readme">communication-protocols</a> as round-trip-time
+dominance. In Redis it is unusually stark. Experiment 3 puts a number on it:
+10,000 <code>INCR</code>s took <strong>277 ms</strong> one at a time and <strong>12 ms</strong> pipelined. Identical
+commands. Identical server work. The client just stopped waiting.</p>
+<h3 id="readme-the-six-words-on-one-page">The six words on one page</h3>
+<p>The last column sends you back to the place in this lab where the thing
+actually happened to somebody.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>The word</th>
+  <th>In the tuck shop</th>
+  <th>What it means precisely</th>
+  <th>Why the word exists</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>key–value store</strong></td>
+  <td>a wall of labelled jars</td>
+  <td>the only index is the primary key</td>
+  <td>to mark what it gave up: questions nobody planned for</td>
+  <td>§2, the three jars</td>
+</tr>
+<tr>
+  <td><strong>in-memory</strong></td>
+  <td>jars in the room, not the basement</td>
+  <td>the working dataset lives in RAM; disk only recovers</td>
+  <td>to mark the opposite arrangement to Postgres</td>
+  <td>§6, Meera reaching behind her</td>
+</tr>
+<tr>
+  <td><strong>single-threaded command execution</strong></td>
+  <td>one Meera, one instruction at a time</td>
+  <td>commands run on one thread, each to completion</td>
+  <td>because &quot;Redis is single-threaded&quot; is over-simplified</td>
+  <td>§6, the second invention</td>
+</tr>
+<tr>
+  <td><strong>atomic (Redis sense)</strong></td>
+  <td>nobody sees the jar mid-count</td>
+  <td>one command is indivisible against other commands</td>
+  <td>because ACID and Java mean different things by it</td>
+  <td>§4, the sale that vanished</td>
+</tr>
+<tr>
+  <td><strong>data type</strong></td>
+  <td>Meera knows each jar's kind</td>
+  <td>the server knows a value is a number, list, hash, set or sorted set</td>
+  <td>because it is <em>how</em> atomicity gets delivered</td>
+  <td>§6, the first invention</td>
+</tr>
+<tr>
+  <td><strong>round trip / pipelining</strong></td>
+  <td>walking to the counter and back</td>
+  <td>one request out plus one reply back; many sent without waiting</td>
+  <td>because the network, not the command, is the cost</td>
+  <td>§7, experiment 3</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-8-what-is-really-running-behind-the-counter">8. What is really running behind the counter?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One process, waiting on every connection at once, running
+one command at a time against a hash table that lives entirely in memory. The
+shop is a good picture of it, and it lies to you in five specific places.</p>
+</blockquote>
+<h3 id="readme-what-is-the-picture-you-carry-around">What is the picture you carry around?</h3>
+<p>One shopkeeper. One counter. A wall of labelled jars, each of a known kind.
+Children shout instructions. Meera does them one at a time, out loud, and
+answers.</p>
+<p>That model is small enough to hold in your head during an incident, which is the
+whole point of having it.</p>
+<h3 id="readme-what-is-actually-running">What is actually running?</h3>
+<p>Now the same thing in machine terms. Read the diagram left to right: many
+connections arrive on the left, and exactly one box in the middle is allowed to
+touch the data.</p>
+<pre class="mermaid">flowchart LR
+  subgraph clients [Many client connections]
+    C1[app server 1]
+    C2[app server 2]
+    C3[app server 20]
+  end
+  C1 --&gt; EL
+  C2 --&gt; EL
+  C3 --&gt; EL
+  subgraph proc [One Redis process]
+    EL[wait on all sockets at once&lt;br/&gt;wake only for the ready ones] --&gt; P[work out where&lt;br/&gt;each command ends]
+    P --&gt; EX[execute&lt;br/&gt;ONE at a time&lt;br/&gt;to completion]
+    EX --&gt; KS[(hash table&lt;br/&gt;key to typed value&lt;br/&gt;all in RAM)]
+    EX --&gt; LOG[[write a record of&lt;br/&gt;the change]]
+    EX --&gt; REPL[[send the change to&lt;br/&gt;a second machine]]
+  end
+  LOG -.-&gt; DISK[(disk)]
+  REPL -.-&gt; R[(second machine)]
+</pre>
+<p>Three facts describe the whole of it.</p>
+<p>The state is one hash table, <code>key → typed value</code>, plus a second table,
+<code>key → deadline</code>, for the keys that have one.</p>
+<p>The loop is: wake on ready sockets, read bytes, work out where each command
+ends, execute each to completion, write replies, and then tidy up. Tidying up
+means dropping keys past their deadline, making room if memory is full, and
+recording changes to disk and to the second machine. Every one of those tidy-up
+steps gets its own section below.</p>
+<p>And the invariant that everything rests on: exactly one thread is ever inside
+the hash table.</p>
+<h3 id="readme-how-does-the-shop-map-onto-the-code">How does the shop map onto the code?</h3>
+<p>The right-hand column is the file and method you can open right now.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>tuck shop</th>
+  <th>Redis</th>
+  <th>where it is in the code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Meera the shopkeeper</td>
+  <td>the command-execution thread</td>
+  <td><code>MiniRedis.loop()</code></td>
+</tr>
+<tr>
+  <td>shouting an instruction</td>
+  <td>one command sent over the network</td>
+  <td><code>Resp.parse()</code></td>
+</tr>
+<tr>
+  <td>Meera knows each jar's kind</td>
+  <td>typed values</td>
+  <td><code>Store.Value.type</code></td>
+</tr>
+<tr>
+  <td>finishing one instruction before the next</td>
+  <td>atomicity</td>
+  <td><code>MiniRedis.execute()</code></td>
+</tr>
+<tr>
+  <td>the wall of jars</td>
+  <td>the keyspace in RAM</td>
+  <td><code>Store.dict</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The shop has four more features that this table does not yet mention. Notes on
+jars saying &quot;throw this out at 4pm&quot;. A shelf that runs out of room. Meera's
+notebook. And a second shop copying that notebook. Each of those names a real
+Redis mechanism. Each gets earned in sections 10 and 11, and the table is
+completed at the end of section 11.</p>
+<h3 id="readme-where-does-the-story-lie-to-you">Where does the story lie to you?</h3>
+<p>Never let an analogy quietly mislead you. Here is exactly where this one stops
+being true.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> you set a key, memory fills up, and Redis throws your key
+away. What does your client see on the next read?</p>
+<details><summary>Reveal</summary>
+
+<p>A miss. Nothing else. No error, no warning, no log line on your side, and no
+way to tell it apart from a key you never set at all.</p>
+<p>If you said &quot;an error&quot;, you are still picturing Meera, who would tell you.
+Redis does not. That gap between the picture and the machine is the first of
+the five below, and it is the one that costs people data.</p>
+</details>
+
+</blockquote>
+<ol>
+<li><strong>Meera would tell you if a jar had been thrown away.</strong> Redis throws keys
+away silently when memory runs out (section 10). Your next read is simply a
+miss, indistinguishable from a key you never set. Nothing is logged to your
+client.</li>
+<li><strong>Meera does everything, including writing the notebook.</strong> Real Redis does
+<em>not</em>. Flushing to disk, taking snapshots via <code>fork()</code>, freeing very large
+values, and, since Redis 6, reading and writing sockets can all happen on
+other threads. &quot;Single-threaded&quot; is a claim about command execution only. Get
+this wrong and you will mispredict performance.</li>
+<li><strong>The shop is one room.</strong> Redis Cluster is many shops, and each jar lives in
+exactly one of them. That is why a command touching two jars may be refused
+outright (section 15).</li>
+<li><strong>Shouting is instant.</strong> The network is not. On a real deployment the round
+trip is usually larger than the command, which is why section 14's experiment
+3 matters more in practice than anything about the command itself.</li>
+<li><strong>The jars are still there in the morning.</strong> Redis's memory is not. Without
+persistence turned on, a restart is an empty shop. Even <em>with</em> it, the
+recovery is not complete (section 11, F4).</li>
+</ol>
+<hr />
+<h2 id="readme-9-can-you-watch-meera-work">9. Can you watch Meera work?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Yes, and five minutes there makes the rest of this document
+much easier. The page runs the same pipeline you just saw drawn, tick by tick,
+forwards and backwards.</p>
+</blockquote>
+<p>Before the mechanism in detail, spend five minutes here.</p>
+<p><strong>→ <a href="https://claude.ai/code/artifact/492e3d97-6221-482d-847c-8ee9302ece13" target="_blank" rel="noopener">The One Thread</a></strong> <em>(also saved locally as <code>visualization.html</code>)</em></p>
+<p>The page is the pipeline in the diagram above, laid out the same way left to
+right: four clients, the waiting line, the one thread, the keyspace. Send
+commands and step through tick by tick, forwards <em>and backwards</em>.</p>
+<h3 id="readme-which-control-on-the-page-is-worth-the-whole-visit">Which control on the page is worth the whole visit?</h3>
+<p>The <strong>thread-count switch</strong>.</p>
+<p>Run the &quot;two clients add 1 to the same counter&quot; scenario on one thread. Then
+flip to four threads and run it again. The commands are identical.</p>
+<p>On one thread the answer is 7. On four, an increment silently disappears, and
+the log tells you exactly which read went stale. That is Arjun and Bina's lost
+sale from section 4, live, with the mechanism visible instead of guessed at.</p>
+<h3 id="readme-what-do-the-five-scenarios-show">What do the five scenarios show?</h3>
+<p>Five predict-then-watch scenarios cover the surprises. Atomicity. One slow
+command freezing everybody. A key's deadline passing without its memory coming
+back. A full shelf picking a victim by sampling. And a machine dying so that its
+stand-in takes over, losing writes that had already been acknowledged to the
+client.</p>
+<p>Each of those five becomes a numbered failure in section 11. Watching them first
+means you will read that section recognising things rather than learning them.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-beginner-model">✅ CHECKPOINT — end of the BEGINNER MODEL</h3>
+<p>You can now explain <em>why</em> Redis exists, what problem the single thread solves,
+and why &quot;the server knows the type&quot; is the mechanism rather than a convenience.
+If you stop here you can hold a sensible conversation about Redis and you will not
+make the lost-update mistake.</p>
+<p><strong>What the next layer adds:</strong> how a command actually gets from a socket to the
+hash table, and why each awkward-looking detail of that path is the scar of
+something that broke.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>atomic</em>, <em>thread</em> or <em>lock</em>, explain
+to a friend why Arjun and Bina cannot lose a sale once Meera is behind the
+counter.</p>
+<details><summary>A good answer sounds like</summary>
+"Nobody is allowed to pick up a jar any more. You just shout what you want
+done. Meera takes the jar down, changes it and puts it back before she listens
+to anyone else, so there is never a moment where two people are both holding
+the same jar with the old number in their head. The children stopped being
+able to make the mistake, rather than being told not to make it."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-10-how-does-a-command-get-from-the-wire-into-the-jar">10. How does a command get from the wire into the jar?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> We will build Meera's counter the way a smart person would
+build it, and let each version break. Every odd-looking detail of real Redis is
+the repair from one of those four breaks.</p>
+</blockquote>
+<h3 id="readme-what-does-the-first-version-look-like">What does the first version look like?</h3>
+<div class="code"><pre><code>forever:
+    wait for a client to say something
+    read the bytes
+    work out which command it is
+    do it
+    write the reply
+</code></pre></div>
+<p>That really is the shape of <code>MiniRedis.loop()</code>. Five lines. Now let us break it
+four times.</p>
+<h3 id="readme-break-1-is-the-socket-is-readable-the-same-as-a-command-arrived">Break 1: is &quot;the socket is readable&quot; the same as &quot;a command arrived&quot;?</h3>
+<p>Arjun sends <code>SET name Redis</code>. Your <code>read()</code> returns 11 bytes. Is that a command?</p>
+<p>It looks like one. It is 11 bytes and the command is 11 bytes long. But you did
+not know that before you counted, and the counting is the problem.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> TCP is a stream of bytes, not a stream of messages. What happens
+if the client's <code>SET name Redis</code> arrives in two packets and the server executes
+whatever it has when the first one lands?</p>
+<details><summary>Reveal</summary>
+
+<p>You execute <code>SET name Re</code>, which either stores the wrong value or is a parse
+error — and then the remaining bytes <code>dis</code> arrive and get interpreted as the start
+of a <em>new</em> command. One split packet corrupts the connection permanently.</p>
+<p>This is the <strong>framing</strong> problem from <a href="../03-io-multiplexing/notes.html#readme">io-multiplexing</a>, where
+you measured one 512 KB message arriving as 76 separate readiness events.</p>
+</details>
+
+</blockquote>
+<p>The repair is why the Redis wire format looks the way it does. Every message
+declares its own length before its content. A reader therefore always knows
+exactly how many more bytes it needs, and never has to guess.</p>
+<p>Engineers call that wire format <strong>RESP</strong>. This is what a client actually sends,
+with the two length declarations pointed out.</p>
+<div class="code"><pre><code>*3\r\n$3\r\nSET\r\n$4\r\nname\r\n$5\r\nRedis\r\n
+ |     |                                          
+ |     $4 = &quot;the next argument is 4 bytes long&quot;
+ *3 = &quot;this command has 3 parts&quot;
+</code></pre></div>
+<p>Replies come back in five shapes, each identified by its first byte. Read the
+middle column: it is what the shape means.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>first byte</th>
+  <th>means</th>
+  <th>example</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>+</code></td>
+  <td>a short status</td>
+  <td><code>+OK\r\n</code></td>
+</tr>
+<tr>
+  <td><code>-</code></td>
+  <td>an error</td>
+  <td><code>-WRONGTYPE Operation against...\r\n</code></td>
+</tr>
+<tr>
+  <td><code>:</code></td>
+  <td>an integer</td>
+  <td><code>:6\r\n</code></td>
+</tr>
+<tr>
+  <td><code>$</code></td>
+  <td>a length-prefixed string (<code>$-1</code> = nothing there)</td>
+  <td><code>$5\r\nRedis\r\n</code></td>
+</tr>
+<tr>
+  <td><code>*</code></td>
+  <td>an array of the above</td>
+  <td><code>*2\r\n$3\r\nfoo\r\n$3\r\nbar\r\n</code></td>
+</tr>
+</tbody>
+</table></div>
+<p>The parser in <code>src/Resp.java</code> returns <code>null</code> when the bytes on hand are not yet a
+complete command, and it never partially consumes them. The test
+<code>resp_frames_a_command_split_across_two_tcp_writes</code> sends a deliberately
+truncated command, checks nothing happened, then sends the rest and checks it
+did.</p>
+<p>And notice the payoff you get for free. If framing is length-prefixed, a client
+can put <em>ten thousand</em> commands into one write, and the server will find all of
+them. That is pipelining, and it is the 23× speedup in experiment 3. Nobody
+added it as a feature. It fell out of fixing the framing bug.</p>
+<h3 id="readme-break-2-one-slow-client-starves-everyone-so-should-we-add-threads">Break 2: one slow client starves everyone, so should we add threads?</h3>
+<p>Priya's connection stalls halfway through a command. Meera waits for her. Every
+other child waits too. The obvious next move is a thread per connection, so that
+one slow child cannot hold up the others.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> you switch to a thread per connection. The command code does not
+change at all. What have you just lost?</p>
+<details><summary>Reveal</summary>
+
+<p>Atomicity. <code>INCR</code> is read-modify-write; with several threads inside the hash table
+the read of one can land between the read and the write of another, and you are
+back to Arjun and Bina.</p>
+<p>Experiment 1 measures precisely this. Eight clients, 2,000 increments each, on
+exactly the same command code:</p>
+<div class="code"><pre><code>expected                                : 16,000
+single-threaded server                  : 16,000   -&gt; 0 lost
+same commands on many threads           : 11,124   -&gt; 4,876 lost (30.5%)
+</code></pre></div>
+<p>Nearly a third of the work vanished, silently. You could get it back with a lock
+per key, which is what most databases do. But then you have paid for locks on
+every operation, and you own every deadlock you create.</p>
+</details>
+
+</blockquote>
+<p>The repair is to refuse the choice. Keep one thread for execution, and solve the
+slow-client problem a different way: never wait on a socket at all. Hand the
+whole connection set to the kernel, sleep, and get woken with only the ready
+ones.</p>
+<p>That is exactly the <code>Selector</code> loop you built in the io-multiplexing lab. It is
+also why Redis can hold tens of thousands of connections on one thread.</p>
+<p>This is the trade at the heart of Redis, stated honestly. One thread means
+perfect isolation between commands and zero lock overhead. The price is that
+<em>everything shares one fate</em>. Which brings us straight to the next break.</p>
+<h3 id="readme-break-3-what-happens-when-the-shelf-runs-out-of-room">Break 3: what happens when the shelf runs out of room?</h3>
+<p>Memory is finite. When the keyspace outgrows it, something has to go.</p>
+<p>The obvious answer is least-recently-used: throw out whatever has gone longest
+without being touched. To do that exactly, you keep every key in a linked list
+and move it to the front on every access.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> exact LRU costs two pointers per key — on 10 million keys, roughly
+160 MB of pure bookkeeping. Redis refuses to spend that and <strong>samples</strong> instead:
+pick 5 keys at random, evict the oldest of those, repeat. How much hit ratio does
+that shortcut cost?</p>
+<details><summary>Reveal</summary>
+
+<p>Almost none. Experiment 5, 200,000 requests over 20,000 keys with 80% of traffic
+on the hot 20%:</p>
+<div class="code"><pre><code>policy                      hit ratio   evictions
+allkeys-exactlru                75.7%       48,639
+allkeys-lru (samples=5)         73.7%       52,545     &lt;- what Redis actually does
+allkeys-lru (samples=10)        74.9%       50,204
+allkeys-random                  66.6%       66,864
+</code></pre></div>
+<p>Sampling five costs <strong>1.9 percentage points</strong> against perfect LRU. Having a policy
+at all is worth <strong>7.1</strong> against random. So Redis buys 79% of the available benefit
+for zero per-key memory, and <code>maxmemory-samples 10</code> buys back another chunk if you
+want to pay a little CPU for it.</p>
+<p>This is a good thing to internalise generally: an approximation that costs nothing
+per item often beats an exact algorithm that costs something per item.</p>
+</details>
+
+</blockquote>
+<p>Asha has to choose which victim rule her instance uses. The setting is
+<code>maxmemory-policy</code>. The right-hand column says which kind of instance each
+choice belongs to.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>policy</th>
+  <th>evicts</th>
+  <th>use when</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>noeviction</code></td>
+  <td>nothing — writes fail with an error</td>
+  <td>Redis is your source of truth and silent data loss is unacceptable</td>
+</tr>
+<tr>
+  <td><code>allkeys-lru</code></td>
+  <td>least recently used, sampled</td>
+  <td>pure cache — the standard choice</td>
+</tr>
+<tr>
+  <td><code>allkeys-lfu</code></td>
+  <td>least <em>frequently</em> used, sampled</td>
+  <td>cache with a stable hot set that scans would otherwise pollute</td>
+</tr>
+<tr>
+  <td><code>volatile-lru</code> / <code>-lfu</code> / <code>-ttl</code> / <code>-random</code></td>
+  <td>only among keys that have a deadline</td>
+  <td>mixed instance: some keys are cache, some are truth</td>
+</tr>
+</tbody>
+</table></div>
+<p>The <code>volatile-*</code> family is how Asha runs one instance holding both disposable
+and precious data. It has a nasty edge, though. If <em>nothing</em> has a deadline
+there is no candidate to evict, and writes fail exactly as if she had chosen
+<code>noeviction</code>.</p>
+<h3 id="readme-break-4-what-about-a-note-saying-throw-this-out-at-4pm">Break 4: what about a note saying &quot;throw this out at 4pm&quot;?</h3>
+<p>Sessions expire. Caches go stale. Locks must not be held forever. So keys need
+deadlines.</p>
+<p>In plain words, a deadline is the moment after which a key stops counting.
+Engineers call it a <strong>TTL</strong>, short for time to live.</p>
+<p>The obvious implementation is a timer per key. On 10 million keys that is 10
+million timers, and the cost is per key again.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Redis will not pay that. So: you set 50,000 keys with a 1-second
+TTL. Two seconds later, nobody has read any of them. How much memory has come back?</p>
+<details><summary>Reveal</summary>
+
+<p>With only lazy expiry, <strong>none at all</strong>. Experiment 4:</p>
+<div class="code"><pre><code>50,000 keys, TTL 1s   DBSIZE=50000  used_memory=15,077,780 bytes
+3 seconds later:
+  DBSIZE (residency)      : 50000      &lt;- unchanged
+  logically alive         : 0
+</code></pre></div>
+<p>Every one of those keys is dead and every one is still occupying memory.</p>
+</details>
+
+</blockquote>
+<p>Redis finds dead keys two ways, and you need both in your head.</p>
+<p>The first is <strong>lazy expiry</strong>. When anything touches a key, the server checks the
+deadline first. If it has passed, the key is deleted right then, and the caller
+is told the key does not exist. This is <code>Store.lookup()</code>. It costs nothing. It
+also only ever finds keys somebody asks for.</p>
+<p>The second is <strong>active expiry</strong>. Ten times a second, sample 20 keys <em>that have a
+deadline</em>, delete the dead ones, and if more than a quarter of the sample was
+dead, go round again immediately. This is <code>Store.activeExpireCycle()</code>, faithful
+to the real algorithm. It is probabilistic rather than exhaustive, and
+deliberately bounded so that it can never monopolise the one thread. Experiment
+4 needed <strong>157 sweep invocations</strong> to clear 50,000 dead keys. At the real
+ten-per-second rate, that is about fifteen seconds.</p>
+<p>Two consequences are worth writing on a sticky note.</p>
+<p><code>DBSIZE</code> counts keys that are <strong>resident</strong>, not keys that are <strong>alive</strong>. That is
+faithful to real Redis, and it is why &quot;my TTLs expired but <code>DBSIZE</code> didn't move&quot;
+is a support question rather than a bug. The test
+<code>expired_key_is_invisible_but_can_still_be_resident</code> pins the behaviour.</p>
+<h2 id="readme-and-an-instance-can-sit-pressed-against-its-maxmemory-limit-holding-nothingbut-corpses-evicting-live-keys-to-make-room-because-the-dead-ones-have-notbeen-sampled-yet">And an instance can sit pressed against its <code>maxmemory</code> limit holding nothing
+but corpses, evicting <em>live</em> keys to make room, because the dead ones have not
+been sampled yet.</h2>
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-intermediate-model">✅ CHECKPOINT — end of the INTERMEDIATE MODEL</h3>
+<p>You can now follow a command from socket bytes to hash table and back, and explain
+why RESP is length-prefixed, why execution is single-threaded, why eviction samples,
+and why expiry is lazy. Each of those is a scar from a break you just watched.</p>
+<p><strong>What the next layer adds:</strong> what happens when things go wrong. The process
+dies, the machine dies, the network splits, a client stalls holding a lock.
+And exactly which promises survive each one.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>sampling</em>, <em>probabilistic</em> or
+<em>amortised</em>, explain to a friend why Redis does not keep a perfect list of
+which key was used least recently, and why that is a good decision.</p>
+<details><summary>A good answer sounds like</summary>
+"Keeping a perfect order means writing something down about every single jar,
+every single time anyone touches one. With ten million jars that bookkeeping
+costs more memory than some of the jars. So instead Meera grabs five jars at
+random and throws out the dustiest of those five. She is wrong sometimes, but
+she is only about two percent worse at picking than perfect, and she pays
+nothing per jar to be that good."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-11-what-breaks-and-which-promise-does-each-break-bend">11. What breaks, and which promise does each break bend?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nine failures, all real, all runnable. In most of them
+nothing is <em>wrong</em>; something is merely <em>late</em>, <em>missing</em> or <em>gone</em>. Telling
+those apart is the whole skill.</p>
+</blockquote>
+<p>Meera's counter is now built. This section is what happens to Asha's shop on a
+bad day. Each failure is numbered so the exercises can point at it.</p>
+<p>Two words will do a lot of work here, so earn them now. When nothing incorrect
+ever happens, engineers say <strong>safety</strong> held. When the system stops making
+progress in time, they say <strong>liveness</strong> was lost. A shop with a very long queue
+is safe and not live. A shop that hands out the wrong change is live and not
+safe.</p>
+<h3 id="readme-f1--why-did-twenty-innocent-reads-jump-to-190-ms">F1 — why did twenty innocent reads jump to 190 ms?</h3>
+<p>Priya walks up to the counter and asks Meera to read out the name on every jar
+in the shop. There are two hundred thousand jars.</p>
+<p>Meera starts reading. Behind Priya, twenty children are waiting to ask for one
+tiny thing each. None of them wants Priya's jars. None of them wants any jar
+Priya is touching. They wait anyway, because there is one Meera.</p>
+<p>To make it happen on your machine, run <code>java src/Experiments.java 2</code>, or open
+the &quot;list every key&quot; scenario in the visualization. Twenty clients do tiny
+<code>GET</code>s on unrelated keys while one other client runs <code>KEYS user:session:1*</code>
+across 200,000 keys.</p>
+<div class="code"><pre><code>the KEYS command itself took            : 245 ms
+GET p99 sampled before it               : p99 =   1,011 us
+GET p99 sampled during it               : p99 = 191,661 us, max = 191,715 us
+</code></pre></div>
+<p>There is one thread and it runs each command to completion. The twenty clients
+were not competing for a key. They were competing for the thread. That is a
+<strong>190×</strong> p99 collapse caused entirely by somebody else's connection.</p>
+<p>Every guarantee about correctness holds here. No data is wrong. What is lost is
+liveness: the system stops making timely progress. Safety intact, liveness gone,
+which is exactly the distinction from <a href="../39-paxos/notes.html#readme">paxos</a>.</p>
+<p>This is the single most common Redis outage there is. <code>KEYS *</code> is the famous
+one, and it has plenty of company. <code>SMEMBERS</code> on a million-member set does it.
+So do <code>HGETALL</code> on a huge hash, <code>LRANGE key 0 -1</code>, a <code>DEL</code> of a multi-gigabyte
+value, and a slow Lua script. Asha finds the culprit afterwards in <code>SLOWLOG GET</code>
+and in <code>INFO commandstats</code>.</p>
+<p>Three fixes, in the order she should reach for them. Use <code>SCAN</code> instead of
+<code>KEYS</code>, because it does bounded work per call. Use <code>UNLINK</code> instead of <code>DEL</code>,
+because it frees on a background thread. And never let one key grow unbounded. A
+single key holding a huge collection is called a <strong>big key</strong>, and it is
+dangerous precisely because every O(n) command on it is an outage for everybody
+else.</p>
+<h3 id="readme-f2--what-happens-when-the-shelf-is-full-and-asha-still-writes">F2 — what happens when the shelf is full and Asha still writes?</h3>
+<p>The shelf holds what it holds. Once it is full, Meera must throw something out
+before she can put anything new up.</p>
+<p>Asha can produce this in a minute: set <code>maxmemory</code> low, set
+<code>maxmemory-policy allkeys-lru</code>, and keep writing. The test
+<code>maxmemory_with_lru_policy_evicts_down_to_the_limit</code> does it, and so does the
+eviction scenario in the visualization.</p>
+<p>The reason is the capacity invariant. Memory used must stay under the limit, so
+on each write that would exceed <code>maxmemory</code>, victims are sampled and dropped
+until it fits.</p>
+<p>Now the part that decides whether this is routine or an emergency. If Redis is a
+cache, nothing of value is lost. A miss just costs a trip to the source. <strong>If
+Redis is Asha's source of truth, this is silent permanent data loss</strong>, and
+nothing in her client will tell her. That is why <code>noeviction</code> exists. It is also
+why the choice of policy is really a declaration of what the instance <em>is</em>.</p>
+<p>In production she watches <code>evicted_keys</code> in <code>INFO</code>. A non-zero rate on an
+instance she thinks of as a database is an emergency, not a graph.</p>
+<p>One trap goes with it. <code>used_memory</code> counts what Redis asked for.
+<code>used_memory_rss</code> counts what the operating system actually gave it. The ratio
+between them is fragmentation, and it means a Redis sitting at 80% of
+<code>maxmemory</code> can still be at 100% of the machine.</p>
+<h3 id="readme-f3--the-deadlines-passed-so-where-did-the-memory-go">F3 — the deadlines passed, so where did the memory go?</h3>
+<p>Fifty thousand jars had notes saying &quot;throw this out at 4pm&quot;. It is now past
+4pm. The shelf is exactly as full as it was.</p>
+<p>Run <code>java src/Experiments.java 4</code> and watch it happen.</p>
+<p>The reason is section 10's fourth break. Expiry is lazy plus sampled. It is
+never exhaustive and never prompt. Nobody asked for those keys, so nobody
+triggered the lazy check, and the sweep only samples.</p>
+<p>Correctness is fine throughout. A dead key is never visible to anybody. What is
+lost is Asha's ability to reason about memory from deadlines alone, which is a
+smaller loss than F2 and a much more confusing one.</p>
+<p>The graph to look at is the <code>expired_keys</code> rate against her own write rate. If
+she creates keys with deadlines faster than the sweep reclaims them, memory
+climbs until eviction starts throwing out <em>live</em> keys. That is F3 turning into
+F2. Real Redis lets her tune the sweep's aggressiveness with <code>hz</code> and
+<code>dynamic-hz</code>.</p>
+<h3 id="readme-f4--the-process-dies-how-much-did-you-just-lose">F4 — the process dies. How much did you just lose?</h3>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Redis is running with <code>appendfsync no</code>, so it has not forced
+anything to disk in ages. You run <code>kill -9</code> on it. How much acknowledged data do
+you lose?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Nothing.</strong> Experiment 6 Part A does this for real, with a real separate process
+and a real <code>kill -9</code>:</p>
+<div class="code"><pre><code>acknowledged writes : 5,000
+survived kill -9    : 5,000   -&gt; 0 lost
+</code></pre></div>
+<p>Redis had already called <code>write()</code>, so the bytes were in the <strong>operating system's
+page cache</strong>. Killing a process does not empty the kernel's memory. <code>appendfsync</code>
+protects you from the <em>machine</em> dying, not from the <em>process</em> dying — and those are
+very different events with very different frequencies.</p>
+<p>If this surprised you, it is because &quot;flushed to disk&quot; quietly conflates three
+separate moments: appended to Redis's own buffer, <code>write()</code>n to the OS, and
+<code>fsync()</code>ed to the physical device. Only the third survives a power cut.</p>
+</details>
+
+</blockquote>
+<p>If you guessed &quot;everything since the last fsync&quot;, you had the right rule and the
+wrong villain. That answer is correct for the <em>next</em> failure, not this one.</p>
+<h4 id="readme-f4b--and-what-if-the-machine-loses-power">F4b — and what if the machine loses power?</h4>
+<p>Now the page cache is gone too, because the page cache lives in the machine's
+memory. Experiment 6 Part B measures all three settings. Read the second-to-last
+column: it is the loss expressed as a <em>duration</em> of traffic.</p>
+<div class="code"><pre><code>appendfsync   acknowledged    durable       lost  lost as traffic   writes/sec
+always              40,144     40,144          0             0 ms        8,920
+everysec           137,121    120,949     16,172           530 ms       30,471
+no                 153,137          0    153,137         4,500 ms       34,030
+</code></pre></div>
+<p>Read the loss as a duration, not a quantity. <code>everysec</code> lost everything written
+since its last fsync. The crash landed 500 ms into the 1,000 ms window, so 530
+ms of traffic went.</p>
+<p>That is Redis's real durability promise, stated honestly: <em>your write is
+acknowledged now and becomes durable up to a second from now.</em></p>
+<p>And look at the throughput column, because that is why <code>everysec</code> is the
+default. Buying the zero in the <code>always</code> row cost <strong>3.4× lower throughput</strong>.</p>
+<h4 id="readme-which-of-the-two-recovery-files-does-what">Which of the two recovery files does what?</h4>
+<p>Meera keeps a notebook of every instruction. She also, now and then, photographs
+the whole shelf. Those are two different ways of being able to rebuild the shop,
+and Redis has both.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th><strong>RDB</strong> (snapshot)</th>
+  <th><strong>AOF</strong> (append-only file)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>what it is</td>
+  <td>a compact binary point-in-time dump of the whole dataset</td>
+  <td>every write command, appended in order</td>
+</tr>
+<tr>
+  <td>written by</td>
+  <td>a <code>fork()</code>ed child process</td>
+  <td>the main process, buffered, fsynced per policy</td>
+</tr>
+<tr>
+  <td>recovery</td>
+  <td>fast — load one file</td>
+  <td>slower — replay every command</td>
+</tr>
+<tr>
+  <td>loses</td>
+  <td>everything since the last snapshot (minutes)</td>
+  <td>up to your fsync window (a second)</td>
+</tr>
+<tr>
+  <td>file size</td>
+  <td>small</td>
+  <td>grows forever unless rewritten</td>
+</tr>
+</tbody>
+</table></div>
+<p>You have seen this pair before, twice. It is the write-ahead log plus checkpoint
+from <a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a>. It is the event log plus snapshot
+from <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>. Same idea, third context.</p>
+<p>Production usually runs <strong>both</strong>: the append-only file for a tight loss window,
+the snapshot for fast restarts and backups. Redis 7 unified them into a
+&quot;multi-part AOF&quot;, which is a base snapshot plus incremental files.</p>
+<p>One production hazard belongs specifically to snapshots. <code>BGSAVE</code> calls
+<code>fork()</code>. The child shares the parent's memory copy-on-write, so every page the
+parent <em>writes</em> while the snapshot runs gets duplicated. On a write-heavy
+instance the process can approach <strong>twice</strong> its dataset size in resident memory
+for the duration. Sizing a box at exactly your dataset size is how you get
+killed by the out-of-memory killer during a backup.</p>
+<h3 id="readme-f5--the-machine-dies-and-ben-takes-over-what-arrives-with-him">F5 — the machine dies and Ben takes over. What arrives with him?</h3>
+<p>Ben keeps a second shop across the road. He copies Meera's notebook as fast as
+he can. He is always slightly behind, and nobody has ever promised how far.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> the master acknowledged 500 writes to their clients, then died. A
+replica is promoted. How many of the 500 are on the new master?</p>
+<details><summary>Reveal</summary>
+
+<p>However many happened to have arrived — which you do not control. Experiment 7:</p>
+<div class="code"><pre><code>replication lag     0 ms  -&gt;  acked 500, on the promoted replica 500, LOST 0
+replication lag 1,500 ms  -&gt;  acked 500, on the promoted replica   0, LOST 500
+</code></pre></div>
+<p>Both rows are the same code with the same guarantees. The only variable is how far
+behind the replica happened to be.</p>
+</details>
+
+</blockquote>
+<p>Redis replication is <strong>asynchronous</strong>. The master replies to the client and
+streams to replicas as two independent acts, in that order. So <em>&quot;Redis said
+OK&quot;</em> and <em>&quot;this write will survive a failover&quot;</em> are different statements, and
+the gap between them is the replication lag.</p>
+<p>Availability survives this. There is a working master within seconds.
+<strong>Durability of acknowledged writes does not.</strong> This is the AP corner of
+<a href="../24-cap-theorem/notes.html#readme">cap-theorem</a>, and it is the product, not a
+misconfiguration.</p>
+<p><code>WAIT</code> does not fix it, and it is worth being precise about why. <code>WAIT numreplicas timeout</code> tells you how many replicas already have your write. It
+cannot un-acknowledge one that they do not have. By the time <code>WAIT</code> returns a
+disappointing number, your client already has its <code>OK</code>, and Redis has no
+rollback. <code>WAIT</code> narrows the window you are exposed to. It does not close it.</p>
+<p>Asha monitors <code>master_repl_offset</code> on the master against each replica's offset.
+She configures <code>min-replicas-to-write</code> and <code>min-replicas-max-lag</code> so that a
+master with no healthy replicas refuses writes rather than accepting ones it
+cannot protect. That is her choosing CP for that instance. And if a write must
+not be lost, it must not live <em>only</em> in Redis.</p>
+<h3 id="readme-f6--what-if-meera-and-ben-are-both-open-at-once">F6 — what if Meera and Ben are both open at once?</h3>
+<p>Split the road. Now some children can reach Meera and some can reach Ben, and
+neither shopkeeper can see the other.</p>
+<p>The failover machinery decides Meera is gone and tells Ben he is in charge. That
+machinery is <strong>Sentinel</strong>, the component that watches a master and promotes a
+replica when it stops answering, covered in section 15. Meera has not stopped
+answering. She simply cannot be seen by the majority.</p>
+<p>So Meera keeps serving the children who can still reach her, while Ben serves
+everybody else, and the two shops record different things. Engineers call this
+<strong>split brain</strong>.</p>
+<p>Both halves keep serving, so availability survives. Their data diverges, so
+consistency does not. When the road reopens, Meera is reconfigured as a copy of
+Ben and <strong>discards her own divergent writes</strong>. Those writes are gone, and no
+client that received an <code>OK</code> was ever told.</p>
+<p>The mitigation is the same <code>min-replicas-to-write</code> setting. A master that cannot
+see enough replicas stops accepting writes, and the minority side goes
+read-only. For Cluster there is <code>cluster-require-full-coverage</code> as well. This is
+the CAP dial, Redis lets Asha turn it, and the default position is AP.</p>
+<h3 id="readme-f7--how-do-two-workers-both-end-up-holding-one-lock">F7 — how do two workers both end up holding one lock?</h3>
+<p>Dev and Omar both process invoices. Only one of them should touch invoice 42.
+Almost every Redis deployment eventually grows this pattern.</p>
+<div class="code"><pre><code class="language-java">// take the lock: set it only if absent, with a deadline, in ONE command
+SET lock:invoice:42 &lt;random-token&gt; NX PX 30000
+   ... do the work ...
+// release it only if we still own it (this must be a Lua script -- see below)
+</code></pre></div>
+<p>The <code>NX PX</code> combination in one command matters. <code>SETNX</code> followed by a separate
+<code>EXPIRE</code> can crash in between and leave a lock with no deadline, held forever.
+The test <code>set_nx_px_grants_the_lock_to_exactly_one_client</code> confirms that exactly
+one of 20 concurrent clients wins.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> client A takes the lock with a 200 ms deadline, then stalls for
+500 ms in a garbage-collection pause. How many clients believe they hold the lock?</p>
+<details><summary>Reveal</summary>
+
+<p><strong>Two.</strong> Experiment 8:</p>
+<div class="code"><pre><code>A: acquired the lock, deadline 200 ms
+B: acquired the lock (A&#x27;s had expired) -&gt; writing
+A: woke up, still believes it holds the lock -&gt; writing
+writers that entered the critical section: 2  [B, A]
+</code></pre></div>
+<p>Redis did nothing wrong. It granted one lock, expired it on schedule, and granted
+it again. The lock was lost by A <strong>without A being told</strong> — because nothing can
+tell A; A was not running.</p>
+<p>And you cannot escape by removing the deadline, because a lock with no deadline
+deadlocks permanently the first time a holder dies. Every lock with a timeout has
+this hole.</p>
+</details>
+
+</blockquote>
+<p>In the story: Dev takes the key, is knocked out for half a minute, and wakes up
+still holding it. Omar has long since been given a new key. Nobody lied to
+either of them.</p>
+<p>The fix does not live in Redis. It lives at the resource. Each acquisition takes
+a strictly increasing number. Engineers call it a <strong>fencing token</strong>. The
+protected resource then refuses any write carrying a token lower than the
+highest it has already honoured.</p>
+<div class="code"><pre><code>B: accepted with token 2
+A: REJECTED by the resource -- token 1 is stale
+with fencing tokens, writers accepted: 1  [B]
+</code></pre></div>
+<p>The lock still failed identically. Both clients still believed they held it.
+What changed is that the <em>resource</em> can now tell which belief is stale.</p>
+<p>So mutual exclusion is <strong>not</strong> guaranteed. What a Redis lock actually gives you
+is a strong probability that two workers will not do the same job at the same
+time. That is worth a great deal, and it is not the same thing.</p>
+<p>Use a Redis lock to stop duplicate work, which is an efficiency goal. Do not use
+one as the only thing standing between you and a correctness violation.
+<strong>Redlock</strong>, the multi-instance algorithm, does not change this conclusion.
+Martin Kleppmann's critique and antirez's reply are both worth reading in full,
+and the durable takeaway is the fencing token.</p>
+<p>One more detail people get wrong. A correct <em>release</em> must check the token and
+delete in one atomic step, which needs a Lua script. A plain <code>GET</code> followed by
+<code>DEL</code> can delete somebody else's lock in between.</p>
+<h3 id="readme-f8--why-does-adding-machines-not-help-chetans-chess-ladder">F8 — why does adding machines not help Chetan's chess ladder?</h3>
+<p>Chetan's ladder is the most popular jar in the shop. Four requests in every ten
+are about it.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Asha's Redis is at 100% of one core because of that one jar.
+She adds four more machines to the cluster. What happens to the load on the
+jar's machine?</p>
+<details><summary>Reveal</summary>
+
+<p>Nothing at all. A cluster spreads <em>keys</em> across machines, and this is one key.
+It lives on exactly one machine before the change and on exactly one machine
+after it.</p>
+<p>If you said &quot;it drops to a fifth&quot;, you are picturing the traffic being split.
+Sharding splits the <em>keyspace</em>, never a single key.</p>
+</details>
+
+</blockquote>
+<p>A key taking a large share of all traffic is called a <strong>hot key</strong>. A Redis
+Cluster spreads keys across shards, and a single key lives on exactly one shard.
+So a key that is 40% of your traffic puts 40% of your traffic on one thread on
+one machine, and adding shards does nothing at all.</p>
+<p>Correctness is fine. What is gone is Asha's ability to scale that particular
+workload horizontally.</p>
+<p>This is the <a href="../60-distributed-rate-limiting/notes.html#readme">distributed-rate-limiting</a> lab's
+hot-key problem in its native habitat, and the same remedies apply. Split the
+key into <code>counter:{id}:0..9</code> and sum the parts. Put a short-deadline local cache
+in front of it. Or route by a different dimension entirely. Find them with
+<code>redis-cli --hotkeys</code> and <code>--bigkeys</code>.</p>
+<h3 id="readme-f9--why-did-the-announcement-reach-nobody">F9 — why did the announcement reach nobody?</h3>
+<p>Bina shouts an announcement across the tuck shop. Everyone currently in the room
+hears it. Everyone else never learns it happened, and there is no record.</p>
+<p>The test <code>pubsub_reaches_only_clients_connected_right_now</code> does exactly that.
+Publish with nobody subscribed, and the message is delivered to zero clients and
+is gone forever.</p>
+<p>Redis <strong>Pub/Sub</strong> is fire-and-forget. There is no queue, no backlog, no retry
+and no replay. A subscriber that was disconnected, or merely reconnecting,
+misses everything sent in that window.</p>
+<p>What you get is at-most-once delivery, with no durability whatsoever.</p>
+<p>If losing a message is acceptable, Pub/Sub is perfect and very cheap. Cache
+invalidation broadcasts and live dashboards are the classic fits. If it is not
+acceptable, use <strong>Redis Streams</strong> with <code>XADD</code> and <code>XREADGROUP</code>, which keep a
+persistent log with consumer groups and explicit acknowledgement. That is the
+&quot;queue versus log&quot; distinction from
+<a href="../04-database-landscape/notes.html#readme">database-landscape</a>, living inside one product.</p>
+<h3 id="readme-the-nine-on-one-page">The nine on one page</h3>
+<p>Read the third column first: it says whether anything became <em>wrong</em>, or merely
+<em>late</em> or <em>missing</em>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>What breaks</th>
+  <th>Safety or liveness?</th>
+  <th>How to make it happen</th>
+  <th>What Asha watches</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>F1</td>
+  <td>one slow command freezes every client</td>
+  <td>safety intact, liveness gone</td>
+  <td><code>java src/Experiments.java 2</code></td>
+  <td><code>SLOWLOG GET</code>, <code>INFO commandstats</code></td>
+</tr>
+<tr>
+  <td>F2</td>
+  <td>memory fills and a needed key is evicted</td>
+  <td>safety gone if Redis is truth</td>
+  <td>low <code>maxmemory</code> plus writes</td>
+  <td><code>evicted_keys</code>, <code>mem_fragmentation_ratio</code></td>
+</tr>
+<tr>
+  <td>F3</td>
+  <td>deadlines pass and memory stays used</td>
+  <td>safety intact, reasoning lost</td>
+  <td><code>java src/Experiments.java 4</code></td>
+  <td><code>expired_keys</code> rate vs write rate</td>
+</tr>
+<tr>
+  <td>F4</td>
+  <td>the process or machine dies</td>
+  <td>up to one second of writes gone</td>
+  <td><code>java src/Experiments.java 6</code></td>
+  <td><code>aof_last_write_status</code></td>
+</tr>
+<tr>
+  <td>F5</td>
+  <td>the master dies and a replica is promoted</td>
+  <td>acknowledged writes gone</td>
+  <td><code>java src/Experiments.java 7</code></td>
+  <td><code>master_repl_offset</code> lag</td>
+</tr>
+<tr>
+  <td>F6</td>
+  <td>a partition leaves two masters</td>
+  <td>consistency gone, availability kept</td>
+  <td>partition the network</td>
+  <td><code>min-replicas-to-write</code> in effect</td>
+</tr>
+<tr>
+  <td>F7</td>
+  <td>two clients hold one lock</td>
+  <td>mutual exclusion gone</td>
+  <td><code>java src/Experiments.java 8</code></td>
+  <td>duplicate-work alerts, fencing rejects</td>
+</tr>
+<tr>
+  <td>F8</td>
+  <td>one key takes all the traffic</td>
+  <td>scaling gone, correctness fine</td>
+  <td><code>redis-cli --hotkeys</code></td>
+  <td>per-shard CPU, <code>--hotkeys</code></td>
+</tr>
+<tr>
+  <td>F9</td>
+  <td>Pub/Sub drops a message</td>
+  <td>delivery gone</td>
+  <td>publish with no subscriber</td>
+  <td>subscriber reconnect counts</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-are-the-last-four-rows-of-the-map">What are the last four rows of the map?</h3>
+<p>Section 8 left four rows of the tuck-shop map unfilled, because the words had not
+been earned yet. They have been now.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>tuck shop</th>
+  <th>Redis</th>
+  <th>where it is in the code</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>a note on a jar saying &quot;throw this out at 4pm&quot;</td>
+  <td>a <strong>TTL</strong>, found lazily and by sampling</td>
+  <td><code>Store.expires</code>, <code>Store.activeExpireCycle()</code></td>
+</tr>
+<tr>
+  <td>the shelf running out of room</td>
+  <td><strong><code>maxmemory</code></strong> plus an <strong>eviction policy</strong>, sampled</td>
+  <td><code>Store.evictIfNeeded()</code></td>
+</tr>
+<tr>
+  <td>Meera's notebook of every instruction</td>
+  <td>the <strong>AOF</strong>, made durable per <code>appendfsync</code></td>
+  <td><code>MiniRedis.appendAof()</code></td>
+</tr>
+<tr>
+  <td>Ben's shop copying the notebook, always slightly behind</td>
+  <td>an <strong>asynchronous replica</strong>, and that &quot;slightly behind&quot; is your failover data-loss window</td>
+  <td><code>MiniRedis.propagate()</code></td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-12-what-is-promised-what-is-not-and-what-did-one-meera-cost">12. What is promised, what is not, and what did one Meera cost?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Six things Redis will always do, six things it will never
+do, and one table showing that both lists come from the same design decision.</p>
+</blockquote>
+<h3 id="readme-which-six-promises-does-the-design-actually-keep">Which six promises does the design actually keep?</h3>
+<p>These hold for Arjun, for Asha's twenty servers, and for every client at once.</p>
+<ol>
+<li><strong>One command at a time.</strong> No command observes another's intermediate state.
+This is the source of everything good here.</li>
+<li><strong>Commands are ordered.</strong> Every client, every replica and the append-only log
+see the same sequence. There is one thread, so there is one order.</li>
+<li><strong>An expired key is never visible</strong>, even if it is still resident.</li>
+<li><strong><code>used_memory</code> ≤ <code>maxmemory</code></strong>, unless the policy is <code>noeviction</code>, in which
+case writes are refused instead.</li>
+<li><strong>Only real effects propagate.</strong> A <code>SET NX</code> that lost the race changes
+nothing, so it is never written to the append-only log and never sent to a
+replica.</li>
+<li><strong>Propagation is deterministic.</strong> Non-deterministic commands are <em>rewritten</em>
+before they leave the server, because a replica replaying them would diverge.
+<code>EXPIRE</code>, which is relative, becomes <code>PEXPIREAT</code>, which is absolute. <code>SPOP</code>,
+which is random, becomes the concrete <code>SREM</code> of the member actually removed.
+Both are pinned by tests.</li>
+</ol>
+<p>That sixth one is worth a second look. Ben is not replaying what Dev asked for.
+He is replaying what actually happened. Those are different, and the difference
+is what keeps his shop identical to Meera's.</p>
+<h3 id="readme-which-six-things-will-redis-never-do-for-you">Which six things will Redis never do for you?</h3>
+<p>In order of how often each one bites people.</p>
+<blockquote>
+<p><strong>🔮 Predict:</strong> you send <code>MULTI</code>, then three increments, then <code>EXEC</code>. The
+second increment fails at run time because that key holds text. What happens to
+the first and third?</p>
+<details><summary>Reveal</summary>
+
+<p>They both happened, and they stay happened. There is no rollback in Redis, so
+the batch is not undone by a failure inside it.</p>
+<p>If you said &quot;the whole thing is rolled back&quot;, you are reading <code>MULTI</code> as a
+database transaction. It is not one. It is a batch that nothing else can
+interleave with, which is a much smaller promise.</p>
+</details>
+
+</blockquote>
+<ul>
+<li><p><strong>Durability of an acknowledged write.</strong> Acknowledgement precedes both <code>fsync</code>
+and replication. Up to one second locally (F4), and unboundedly on failover
+(F5).</p>
+</li>
+<li><p><strong>That a &quot;transaction&quot; can be rolled back.</strong> <code>MULTI</code>/<code>EXEC</code> runs a batch with
+nothing interleaved. It does <strong>not</strong> undo. If command 3 of 5 fails at run
+time, commands 1, 2, 4 and 5 still happened. Pinned by
+<code>multi_exec_does_not_roll_back_after_a_failed_command</code>:</p>
+<div class="code"><pre><code>MULTI; INCR good; INCR text(&lt;- fails); INCR good; EXEC
+-&gt; [1, error, 2]   and `good` is 2.
+</code></pre></div>
+<p>Redis's own documentation is explicit that this is a deliberate choice. Errors
+inside <code>EXEC</code> are programming bugs, and supporting rollback would cost every
+transaction speed to protect against them.</p>
+</li>
+<li><p><strong>Mutual exclusion from a lock</strong> (F7).</p>
+</li>
+<li><p><strong>Message delivery from Pub/Sub</strong> (F9).</p>
+</li>
+<li><p><strong>That a key you wrote is still there.</strong> Eviction and expiry both remove keys
+silently.</p>
+</li>
+<li><p><strong>Isolation across multiple keys, when the data is spread over several
+machines.</strong> A multi-key command whose keys live on different shards is refused
+outright (section 15).</p>
+</li>
+</ul>
+<h3 id="readme-what-did-the-single-thread-buy-and-what-did-it-charge">What did the single thread buy, and what did it charge?</h3>
+<p>Every row here is the same decision seen from two sides. Read them across.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>bought</th>
+  <th>cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>every command atomic, with no locks anywhere</td>
+  <td>one slow command blocks everything (F1)</td>
+</tr>
+<tr>
+  <td>no lock contention, no deadlocks, no lost updates</td>
+  <td>one CPU core per instance for command work</td>
+</tr>
+<tr>
+  <td>one total order of operations, for free</td>
+  <td>vertical scaling of a single key is impossible (F8)</td>
+</tr>
+<tr>
+  <td>a dramatically simpler codebase, hence very few concurrency bugs</td>
+  <td>you must reason about command complexity yourself</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-commands-are-safe-to-send-and-which-are-outages">Which commands are safe to send, and which are outages?</h3>
+<p>The rule that falls out of that table is worth carrying into your own code:
+<em>know the big-O of every command you send.</em></p>
+<p>The right-hand column is the sentence to say to yourself before sending one of
+these on a busy instance.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Cost</th>
+  <th>Commands</th>
+  <th>What it means on one thread</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>O(1)</td>
+  <td><code>GET</code>, <code>SET</code>, <code>INCR</code>, <code>LPUSH</code>, <code>HGET</code>, <code>SADD</code></td>
+  <td>free; send as many as you like</td>
+</tr>
+<tr>
+  <td>O(log n)</td>
+  <td><code>ZADD</code></td>
+  <td>free in practice, even on a large sorted set</td>
+</tr>
+<tr>
+  <td>O(offset + count)</td>
+  <td><code>LRANGE</code></td>
+  <td>fine with a small window, an outage with <code>0 -1</code></td>
+</tr>
+<tr>
+  <td>O(n)</td>
+  <td><code>KEYS</code>, <code>SMEMBERS</code>, <code>HGETALL</code>, <code>SORT</code>, <code>DEL</code> of a large collection</td>
+  <td>not &quot;slow for that caller&quot; — slow for everyone</td>
+</tr>
+</tbody>
+</table></div>
+<p>That last row is the whole point. On a threaded database, an O(n) query is a
+problem for the person who ran it. On Redis it is F1.</p>
+<h3 id="readme-what-do-you-do-when-one-command-cannot-express-the-change">What do you do when one command cannot express the change?</h3>
+<p>Sometimes the change Asha wants depends on a value in a way no single command
+captures. Read a balance, decide something in application code, then write.</p>
+<p><code>WATCH</code> is Redis's answer. It does not lock anything. It <em>remembers a version</em>,
+and <code>EXEC</code> refuses if the version moved.</p>
+<div class="code"><pre><code>WATCH balance          &lt;- remember the version
+GET balance            -&gt; 100
+MULTI
+SET balance 90         &lt;- queued, not run
+EXEC                   -&gt; nil, if anybody touched `balance` in between
+</code></pre></div>
+<p>This is the expected-version check from
+<a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>, applied per key. And like all optimism
+it degrades with contention. Experiment 9 puts twelve clients on one key:</p>
+<div class="code"><pre><code>WATCH/MULTI/EXEC : result=2400  694 ms, 11,606 aborted attempts (4.8 per success)
+INCR             : result=2400   23 ms,      0 aborted attempts
+</code></pre></div>
+<p>Both are correct. One is <strong>30× faster</strong> and cannot fail.</p>
+<h2 id="readme-so-if-a-single-command-already-expresses-what-you-want-use-it-reach-forwatch-only-when-none-does-reach-for-a-lua-script-when-even-that-costs-toomany-round-trips">So: <strong>if a single command already expresses what you want, use it.</strong> Reach for
+<code>WATCH</code> only when none does. Reach for a Lua script when even that costs too
+many round trips.</h2>
+<h2 id="readme-13-where-is-all-of-this-in-the-code">13. Where is all of this in the code?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight files, no build tool, no dependencies. One command
+starts a real TCP server you can talk to, and seven short methods contain every
+idea in this lab.</p>
+</blockquote>
+<p><code>java src/MiniRedis.java 6380</code> starts a real TCP server on port 6380. Nothing
+else is needed.</p>
+<p>The second column says which section of this lab each file belongs to.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>file</th>
+  <th>what it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>src/Resp.java</code></td>
+  <td>the wire protocol — the framing fix from §10 break 1</td>
+</tr>
+<tr>
+  <td><code>src/Store.java</code></td>
+  <td>the keyspace, expiry, eviction, versions for <code>WATCH</code></td>
+</tr>
+<tr>
+  <td><code>src/Commands.java</code></td>
+  <td>the command table — read it asking &quot;why is this a <em>server</em> command?&quot;</td>
+</tr>
+<tr>
+  <td><code>src/MiniRedis.java</code></td>
+  <td>the event loop, persistence, replication</td>
+</tr>
+<tr>
+  <td><code>src/Cli.java</code></td>
+  <td>a small <code>redis-cli</code>, and the client the tests drive</td>
+</tr>
+<tr>
+  <td><code>src/Tests.java</code></td>
+  <td>25 scenario-named tests</td>
+</tr>
+<tr>
+  <td><code>src/Experiments.java</code></td>
+  <td>the nine experiments in §14</td>
+</tr>
+<tr>
+  <td><code>src/BrokenRedis.java</code></td>
+  <td>three planted bugs, for the debug exercise</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-seven-methods-carry-the-whole-lab">Which seven methods carry the whole lab?</h3>
+<p>Read them in this order. Each one is short, and each one is a piece of Meera's
+counter made concrete.</p>
+<ol>
+<li><strong><code>MiniRedis.loop()</code></strong> — accept, read, execute, reply, housekeep. Note what is
+<em>absent</em>: no <code>synchronized</code>, no locks, no atomics around the store. There
+cannot be a race because there is only ever one thread inside it.</li>
+<li><strong><code>Commands.incrBy()</code></strong> — read, modify, write, with no possibility of
+interleaving. This is the entire atomicity guarantee, and it is four lines
+with no concurrency machinery in them at all.</li>
+<li><strong><code>Store.lookup()</code></strong> — lazy expiry. A key past its deadline must never be
+<em>visible</em>, but may still be <em>resident</em>.</li>
+<li><strong><code>Store.evictIfNeeded()</code> / <code>pickVictim()</code></strong> — sampling rather than an exact
+LRU order, plus the cost of that shortcut.</li>
+<li><strong><code>MiniRedis.execute()</code>, the propagation block</strong> — effects propagate, requests
+do not. Plus the <code>EXPIRE → PEXPIREAT</code> rewrite that keeps Ben's shop
+deterministic.</li>
+<li><strong><code>Commands.run()</code>, the <code>SET</code> case</strong> — the sharpest example of &quot;propagate the
+effect, not the request&quot;. Both the <code>NX</code> condition and the relative <code>PX</code>
+deadline are stripped before the command leaves the server, because
+re-deciding a condition later against a different clock can reach the opposite
+answer. <code>BrokenRedis</code> bug 3 turns this off, and shows the live server and the
+recovered server disagreeing about who holds a lock.</li>
+<li><strong><code>MiniRedis.appendAof()</code> / <code>flushAof()</code></strong> — the three distinct moments
+(buffer, <code>write()</code>, <code>fsync()</code>) whose conflation causes the F4 surprise.</li>
+</ol>
+<h3 id="readme-how-do-you-run-it">How do you run it?</h3>
+<div class="code"><pre><code class="language-bash">cd ~/Documents/Learning/13-redis
+
+java src/Tests.java                 # 25 scenario tests, ~20s
+java src/Experiments.java           # all nine experiments, ~5 min
+java src/Experiments.java 1 7       # just experiments 1 and 7
+java src/BrokenRedis.java           # three planted bugs, each one real
+
+# or talk to it by hand
+java src/MiniRedis.java 6380 &amp;
+java src/Cli.java 6380
+  127.0.0.1:6380&gt; SET name Redis
+  127.0.0.1:6380&gt; INCR visits
+  127.0.0.1:6380&gt; OBJECT ENCODING visits
+  127.0.0.1:6380&gt; INFO
+</code></pre></div>
+<p><code>nc 127.0.0.1 6380</code> works too. The server accepts plain typed lines as well as
+RESP arrays, exactly as real Redis does. There is one thing this has <em>not</em> been
+checked against, and it is recorded in <a href="#readme-19-about-this-lab">section 19</a>.</p>
+<hr />
+<h2 id="readme-14-which-experiment-answers-which-question">14. Which experiment answers which question?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nine runnable questions. Predict first, run second,
+reconcile third. The reconciling is where the learning is.</p>
+</blockquote>
+<p>Each is framed the way you should approach any experiment. Read the middle
+column and commit to an answer before you type anything.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>#</th>
+  <th>question to answer before running</th>
+  <th>command</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>8 clients × 2,000 <code>INCR</code>, no locks. Final value?</td>
+  <td><code>java src/Experiments.java 1</code></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>20 clients doing <code>GET</code>s; one runs <code>KEYS *</code>. What happens to the 20?</td>
+  <td><code>... 2</code></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>10,000 increments four ways. Which is fastest, and which is <em>wrong</em>?</td>
+  <td><code>... 3</code></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>50,000 keys expire and nobody reads them. How much memory returns?</td>
+  <td><code>... 4</code></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Redis samples 5 keys instead of tracking exact LRU. What does that cost?</td>
+  <td><code>... 5</code></td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><code>kill -9</code> with <code>appendfsync no</code>. How much is lost?</td>
+  <td><code>... 6</code></td>
+</tr>
+<tr>
+  <td>7</td>
+  <td>500 writes acknowledged, then the master dies. How many survive?</td>
+  <td><code>... 7</code></td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>A locks for 200 ms, then stalls 500 ms. How many hold the lock?</td>
+  <td><code>... 8</code></td>
+</tr>
+<tr>
+  <td>9</td>
+  <td><code>WATCH</code> loop vs <code>INCR</code>, 12 contending clients. Same answer — same cost?</td>
+  <td><code>... 9</code></td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-why-will-your-numbers-differ-from-these-and-which-ones-should-not">Why will your numbers differ from these, and which ones should not?</h3>
+<p>Your numbers will not match these exactly, and that is not a problem. But read
+the variance carefully, because it is itself informative.</p>
+<p>Across repeated runs the lost updates in experiment 1 ranged from 26.6% to
+30.5%, and experiment 2's p99 under load from 191 ms to 287 ms.</p>
+<p>Now notice <em>which</em> numbers move and which do not. The single thread loses
+<strong>exactly zero</strong> every time. Experiment 7 loses <strong>exactly all 500</strong> every time.
+Those two are consequences of the design rather than of the machine.</p>
+<p>So the wobbly numbers are the ones telling you how bad something is. The fixed
+ones are telling you whether it happens at all.</p>
+<p>When a figure here differs from yours by a factor rather than a fraction, that
+is worth investigating. When it differs by 20%, that is your laptop.</p>
+<hr />
+<blockquote>
+<h3 id="readme--checkpoint--end-of-the-engineering-model">✅ CHECKPOINT — end of the ENGINEERING MODEL</h3>
+<p>You can now reason about Redis failures the way an on-call engineer has to: which
+promise each one bends, whether safety or liveness is lost, and what the mitigation
+actually is.</p>
+<p><strong>What the last layer adds:</strong> the bridge from this toy to a real deployment — what
+MiniRedis leaves out, how production Redis fills each gap, and what you actually
+watch and tune.</p>
+</blockquote>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>durability</em>, <em>asynchronous</em> or
+<em>replication</em>, explain to a friend why &quot;Redis said OK&quot; is not the same as
+&quot;this will still be here tomorrow&quot;.</p>
+<details><summary>A good answer sounds like</summary>
+"Meera calls out 'done' the moment she has changed the jar. Writing it in her
+notebook, and Ben across the road copying that notebook, both happen
+afterwards. If the shop burns down in between, you were told yes and the
+change is gone. You can make her write things down more often, but she will
+serve fewer children, and you can never get the gap to zero."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-15-what-changes-between-this-toy-and-a-real-deployment">15. What changes between this toy and a real deployment?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Less than you would expect. The architecture is the same;
+real Redis adds formats, clustering, failover and scripting on top of the
+identical one-thread core.</p>
+</blockquote>
+<h3 id="readme-how-much-of-what-you-learned-survives">How much of what you learned survives?</h3>
+<p>All of it. MiniRedis and real Redis share the same architecture. One execution
+thread. An event loop over non-blocking sockets. A hash table of typed values,
+plus a second table of deadlines. Lazy plus sampled expiry, and sampled
+eviction. An append-only log, and asynchronous replication.</p>
+<p>If you understand this lab, you understand the shape of the real thing.</p>
+<h3 id="readme-what-did-miniredis-leave-out-and-how-does-redis-fill-each-gap">What did MiniRedis leave out, and how does Redis fill each gap?</h3>
+<p>The second column is the real mechanism. Several of them are worth a lab of
+their own.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>omitted here</th>
+  <th>what real Redis does</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>binary RDB format</td>
+  <td>a compact binary snapshot written by a <code>fork()</code>ed child; ours writes commands</td>
+</tr>
+<tr>
+  <td>AOF rewrite</td>
+  <td>the log would grow forever; Redis periodically rewrites it to a minimal form (Redis 7: a base RDB + incremental files)</td>
+</tr>
+<tr>
+  <td>Lua scripting / Functions</td>
+  <td><code>EVAL</code> and <code>FUNCTION</code> run a whole script atomically on the one thread. Ours fakes one case as a native <code>RATELIMIT</code> command</td>
+</tr>
+<tr>
+  <td>Redis Cluster</td>
+  <td>16,384 hash slots, <code>CRC16(key) mod 16384</code>, <code>MOVED</code>/<code>ASK</code> redirects, hash tags <code>{...}</code> to force keys together</td>
+</tr>
+<tr>
+  <td>Sentinel</td>
+  <td>monitors a non-clustered master, elects a new one, tells clients</td>
+</tr>
+<tr>
+  <td>Streams, bitmaps, HyperLogLog, geo, vector sets</td>
+  <td>more types, same execution model</td>
+</tr>
+<tr>
+  <td>blocking commands (<code>BLPOP</code>, <code>BRPOPLPUSH</code>)</td>
+  <td>the client is parked without blocking the thread</td>
+</tr>
+<tr>
+  <td>memory encodings</td>
+  <td><code>listpack</code> / <code>intset</code> / <code>skiplist</code> / <code>embstr</code> — a small hash is a flat array, not a hash table. Ours reports the encoding it <em>would</em> pick (test: <code>object_encoding_changes_when_a_collection_grows</code>)</td>
+</tr>
+<tr>
+  <td>ACLs, TLS, <code>protected-mode</code></td>
+  <td>authentication and per-user command permissions</td>
+</tr>
+<tr>
+  <td>client-side caching, RESP3</td>
+  <td>the server invalidates a client's local cache by push message</td>
+</tr>
+<tr>
+  <td>active defragmentation, I/O threads</td>
+  <td><code>activedefrag</code>, <code>io-threads</code></td>
+</tr>
+<tr>
+  <td>keyspace notifications</td>
+  <td>events when keys change or expire</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-which-deployment-shape-should-asha-choose">Which deployment shape should Asha choose?</h3>
+<p>Consider them in this order, and stop at the first one that works.</p>
+<ol>
+<li><strong>One instance, one replica, Sentinel.</strong> Correct for the overwhelming
+majority of workloads. One Redis on decent hardware handles well over 100,000
+operations per second on one core.</li>
+<li><strong>Redis Cluster.</strong> Only when the dataset genuinely does not fit in one
+machine's RAM, or one core is genuinely the bottleneck. It costs her: no
+multi-key commands across slots, no <code>MULTI</code> across slots, a cluster-aware
+client, and resharding as an operation. <strong>Do not start here.</strong></li>
+<li><strong>Managed.</strong> AWS ElastiCache, MemoryDB (which is Redis-compatible <em>with</em>
+durable multi-AZ writes, a genuinely different durability posture), Redis
+Cloud, GCP Memorystore.</li>
+</ol>
+<blockquote>
+<p><strong>🔮 Predict:</strong> Asha's dataset is 4 GB and her instance is at 30% of one core.
+Somebody proposes moving to Redis Cluster &quot;so it scales&quot;. What does she get?</p>
+<details><summary>Reveal</summary>
+
+<p>Nothing she needs, and four things she did not have before: no multi-key
+commands across slots, no <code>MULTI</code> across slots, a cluster-aware client, and
+resharding as an operation she now owns.</p>
+<p>If you said &quot;headroom&quot;, note that she already has it. Cluster buys capacity
+she is not short of, at a cost in capability she currently enjoys.</p>
+</details>
+
+</blockquote>
+<h3 id="readme-what-does-an-on-call-engineer-actually-watch">What does an on-call engineer actually watch?</h3>
+<p>These are the commands Asha types at 3 a.m., in the order she types them.</p>
+<div class="code"><pre><code>INFO memory       used_memory, used_memory_rss, mem_fragmentation_ratio, maxmemory
+INFO stats        evicted_keys, expired_keys, keyspace_hits/misses, rejected_connections
+INFO replication  master_repl_offset vs each replica&#x27;s offset  (the F5 exposure window)
+INFO persistence  rdb_last_bgsave_status, aof_last_write_status, aof_rewrite_in_progress
+INFO clients      connected_clients, blocked_clients
+SLOWLOG GET       the F1 culprit, after the fact
+LATENCY DOCTOR    Redis&#x27;s own analysis of its latency spikes
+redis-cli --latency / --bigkeys / --hotkeys / --memkeys
+</code></pre></div>
+<p>Three alerts earn their place on the pager. <code>evicted_keys &gt; 0</code> on an instance
+she treats as a database. Replication offset lag above her tolerated data-loss
+window. And <code>used_memory_rss</code> approaching machine memory, remembering that
+<code>fork()</code> can nearly double it during a snapshot.</p>
+<h3 id="readme-what-changes-if-you-are-wiring-this-into-spring-boot">What changes if you are wiring this into Spring Boot?</h3>
+<p>Six things, and the last two catch people who did everything else right.</p>
+<ul>
+<li><strong>Spring Data Redis</strong> with the <strong>Lettuce</strong> driver is the default and the right
+choice. It is Netty-based, and one connection multiplexes safely across
+threads. Jedis needs a connection pool because its connections are not
+thread-safe.</li>
+<li><code>RedisTemplate</code> and <code>StringRedisTemplate</code> handle direct commands.
+<code>@Cacheable</code> and <code>@CacheEvict</code> via <code>RedisCacheManager</code> generate the
+cache-aside pattern for you. <strong>Always set a TTL on cache entries.</strong> An
+unbounded <code>@Cacheable</code> region is F2 waiting to happen.</li>
+<li><strong>Spring Session</strong> puts HTTP sessions in Redis, which is what makes Asha's
+twenty app servers interchangeable. Note the durability consequence: a Redis
+failover can log everybody out. Decide whether that is acceptable before it
+happens, not after.</li>
+<li>Serialization matters more than people expect. The default
+<code>JdkSerializationRedisSerializer</code> produces large, Java-only,
+refactoring-fragile blobs. Use <code>GenericJackson2JsonRedisSerializer</code> or a
+String serializer.</li>
+<li>A Redis call is a network call, so set command timeouts. Then decide per call
+site whether a Redis failure should fail the request or fall through to the
+source. That is the fail-open versus fail-closed choice from
+<a href="../60-distributed-rate-limiting/notes.html#readme">distributed-rate-limiting</a>, made once per
+call site.</li>
+<li><code>@Transactional</code> on a Spring <code>RedisTemplate</code> does <strong>not</strong> give you database
+transaction semantics. It maps to <code>MULTI</code>/<code>EXEC</code>, which, as section 12
+established, has no rollback.</li>
+</ul>
+<h3 id="readme-when-should-you-not-use-redis-at-all">When should you not use Redis at all?</h3>
+<p>Five honest answers, any one of which is enough.</p>
+<ul>
+<li>The data does not fit in RAM, or would be far cheaper on disk.</li>
+<li>You need queries you cannot express as &quot;I know the key&quot;.</li>
+<li>You cannot tolerate losing a second of acknowledged writes and cannot tolerate
+losing more on failover. MemoryDB is the exception built for exactly this.</li>
+<li>You need real multi-key transactions with rollback.</li>
+<li>You are reaching for it as a message queue and you need delivery guarantees.
+Use Streams deliberately, or use Kafka.</li>
+</ul>
+<h3 id="readme-what-should-you-know-before-you-deploy-in-2026">What should you know before you deploy in 2026?</h3>
+<p>Redis's licence changed twice, and the fork it produced is now a default.</p>
+<p>Redis left BSD in March 2024 for RSALv2 and SSPLv1, which are source-available
+rather than open source. AWS and Google forked the last BSD version as
+<strong>Valkey</strong>, now under the Linux Foundation. Redis 8.0, in May 2025, then added
+AGPLv3, so Redis now ships under a tri-licence of AGPLv3, SSPLv1 or RSALv2, with
+the line at Redis 8.8 as of May 2026. Valkey is BSD-3, wire-compatible, on its
+own cadence at 9.1 in May 2026, and is the default on AWS ElastiCache and
+MemoryDB.</p>
+<p>Practically: everything in this lab applies identically to both. The choice is a
+licensing and ecosystem decision, not a technical one. Do check which one your
+managed provider is actually giving you.</p>
+<blockquote>
+<p><strong>Say it back.</strong> Without using the words <em>cluster</em>, <em>shard</em> or <em>replica</em>,
+explain to a friend why Asha's answer to &quot;should we scale Redis out?&quot; is
+almost always no.</p>
+<details><summary>A good answer sounds like</summary>
+"One shop with one shopkeeper already serves a hundred thousand children a
+second. Splitting it into five shops only helps if the jars no longer fit on
+one wall, or if the one shopkeeper is genuinely flat out. It costs you the
+ability to ask for two jars in one breath, and somebody now has to decide
+which jars live in which shop. So you only do it when you have run out of
+wall."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-16-which-exercise-should-you-do-if-you-only-do-one">16. Which exercise should you do if you only do one?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Rung 6.5. It is the one where a green test suite turns out
+to be a statement about the tests rather than about the code.</p>
+</blockquote>
+<p><strong><a href="notes.html#exercises">EXERCISES.md</a></strong> has eight rungs, from &quot;explain it back&quot; to
+&quot;design the session store for three datacentres&quot;. Answers are in
+<strong><a href="notes.html#solutions">SOLUTIONS.md</a></strong>. Try first.</p>
+<p>If you only do one, do <strong>6.5</strong>. <code>java src/BrokenRedis.java</code> runs three planted
+bugs in Meera's counter, each a mistake somebody has shipped. Two are caught by the test suite. One
+passes all 25 tests, and it is the one that would do the most damage.</p>
+<p>Finding out which, and working out what <em>shape</em> of test the suite is missing, is
+worth more than the other seven rungs combined.</p>
+<hr />
+<h2 id="readme-17-what-should-you-learn-next">17. What should you learn next?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five labs led here. Four lead onward, and the first of them
+fills in the one black box this lab had to leave closed.</p>
+</blockquote>
+<p>Everything above <code>redis</code> in this diagram is a prerequisite you already own.
+Everything below it is a door this lab opens, and the first one explains how
+Asha's cluster would decide which shop Chetan's ladder lives in.</p>
+<pre class="mermaid">flowchart TD
+  IO[io-multiplexing&lt;br/&gt;learned] --&gt; R
+  CA[caching&lt;br/&gt;learned] --&gt; R
+  DRL[distributed-rate-limiting&lt;br/&gt;learned] --&gt; R
+  CAP[cap-theorem&lt;br/&gt;learned] --&gt; R
+  BL[btree-and-lsm&lt;br/&gt;learned] --&gt; R
+  R([**redis**&lt;br/&gt;one thread, typed values,&lt;br/&gt;memory first])
+  R --&gt; CH[consistent-hashing&lt;br/&gt;how Cluster spreads keys]
+  R --&gt; KA[kafka&lt;br/&gt;when you need the log, not the cache]
+  R --&gt; LS[load-shedding&lt;br/&gt;what to do when Redis is the bottleneck]
+  R --&gt; IK[idempotency-keys&lt;br/&gt;the safe version of the lock]
+</pre>
+<h3 id="readme-what-is-redis-commonly-confused-with">What is Redis commonly confused with?</h3>
+<p>Six confusions, one separating sentence each.</p>
+<ul>
+<li><strong>Memcached</strong> stores opaque bytes, so compound operations must happen in your
+client, with the gap that loses updates. Redis knows the type, so they happen
+on the server.</li>
+<li><strong>A cache</strong> is defined by <em>deleting it costs only speed</em>. Redis is often used
+as one, but configure it as a source of truth and that stops being true.</li>
+<li><strong>Redis Cluster versus Sentinel</strong>: Cluster shards data across machines,
+Sentinel keeps one unsharded master highly available. Different problems.</li>
+<li><strong>Redis Streams versus Pub/Sub</strong>: Streams keep a persistent log with consumer
+groups and acknowledgements. Pub/Sub keeps nothing and forgets instantly.</li>
+<li><strong><code>MULTI</code>/<code>EXEC</code> versus an ACID transaction</strong>: the first batches commands so
+nothing interleaves, the second can roll back. Redis has no rollback.</li>
+<li><strong>Redis versus Valkey</strong>: the same software, forked over licensing in 2024,
+still wire-compatible.</li>
+</ul>
+<h3 id="readme-where-do-you-go-from-here">Where do you go from here?</h3>
+<div class="code"><pre><code>/learn consistent-hashing      # how Cluster&#x27;s 16,384 slots actually place a key -- the
+                               # one prerequisite this lab had to leave as a black box
+/learn kafka                   # the durable log, where Pub/Sub&#x27;s guarantees run out
+/learn idempotency-keys        # the correct answer to &quot;did that job already run?&quot; --
+                               # the one the F7 lock only approximates
+/learn load-shedding           # the sibling of rate limiting, for when Redis is the
+                               # thing that is overloaded
+</code></pre></div>
+<hr />
+<h2 id="readme-18-glossary--which-word-means-what">18. Glossary — which word means what?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Every term this lab earned, grouped by the part of the shop
+it belongs to. The last column of each table says where you first met the
+thing, so a word you have forgotten sends you back to the story rather than to
+a definition.</p>
+</blockquote>
+<h3 id="readme-the-problem-and-the-shape-of-the-store">The problem, and the shape of the store</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>in one line</th>
+  <th>where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>lost update</strong></td>
+  <td>two clients read the same value and both write back a change; one silently disappears</td>
+  <td>§4, Arjun and Bina's samosa</td>
+</tr>
+<tr>
+  <td><strong>key–value store</strong></td>
+  <td>a store whose only index is the primary key — no queries, no joins</td>
+  <td>§7, the wall of labelled jars</td>
+</tr>
+<tr>
+  <td><strong>in-memory</strong></td>
+  <td>the working dataset lives in RAM; disk is only for recovery</td>
+  <td>§7, jars in the room not the basement</td>
+</tr>
+<tr>
+  <td><strong>single-threaded command execution</strong></td>
+  <td>all commands run on one thread, each to completion — not a claim about the whole process</td>
+  <td>§6, one Meera</td>
+</tr>
+<tr>
+  <td><strong>atomic (Redis sense)</strong></td>
+  <td>no other command interleaves; achieved by having one thread, not by locking</td>
+  <td>§7, the three atomicities</td>
+</tr>
+<tr>
+  <td><strong>data type</strong></td>
+  <td>the server knows a value is a number/list/hash/set/sorted set, which is what allows server-side compound operations</td>
+  <td>§7, Meera knows each jar</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-getting-a-command-in-and-the-answer-out">Getting a command in and the answer out</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>in one line</th>
+  <th>where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>round trip (RTT)</strong></td>
+  <td>one request out plus one reply back; usually costs more than the command</td>
+  <td>§7, walking to the counter</td>
+</tr>
+<tr>
+  <td><strong>pipelining</strong></td>
+  <td>sending many commands without waiting for each reply</td>
+  <td>§10 break 1, the free payoff</td>
+</tr>
+<tr>
+  <td><strong>RESP</strong></td>
+  <td>Redis's wire protocol; every message declares its own length so commands can be framed out of a byte stream</td>
+  <td>§10 break 1</td>
+</tr>
+<tr>
+  <td><strong>framing</strong></td>
+  <td>recovering message boundaries from a TCP byte stream</td>
+  <td>§10 break 1, the split packet</td>
+</tr>
+<tr>
+  <td><strong>event loop</strong></td>
+  <td>one thread waiting on many sockets at once via <code>epoll</code>/<code>kqueue</code>, woken only for ready ones</td>
+  <td>§10 break 2, refusing the choice</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-notes-on-jars-deadlines-and-residency">Notes on jars: deadlines and residency</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>in one line</th>
+  <th>where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>TTL</strong></td>
+  <td>a per-key deadline after which the key stops being visible</td>
+  <td>§10 break 4</td>
+</tr>
+<tr>
+  <td><strong>lazy expiry</strong></td>
+  <td>a dead key is deleted when something touches it</td>
+  <td>§10 break 4, <code>Store.lookup()</code></td>
+</tr>
+<tr>
+  <td><strong>active expiry</strong></td>
+  <td>a background sweep samples ~20 keys with deadlines, ~10×/sec, repeating while &gt;25% of a sample is dead</td>
+  <td>§10 break 4, 157 sweeps</td>
+</tr>
+<tr>
+  <td><strong>resident vs alive</strong></td>
+  <td>a key past its deadline is invisible but may still occupy memory; <code>DBSIZE</code> counts resident</td>
+  <td>§11 F3, the memory that stayed</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-when-the-shelf-runs-out-of-room">When the shelf runs out of room</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>in one line</th>
+  <th>where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>maxmemory</code></strong></td>
+  <td>the memory ceiling at which eviction (or refusal) begins</td>
+  <td>§10 break 3</td>
+</tr>
+<tr>
+  <td><strong>eviction policy</strong></td>
+  <td>which key to discard when full: <code>noeviction</code>, <code>allkeys-lru</code>, <code>allkeys-lfu</code>, <code>volatile-*</code></td>
+  <td>§10 break 3, Asha's choice</td>
+</tr>
+<tr>
+  <td><strong>sampled LRU</strong></td>
+  <td>approximate LRU by sampling N keys and evicting the oldest — 1.9 points below exact in experiment 5</td>
+  <td>§10 break 3</td>
+</tr>
+<tr>
+  <td><strong>hot key</strong></td>
+  <td>one key taking a large share of traffic; sharding cannot help it</td>
+  <td>§11 F8, Chetan's ladder</td>
+</tr>
+<tr>
+  <td><strong>big key</strong></td>
+  <td>one key holding a huge collection, so O(n) commands on it block everyone</td>
+  <td>§11 F1, Priya's request</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-surviving-a-restart">Surviving a restart</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>in one line</th>
+  <th>where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>AOF</strong></td>
+  <td>append-only file: every write command, replayed to recover</td>
+  <td>§11 F4, Meera's notebook</td>
+</tr>
+<tr>
+  <td><strong><code>appendfsync</code></strong></td>
+  <td>how often the AOF is forced to physical disk: <code>always</code>, <code>everysec</code>, <code>no</code></td>
+  <td>§11 F4b, the three rows</td>
+</tr>
+<tr>
+  <td><strong>page cache</strong></td>
+  <td>the OS's copy of written-but-not-fsynced data; survives <code>kill -9</code>, not a power cut</td>
+  <td>§11 F4, the zero-loss surprise</td>
+</tr>
+<tr>
+  <td><strong>RDB</strong></td>
+  <td>a compact binary point-in-time snapshot, written by a forked child</td>
+  <td>§11 F4, photographing the shelf</td>
+</tr>
+<tr>
+  <td><strong>copy-on-write</strong></td>
+  <td>why <code>fork()</code> for a snapshot can nearly double memory on a write-heavy instance</td>
+  <td>§11 F4, the backup hazard</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-surviving-a-dead-machine">Surviving a dead machine</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>in one line</th>
+  <th>where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>replica</strong></td>
+  <td>a second instance receiving a live stream of the master's changes</td>
+  <td>§11 F5, Ben's shop</td>
+</tr>
+<tr>
+  <td><strong>asynchronous replication</strong></td>
+  <td>the master acknowledges the client before the replica has the write</td>
+  <td>§11 F5</td>
+</tr>
+<tr>
+  <td><strong>replication lag</strong></td>
+  <td>the gap between acknowledged and replicated — exactly your failover data-loss window</td>
+  <td>§11 F5, 0 ms versus 1,500 ms</td>
+</tr>
+<tr>
+  <td><strong>failover</strong></td>
+  <td>promoting a replica to master; loses whatever had not replicated</td>
+  <td>§11 F5</td>
+</tr>
+<tr>
+  <td><strong><code>WAIT</code></strong></td>
+  <td>reports how many replicas have your write; narrows the window, cannot close it</td>
+  <td>§11 F5</td>
+</tr>
+<tr>
+  <td><strong>split brain</strong></td>
+  <td>a partition leaves two masters accepting divergent writes; the loser's writes are discarded on heal</td>
+  <td>§11 F6, the split road</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-doing-more-than-one-thing-at-a-time">Doing more than one thing at a time</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>in one line</th>
+  <th>where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong><code>MULTI</code>/<code>EXEC</code></strong></td>
+  <td>run a batch of queued commands with nothing interleaved — <strong>no rollback</strong></td>
+  <td>§12, the failed increment</td>
+</tr>
+<tr>
+  <td><strong><code>WATCH</code></strong></td>
+  <td>optimistic concurrency: remember a key's version, abort <code>EXEC</code> if it moved</td>
+  <td>§12, experiment 9</td>
+</tr>
+<tr>
+  <td><strong>fencing token</strong></td>
+  <td>a strictly increasing number per lock acquisition, checked by the <em>resource</em>, which is what makes a lock safe</td>
+  <td>§11 F7, Dev and Omar</td>
+</tr>
+<tr>
+  <td><strong>Redlock</strong></td>
+  <td>the multi-instance Redis lock algorithm; still needs fencing for correctness</td>
+  <td>§11 F7</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-running-one-for-real">Running one for real</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>in one line</th>
+  <th>where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>hash slot</strong></td>
+  <td>one of Cluster's 16,384 buckets; <code>CRC16(key) mod 16384</code> decides which shard holds a key</td>
+  <td>§15, what Cluster adds</td>
+</tr>
+<tr>
+  <td><strong>hash tag</strong></td>
+  <td><code>{...}</code> in a key name, forcing related keys onto the same slot</td>
+  <td>§15, what Cluster adds</td>
+</tr>
+<tr>
+  <td><strong>Sentinel</strong></td>
+  <td>monitors a non-clustered master and orchestrates failover</td>
+  <td>§11 F6, who promoted Ben</td>
+</tr>
+<tr>
+  <td><strong>encoding</strong></td>
+  <td>the physical layout Redis picks for a value (<code>listpack</code>, <code>intset</code>, <code>skiplist</code>, <code>embstr</code>), visible via <code>OBJECT ENCODING</code></td>
+  <td>§15, memory encodings</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-messages-and-the-name-on-the-tin">Messages, and the name on the tin</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>term</th>
+  <th>in one line</th>
+  <th>where it happened</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Pub/Sub</strong></td>
+  <td>fire-and-forget broadcast; no queue, no replay, no delivery guarantee</td>
+  <td>§11 F9, Bina's announcement</td>
+</tr>
+<tr>
+  <td><strong>Streams</strong></td>
+  <td>a persistent append-only log with consumer groups and acknowledgements</td>
+  <td>§11 F9, the fix</td>
+</tr>
+<tr>
+  <td><strong>Valkey</strong></td>
+  <td>the BSD-licensed fork of Redis created in 2024, wire-compatible</td>
+  <td>§15, the 2026 licence note</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-19-about-this-lab">19. About this lab</h2>
+<blockquote>
+<p><strong>In one breath:</strong> What this lab is made of, where its numbers came from, what
+it has not checked, and where it sits next to your other labs.</p>
+</blockquote>
+<h3 id="readme-what-is-this-lab-mechanically">What is this lab, mechanically?</h3>
+<p>A lab that teaches Redis by building one. Everything above is demonstrated by a
+working TCP server in <code>src/</code> that runs commands one at a time.</p>
+<p>Lab type: runnable Java, plus an interactive visualization, plus exercises. The
+cast is Meera, Arjun, Bina, Chetan, Asha, Priya, Ben, Dev and Omar, the same
+names you meet across this workspace. If Asha felt familiar from
+<a href="../08-isolation-levels/notes.html#readme">isolation-levels</a>, that is deliberate.</p>
+<h3 id="readme-how-is-it-structured">How is it structured?</h3>
+<p>The four depth layers are BEGINNER MODEL (§1–9), INTERMEDIATE MODEL (§10),
+ENGINEERING MODEL (§11–14) and PRODUCTION MODEL (§15). There is a checkpoint at
+each transition telling you what stopping there leaves you with, and a <strong>Say it
+back</strong> box closing each one.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>What you can do after it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner model</td>
+  <td>1–9</td>
+  <td>say why Redis exists and why one thread is the mechanism</td>
+</tr>
+<tr>
+  <td>Intermediate model</td>
+  <td>10</td>
+  <td>trace a command from socket bytes to hash table</td>
+</tr>
+<tr>
+  <td>Engineering model</td>
+  <td>11–14</td>
+  <td>name the promise each failure bends, and the fix</td>
+</tr>
+<tr>
+  <td>Production model</td>
+  <td>15</td>
+  <td>run one, watch the right numbers, and know when not to</td>
+</tr>
+</tbody>
+</table></div>
+<p>Prediction points marked 🔮 sit at the genuine forks. Commit to an answer before
+reading on, because that is most of the value. Section numbers in this README
+are stable, and <a href="notes.html#exercises"><code>EXERCISES.md</code></a> and <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>
+cite them.</p>
+<h3 id="readme-where-did-the-numbers-come-from">Where did the numbers come from?</h3>
+<p>Every measured figure quoted in this document came from the experiment runs in
+§14, on this machine, one representative run each.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>What</th>
+  <th>Where it comes from</th>
+  <th>What that means for you</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>experiments 1–9</td>
+  <td><code>java src/Experiments.java</code>, run on one laptop</td>
+  <td>shapes are real, exact digits are one run</td>
+</tr>
+<tr>
+  <td>the 25 test names</td>
+  <td><code>java src/Tests.java</code>, all passing</td>
+  <td>each named behaviour is pinned by a test</td>
+</tr>
+<tr>
+  <td>the eviction and durability tables</td>
+  <td>experiments 5 and 6</td>
+  <td>ratios hold; absolute throughput is machine-specific</td>
+</tr>
+<tr>
+  <td>Redis and Valkey version numbers</td>
+  <td>public release notes up to May 2026</td>
+  <td>check before it matters to a contract</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-what-has-not-been-checked">What has not been checked?</h3>
+<p>I have not pointed a real <code>redis-cli</code> at this server, because Redis is not
+installed on this machine. The protocol implementation follows RESP2 faithfully
+and <em>should</em> work. If you want to check, run <code>brew install redis</code> and then
+<code>redis-cli -p 6380 ping</code>.</p>
+<p>My training data ends in May 2026, and the licensing area has moved fast, so
+verify the current state before it matters to a contract.</p>
+<h3 id="readme-where-does-this-sit-among-your-other-labs">Where does this sit among your other labs?</h3>
+<p>Five labs lead here, and each of them left a piece of machinery this lab
+assumes. <a href="../03-io-multiplexing/notes.html#readme">io-multiplexing</a> gave you the event loop.
+<a href="../11-caching/notes.html#readme">caching</a> gave you the definition of a cache.
+<a href="../60-distributed-rate-limiting/notes.html#readme">distributed-rate-limiting</a> gave you the lost
+update at scale. <a href="../24-cap-theorem/notes.html#readme">cap-theorem</a> gave you the AP corner.
+<a href="../05-btree-and-lsm/notes.html#readme">btree-and-lsm</a> gave you the log-plus-checkpoint pair.</p>
+<p>This lab does not re-teach any of those. It spends its depth on one narrow
+question: <strong>what does it cost to run a database where exactly one thing happens
+at a time?</strong> Section 17 says where to go next.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-redis--exercises">Redis — exercises</h1>
+<p>Eight rungs, easiest first. Rungs 1–3 need only the README and the
+<a href="https://claude.ai/code/artifact/492e3d97-6221-482d-847c-8ee9302ece13" target="_blank" rel="noopener">visualization</a>.
+From rung 4 you are editing and running code.</p>
+<p>Answers in <strong><a href="notes.html#solutions">SOLUTIONS.md</a></strong> — attempt first. For rungs 7–8 the
+&quot;answer&quot; is a worked discussion, not a single right output.</p>
+<div class="code"><pre><code class="language-bash">cd ~/Documents/Learning/13-redis
+java src/Tests.java              # 25 scenario tests
+java src/Experiments.java N      # experiment N (1..9)
+java src/BrokenRedis.java        # the three planted bugs
+java src/MiniRedis.java 6380 &amp;   # a real server
+java src/Cli.java 6380           # talk to it
+</code></pre></div>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p>Write these out in your own words. No notation, no jargon you cannot define.</p>
+<p><strong>1.1</strong> Why does Redis exist? Name a specific problem it solves that neither a
+<code>ConcurrentHashMap</code> inside your app nor a Postgres table solves — and say what is
+wrong with each of those two answers specifically.</p>
+<p><strong>1.2</strong> Explain where Redis's atomicity comes from <strong>without using the words &quot;lock&quot;,
+&quot;synchronized&quot;, &quot;thread-safe&quot; or &quot;mutex&quot;</strong>. If you cannot, you have not got it yet.</p>
+<p><strong>1.3</strong> Someone says: &quot;Redis's data types are just a convenience — you could do all
+of it client-side.&quot; Say why they are wrong, using the samosa jar.</p>
+<p><strong>1.4</strong> You have already learned about caching. Give one concrete example of Redis
+being used as a cache and one of it being used as something that is definitely <em>not</em>
+a cache, and state the single test that tells the two apart.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> In the visualization, run the <strong>&quot;one client asks for a list of every key&quot;</strong>
+scenario. Pause it midway and answer from the screen alone: which client is being
+served, how many are waiting, what is the longest anyone has waited, and what does
+the verdict band say is happening?</p>
+<p><strong>2.2</strong> In <code>src/Commands.java</code>, find the exact lines that make <code>INCR</code> atomic. How
+many lines are they? How many of them mention concurrency in any way?</p>
+<p><strong>2.3</strong> Start a server and use <code>INFO</code> to answer: how many keys are resident, how many
+bytes have been written to the log, and how many of those bytes are actually on disk?
+Which of those three numbers can lie to you, and about what?</p>
+<p><strong>2.4</strong> Decode this by hand, then check with <code>nc</code>:</p>
+<div class="code"><pre><code>*3\r\n$4\r\nHSET\r\n$6\r\nuser:1\r\n$5\r\nalice\r\n
+</code></pre></div>
+<p>What is wrong with it? (Look at the argument count.)</p>
+<p><strong>2.5</strong> In the visualization, set the memory limit to 3 keys and store a fourth. Which
+key was thrown out, and — this is the real question — could you have predicted <em>which
+one</em> before running it? Why not?</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Commit to an answer, then run the check.</p>
+<p><strong>3.1</strong> With active expiry switched off, you run <code>SET k v PX 100</code> and wait five
+seconds without touching <code>k</code>. What does <code>DBSIZE</code> return? What does <code>GET k</code> return?
+Why are those two answers consistent with each other?
+<em>Check:</em> <code>java src/Tests.java</code> → <code>expired_key_is_invisible_but_can_still_be_resident</code>.</p>
+<p><strong>3.2</strong> <code>maxmemory-policy</code> is <code>volatile-lru</code>. Memory is full. <strong>No key in the
+instance has a TTL.</strong> What happens to the next write, and why is this a nastier
+failure than <code>noeviction</code>?</p>
+<p><strong>3.3</strong> Predict all four values:</p>
+<div class="code"><pre><code>SET good 0
+SET text hello
+MULTI
+INCR good
+INCR text     &lt;- this will fail
+INCR good
+EXEC
+</code></pre></div>
+<p>What are the three replies inside <code>EXEC</code>? What is <code>good</code> afterwards?
+<em>Check:</em> the test <code>multi_exec_does_not_roll_back_after_a_failed_command</code>.</p>
+<p><strong>3.4</strong> Two clients both <code>WATCH balance</code>, both read 100, both <code>MULTI; SET balance 90; EXEC</code>. How many succeed? Now: both use <code>DECRBY balance 10</code> instead. How many succeed?
+Which is correct, and what is the cost difference?
+<em>Check:</em> <code>java src/Experiments.java 9</code>.</p>
+<p><strong>3.5</strong> <code>appendfsync always</code>. You <code>kill -9</code> the process. How much is lost? Now the
+machine loses power. How much is lost? Now <code>appendfsync no</code> for both. Fill in all
+four cells before running <code>java src/Experiments.java 6</code>.</p>
+<p><strong>3.6</strong> A master has three replicas and acknowledges a write. <code>WAIT 3 100</code> returns
+<code>1</code>. What do you now know, what do you <em>not</em> know, and what can you do about it?</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p>Change something, predict what breaks, then measure. For each: <strong>which property
+moved — safety or liveness? Did correctness change at all?</strong></p>
+<p><strong>4.1</strong> In <code>src/Experiments.java</code>, experiment 5 runs <code>allkeys-lru</code> with
+<code>maxmemory-samples</code> 5 and 10. Add runs at <strong>2</strong> and at <strong>50</strong>. Predict both hit
+ratios first. Then answer: why does Redis default to 5 rather than 50?</p>
+<p><strong>4.2</strong> In <code>src/Store.java</code>, <code>activeExpireCycle</code> goes round again only while more
+than 25% of a sample was dead (<code>deadInSample * 4 &lt;= sample</code> breaks the loop). Change
+it to always stop after one round. Re-run <code>java src/Experiments.java 4</code>. How many
+more sweeps are needed? What would that mean on a real instance running the sweep ten
+times a second?</p>
+<p><strong>4.3</strong> In experiment 7, change the replication delay from <code>1500</code> to <code>0</code>. The lost
+writes go to zero. <strong>Is the write now guaranteed to survive a failover?</strong> Answer
+carefully — this is the question the whole of §11 F5 exists to make you get right.</p>
+<p><strong>4.4</strong> In <code>src/MiniRedis.java</code>, <code>cron()</code> calls <code>flushAof()</code> on every loop iteration.
+Change it to run only every 200th iteration. Which experiment's numbers change, and
+which stay identical? Explain why <code>kill -9</code> behaves differently now but power loss
+does not.</p>
+<hr />
+<h2 id="exercises-rung-5--implement">Rung 5 — Implement</h2>
+<p>Each of these must be <strong>one atomic command</strong> — that is the whole point. Add a test to
+<code>src/Tests.java</code> named after the scenario.</p>
+<p><strong>5.1 <code>GETEX key PX &lt;ms&gt;</code></strong> — return the value and reset its deadline in one command.
+Then answer: what specifically goes wrong if a client does <code>GET</code> then <code>PEXPIRE</code>
+instead? Construct the interleaving.</p>
+<p><strong>5.2 <code>INCRCAP key max</code></strong> — increment, but return <code>-1</code> and change nothing if the
+result would exceed <code>max</code>. Explain why a client cannot build this correctly out of
+<code>GET</code> and <code>INCR</code>, and why it cannot build it correctly out of <code>INCR</code> and <code>DECR</code>
+either (what does the second one break?).</p>
+<p><strong>5.3 <code>LMOVE src dst</code></strong> — atomically pop from the tail of one list and push to the
+head of another. This is the <em>reliable queue</em> pattern. Write a test proving no job
+can be lost even if the worker crashes immediately after <code>LMOVE</code> returns. Then say
+what is still missing before this is a production queue.</p>
+<hr />
+<h2 id="exercises-rung-6--debug">Rung 6 — Debug</h2>
+<p><code>java src/BrokenRedis.java</code> runs three planted bugs. Each is a mistake somebody has
+shipped, and each looks reasonable in review.</p>
+<p>For <strong>each</strong> bug, answer four things <strong>before</strong> reading the output:</p>
+<ol>
+<li>What is the observable symptom?</li>
+<li><strong>Which test in <code>src/Tests.java</code> catches it?</strong> (Find it by name.)</li>
+<li>Which invariant from README §12 does it violate?</li>
+<li>Why would this be hard to find in production?</li>
+</ol>
+<div class="table"><table><thead>
+<tr>
+  <th>bug</th>
+  <th>the change</th>
+  <th>run</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td><code>EXPIRE</code> is sent to replicas exactly as typed, not rewritten to an absolute deadline</td>
+  <td><code>java src/BrokenRedis.java 1</code></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td><code>INCR</code> reads the hash table directly instead of through the expiry check</td>
+  <td><code>java src/BrokenRedis.java 2</code></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><code>SET</code> is logged exactly as typed, keeping <code>NX</code> and a relative deadline</td>
+  <td><code>java src/BrokenRedis.java 3</code></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>6.4</strong> Bug 2 is the quietest of the three. Say precisely why: what makes a bug where
+<em>one</em> command disagrees with <em>another</em> command about the same key so much harder to
+find than a bug where a command is simply wrong?</p>
+<p><strong>6.5 — the important one.</strong> Turn each bug on by flipping its flag at the top of
+<code>src/Commands.java</code>, and run the <strong>full</strong> test suite each time.</p>
+<p>Two of the three are caught. <strong>One of them passes all 25 tests.</strong> Find out which,
+before reading on, and then answer:</p>
+<ul>
+<li>Why did the suite miss it? What is the shape of the thing it fails to check?</li>
+<li>Which of the three bugs would do the most damage in production? Is it the same one
+the suite missed? (It is. Sit with that for a moment.)</li>
+<li><strong>Write the test that catches it.</strong> Name it after the scenario. Verify it fails
+with the flag on and passes with it off — a test you have not seen fail is not
+evidence of anything.</li>
+</ul>
+<p>This is the most useful exercise on the page. A green suite is a statement about the
+tests, not about the code.</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>Extend the system to survive something it currently does not.</p>
+<p><strong>7.1 — Make the lock safe.</strong> Experiment 8 shows two clients holding one lock, and
+fencing tokens fixing it <em>at the resource</em>. Now build it properly:</p>
+<ul>
+<li>issue the token with <code>INCR fence:&lt;resource&gt;</code> on acquisition,</li>
+<li>have the resource reject any token below the highest it has honoured,</li>
+<li>write the correct <strong>release</strong>, which must check ownership and delete in one atomic
+step (a plain <code>GET</code> then <code>DEL</code> can delete someone else's lock — construct that
+interleaving too).</li>
+</ul>
+<p>Then answer the hard part: <strong>which resources can actually do this, and what do you do
+about the ones that cannot?</strong> Name a real example of each.</p>
+<p><strong>7.2 — Make the job queue survive a dead worker.</strong> <code>LPOP</code> removes a job from the
+queue and hands it to a worker. If that worker dies, the job is gone. Rebuild it so
+no job is ever lost:</p>
+<ul>
+<li><code>LMOVE queue processing</code> when taking a job,</li>
+<li>remove from <code>processing</code> only on success,</li>
+<li>something must reclaim jobs stranded in <code>processing</code>.</li>
+</ul>
+<p>Now say what your design does when a job is <em>slow</em> rather than dead, and why that is
+the same problem as F7.</p>
+<p><strong>7.3 — Make the write in experiment 7 survive.</strong> Client writes <code>order:99 paid</code>, gets
+<code>OK</code>, the master dies. Enumerate every option and its real cost:
+<code>WAIT</code>, <code>min-replicas-to-write</code>, <code>appendfsync always</code>, AWS MemoryDB, and &quot;don't put
+it only in Redis&quot;. Which do you actually pick for a payment, and why is that answer
+different from the one you pick for a session?</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p>Production-scale prompts. There is no single correct answer; there are answers that
+survive the follow-up questions.</p>
+<p><strong>8.1 — Session store, three datacentres.</strong> 50 million sessions, 2 KB each, users
+pinned to their nearest DC 60 ms apart, 40,000 reads/sec and 4,000 writes/sec at
+peak. Design it. Cover: how much RAM and how many instances; whether you replicate
+across DCs and what that costs; what happens to logged-in users when one DC goes
+dark; which parts of this lab survive unchanged and which must change; and the three
+things you alert on.</p>
+<p><strong>8.2 — &quot;Top 100 products this hour&quot;.</strong> 200,000 view events per second. The obvious
+design is <code>ZINCRBY leaderboard:&lt;hour&gt; 1 &lt;product&gt;</code>. Find the wall it hits — be
+specific about which resource runs out first and why sharding does not help — and
+design around it. What accuracy would you trade, and what would you say to the
+product manager who asks for exact counts?</p>
+<p><strong>8.3 — The two-paragraph reply.</strong> A colleague proposes moving the shopping basket
+out of Postgres into Redis &quot;because Redis is faster&quot;. Write the reply you would
+actually send. It must name the specific thing that could go wrong, quantify it, and
+end with a concrete proposal rather than a refusal.</p>
+<p><strong>8.4 — Read your own incident.</strong> You are on call. The alert is <em>&quot;p99 latency 400 ms,
+was 2 ms&quot;</em>. <code>INFO</code> shows <code>connected_clients: 1200</code>, <code>evicted_keys: 0</code>,
+<code>used_memory</code> at 60% of <code>maxmemory</code>, <code>master_repl_offset</code> healthy. What is your first
+command, your second, and your third — and what does each one rule in or out?</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-redis--solutions">Redis — solutions</h1>
+<p>Try the exercises first. Rungs 7–8 are worked discussions, not single answers.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Redis exists to hold <strong>shared, hot, mutable state</strong> for many machines at once.</p>
+<ul>
+<li>A <code>ConcurrentHashMap</code> inside your app is fast and correct — <em>for one process</em>. The
+moment you run two app servers they each have their own map and neither can see the
+other's. Your rate limiter now allows 2× its limit, and 20× when you autoscale to
+twenty. Thread-safety was never the problem; <strong>process boundaries</strong> were.</li>
+<li>A Postgres table is shared and correct, but every read-modify-write is a round trip
+through machinery designed to make facts permanent forever: WAL, MVCC, indexes,
+row locks. For a counter changing 10,000 times a second that is the wrong price,
+and worse, under contention your twenty servers <strong>serialise on the row lock</strong> — you
+have bought a distributed queue you did not want.</li>
+</ul>
+<p>Redis is the middle: shared like the database, fast like the in-process map, and
+explicit about what it gives up (durability, and queries beyond the key).</p>
+<p><strong>1.2</strong> Without the forbidden words: <em>only one thing ever happens at a time.</em> A
+command is not a sequence of steps that other commands can get between — while one
+command runs, no other command is running at all. So &quot;read 5, add 1, write 6&quot; has no
+gap in it, because during those three steps nothing else in the entire system is
+executing. There is nothing to exclude, because nothing else is there.</p>
+<p>If you found yourself wanting to say &quot;it's like an implicit lock around every
+command&quot; — that is the right intuition for the <em>effect</em> and the wrong one for the
+<em>mechanism</em>, and the difference matters when you predict performance. A lock costs
+something and can be contended. This costs nothing and cannot.</p>
+<p><strong>1.3</strong> Because &quot;add one to the samosa jar&quot; is only a sentence you can <em>say</em> if the
+listener knows the jar holds a number. A shopkeeper who only knows &quot;here is a jar,
+here is a different jar&quot; cannot do anything for you but hand it over and take it
+back — which is exactly three trips and exactly the gap Arjun and Bina fell into.</p>
+<p>Memcached is the shopkeeper who does not know what is in the jars. That is the whole
+difference. The types are not sugar on top of the atomicity guarantee; <strong>they are the
+delivery mechanism for it.</strong></p>
+<p><strong>1.4</strong> Cache: a rendered product page under <code>page:sku:123</code> with a 60-second TTL.
+Not a cache: a user's shopping basket, or the fencing counter <code>fence:invoice:42</code>.</p>
+<p>The test, from the caching lab: <strong>delete the whole store and see what you lost.</strong>
+Lose the cache and you lost speed — the pages regenerate. Lose the baskets and you
+lost baskets; nothing else in the world knows what was in them. This is a decision
+you make with <code>appendfsync</code>, <code>maxmemory-policy</code> and your replication setup — it is
+not a property of the software.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> Whatever the screen says — the point is that it says it. The verdict band
+reads <em>&quot;N clients are stuck waiting. The thread is listing every key in the database,
+and it will not start anything else until it finishes&quot;</em>, and the log gives you the
+sentence <em>&quot;Client A finally gets served after waiting 23 ticks — it was ready the
+whole time; the thread was busy.&quot;</em> If you had to guess at any of that, the page
+failed.</p>
+<p><strong>2.2</strong> <code>Commands.incrBy()</code>, and the load-bearing part is <strong>four lines</strong>: read the
+value, parse it, add, store. <strong>Zero</strong> of them mention concurrency. That absence is
+the answer to 1.2 made physical — go and look at it, because it is genuinely
+startling to see a lock-free multi-client counter with nothing in it.</p>
+<p><strong>2.3</strong> From <code>INFO</code>: <code>db0:keys=N</code> (resident), <code>aof_written_bytes</code> (handed to the OS),
+<code>aof_fsynced_bytes</code> (actually durable).</p>
+<p>The one that lies is <code>db0:keys</code> — like real Redis's <code>DBSIZE</code>, it counts keys that are
+<strong>resident</strong>, including ones whose deadline has passed and which no longer exist as
+far as any client is concerned. <code>aof_written_bytes</code> also misleads if you read it as
+&quot;safe&quot;: it is safe from <code>kill -9</code> and not from a power cut. Only the third number is
+a durability statement.</p>
+<p><strong>2.4</strong> The header says <code>*3</code> — three arguments — and <code>HSET user:1 alice</code> is indeed
+three. But <code>HSET</code> needs a field <em>and</em> a value, so this sets field <code>alice</code> to...
+nothing; there is no fourth argument. Real Redis replies
+<code>-ERR wrong number of arguments for 'hset' command</code>. The framing is valid; the
+command is not. <strong>Well-formed and correct are different checks</strong>, and RESP only does
+the first.</p>
+<p><strong>2.5</strong> You cannot predict it, and that is the lesson. The policy is
+<code>allkeys-lru</code>, but Redis does not maintain a true LRU order — it samples a handful of
+keys at random and evicts the oldest <em>of that sample</em>. With 4 keys and a sample of 3
+you will usually but not always get the genuinely-oldest one. Anyone who tells you
+Redis &quot;evicts the least recently used key&quot; is describing the intent, not the
+algorithm.</p>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> <code>DBSIZE</code> returns <strong>1</strong>. <code>GET k</code> returns <strong>nil</strong>.</p>
+<p>Both are correct simultaneously, and that is the whole point. Passing the deadline
+makes a key <strong>invisible</strong>, not <strong>absent</strong>. With active expiry off, nothing has gone
+looking for it, so it still occupies memory; <code>DBSIZE</code> reports residency. <code>GET</code> checks
+the deadline first (lazy expiry), reports nil — <em>and that read is what finally frees
+the memory</em>. Run <code>GET</code> then <code>DBSIZE</code> again and you get 0.</p>
+<p><strong>3.2</strong> The write <strong>fails with an OOM error</strong>, exactly as under <code>noeviction</code>.
+<code>volatile-lru</code> will only ever consider keys that have a deadline; with no candidates
+there is nothing to evict, so there is no way to make room.</p>
+<p>It is nastier than <code>noeviction</code> because <code>noeviction</code> is what you <em>asked for</em> — you
+chose it and you expect refusal. <code>volatile-lru</code> looks like an eviction policy, so the
+instance appears configured to shed load, and it silently is not. The failure arrives
+the day someone stops setting TTLs on new keys, which is a code change nobody
+associates with a Redis outage.</p>
+<p><strong>3.3</strong> Replies: <code>1</code>, an error, <code>2</code>. And <code>good</code> is <strong>2</strong>.</p>
+<p>The middle command failed and the ones around it committed anyway. <strong>Redis has no
+rollback.</strong> <code>MULTI</code>/<code>EXEC</code> guarantees only that nothing else interleaved — it is a
+batch, not a transaction in the ACID sense, and this is Redis's deliberate choice: an
+error inside <code>EXEC</code> is treated as a programming bug, and supporting rollback would
+tax every transaction to defend against one.</p>
+<p>If you predicted <code>[1, error]</code> and an aborted batch, you were applying database
+intuition. That intuition is exactly what makes this a production bug rather than a
+trivia question.</p>
+<p><strong>3.4</strong> With <code>WATCH</code>: <strong>one</strong> succeeds, one gets nil and must retry. With <code>DECRBY</code>:
+<strong>both</strong> succeed, and they are both correct — the command is atomic, so the second
+operates on the first's result.</p>
+<p>Both approaches are correct. The difference is cost, measured in experiment 9:</p>
+<div class="code"><pre><code>WATCH/MULTI/EXEC : 694 ms, 11,606 aborted attempts (4.8 per success)
+INCR             :  23 ms,      0 aborted attempts
+</code></pre></div>
+<p><strong>30× slower, and it gets worse as contention rises</strong>, because every loser redoes its
+work. The rule: if one command already expresses what you want, use it — it cannot
+lose a race and can never need a retry.</p>
+<p><strong>3.5</strong> All four cells, measured in experiment 6:</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th><code>kill -9</code></th>
+  <th>power loss</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>appendfsync always</code></td>
+  <td><strong>0 lost</strong></td>
+  <td><strong>0 lost</strong></td>
+</tr>
+<tr>
+  <td><code>appendfsync no</code></td>
+  <td><strong>0 lost</strong></td>
+  <td><strong>everything since the last OS flush</strong> (4,500 ms of traffic measured)</td>
+</tr>
+</tbody>
+</table></div>
+<p>The surprising cell is bottom-left. <code>kill -9</code> with fsync off loses nothing, because
+Redis already called <code>write()</code> and the data sits in the <strong>operating system's page
+cache</strong> — killing a process does not empty the kernel's memory. <code>appendfsync</code> defends
+against the <em>machine</em> stopping, not the <em>process</em> stopping. Two very different events
+with very different frequencies, and conflating them is how people end up paying for
+<code>always</code> to solve a problem they did not have.</p>
+<p><strong>3.6</strong> You know: <strong>one</strong> replica definitely has the write, so a failover to <em>that
+one</em> would preserve it.</p>
+<p>You do not know: which replica, whether the other two will ever get it, or — most
+importantly — whether the failover machinery will pick the one that has it. Sentinel
+picks by replication offset, so it usually will, but &quot;usually&quot; is the operative word.</p>
+<p>What you can do: nothing retroactive. Your client already has its <code>OK</code> and Redis has
+no rollback. <code>WAIT</code> is a <strong>measurement</strong>, not a mechanism. What you can do
+<em>prospectively</em> is set <code>min-replicas-to-write 2</code> so the master refuses writes it
+cannot protect — which is you choosing CP for that instance, and accepting the
+write-unavailability that comes with it.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Measured on this machine (same workload as experiment 5):</p>
+<div class="table"><table><thead>
+<tr>
+  <th><code>maxmemory-samples</code></th>
+  <th>hit ratio</th>
+  <th>gap to exact LRU</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>2</td>
+  <td>70.4%</td>
+  <td>−5.3</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>72.3%</td>
+  <td>−3.4</td>
+</tr>
+<tr>
+  <td><strong>5 (Redis default)</strong></td>
+  <td><strong>73.8%</strong></td>
+  <td><strong>−1.9</strong></td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>74.9%</td>
+  <td>−0.8</td>
+</tr>
+<tr>
+  <td>20</td>
+  <td>75.4%</td>
+  <td>−0.3</td>
+</tr>
+<tr>
+  <td>50</td>
+  <td>75.6%</td>
+  <td>−0.1</td>
+</tr>
+<tr>
+  <td>exact LRU</td>
+  <td>75.7%</td>
+  <td>—</td>
+</tr>
+</tbody>
+</table></div>
+<p>Redis defaults to 5 because the curve is steeply diminishing and <strong>every sample is
+CPU spent on the one thread that is also serving your traffic</strong>. Going 5→10 buys 1.1
+points; 10→50 buys 0.7 for five times the work. On an instance evicting thousands of
+keys a second, sampling 50 keys per eviction is real latency for every client — you
+would be spending the single thread, the scarcest resource in the whole design, to
+chase a fraction of a percentage point.</p>
+<p>Note also where the curve starts: even <strong>2</strong> samples gets you 70.4% against random's
+66.6%. Almost all the value is in having <em>any</em> preference at all.</p>
+<p><strong>Nothing about correctness changed</strong> in any row. Eviction never returns a wrong
+answer; it changes <em>which</em> answers require a trip to the source. This is a pure
+efficiency dial, which is exactly why it is safe to leave alone.</p>
+<p><strong>4.2</strong> Roughly 4–5× more sweeps, because the &quot;go round again if the sample was
+mostly dead&quot; rule is what lets one sweep clear a large backlog quickly. Experiment 4
+needs 157 invocations with the rule; without it each invocation does one round of 20.</p>
+<p>On a real instance running the sweep ten times a second, that is the difference
+between clearing a 50,000-key backlog in seconds and in minutes — during which those
+dead keys still count against <code>maxmemory</code> and can force <strong>live</strong> keys to be evicted.
+Again: <strong>liveness, not safety.</strong> Nothing is ever wrong; things are late.</p>
+<p><strong>4.3</strong> <strong>No.</strong> This is the single most important &quot;careful&quot; answer in the lab.</p>
+<p>Setting the lag to zero removes the <em>simulated</em> delay. It does not make replication
+synchronous. The master still replies to the client and streams to the replica as two
+separate acts in that order, so there is always a window — now microseconds instead
+of 1,500 milliseconds, but never zero, and it widens under load, GC, network
+congestion or a slow replica exactly when you are least able to notice.</p>
+<p>The honest statement is: <strong>the write is now very likely to survive, and still not
+guaranteed to.</strong> &quot;Very likely&quot; is a fine basis for a session and a poor one for a
+payment. If you wrote &quot;yes, it's fixed&quot;, re-read F5 — the difference between
+narrowing a window and closing it is the entire content of that section.</p>
+<p><strong>4.4</strong> Experiment 6 <strong>Part A</strong> changes: with <code>flushAof()</code> running rarely, a <code>kill -9</code>
+can now lose data, because bytes are still sitting in Redis's own in-process buffer
+and have never reached the kernel. Part B is <strong>unchanged</strong> — power loss was already
+losing everything past the last <code>fsync</code>, and the buffer was never the binding
+constraint there.</p>
+<p>This is the three-moments distinction made concrete: <em>buffer → <code>write()</code> → <code>fsync()</code></em>.
+Your change moved the first boundary and left the second alone. Real Redis flushes
+its buffer every event-loop iteration precisely so that the first boundary is never
+the one that hurts you.</p>
+<hr />
+<h2 id="solutions-rung-5--implement">Rung 5 — Implement</h2>
+<p><strong>5.1 <code>GETEX</code>.</strong> The interleaving that breaks <code>GET</code>-then-<code>PEXPIRE</code>:</p>
+<div class="code"><pre><code>A: GET session:9            -&gt; &quot;alice&quot;        (still alive, 5 ms left)
+                B: (the key&#x27;s deadline passes; a reader reaps it)
+                B: SET session:9 &quot;bob&quot; PX 30000
+A: PEXPIRE session:9 30000                    &lt;- A just extended BOB&#x27;s session
+</code></pre></div>
+<p>A read a value, and then set a deadline on a <em>different</em> value it never saw. <code>GETEX</code>
+closes it by making the read and the deadline one indivisible act. The general shape:
+<strong>any time you read a value and then act on the key based on what you read, you have
+a gap</strong> — and the gap is only safe if a single command spans it, or <code>WATCH</code> guards it.</p>
+<p><strong>5.2 <code>INCRCAP</code>.</strong> <code>GET</code> then <code>INCR</code> fails for the same reason as everything else in
+§4: two clients both read 99 against a cap of 100 and both increment, and you are at
+101 with both believing they were under.</p>
+<p><code>INCR</code> then <code>DECR</code>-if-over is the tempting fix and it is worse, not better. It is
+<em>eventually</em> consistent to the right number, but in between the counter genuinely
+exceeds the cap — so <strong>any other client reading it during that window sees an
+over-limit value and acts on it</strong>. You have converted a lost update into a transient
+lie, which is harder to reason about. If the cap is a rate limit, you have just
+admitted a request you were supposed to reject.</p>
+<p>The only correct answer is to do the comparison and the increment in the same
+indivisible step — which is what <code>RATELIMIT</code> in <code>Commands.java</code> does, and what a Lua
+script does in real Redis.</p>
+<p><strong>5.3 <code>LMOVE</code>.</strong> The reliable-queue property: the job is never in <em>neither</em> list. A
+crash after <code>LMOVE</code> returns leaves it in <code>processing</code>, where a reclaimer can find it.</p>
+<p>What is still missing before this is a production queue:</p>
+<ul>
+<li><strong>Reclaim by age</strong>, and therefore a heartbeat or a timestamp per in-flight job — and
+once you have a timeout you have F7 again: a <em>slow</em> worker is indistinguishable from
+a dead one, and reclaiming its job means the job runs twice.</li>
+<li><strong>Therefore idempotent consumers.</strong> At-least-once delivery is what you actually
+built; make the work safe to repeat.</li>
+<li><strong>A dead-letter path</strong> for jobs that fail repeatedly, or one poison message loops
+forever.</li>
+<li><strong>Fairness and backpressure</strong> across workers.</li>
+</ul>
+<p>Which is a good moment to notice you are re-deriving Redis Streams (<code>XADD</code>,
+<code>XREADGROUP</code>, <code>XACK</code>, <code>XAUTOCLAIM</code>) — they exist because everyone builds this and
+everyone gets the reclaim wrong.</p>
+<hr />
+<h2 id="solutions-rung-6--debug">Rung 6 — Debug</h2>
+<div class="table"><table><thead>
+<tr>
+  <th>bug</th>
+  <th>symptom</th>
+  <th>caught by</th>
+  <th>invariant broken (§12)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1 — <code>EXPIRE</code> sent verbatim</td>
+  <td>master and replica disagree about when a key dies; measured <strong>907 ms</strong> of drift after one hop</td>
+  <td><code>expire_is_propagated_as_an_absolute_pexpireat</code></td>
+  <td>#6, propagation is deterministic</td>
+</tr>
+<tr>
+  <td>2 — <code>INCR</code> skips the expiry check</td>
+  <td><code>GET</code> says the key is gone, <code>INCR</code> resurrects it</td>
+  <td><strong>nothing catches it</strong></td>
+  <td>#3, an expired key is never visible</td>
+</tr>
+<tr>
+  <td>3 — <code>SET</code> logged verbatim</td>
+  <td>live server says the lock is held by B; the recovered server says A</td>
+  <td><code>set_is_propagated_without_nx_and_with_an_absolute_deadline</code></td>
+  <td>#5 and #6, propagate the effect not the request</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Why bug 1 is hard to find in production:</strong> it is invisible until a failover, and
+then it presents as &quot;a few sessions expired at slightly the wrong time&quot; — which
+nobody files a ticket about, and which is indistinguishable from clock skew.</p>
+<p><strong>Why bug 3 is hard to find:</strong> the live server is completely correct. The divergence
+exists only in a file, and only manifests on restart or failover — so it appears
+during an incident, as a <em>second</em> incident, when nobody is looking for it.</p>
+<p><strong>6.4 — why bug 2 is the quietest.</strong> Because every command, examined alone, behaves
+perfectly. <code>GET</code> correctly reports the key as gone. <code>INCR</code> correctly increments a key
+it can see. There is no wrong answer anywhere to grep for, no error, no exception —
+the defect exists only in the <em>disagreement between two correct-looking commands</em>,
+and no single-command test can see a disagreement.</p>
+<p>That is also why it does the most damage. A rate-limit counter that never resets
+throttles a customer permanently, the <code>TTL</code> command reports the key as gone so the
+first thing you check exonerates it, and every debugging session begins by ruling out
+the wrong component.</p>
+<p><strong>6.5 — the one the suite misses.</strong> It is <strong>bug 2</strong>, and it passes all 25 tests.</p>
+<p>Why the suite missed it: every test asserts <em>one command's</em> behaviour. Nothing asserts
+that <strong>two different commands agree with each other about the same key</strong>. That is a
+shape of test the suite does not contain at all, so no amount of adding more tests of
+the existing shape would have found it.</p>
+<p>The test to write:</p>
+<div class="code"><pre><code class="language-java">static void every_command_agrees_that_an_expired_key_is_gone(MiniRedis s) throws Exception {
+    try (Cli c = new Cli(s.port)) {
+        c.cmd(&quot;DEBUG&quot;, &quot;SET-ACTIVE-EXPIRE&quot;, &quot;0&quot;);
+        c.cmd(&quot;SET&quot;, &quot;k&quot;, &quot;41&quot;, &quot;PX&quot;, &quot;50&quot;);
+        c.cmd(&quot;DEBUG&quot;, &quot;ADVANCE&quot;, &quot;60000&quot;);
+        eq(&quot;GET agrees it is gone&quot;,    null, c.cmd(&quot;GET&quot;, &quot;k&quot;));
+        eq(&quot;EXISTS agrees&quot;,              0L, c.cmd(&quot;EXISTS&quot;, &quot;k&quot;));
+        eq(&quot;TTL agrees&quot;,                -2L, c.cmd(&quot;TTL&quot;, &quot;k&quot;));
+        eq(&quot;TYPE agrees&quot;,            &quot;none&quot;, c.cmd(&quot;TYPE&quot;, &quot;k&quot;));
+        eq(&quot;and INCR agrees -- it must start from zero, not resurrect 41&quot;,
+                                         1L, c.cmd(&quot;INCR&quot;, &quot;k&quot;));
+    }
+}
+</code></pre></div>
+<p>(<code>DEBUG ADVANCE</code> moves the clock forward, and each assertion needs a fresh key
+because the failing read reaps it — the second subtlety this exercise teaches.)</p>
+<p><strong>This test is deliberately not in <code>src/Tests.java</code>.</strong> The hole is the exercise;
+shipping the patch would remove it. But it is not unverified — running it both ways
+gives:</p>
+<div class="code"><pre><code>--- with the bug OFF ---   PASS  every_command_agrees_that_an_expired_key_is_gone   26 passed, 0 failed
+--- with the bug ON  ---   FAIL  every_command_agrees_that_an_expired_key_is_gone   25 passed, 1 failed
+</code></pre></div>
+<p>That second line is the part that matters. <strong>A test you have not watched fail is not
+evidence of anything</strong> — it may be asserting something that was never possible to
+break, and a suite full of those is worse than no suite, because it buys confidence
+without paying for it.</p>
+<p>The transferable lesson: a green suite is a statement about your tests, not about
+your code. The bugs that survive are the ones whose <em>shape</em> your tests do not have,
+and you find those by asking &quot;what kind of wrongness could not possibly show up
+here?&quot; rather than by writing more of what you already have.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<h3 id="solutions-71--making-the-lock-safe">7.1 — Making the lock safe</h3>
+<p>The correct release, which must be one atomic step (in real Redis, a Lua script;
+here, a small native command):</p>
+<div class="code"><pre><code>if redis.call(&quot;GET&quot;, KEYS[1]) == ARGV[1] then
+    return redis.call(&quot;DEL&quot;, KEYS[1])
+else
+    return 0
+end
+</code></pre></div>
+<p>The interleaving that <code>GET</code>-then-<code>DEL</code> allows:</p>
+<div class="code"><pre><code>A: GET lock -&gt; &quot;A-token&quot;    (A still owns it)
+            A stalls 400 ms; the lock expires; B acquires it
+A: DEL lock                 &lt;- A has just deleted B&#x27;s lock
+</code></pre></div>
+<p>A now believes it released its own lock, B believes it holds one, and the next
+acquirer will collide with B. Note this is a <em>second</em> failure on top of F7: even a
+client that correctly gives up can corrupt the system.</p>
+<p><strong>The hard part — which resources can be fenced?</strong> A resource can reject a stale
+writer only if it can <em>remember the highest token it has honoured</em> and compare
+atomically:</p>
+<ul>
+<li><strong>Can be fenced:</strong> a Postgres row (<code>UPDATE ... WHERE fence &lt; :token</code>), a
+DynamoDB conditional write, an object store with conditional-put/ETag semantics, any
+service you wrote that will accept a token parameter.</li>
+<li><strong>Cannot be fenced:</strong> sending an email, charging a card through a provider with no
+idempotency key, <code>POST</code>ing to a third-party webhook, writing to a filesystem with no
+compare-and-set, calling a legacy SOAP service.</li>
+</ul>
+<p>For the ones that cannot: <strong>stop trying to make the lock correct, and make the
+operation idempotent instead.</strong> Give the work a stable identity — an idempotency key —
+and have the far side deduplicate. Payment providers offer exactly this because they
+know their callers cannot be trusted to hold a lock. If the far side offers nothing,
+you record your own intent transactionally before acting and check it on retry, which
+is the transactional-outbox pattern wearing a different hat. Redis's lock then reverts
+to what it is genuinely good at: making the duplicate <em>rare</em>, so the deduplication
+path is cold.</p>
+<h3 id="solutions-72--the-job-queue-that-survives-a-dead-worker">7.2 — The job queue that survives a dead worker</h3>
+<div class="code"><pre><code>take:      LMOVE queue processing RIGHT LEFT      -- atomic; never in neither list
+succeed:   LREM processing 1 &lt;job&gt;
+reclaim:   anything in processing older than T goes back to queue
+</code></pre></div>
+<p>The design is correct for a <strong>dead</strong> worker and unavoidably wrong for a <strong>slow</strong> one,
+because nothing can tell them apart from the outside. When the reclaimer moves a job
+that is merely slow, that job now runs twice — concurrently, on two machines.</p>
+<p>This is F7 exactly: <em>a timeout converts an unknown into a decision, and the decision
+is sometimes wrong.</em> And it has the same resolution: you cannot fix it in the queue,
+so make the job idempotent, or fence the resource it writes to. Choosing T only moves
+the failure between &quot;jobs stall for a long time&quot; and &quot;jobs run twice more often&quot; — it
+never removes it.</p>
+<p>Production versions of this are Redis Streams' consumer groups with <code>XAUTOCLAIM</code>,
+which give you the reclaim machinery and the delivery counter, and still leave
+idempotency to you.</p>
+<h3 id="solutions-73--making-the-write-survive">7.3 — Making the write survive</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>option</th>
+  <th>what it actually buys</th>
+  <th>real cost</th>
+  <th>verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>WAIT n timeout</code></td>
+  <td>tells you how many replicas have it</td>
+  <td>latency per write; <strong>cannot un-acknowledge</strong>, so the window is narrowed, never closed</td>
+  <td>necessary, insufficient</td>
+</tr>
+<tr>
+  <td><code>min-replicas-to-write</code></td>
+  <td>master refuses writes it cannot protect</td>
+  <td>write unavailability when replicas are unhealthy — you have chosen CP</td>
+  <td>genuinely useful, and an availability decision to make deliberately</td>
+</tr>
+<tr>
+  <td><code>appendfsync always</code></td>
+  <td>no local loss to power failure</td>
+  <td><strong>3.4× lower throughput</strong>, measured</td>
+  <td>solves the wrong half — the machine is gone, not just powered off</td>
+</tr>
+<tr>
+  <td>AWS MemoryDB</td>
+  <td>a durable multi-AZ transaction log; writes are acknowledged only once committed</td>
+  <td>more expensive, higher write latency</td>
+  <td>the honest answer if you truly need Redis semantics <em>and</em> durability</td>
+</tr>
+<tr>
+  <td>don't put it only in Redis</td>
+  <td>Postgres is the source of truth; Redis is a derived copy</td>
+  <td>you now own a sync path</td>
+  <td><strong>the right answer for a payment</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>For a payment:</strong> the last row, without hesitation. <code>order:99 paid</code> is a fact about
+money; it belongs in a store whose acknowledgement means committed. Redis can hold a
+fast derived copy, kept in sync by the transactional-outbox pattern, and if that copy
+is lost you rebuild it.</p>
+<p><strong>For a session:</strong> <code>min-replicas-to-write 1</code> plus asynchronous replication is fine.
+The failure mode is &quot;some users are logged out after a failover&quot;, which is a cost you
+can accept because the recovery — logging in again — is cheap and well understood.</p>
+<p><strong>The generalisation worth keeping:</strong> the question is never &quot;is Redis durable enough?&quot;
+It is &quot;what does losing <em>this specific fact</em> cost, and is that less than what
+protecting it costs?&quot; The same instance can hold facts on both sides of that line —
+which is exactly what the <code>volatile-*</code> eviction policies are for.</p>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<h3 id="solutions-81--session-store-three-datacentres">8.1 — Session store, three datacentres</h3>
+<p><strong>Sizing.</strong> 50M × 2 KB = 100 GB of payload; with per-key overhead and fragmentation,
+budget <strong>~140–160 GB</strong>, plus headroom for <code>fork()</code> during snapshots (F4), so
+<strong>~200 GB of RAM</strong>. That does not fit one machine comfortably, so this is one of the
+genuine cases for <strong>Redis Cluster</strong> — say 6 shards of ~35 GB, each with one replica.
+40k reads/sec across 6 shards is unremarkable; a single Redis does far more.</p>
+<p><strong>Cross-DC replication: no.</strong> Sessions are read on almost every request, so a 60 ms
+cross-DC hop on the read path is unacceptable. Run <strong>an independent cluster per DC</strong>
+and pin users to their nearest one via the load balancer. Do <em>not</em> try to replicate
+sessions across DCs synchronously — you would be paying 60 ms to protect data whose
+loss costs a re-login.</p>
+<p><strong>When a DC goes dark:</strong> its users are routed to another DC, find no session, and log
+in again. That is the deliberate trade, and the thing to verify is not Redis but
+whether your <strong>login path can absorb a third of your users at once</strong> — which is where
+this design actually fails if it fails. Test that, not the Redis failover.</p>
+<p><strong>What survives from this lab unchanged:</strong> the single-threaded execution model, TTLs
+as the expiry mechanism (a session TTL is refreshed on each request), lazy plus
+sampled expiry, and asynchronous replication within a DC.</p>
+<p><strong>What must change:</strong> multi-key operations are gone (keys land in different hash
+slots), so no <code>MGET</code> across sessions unless you hash-tag them; you need a
+cluster-aware client; and resharding becomes an operation you must have rehearsed.</p>
+<p><strong>Three alerts:</strong> (1) <code>used_memory_rss</code> approaching machine memory on any shard —
+remember <code>fork()</code> can nearly double it; (2) replication offset lag beyond your
+tolerated loss window; (3) p99 latency per shard, because one hot shard is invisible
+in an average.</p>
+<h3 id="solutions-82--top-100-products-this-hour">8.2 — &quot;Top 100 products this hour&quot;</h3>
+<p><code>ZINCRBY leaderboard:2026-08-28T14 1 &lt;product&gt;</code> is correct and it is one command, so
+it cannot lose an update. The wall it hits is <strong>not</strong> memory and <strong>not</strong> the sorted
+set's O(log n) — it is that <strong>the whole hour's leaderboard is one key</strong>, so it lives
+on one shard, on one thread. 200,000 writes/sec to one key is one core's problem, and
+<strong>adding shards does nothing at all</strong>, because sharding distributes keys and there is
+only one key. That is F8 exactly.</p>
+<p>The fix has two independent halves:</p>
+<ol>
+<li><strong>Split the key.</strong> <code>leaderboard:&lt;hour&gt;:&lt;0..15&gt;</code>, chosen by <code>hash(product) % 16</code>.
+Now 16 shards share the write load, and a read merges 16 sorted sets — which is
+cheap, because you only need the top 100 from each.</li>
+<li><strong>Do not send every event.</strong> Aggregate in the application for 1–2 seconds and send
+one <code>ZINCRBY</code> per product per window. At 200k events/sec over a few thousand
+distinct products this is a 100× reduction, and it is the change that actually
+matters. Pipelining the batch makes it one round trip.</li>
+</ol>
+<p><strong>What accuracy you trade:</strong> the leaderboard lags by your aggregation window, and a
+crashing app instance loses its unflushed local counts. For &quot;top 100 products this
+hour&quot; both are irrelevant — you are ranking, and the ranking is stable long before
+the counts are exact.</p>
+<p><strong>What to tell the product manager:</strong> not &quot;no&quot;. Say that the numbers are exact within
+about two seconds and that the <em>ranking</em> is what the feature is for; then ask what
+decision the exact count would change. If the honest answer is &quot;billing&quot; or
+&quot;a payout&quot;, this is the wrong store and the events belong in a durable log with a
+batch job behind it — which is a different feature with a different cost, and worth
+naming as such rather than discovering later.</p>
+<h3 id="solutions-83--the-two-paragraph-reply">8.3 — The two-paragraph reply</h3>
+<blockquote>
+<p>Moving the basket to Redis would genuinely make it faster, and the reads probably
+are our bottleneck, so I don't want to dismiss it. The thing that worries me is what
+&quot;acknowledged&quot; means in each store. Postgres tells us a write is committed only once
+it is durable; Redis acknowledges immediately and becomes durable up to a second
+later, and on a failover it loses whatever had not yet reached the replica — which
+in our setup is unbounded, because replication is asynchronous. So the failure mode
+is not &quot;the basket is slow&quot;, it is &quot;the basket silently loses the item the customer
+just added&quot;, during a failover, which is exactly when we are least able to notice.
+For a basket that turns into an order, I don't think we want that.</p>
+<p>What I'd suggest instead: keep Postgres as the source of truth and put a
+<strong>read-through cache</strong> in Redis with a short TTL, invalidated on write. That gets us
+the read speed — which is where the pain actually is — without changing what a
+committed basket means. If writes turn out to be the bottleneck too, the next step
+is AWS MemoryDB, which is Redis-compatible with durable multi-AZ writes; it costs
+more and is slower on writes, but it is the one option that gives us both. Shall I
+measure the read/write split first so we know which problem we are actually solving?</p>
+</blockquote>
+<p>The shape worth copying: agree with the part that is right, name <strong>one</strong> specific
+failure with its mechanism, quantify it, and end with a concrete proposal and a
+question — not a refusal.</p>
+<h3 id="solutions-84--reading-the-incident">8.4 — Reading the incident</h3>
+<p>The <code>INFO</code> you were given has already ruled things out: <code>evicted_keys: 0</code> and memory
+at 60% means this is <strong>not</strong> memory pressure; healthy replication offset means it is
+<strong>not</strong> a struggling replica. What is unusual is <strong>1,200 connected clients</strong>.</p>
+<ol>
+<li><strong><code>SLOWLOG GET 25</code></strong> — first, always. If one command is taking hundreds of
+milliseconds, everything else queues behind it (F1) and you have your answer in one
+step. Look for <code>KEYS</code>, <code>HGETALL</code>, <code>SMEMBERS</code>, <code>LRANGE 0 -1</code>, a large <code>DEL</code>, or a
+slow script. <strong>Rules in:</strong> head-of-line blocking. <strong>Rules out:</strong> everything else,
+if it is empty.</li>
+<li><strong><code>redis-cli --latency</code></strong> and <code>INFO commandstats</code> — separates &quot;one command is slow&quot;
+from &quot;everything is uniformly slow&quot;. Uniform slowness with a clean SLOWLOG points
+away from Redis and toward the network, a noisy neighbour, or the client side.
+<strong><code>INFO clients</code></strong> matters here too: 1,200 connections is a lot, and a client
+library that has lost its connection pool and is opening a connection per request
+produces exactly this picture — latency that is real but not Redis's fault.</li>
+<li><strong><code>INFO persistence</code></strong> — is <code>rdb_bgsave_in_progress</code> or an AOF rewrite running? A
+<code>fork()</code> on a large instance stalls the process for the duration of the copy, and
+it is periodic, which fits &quot;was 2 ms, now 400 ms&quot; better than a code change does.
+Check <code>latest_fork_usec</code>.</li>
+</ol>
+<p><strong>The meta-point:</strong> each command should <em>eliminate</em> a class of cause, not just gather
+information. If your first three commands cannot each rule something out, you are
+collecting data rather than diagnosing — and on a 400 ms p99 you do not have time for
+that.</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../12-http-caching/notes.html"><small>← Lab 12</small>http-caching</a><a href="../14-tls/notes.html" style="text-align:right"><small>Lab 14 →</small>tls</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-cant-twenty-machines-just-share-one-number">1. Why can&#x27;t twenty machines just share one number?</a><a href="#readme-2-what-does-the-tuck-shop-need-that-a-cupboard-cannot-give">2. What does the tuck shop need that a cupboard cannot give?</a><a href="#readme-3-what-does-a-reasonable-person-try-first">3. What does a reasonable person try first?</a><a href="#readme-4-why-does-the-open-shelf-lose-a-sale">4. Why does the open shelf lose a sale?</a><a href="#readme-5-what-exactly-must-we-guarantee">5. What exactly must we guarantee?</a><a href="#readme-6-what-if-nobody-is-allowed-to-touch-the-jars">6. What if nobody is allowed to touch the jars?</a><a href="#readme-7-what-are-these-things-called-now-that-you-have-felt-them">7. What are these things called, now that you have felt them?</a><a href="#readme-8-what-is-really-running-behind-the-counter">8. What is really running behind the counter?</a><a href="#readme-9-can-you-watch-meera-work">9. Can you watch Meera work?</a><a href="#readme-10-how-does-a-command-get-from-the-wire-into-the-jar">10. How does a command get from the wire into the jar?</a><a href="#readme-and-an-instance-can-sit-pressed-against-its-maxmemory-limit-holding-nothingbut-corpses-evicting-live-keys-to-make-room-because-the-dead-ones-have-notbeen-sampled-yet">And an instance can sit pressed against its maxmemory limit holding nothing
+but corpses, evicting live keys to make room, because the dead ones have not
+been sampled yet.</a><a href="#readme-11-what-breaks-and-which-promise-does-each-break-bend">11. What breaks, and which promise does each break bend?</a><a href="#readme-12-what-is-promised-what-is-not-and-what-did-one-meera-cost">12. What is promised, what is not, and what did one Meera cost?</a><a href="#readme-so-if-a-single-command-already-expresses-what-you-want-use-it-reach-forwatch-only-when-none-does-reach-for-a-lua-script-when-even-that-costs-toomany-round-trips">So: if a single command already expresses what you want, use it. Reach for
+WATCH only when none does. Reach for a Lua script when even that costs too
+many round trips.</a><a href="#readme-13-where-is-all-of-this-in-the-code">13. Where is all of this in the code?</a><a href="#readme-14-which-experiment-answers-which-question">14. Which experiment answers which question?</a><a href="#readme-15-what-changes-between-this-toy-and-a-real-deployment">15. What changes between this toy and a real deployment?</a><a href="#readme-16-which-exercise-should-you-do-if-you-only-do-one">16. Which exercise should you do if you only do one?</a><a href="#readme-17-what-should-you-learn-next">17. What should you learn next?</a><a href="#readme-18-glossary--which-word-means-what">18. Glossary — which word means what?</a><a href="#readme-19-about-this-lab">19. About this lab</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,4037 @@
+<!doctype html>
+<html lang="en" data-hub-lab="51-cqrs">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>51. cqrs</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700&family=IBM+Plex+Mono:wght@400;500;600&family=Source+Sans+3:ital,wght@0,400;0,600;1,400&display=swap">
+<style>
+:root{
+  --ground:#EFF2F0; --surface:#FAFCFA; --surface-2:#E5EAE7; --sunken:#E9EEEB;
+  --ink:#16211E; --ink-2:#55645F; --ink-3:#8A9994; --line:#D3DBD7; --line-2:#C0CAC5;
+  --accent:#0F6E63; --warn:#A2621A; --code:#E4EAE6;
+  --display:"Archivo","Segoe UI",system-ui,sans-serif;
+  --body:"Source Sans 3","Segoe UI",system-ui,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --ground:#0E1415; --surface:#161E1F; --surface-2:#1F2A2B; --sunken:#121A1B;
+  --ink:#E2EAE7; --ink-2:#9AAAA5; --ink-3:#6A7B76; --line:#2A3536; --line-2:#384748;
+  --accent:#45C1B0; --warn:#DFA05C; --code:#1B2425; color-scheme:dark;
+}
+
+body{background:var(--ground);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.6}
+a{color:var(--accent)}
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--surface);border-bottom:1px solid var(--line);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--surface)}
+.top-in{max-width:1180px;margin:0 auto;display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;padding-block:8px;font-size:14px}
+.crumb{font-family:var(--mono);font-size:12.5px;color:var(--ink-2);text-decoration:none;white-space:nowrap}
+.crumb:hover{color:var(--accent)}
+.where{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);white-space:nowrap}
+.tabs{display:flex;gap:2px;flex-wrap:wrap;margin-left:auto}
+.tabs a,.tbtn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border-radius:5px;color:var(--ink-2);text-decoration:none;font-weight:600;
+  border:0;background:none;font:inherit;font-weight:600;cursor:pointer}
+.tabs a:hover,.tbtn:hover{background:var(--surface-2);color:var(--ink)}
+.tabs a:focus-visible,.tbtn:focus-visible,.crumb:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 250px;gap:40px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:28px 80px}
+main{min-width:0;max-width:74ch}
+aside{position:sticky;top:64px;align-self:start;max-height:calc(100vh - 90px);overflow:auto;font-size:13.5px;line-height:1.45}
+aside h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:18px 0 6px}
+aside a{display:block;padding:3px 0;color:var(--ink-2);text-decoration:none}
+aside a:hover{color:var(--accent)}
+.kicker{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);margin:0 0 6px}
+h1,h2,h3,h4{font-family:var(--display);line-height:1.2;text-wrap:balance;color:var(--ink)}
+h1{font-size:2rem;margin:0 0 18px}
+h2{font-size:1.45rem;margin:2.2em 0 .6em;padding-top:.4em;border-top:1px solid var(--line)}
+h3{font-size:1.15rem;margin:1.8em 0 .5em}
+h1,h2,h3,h4{scroll-margin-top:72px}
+.part{font-size:1.9rem;border-top:3px solid var(--ink);padding-top:.6em;margin-top:2.6em}
+blockquote{margin:1.2em 0;padding:.6em 1em;border-left:3px solid var(--accent);background:var(--surface);color:var(--ink-2)}
+blockquote p{margin:.4em 0}
+code{font-family:var(--mono);font-size:.86em;background:var(--code);padding:.1em .35em;border-radius:4px}
+.code{overflow-x:auto;background:var(--sunken);border:1px solid var(--line);border-radius:6px;margin:1em 0}
+.code pre{margin:0;padding:12px 14px;line-height:1.5}
+.code code{background:none;padding:0;font-size:13.5px;white-space:pre}
+pre.mermaid{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:12px;overflow-x:auto;font-family:var(--mono);font-size:12px}
+.table{overflow-x:auto;margin:1em 0}
+table{border-collapse:collapse;font-size:15px;line-height:1.45}
+th,td{border:1px solid var(--line);padding:6px 10px;text-align:left;vertical-align:top}
+th{background:var(--surface-2);font-family:var(--display);font-weight:600}
+td{background:var(--surface)}
+hr{border:0;border-top:1px solid var(--line);margin:2em 0}
+.missing{text-decoration:underline dotted var(--ink-3);color:var(--ink-2);cursor:help}
+details.sol{margin-top:1em;border:1px solid var(--line);border-radius:6px;background:var(--surface)}
+details.sol>summary{cursor:pointer;padding:12px 16px;font-family:var(--display);font-weight:600;color:var(--accent)}
+details.sol>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+details.sol>div{padding:0 16px 16px}
+.pager{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:3em;padding-top:1em;border-top:1px solid var(--line);font-size:15px}
+.pager a{text-decoration:none;max-width:48%}
+.pager small{display:block;font-family:var(--mono);font-size:12px;color:var(--ink-3)}
+.hljs-keyword,.hljs-built_in,.hljs-type{color:var(--accent);font-weight:600}
+.hljs-string,.hljs-number,.hljs-literal{color:var(--warn)}
+.hljs-comment{color:var(--ink-3);font-style:italic}
+.hljs-title,.hljs-function{color:var(--ink)}
+@media (max-width:1000px){.wrap{grid-template-columns:minmax(0,1fr)}aside{display:none}}
+@media (max-width:600px){body{font-size:16px}h1{font-size:1.6rem}.tabs{margin-left:0}}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top"><div class="top-in"><a class="crumb" href="../index.html">Learning Hub</a><span class="where">/</span><a class="crumb" href="../atlas.html">Atlas</a><span class="where">Lab 51 of 71 · Stage 6</span><nav class="tabs" aria-label="This lab"><a href="#readme">Read</a><a href="#exercises">Exercises</a><a href="#solutions">Solutions</a><a href="visualization.html">Visual</a><button class="tbtn" id="hub-full" type="button" aria-pressed="false"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg><span class="hub-full-label">Full screen</span></button></nav></div></header><div class="wrap"><main><p class="kicker">Lab 51 · Work That Spans Services</p><article id="readme"><h1 id="readme-cqrs--one-guarded-ledger-many-chalkboards">CQRS — one guarded ledger, many chalkboards</h1>
+<blockquote>
+<p><strong>Tell a friend:</strong> Asha's shop keeps one ledger at the counter, and every sale
+goes into it under strict rules. Meera the manager keeps flipping back through
+that same ledger to add up the day's totals, and the queue at the counter
+grows while she does it. So Asha hires Dev, who reads the new entries every
+few minutes and copies the answers onto chalkboards that Meera reads instead.
+That is CQRS: one guarded ledger for changes, many cheap boards for questions,
+and a price paid in the boards always being a little behind. The one rule that
+keeps it safe is that nobody ever <em>decides</em> anything from a board.</p>
+</blockquote>
+<p>The trainer is <a href="visualization.html"><code>visualization.html</code></a> — five panels, and
+panel 1 is the one to open first. What this lab is made of, where every number
+came from, and where it sits among your other labs are in
+<a href="#readme-17-about-this-lab">section 17</a> at the end.</p>
+<hr />
+<h2 id="readme-1-why-did-checkout-die-when-nobody-touched-checkout">1. Why did checkout die when nobody touched checkout?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Asha's order service puts one queue in front of eight
+workers. One of Meera's reports holds a worker for most of a second. Priya's
+checkout write needs five milliseconds, and ends up waiting thirteen.</p>
+</blockquote>
+<p>Start with the shape of the outage, because it is the reason the pattern exists.
+It is also not the reason usually given.</p>
+<p>Asha runs a retail order service. One Postgres, one connection pool of eight
+workers. Checkout writes are small and fast. Each takes about 5 ms, and there
+are 300 of them a second.</p>
+<p>Do that arithmetic. It is 1.5 seconds of work arriving every second, spread over
+eight workers. That is <strong>19% utilisation</strong>. The database is nearly idle, and
+every dashboard says so.</p>
+<p>Then Ben on the analytics team ships a merchandising page for Meera. It runs a
+five-way join over orders, order_items, products and customers. It aggregates
+by day. It takes about 800 ms, and it is called a handful of times a second.</p>
+<p>Nothing about checkout changed. Not its code, not its traffic, not its hardware.
+Read down the table below. The only thing moving is how many of Ben's reports
+per second share the pool with Priya's order.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Reports/s</th>
+  <th>Pool utilisation</th>
+  <th>Checkout mean</th>
+  <th>Checkout p99</th>
+  <th>What Priya feels</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0</td>
+  <td>0.19</td>
+  <td>5.01 ms</td>
+  <td><strong>23 ms</strong></td>
+  <td>instant</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>0.39</td>
+  <td>5.13 ms</td>
+  <td><strong>24 ms</strong></td>
+  <td>instant</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>0.59</td>
+  <td>19.44 ms</td>
+  <td><strong>406 ms</strong></td>
+  <td>a hesitation</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>0.79</td>
+  <td>161.24 ms</td>
+  <td><strong>1,590 ms</strong></td>
+  <td>&quot;is this working?&quot;</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>0.99</td>
+  <td>5,412 ms</td>
+  <td><strong>13,192 ms</strong></td>
+  <td>she gives up and leaves</td>
+</tr>
+</tbody>
+</table></div>
+<p>Checkout's p99 goes from 23 ms to 1.59 seconds. That is <strong>69×</strong>. At eight
+reports a second checkout is simply dead: thirteen seconds to place an order.</p>
+<p>The mechanism is not mysterious, and it is not about CPU. There is one queue in
+front of eight workers. An 800 ms report <strong>occupies a worker for 800 ms</strong>. A
+5 ms checkout write that arrives while several workers hold reports waits behind
+them.</p>
+<p>Engineers call that <strong>head-of-line blocking</strong>, and you can read it straight off
+the number. At 4 reports/s the checkout p99 is 406 ms. That is about half of one
+report's service time, which is exactly the average wait behind a job you are
+stuck behind.</p>
+<p>Now the part that makes this a <em>pattern</em> and not just a capacity story. Two
+completely different things are wrong here, and they need different fixes.</p>
+<p><strong>One: two workloads with very different service times share one queue.</strong> Your
+<a href="../59-load-balancing/notes.html#readme">load-balancing</a> lab proved that pooling is a large win
+when the work is <em>identical</em>. This is the same result read backwards. When the
+work is not identical, sharing a queue means the short jobs inherit the long
+jobs' latency.</p>
+<p><strong>Two: the report recomputes, on every single view, an answer that changes only
+when someone places an order.</strong> The join is not slow because the database is
+bad. It is slow because the schema is shaped for <em>recording a sale</em>, and Meera's
+question is <em>how much did we sell today</em>. Those are not the same shape.</p>
+<p>CQRS is the design that takes both of those seriously at once. Most explanations
+lead with the second. The first is what actually gets it approved.</p>
+<blockquote>
+<p><strong>🔮 Predict, before §3.</strong> You have the table above on a dashboard. Which
+would you reach for first: a read replica, a cache, or a materialised summary
+table? Write down which, and what you expect it to fix.</p>
+<details><summary>Reveal</summary>
+All three are reasonable and §3 scores all three. If you said <em>read
+replica</em>, you are right about the table and §4 will show you what the
+table does not contain. If you said <em>cache</em>, you have chosen the one
+that helps least here. Meera's report is a different query every day, and the
+first view after every order still pays full price. If you said
+<em>materialised summary table</em>, you have already invented the pattern and
+§10.1 is your design written down.
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-2-what-are-the-two-jobs-one-ledger-is-being-asked-to-do">2. What are the two jobs one ledger is being asked to do?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The people who write into the ledger and the people who
+read out of it want opposite things. One wants rules and care. The other wants
+speed and totals. Only one of them minds being half a minute out of date.</p>
+</blockquote>
+<p>The abstraction is easier to hold if you have a physical picture first, so put
+the software down and walk into Asha's shop.</p>
+<p>A busy shop keeps <strong>one ledger</strong> at the counter. Cashiers write every sale into
+it: date, customer, each item, each price. They are careful. Prices are checked,
+quantities cannot be negative, one entry per sale. The ledger is the truth, and
+it is guarded.</p>
+<p>Meera the manager reads that same ledger constantly. <em>Revenue so far today?
+Which product is moving? How much has Priya spent this year?</em> None of those
+answers are written anywhere in the ledger. Each one is found by flipping back
+through pages and adding numbers up.</p>
+<p>So the ledger is doing two jobs with opposite requirements. The last row is the
+one to remember.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>The cashier's job</th>
+  <th>Meera's job</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Needs</td>
+  <td>rules, one-at-a-time care, exact</td>
+  <td>speed, totals, convenient shape</td>
+</tr>
+<tr>
+  <td>Touches</td>
+  <td>one new entry</td>
+  <td>hundreds of old entries</td>
+</tr>
+<tr>
+  <td>Frequency</td>
+  <td>once per sale</td>
+  <td>many times per hour</td>
+</tr>
+<tr>
+  <td>If it is 30 seconds out of date</td>
+  <td><strong>unacceptable</strong> — you would sell stock twice</td>
+  <td>fine, nobody notices</td>
+</tr>
+</tbody>
+</table></div>
+<p>Why does that last row matter more than the others? Because the two jobs do not
+merely have different performance profiles. <strong>They have different tolerances for
+being wrong about time.</strong></p>
+<p>That asymmetry is the entire opening for the pattern. A design that does not
+exploit it has nothing to trade.</p>
+<p>And now the shop's actual fix, which is what CQRS is.</p>
+<p>Cashiers keep writing into the ledger, unchanged. But every few minutes Dev the
+clerk walks over, reads the entries added since he last looked, and updates
+<strong>chalkboards</strong> on the wall. <code>TODAY'S REVENUE: ₹12,400</code>. <code>TOP SELLER: keyboards</code>. <code>PRIYA — 4 ORDERS THIS YEAR</code>.</p>
+<p>Meera stops opening the ledger entirely. One glance at a board answers each
+question. The boards are a few minutes behind. Everyone accepts that, and the
+queue at the counter disappears.</p>
+<p>Three properties of that arrangement are worth naming now, because everything
+technical later is one of these three.</p>
+<p><strong>The boards are derived.</strong> Erase one and Dev can rewrite it from the ledger.
+They hold no truth of their own.</p>
+<p><strong>The boards are behind.</strong> Always. Not sometimes, not under load — always, by at
+least the time it takes Dev to walk over.</p>
+<p><strong>Nobody makes a decision from a board.</strong> The cashier checks stock in the ledger,
+not on a chalkboard. Notice this one. It is doing more work than it appears to
+be, and §11.2 is what happens when it is violated.</p>
+<p><strong>Where this lab takes you.</strong> Stop at any checkpoint and you still have
+something whole.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Layer</th>
+  <th>Sections</th>
+  <th>After it you can…</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Beginner</td>
+  <td>1–8</td>
+  <td>tell the shop story, and say why a read replica is not enough</td>
+</tr>
+<tr>
+  <td>Intermediate</td>
+  <td>9–10</td>
+  <td>build the machine step by step, and price what each step cost</td>
+</tr>
+<tr>
+  <td>Engineering</td>
+  <td>11–12</td>
+  <td>reason about every failure, and say what is actually guaranteed</td>
+</tr>
+<tr>
+  <td>Production</td>
+  <td>13–17</td>
+  <td>operate it: what to monitor, what to rebuild, what to refuse</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-3-what-is-the-obvious-solution-and-why-should-you-try-it-first">3. What is the obvious solution, and why should you try it first?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Nobody sane invents CQRS while looking at §1's table. They
+add an index, then a cache, then a read replica. All three are good moves, and
+one of them fixes the table completely.</p>
+</blockquote>
+<p>Faced with §1's table, no competent engineer invents CQRS. They do these, in
+roughly this order, and they are all reasonable.</p>
+<p><strong>Add indexes.</strong> Correct first move, often sufficient, and cheap. Its limit is
+structural. An index makes <em>finding</em> rows fast, but the merchandising query's
+cost is in <em>joining and aggregating</em> them, and no index removes that. Every
+index added for Meera's side is then maintained on Priya's side, on every write,
+forever.</p>
+<p><strong>Add a cache.</strong> Also correct, also often sufficient. Its limit is that a cache
+is a <em>guess</em> about what will be asked again, with invalidation as the price.
+Your <a href="../11-caching/notes.html#readme">caching</a> lab covered where that guess goes wrong. A cache
+also does nothing for the first request after every write.</p>
+<p><strong>Add a read replica.</strong> This is the strongest of the three and it deserves a
+straight answer: <strong>it fixes §1's table completely.</strong> Move Ben's reports to a
+replica and checkout gets its eight workers back and its 23 ms p99. If §1 were
+the whole problem you would stop here, and many teams correctly do.</p>
+<p><strong>Write cleverer SQL, or a materialised view.</strong> Now you are close to the real
+thing, and §10.1 comes back to it.</p>
+<blockquote>
+<p><strong>🔮 Predict.</strong> The read replica has just fixed the contention. What is still
+wrong? Try to name it before reading on. Note that &quot;the replica is slightly
+stale&quot; is <em>not</em> the answer, because you are about to accept staleness in every
+design in this lab.</p>
+<details><summary>Reveal</summary>
+Two things are still wrong and §4 takes them one at a time. If you said "the
+replica is stale", you named the <em>price</em> rather than the problem — and
+the interesting question is what you bought with it. If you said "the reports
+are still slow", you are close: the replica made them slow somewhere else
+instead of making them cheap. The word to reach for is <em>shape</em>.
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-4-what-survives-the-read-replica-and-why-is-that-a-failure">4. What survives the read replica, and why is that a failure?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The replica moved Ben's reports off Priya's queue and
+changed nothing else. The five-way join is still a five-way join. And you paid
+for staleness without buying anything with it.</p>
+</blockquote>
+<p>Two things survive the read replica. Each one is a reason for a different half
+of CQRS, and there is a third that no benchmark will ever show you.</p>
+<h3 id="readme-4a-did-you-pay-for-staleness-and-forget-to-spend-it">4a. Did you pay for staleness and forget to spend it?</h3>
+<p>A read replica is asynchronously replicated. The moment you route Meera's
+reports to it, her answers come from a slightly old copy of Asha's ledger.</p>
+<p>Look at what that means. You have accepted exactly the property people cite as
+the <em>reason not to</em> adopt CQRS. That property is &quot;eventual consistency is too
+hard&quot;. And in exchange you received the same schema, somewhere else.</p>
+<p>That is the trade worth staring at. Staleness is the currency here. A replica
+spends it and buys isolation. CQRS spends the same currency and buys isolation
+<strong>and</strong> shape.</p>
+<p>If you were willing to pay once, the only question left is whether you want the
+second thing too.</p>
+<h3 id="readme-4b-which-end-of-the-shop-is-paying-for-the-arithmetic">4b. Which end of the shop is paying for the arithmetic?</h3>
+<p>Here is the arithmetic, and it is the whole economic case for the pattern. Ask
+it in the shop first, in words, before any letters appear.</p>
+<p>How many times a day does something in the shop <em>change</em>? That is the number of
+sales. How many times a day does someone <em>ask a question</em>? That is the number of
+times Meera looks. And how much work is one answer, computed the hard way by
+flipping through the ledger?</p>
+<p>Now the letters, each carrying its words for a while. Let <strong>N</strong> be the changes
+per day. Let <strong>R</strong> be the reads per day. Let <strong>J</strong> be the cost of computing one
+answer from the normalised schema, the hard way.</p>
+<p>There are exactly two places to do that work.</p>
+<p>Compute at <strong>read</strong> time and the total cost is <strong>R · J</strong>, which is reads per day
+times the cost of one answer. You pay once per question asked.</p>
+<p>Compute at <strong>write</strong> time and the total cost is about <strong>N · J′</strong>, which is
+changes per day times the cost of <em>incrementally updating</em> a stored answer. You
+pay once per change made.</p>
+<p>So the deciding quantity is <strong>R/N</strong>, which is reads per change, and nothing
+else. Not data volume. Not table size. Not &quot;we're at scale now&quot;.</p>
+<blockquote>
+<p><strong>🔮 Predict.</strong> Asha's shop takes 40,000 orders a day and Meera's dashboard is
+viewed a million times a day. Which end should pay? Now flip it: a million
+orders a day, a hundred thousand views. Same answer?</p>
+<details><summary>Reveal</summary>
+No, and the flip is the point. The first case is 25 reads per change and
+projections win by 25×. The second is 0.1 reads per change and projections
+<em>lose</em> by 10×. If you said "projections always win at scale", the last
+row of the table below is written for you: scale is not the variable, the
+ratio is.
+</details>
+
+</blockquote>
+<p>Read the table with J = 40 ms. That is a model, not a measurement — the point is
+the ratio, not the constant.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Orders/day (N)</th>
+  <th>Dashboard views/day (R)</th>
+  <th>R/N</th>
+  <th>Read-time cost</th>
+  <th>Projection-time cost</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>40,000</td>
+  <td>20,000</td>
+  <td>0.5</td>
+  <td>0.22 CPU-h/day</td>
+  <td>0.44 CPU-h/day</td>
+</tr>
+<tr>
+  <td>40,000</td>
+  <td>100,000</td>
+  <td>2.5</td>
+  <td>1.11 CPU-h/day</td>
+  <td>0.44 CPU-h/day</td>
+</tr>
+<tr>
+  <td>40,000</td>
+  <td>1,000,000</td>
+  <td>25</td>
+  <td><strong>11.11 CPU-h/day</strong></td>
+  <td><strong>0.44 CPU-h/day</strong></td>
+</tr>
+<tr>
+  <td>1,000,000</td>
+  <td>100,000</td>
+  <td>0.1</td>
+  <td>1.11 CPU-h/day</td>
+  <td>11.11 CPU-h/day</td>
+</tr>
+</tbody>
+</table></div>
+<p>Read the last row carefully, because it is the row people skip. <strong>A write-heavy
+system with few reads is made worse by projections.</strong></p>
+<p>CQRS is not a scaling technique that helps more the bigger you get. It is a bet
+on a ratio, and the bet loses when the ratio is below 1.</p>
+<p>And now the distinction the replica option obscures.</p>
+<blockquote>
+<p><strong>A read replica multiplies the number of machines paying R·J.
+A projection reduces R·J itself.</strong></p>
+</blockquote>
+<p>Replicas <em>add capacity</em> to absorb the work. Projections <em>delete the work</em>. If
+Meera's dashboard is called a million times a day, three replicas means three
+machines each doing five-way joins a million times a day.</p>
+<p>That is why &quot;just add replicas&quot; runs out. Not at some magic scale, but at the
+point where reads times cost-per-answer exceeds what you are willing to buy
+hardware for, over and over.</p>
+<h3 id="readme-4c-what-breaks-that-no-benchmark-can-see">4c. What breaks that no benchmark can see?</h3>
+<p>There is a slower failure that no table in this lab will show you.</p>
+<p>Once the write model is also the read model, display concerns leak into it. A
+<code>total_amount</code> column denormalised so one screen is fast. A <code>last_order_at</code>
+maintained inline. An order that grows six fields belonging to one of Meera's
+reports.</p>
+<p>Each of those is individually justified. Collectively they mean the one place
+Asha's business rules must stay crisp is now also a view model. Every rule change
+then has to reason about screens.</p>
+<p>This one does not appear in any table in this lab, and in my experience it is
+the reason teams that adopt CQRS say they would do it again. Flagging it as
+judgement rather than measurement.</p>
+<hr />
+<h2 id="readme-5-what-is-the-real-requirement-said-in-plain-words-first">5. What is the real requirement, said in plain words first?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The code that changes things and the code that shows things
+want different shapes on different machines, and neither should be able to
+hurt the other. The showing side pays for that by being allowed to lag.</p>
+</blockquote>
+<p>Everything above points at one requirement, and it is worth writing without any
+vocabulary at all.</p>
+<blockquote>
+<p><strong>The code that changes things and the code that shows things should be able
+to use different data shapes, on different hardware, without either one being
+able to slow down or corrupt the other — and the showing side must be allowed
+to be slightly out of date, because that is the only thing we have to pay
+with.</strong></p>
+</blockquote>
+<p>Three commitments hide in that sentence. Each one becomes a mechanism later.</p>
+<p><strong>Different shapes.</strong> So there must be more than one representation of the same
+facts, and something must keep the second one current. That something is Dev.</p>
+<p><strong>Neither can hurt the other.</strong> So the coupling between them must be
+asynchronous. And the moment it is asynchronous, they are not equal in time.</p>
+<p><strong>Out of date is allowed.</strong> Allowed <em>where</em>? That is the question this lab
+spends the most effort on. The honest answer is not &quot;on the read side&quot;. It is
+narrower than that, and §6 states it.</p>
+<hr />
+<h2 id="readme-6-what-is-the-key-idea-and-what-one-rule-licenses-it">6. What is the key idea, and what one rule licenses it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Use one model for changes and a different model for
+questions. That is safe only because no change ever consults a question model.
+Break that one rule and staleness stops being a delay and becomes a bug.</p>
+</blockquote>
+<p>The idea in two sentences:</p>
+<blockquote>
+<p><strong>Handle changes and questions with two different models. One model receives
+commands, enforces every rule, and records what happened; from that record,
+any number of query models are built, each shaped like one question, each
+rebuildable, each allowed to lag.</strong></p>
+</blockquote>
+<p>That is CQRS. It fits on a napkin.</p>
+<p>But stated that way it invites the mistake that ruins it. So here is the rule
+that makes it safe, and it is the single most important sentence in this lab.</p>
+<blockquote>
+<h3 id="readme-the-read-model-makes-no-decisions">The read model makes no decisions.</h3>
+<p>It is allowed to be stale, denormalised, duplicated, wrong-shaped and
+disposable <strong>precisely and only because nothing depends on it being right at
+any particular instant.</strong> The moment a command consults a read model in order
+to decide whether to accept, the consistency window stops being a UX cost and
+becomes a correctness bug.</p>
+</blockquote>
+<p>In the shop: Meera reads chalkboards all day and no harm comes of it. The
+cashier at the counter never looks at a board before saying yes to a sale. She
+looks at the ledger.</p>
+<p>Everything else in this lab is either machinery that supports that rule, or a
+measurement of what happens when it is broken. §11.2 breaks it on purpose and
+counts the damage.</p>
+<p>Notice what the rule does <em>not</em> say. It does not say the read side is
+unimportant. It does not say it can be sloppy. It does not say staleness does
+not matter.</p>
+<p>It says the read side's staleness is <em>survivable</em> because it is never an input
+to a decision. That is a narrow, checkable property. You check it by reading
+your command handlers and asking one question: <strong>does anything in here read from
+a projection?</strong></p>
+<p>Now the same shop drawn as a system. Read it top to bottom. Priya and Asha's
+counter at the top, the ledger and its running list of facts under it, Dev's
+boards below that, and Meera reading them.</p>
+<pre class="mermaid">flowchart TD
+    U[&quot;Priya&lt;br&gt;command: place order&quot;] --&gt; C[&quot;Asha&#x27;s counter&lt;br&gt;command handler&lt;br&gt;every rule lives here&quot;]
+    C --&gt;|&quot;one transaction&quot;| WDB[(&quot;write store&lt;br&gt;the ledger&lt;br&gt;normalised&quot;)]
+    C --&gt;|&quot;same transaction&quot;| E[&quot;event feed&lt;br&gt;#1 #2 #3 ...&quot;]
+    E --&gt; P1[&quot;Dev A&lt;br&gt;projector&quot;] --&gt; R1[(&quot;customer dashboard&quot;)]
+    E --&gt; P2[&quot;Dev B&lt;br&gt;projector&quot;] --&gt; R2[(&quot;daily revenue&quot;)]
+    E --&gt; P3[&quot;Dev C&lt;br&gt;projector&quot;] --&gt; R3[(&quot;search index&quot;)]
+    U2[&quot;Meera&lt;br&gt;query&quot;] --&gt; R1
+    U2 --&gt; R2
+    U2 --&gt; R3
+    R1 -. &quot;NEVER&quot; .-&gt; C
+    linkStyle 12 stroke:#b45,stroke-dasharray:4 4
+</pre>
+<p>The dashed arrow is the one that must not exist. Most of the failures in §11 are
+that arrow drawn by accident.</p>
+<hr />
+<h2 id="readme-7-which-terminology-does-this-actually-need-and-which-two-words-get-confused">7. Which terminology does this actually need, and which two words get confused?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five words, and you have met all five in the shop already.
+Two of them look like each other and are not, and the confusion costs teams a
+year.</p>
+</blockquote>
+<p>You have met most of these. The entries here are about the <em>distinctions</em>, not
+the definitions. The full list is in §16.</p>
+<h3 id="readme-what-is-the-difference-between-asking-for-a-change-and-asking-a-question">What is the difference between asking for a change and asking a question?</h3>
+<p>A <strong>command</strong> asks for a change. <code>PlaceOrder(ord-1, priya, [...])</code>. It is named
+imperatively, it may be <strong>rejected</strong>, and it returns success or failure rather
+than data.</p>
+<p>A <strong>query</strong> asks a question. It changes nothing, and it is never rejected for a
+business reason.</p>
+<p>Why bother naming them? Because they have different <em>failure vocabularies</em>. A
+command can fail because you are not allowed to do that. A query can only fail
+because something broke.</p>
+<p>Once you notice that, it is obvious they should not share a code path. It is
+less obvious, and equally true, that they need not share a data model.</p>
+<h3 id="readme-cqs-or-cqrs--which-one-did-your-team-actually-adopt">CQS or CQRS — which one did your team actually adopt?</h3>
+<p>This is the confusion that costs people a year, so take the two apart slowly.</p>
+<p><strong>CQS</strong> is Command–Query Separation, from Bertrand Meyer in 1988. It is a rule
+about <em>methods</em>. A method either changes state or returns a value, never both.
+It applies inside one object, one model, one database. <code>list.pop()</code> violates it.</p>
+<p><strong>CQRS</strong> is Command Query Responsibility Segregation, from Greg Young around
+2010. It is a rule about <em>models</em>. The object model you write through and the
+object model you read through are allowed to be different objects, in different
+stores, with different schemas.</p>
+<p>CQRS is what happens when you take CQS seriously enough to notice the two sides
+also want different <em>data</em>.</p>
+<p>A team that splits its handlers into <code>PlaceOrderCommand</code> and <code>GetOrderQuery</code>
+classes, keeps one schema, and announces it has adopted CQRS has adopted CQS.
+That is a perfectly good thing to have adopted. It buys none of §1's table.</p>
+<h3 id="readme-why-is-read-model-a-slightly-unfortunate-name">Why is &quot;read model&quot; a slightly unfortunate name?</h3>
+<p>The <strong>write model</strong> is the one that validates commands and owns the business
+rules. It is Asha's ledger and her counter. Normalised, transactional, one per
+bounded piece of the domain.</p>
+<p>The <strong>read model</strong> is a store shaped like one family of questions. It is one of
+Dev's chalkboards. Denormalised, disposable, and there are usually several.</p>
+<p>The name misleads because a read model is not a <em>view of</em> the write model. It is
+a <em>separate stored answer</em>, maintained from the same facts. Think &quot;chalkboard&quot;,
+not &quot;window&quot;.</p>
+<h3 id="readme-what-is-an-event-what-is-a-projection-and-what-is-a-bookmark">What is an event, what is a projection, and what is a bookmark?</h3>
+<p>An <strong>event</strong> is a fact that a command succeeded. <code>OrderPlaced(seq=17, total=120.00)</code>. Past tense, immutable, and it carries a sequence number.</p>
+<p>A <strong>projection</strong> is the code that consumes events and updates a read model. That
+is Dev.</p>
+<p>A <strong>checkpoint</strong> is the projector's bookmark. It says: <em>I have applied
+everything up to sequence N.</em> It is the pencil mark Dev leaves in the ledger
+margin so he knows where to start next time.</p>
+<p>The checkpoint is the most under-rated of the three. It is what makes a
+projector restartable. It is what makes duplicates detectable. It is what makes
+lag measurable. In §10.5 it is half of the correctness argument.</p>
+<p>Kafka calls it a consumer offset. Debezium calls it an LSN. It is the same
+object.</p>
+<h3 id="readme-what-exactly-is-the-consistency-window">What exactly is the consistency window?</h3>
+<p>The <strong>consistency window</strong> is the time between an event committing on Asha's
+side and becoming visible on one of Dev's boards. It is how far behind the board
+is, right now.</p>
+<p>It is not a constant. It is a distribution, and §10.2 gives it edges. Every
+number in this lab that matters is a property of that distribution.</p>
+<hr />
+<h2 id="readme-8-what-are-the-mental-models-in-five-objects-and-two-promises">8. What are the mental models, in five objects and two promises?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> One guarded ledger, many chalkboards, one clerk per board.
+Two promises hold it together: a sale and its announcement commit together,
+and replaying the announcements twice changes nothing.</p>
+</blockquote>
+<h3 id="readme-the-simple-model-what-is-the-shop-doing">The simple model: what is the shop doing?</h3>
+<p><strong>One guarded ledger, many chalkboards, one clerk per board.</strong></p>
+<p>Changes go through the counter, which checks the rules and writes the ledger.
+Clerks copy from the ledger onto boards, each board pre-answering one question.
+Everyone reads boards. Erase a board and a clerk rewrites it from the ledger's
+history.</p>
+<h3 id="readme-the-engineering-model-what-are-the-five-objects">The engineering model: what are the five objects?</h3>
+<p>State it as five objects and two invariants, because that is all it is.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Object</th>
+  <th>What it holds</th>
+  <th>Who it is in the shop</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Write store</td>
+  <td>Current state, normalised. The truth</td>
+  <td>Asha's ledger</td>
+</tr>
+<tr>
+  <td>Event feed</td>
+  <td>An ordered, append-only sequence of facts, each with a sequence number</td>
+  <td>the ledger read in order, newest last</td>
+</tr>
+<tr>
+  <td>Projector</td>
+  <td>A loop: read after checkpoint → apply → advance checkpoint</td>
+  <td>Dev</td>
+</tr>
+<tr>
+  <td>Read store</td>
+  <td>One denormalised table (or index, or document) per question</td>
+  <td>one chalkboard</td>
+</tr>
+<tr>
+  <td>Checkpoint</td>
+  <td>One integer per projector, per read model</td>
+  <td>Dev's pencil mark in the margin</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Invariant 1, atomicity at the source.</strong> A state change and its event commit
+together or not at all. This is the
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a> guarantee. Without it the
+feed can describe a write that was rolled back.</p>
+<p><strong>Invariant 2, effectively-once application.</strong> Applying the feed from sequence 0
+to sequence N produces the same read-store state, regardless of how many times
+any individual event was delivered. It also holds regardless of how many times
+Dev crashed on the way.
+§10.5 is entirely about buying this.</p>
+<p>Given those two, one property follows. It is the property people mean when they
+say &quot;eventual consistency&quot;.</p>
+<blockquote>
+<p>Stop writing. Wait. Every read model converges to exactly what a from-scratch
+replay would produce.</p>
+</blockquote>
+<p>Your <a href="../28-eventual-consistency/notes.html#readme">eventual-consistency</a> lab already established
+what kind of promise that is. It is a <strong>liveness</strong> property. It promises about
+the limit and says nothing about any present moment, and no finite observation
+can falsify it.</p>
+<p>That is why the rest of this lab measures the <em>window</em> rather than testing the
+<em>promise</em>. The promise is not testable. The window is.</p>
+<h3 id="readme-which-shop-word-maps-to-which-system-word">Which shop word maps to which system word?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Shop</th>
+  <th>System</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The ledger</td>
+  <td>Write store + event feed</td>
+  <td>§2, the counter</td>
+</tr>
+<tr>
+  <td>The counter, where prices are checked</td>
+  <td>Command handlers — every business rule</td>
+  <td>§2, &quot;the ledger is guarded&quot;</td>
+</tr>
+<tr>
+  <td>A chalkboard</td>
+  <td>One read model</td>
+  <td>§2, <code>TODAY'S REVENUE: ₹12,400</code></td>
+</tr>
+<tr>
+  <td>Dev walking over</td>
+  <td>The projector's poll</td>
+  <td>§2, &quot;every few minutes&quot;</td>
+</tr>
+<tr>
+  <td>&quot;The board is 3 minutes behind&quot;</td>
+  <td>The consistency window</td>
+  <td>§7, the last entry</td>
+</tr>
+<tr>
+  <td>Erasing and rewriting a board</td>
+  <td>A rebuild</td>
+  <td>§2, &quot;erase one and Dev can rewrite it&quot;</td>
+</tr>
+</tbody>
+</table></div>
+<h3 id="readme-where-does-the-shop-story-lie-to-you">Where does the shop story lie to you?</h3>
+<p>Three places, and all three are load-bearing.</p>
+<p><strong>Dev is not one clerk.</strong> Real projectors run in parallel for capacity, and
+parallel clerks can update a board out of order in a way one clerk never could.
+§10.4 and §11.6.</p>
+<p><strong>Chalk does not double-write.</strong> A clerk who is interrupted and starts over does
+not accidentally add today's revenue twice. Code does, and it is the most common
+real corruption in this pattern. §10.5 and §11.7.</p>
+<p><strong>The boards are not &quot;a few minutes behind&quot;.</strong> That phrase describes a
+distribution with a tail, and the tail is where every incident lives. Replace
+&quot;a few minutes behind&quot; in your head with &quot;a random variable with a cliff in it&quot;.</p>
+<p>Here are the three numbers that phrase is hiding, all from the canonical setup
+described in §17.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Figure</th>
+  <th>Value</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Mean window</td>
+  <td>297 ms</td>
+  <td>how far behind the board sits on an average day</td>
+</tr>
+<tr>
+  <td>p99 window</td>
+  <td>545 ms</td>
+  <td>how far behind it sits for the unluckiest 1 read in 100</td>
+</tr>
+<tr>
+  <td>Under §11.3's conditions</td>
+  <td>unbounded</td>
+  <td>there is no number at all, and no warning first</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>Say it back.</strong> You have finished the beginner layer. Without using the words
+<em>command</em>, <em>query</em>, <em>projection</em> or <em>eventual</em>, explain to a friend why Asha
+put chalkboards on the wall, and what it costs her.</p>
+<details><summary>A good answer sounds like</summary>
+"There is one book at the counter and everyone needs it. The cashier needs to
+write one line in it. The manager needs to add up two hundred lines in it. So
+the manager kept blocking the queue. Now a clerk copies the totals onto boards
+on the wall every few minutes, and the manager reads a board. The cost is that
+a board is never quite current. It shows where the shop was a few minutes ago,
+not where it is."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-9-what-should-you-open-in-the-visualization-and-what-should-you-watch">9. What should you open in the visualization, and what should you watch?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five panels. Panel 1 is the window itself. Drag one slider
+and you will see the number this whole lab is about move.</p>
+</blockquote>
+<p>Open <a href="visualization.html"><code>visualization.html</code></a>. The five panels are in the order
+the document uses them.</p>
+<p><strong>Panel 1, the window.</strong> The core exhibit. Drag the poll interval and watch the
+lag distribution move. Switch to streaming and watch the floor collapse. Push
+Asha's order rate towards Dev's capacity and watch §11.3's cliff appear all at
+once.</p>
+<p><strong>Panel 2, the stale read.</strong> The same run, asked two questions. What fraction of
+users like Priya see their own write missing? And how many orders get accepted
+against stock that is already gone?</p>
+<p><strong>Panel 3, the split.</strong> §1's table, live. Drag Ben's report load across a shared
+pool, then separate the pools.</p>
+<p><strong>Panel 4, projection correctness.</strong> The four crash combinations, and the
+ordering experiment with a stalled worker, keyed and unkeyed.</p>
+<p><strong>Panel 5, the rebuild.</strong> Backlog, capacity and live load. Watch the catch-up
+time go non-linear.</p>
+<p>Each panel has a <strong>Run this scenario for me</strong> button that drives the sequence the
+document describes. Panels 1, 2 and 4 ask you to predict before revealing.</p>
+<hr />
+<h2 id="readme-10-what-is-the-actual-mechanism-built-one-forced-step-at-a-time">10. What is the actual mechanism, built one forced step at a time?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Five designs. Each one is the simplest thing that could
+work after the previous one broke, and each break is a specific number you can
+read off a table.</p>
+</blockquote>
+<p>This is the spine of the lab. We do not start at the final architecture. We
+start at the simplest thing that could work, and each step is taken because a
+specific thing went wrong.</p>
+<h3 id="readme-101--v1-what-if-dev-updates-the-boards-inside-the-sale-itself">10.1 — v1: what if Dev updates the boards inside the sale itself?</h3>
+<blockquote>
+<p>The smallest possible split: one database, one transaction, and the boards are
+never behind at all.</p>
+</blockquote>
+<p>Keep one database. Add a second set of tables shaped for reading. When a command
+commits, update those tables <strong>in the same transaction</strong>. In the shop, Dev
+stands at the counter and updates the boards before the cashier hands Priya her
+receipt.</p>
+<div class="code"><pre><code>BEGIN;
+  INSERT INTO orders ...;                          -- write model
+  INSERT INTO order_items ...;
+  INSERT INTO customer_dashboard (...) VALUES (...);   -- read model, inline
+  UPDATE daily_revenue SET total = total + 120 WHERE day = &#x27;2026-09-01&#x27;;
+COMMIT;
+</code></pre></div>
+<p>This is often called <strong>CQRS-lite</strong>, and it deserves more respect than it gets.
+Look at what it already has.</p>
+<p>Meera's dashboard query is now <code>SELECT * FROM customer_dashboard WHERE customer = 'priya'</code>. No joins, no aggregation. §4b's reads-times-cost-per-answer
+is gone.</p>
+<p><strong>The consistency window is exactly zero.</strong> Every guarantee you had with one
+model, you still have. Priya sees her own order the instant it commits. There is
+no lag to monitor, no projector to restart, no rebuild to schedule.</p>
+<p>It is one transaction, so there is no outbox, no feed, no checkpoint.</p>
+<p>For a very large fraction of systems that think they need CQRS, this is the
+correct final answer. Say so out loud in design reviews.</p>
+<p><strong>What it costs.</strong> The projection work is now on the write path. Same setup as
+§1: checkout at 300/s, base write 5 ms, each read model adding 2 ms. First, what
+happens to the work itself.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Boards updated inline</th>
+  <th>Write service time</th>
+  <th>Pool utilisation</th>
+  <th>What the counter is now doing</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0</td>
+  <td>5 ms</td>
+  <td>0.188</td>
+  <td>records the sale only</td>
+</tr>
+<tr>
+  <td>1</td>
+  <td>7 ms</td>
+  <td>0.263</td>
+  <td>sale, then one board</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>9 ms</td>
+  <td>0.338</td>
+  <td>sale, then two boards</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>11 ms</td>
+  <td>0.413</td>
+  <td>sale, then three boards</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>15 ms</td>
+  <td>0.563</td>
+  <td>sale, then five boards</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>21 ms</td>
+  <td>0.788</td>
+  <td>sale, then eight boards</td>
+</tr>
+</tbody>
+</table></div>
+<p>And second, what Priya feels while that happens. Note the last column: it is zero
+the whole way down, and that is the prize.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Boards updated inline</th>
+  <th>Checkout mean</th>
+  <th>Checkout p99</th>
+  <th>Window</th>
+  <th>What Priya gets</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0</td>
+  <td>5.00 ms</td>
+  <td>23 ms</td>
+  <td>0 ms</td>
+  <td>instant, and the board is already right</td>
+</tr>
+<tr>
+  <td>1</td>
+  <td>7.00 ms</td>
+  <td>32 ms</td>
+  <td>0 ms</td>
+  <td>still instant</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>9.01 ms</td>
+  <td>42 ms</td>
+  <td>0 ms</td>
+  <td>still instant</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>11.05 ms</td>
+  <td>51 ms</td>
+  <td>0 ms</td>
+  <td>a shade slower, still imperceptible</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>15.44 ms</td>
+  <td>70 ms</td>
+  <td>0 ms</td>
+  <td>slower, still fine</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>26.34 ms</td>
+  <td>108 ms</td>
+  <td>0 ms</td>
+  <td>noticeably slower, still exact</td>
+</tr>
+</tbody>
+</table></div>
+<p>That is a real cost but not a shocking one. Eight read models maintained inline
+take checkout's p99 from 23 ms to 108 ms, and its utilisation from 19% to 79%.
+If you have three read models and a comfortable pool, this is completely fine,
+and you get a zero-width window for it.</p>
+<blockquote>
+<p><strong>🔮 Predict.</strong> v1 has zero staleness and acceptable latency. What forces
+anyone to give that up? There are three answers and only one of them is about
+performance.</p>
+<details><summary>Reveal</summary>
+The three are listed immediately below. If you said "it gets slow", you found
+the third and least important one. The two that actually force the change are
+about <em>where</em> the read store lives and <em>what happens when it is
+down</em> — neither of which is a speed problem.
+</details>
+
+</blockquote>
+<p><strong>What breaks it.</strong></p>
+<ol>
+<li><strong>The read store cannot always be in your transaction.</strong> The moment one of
+your read models is Elasticsearch, Redis, ClickHouse, or another service's
+database, there is no transaction that spans it. You would need a distributed
+transaction, and your <a href="../45-two-phase-commit/notes.html#readme">two-phase-commit</a> and
+<a href="../46-distributed-transactions/notes.html#readme">distributed-transactions</a> labs already
+established what that costs and why nobody does it here.</li>
+<li><strong>Availability is now coupled the wrong way.</strong> If the search index is down,
+checkout fails. You have made the least important component a dependency of
+the most important one. That is backwards, and it is not fixable within v1.</li>
+<li><strong>Latency is coupled.</strong> Row 8 above is fine at 21 ms. It is not fine when one
+read model's update occasionally takes 400 ms because of a lock or a remote
+call. That 400 ms is now inside Priya's checkout.</li>
+</ol>
+<p>Points 2 and 3 are the same shape. <strong>Synchronous coupling means the write path
+inherits every read model's worst day.</strong> That is the requirement v2 exists to
+break, and breaking it creates every remaining problem in this lab.</p>
+<h3 id="readme-102--v2-what-happens-when-dev-walks-over-on-a-timer">10.2 — v2: what happens when Dev walks over on a timer?</h3>
+<blockquote>
+<p>Write the fact down in the same transaction as the sale, and let Dev pick it
+up later. Asha's counter is now insulated. And the window is born.</p>
+</blockquote>
+<p>Write the event to a feed inside the write transaction. That is the outbox
+rule. Then let a separate process apply it later.</p>
+<div class="code"><pre><code>-- command side, one transaction
+BEGIN;
+  INSERT INTO orders ...;
+  INSERT INTO events (seq, type, payload) VALUES (17, &#x27;OrderPlaced&#x27;, ...);
+COMMIT;
+
+-- projector, separately, forever
+loop every 500ms:
+    BEGIN;                                     -- on the READ store
+      rows = SELECT * FROM events WHERE seq &gt; :checkpoint ORDER BY seq LIMIT 100;
+      for each row: apply(row);
+      UPDATE projector_state SET checkpoint = :lastSeq;
+    COMMIT;
+</code></pre></div>
+<p>Now checkout is insulated. Its transaction contains one extra small INSERT and
+nothing else. The read models can be anywhere, in any technology, and can be
+down without checkout noticing.</p>
+<p><strong>And the consistency window is born.</strong> Dev now naps between trips, and Priya's
+order sits in the ledger unread for the length of the nap.</p>
+<blockquote>
+<p><strong>🔮 Predict.</strong> Dev naps for 500 ms between trips. An order commits at a random
+moment. How long, on average, before it appears on the board? Guess before you
+look.</p>
+<details><summary>Reveal</summary>
+About 250 ms of waiting for Dev to wake, plus the work itself, which lands the
+mean near 297 ms. If you said 500 ms you assumed every order arrives just as
+Dev falls asleep; on average an order arrives halfway through the nap. If you
+said "it depends on load", you are right about the second term and it is
+smaller than you think — see the formula below.
+</details>
+
+</blockquote>
+<p>Here is the window at the canonical load, first as the typical case.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Projector</th>
+  <th>Mean window</th>
+  <th>p50</th>
+  <th>What the typical reader sees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>poll 100 ms</td>
+  <td>65.1 ms</td>
+  <td>65.2</td>
+  <td>a board that is a blink behind</td>
+</tr>
+<tr>
+  <td><strong>poll 500 ms</strong></td>
+  <td><strong>297.2 ms</strong></td>
+  <td>297.9</td>
+  <td>the canonical setup, a third of a second behind</td>
+</tr>
+<tr>
+  <td>poll 1000 ms</td>
+  <td>586.8 ms</td>
+  <td>586.4</td>
+  <td>over half a second behind</td>
+</tr>
+<tr>
+  <td>poll 2000 ms</td>
+  <td>1160.9 ms</td>
+  <td>1160.3</td>
+  <td>more than a second behind</td>
+</tr>
+<tr>
+  <td>poll 5000 ms</td>
+  <td>2513.0 ms</td>
+  <td>2515.2</td>
+  <td>two and a half seconds behind</td>
+</tr>
+</tbody>
+</table></div>
+<p>And then as the tail, which is where the incidents live.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Projector</th>
+  <th>p95</th>
+  <th>p99</th>
+  <th>Max</th>
+  <th>What the unlucky reader sees</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>poll 100 ms</td>
+  <td>110.1</td>
+  <td>116.6</td>
+  <td>129.9</td>
+  <td>still under a seventh of a second</td>
+</tr>
+<tr>
+  <td><strong>poll 500 ms</strong></td>
+  <td>522.1</td>
+  <td><strong>544.9</strong></td>
+  <td>577.3</td>
+  <td>roughly one whole nap behind</td>
+</tr>
+<tr>
+  <td>poll 1000 ms</td>
+  <td>1035.3</td>
+  <td>1079.0</td>
+  <td>1123.5</td>
+  <td>a full second behind</td>
+</tr>
+<tr>
+  <td>poll 2000 ms</td>
+  <td>2066.3</td>
+  <td>2147.1</td>
+  <td>2199.3</td>
+  <td>two seconds behind</td>
+</tr>
+<tr>
+  <td>poll 5000 ms</td>
+  <td>4655.8</td>
+  <td>4920.0</td>
+  <td>5198.2</td>
+  <td>five seconds behind</td>
+</tr>
+</tbody>
+</table></div>
+<p>The structure is completely regular. Say the rule in words before the symbols.
+<strong>An order waits for half of Dev's nap. Then it waits while Dev works through
+whatever piled up ahead of it. Then it waits for the board to be written.</strong></p>
+<p>Three of those pieces have short names. The nap is the <strong>poll interval</strong>. How
+busy Dev is, meaning his work arriving divided by his capacity, is <strong>ρ (rho)</strong>.
+The work itself is one apply plus one checkpoint commit.</p>
+<blockquote>
+<p><strong>mean window ≈ (poll / 2) · (1 + ρ) + apply + checkpoint</strong></p>
+</blockquote>
+<p>Three Greek letters run through the rest of this lab. Each is a thing in the
+shop first, a sentence in words second, and a symbol only third.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>In the shop</th>
+  <th>In words</th>
+  <th>Symbol</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>how fast sales arrive at the counter</td>
+  <td>events committed per second</td>
+  <td><strong>λ (lambda)</strong></td>
+</tr>
+<tr>
+  <td>how fast Dev can work</td>
+  <td>events one projector can apply per second</td>
+  <td><strong>μ (mu)</strong></td>
+</tr>
+<tr>
+  <td>how busy Dev is</td>
+  <td>arrivals divided by capacity</td>
+  <td><strong>ρ (rho)</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>In words once more, because it is the formula the whole lab hangs on: half the
+nap, stretched by how busy the clerk is, plus the time to do the work.</p>
+<p>Why is the drain term ρ·poll? Because an event arrives at a uniformly random
+point in the nap, so it waits <strong>poll/2</strong> on average. Then it waits for the
+projector to chew through the events ahead of it in the same batch. At
+utilisation ρ, that pile takes ρ·poll to clear.</p>
+<p>Check it. At ρ = 0.96 the formula gives 250·1.964 = 491 ms, and the simulator
+gives 491 ms.</p>
+<p>Now read the practical consequence off that formula. <strong>At low utilisation, which is
+what a healthy projector looks like, the window is essentially poll/2 and
+nothing else.</strong></p>
+<p>Your consistency window is a config value you chose. Probably without thinking
+about it. Probably by copying it from another service.</p>
+<p><strong>Visibility is quantised.</strong> Because the applies and the checkpoint share one
+transaction, a whole batch becomes visible at one instant. Dev does not chalk one
+number at a time; he steps back and the whole board changes at once.</p>
+<p>So the window does not shrink smoothly toward zero for lucky events. Events
+cluster at batch commits. That is why the p50 of 297.9 ms sits almost exactly at
+the mean, and the p95 jumps to 522 ms. The distribution is closer to a sawtooth
+than a bell.</p>
+<h3 id="readme-103--v3-what-if-you-stop-polling-and-just-tell-dev">10.3 — v3: what if you stop polling and just tell Dev?</h3>
+<blockquote>
+<p>The formula says the whole window is the nap. So delete the nap.</p>
+</blockquote>
+<p>Have the write side notify the projector. A <code>LISTEN/NOTIFY</code>, a broker push, a
+long-lived CDC stream. Then let it apply events as they arrive, batching whatever
+happens to be available. Asha rings a bell instead of letting Dev nap.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Projector</th>
+  <th>Mean window</th>
+  <th>p99</th>
+  <th>Capacity</th>
+  <th>What changed</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>poll 500 ms</td>
+  <td>297.2 ms</td>
+  <td>544.9 ms</td>
+  <td>487.8/s</td>
+  <td>Dev naps, then works</td>
+</tr>
+<tr>
+  <td><strong>streaming</strong></td>
+  <td><strong>8.1 ms</strong></td>
+  <td><strong>15.5 ms</strong></td>
+  <td>487.8/s</td>
+  <td>Dev is woken, then works</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>A 37× reduction in the mean window from deleting a timer.</strong> And notice the
+capacity column. <strong>It did not change at all.</strong></p>
+<p>That is the sentence to remember:</p>
+<blockquote>
+<p>Streaming fixes the <em>floor</em> of the window. It does nothing to the <em>ceiling</em>.</p>
+</blockquote>
+<p>There is a nice secondary result hiding here, and it corrected an intuition I had
+to abandon. I expected batching to trade latency for throughput. Bigger batches,
+wider window. Under streaming it does not.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Max batch</th>
+  <th>Capacity</th>
+  <th>Mean window</th>
+  <th>Actual mean batch</th>
+  <th>What this row shows</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>142.9/s</td>
+  <td>8.38 ms</td>
+  <td>1.00</td>
+  <td>one at a time, checkpoint cost dominates</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>400.0/s</td>
+  <td>8.12 ms</td>
+  <td>1.04</td>
+  <td>room for ten, still takes one</td>
+</tr>
+<tr>
+  <td>100</td>
+  <td>487.8/s</td>
+  <td>8.12 ms</td>
+  <td>1.04</td>
+  <td>the canonical setting</td>
+</tr>
+<tr>
+  <td>2000</td>
+  <td>499.4/s</td>
+  <td>8.12 ms</td>
+  <td>1.04</td>
+  <td>a huge ceiling that is never reached</td>
+</tr>
+</tbody>
+</table></div>
+<p>Raising the batch limit from 1 to 2000 changed capacity by 3.5× and the window
+by nothing. Why? Because the batch is <strong>opportunistic</strong>. It takes whatever has
+arrived, which at ρ = 0.08 is one event.</p>
+<p>Batching only costs latency if you <em>wait</em> to fill the batch. And that waiting has
+a name you already know. It is a linger timer, and <strong>a poll interval is a linger
+timer</strong>. That is precisely why v2 cost 297 ms and v3 costs 8 ms. Same mechanism,
+one lab apart.</p>
+<p>So: set the batch limit high, and never add a fill-wait.</p>
+<h3 id="readme-104--v4-what-breaks-the-moment-there-are-eight-devs">10.4 — v4: what breaks the moment there are eight Devs?</h3>
+<blockquote>
+<p>Streaming fixed the floor. Capacity is still one clerk. Hire eight and one
+stall rewrites three orders permanently.</p>
+</blockquote>
+<p>Capacity is still one projector's 487.8 events/s. When Asha's order rate
+approaches that, the obvious move is more workers.</p>
+<p>The obvious way to do it is wrong, and it fails so rarely that it will reach
+production.</p>
+<p>Hand events to N workers round-robin. Now consider one order. <code>OrderPlaced(ord-1)</code>
+at t. <code>OrderCancelled(ord-1)</code> 50 ms later. Different workers. Normally the placed
+event is applied first because it arrived first, and everything is fine.</p>
+<p>Then one worker stalls. A GC pause, a slow read-store shard, a lock. One second.</p>
+<blockquote>
+<p><strong>🔮 Predict.</strong> 20,000 orders over ten minutes, 8 workers, one single 1-second
+stall. How many orders end up permanently wrong on the board?</p>
+<details><summary>Reveal</summary>
+Three. If you said zero, you assumed arrival order survives round-robin
+hand-off, and it does not survive one stalled worker. If you guessed hundreds,
+you overestimated: the damage needs two events for the <em>same</em> order to
+straddle the stall, which is rare. Three out of twenty thousand is 0.015%, and
+that rarity is exactly what makes it reach production.
+</details>
+
+</blockquote>
+<div class="table"><table><thead>
+<tr>
+  <th>Setup</th>
+  <th>Cancelled orders left looking alive</th>
+  <th>Max apply delay</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>8 workers, round-robin, no stall</td>
+  <td><strong>0</strong></td>
+  <td>4 ms</td>
+</tr>
+<tr>
+  <td>8 workers, round-robin, one 1 s stall</td>
+  <td><strong>3</strong></td>
+  <td>989 ms</td>
+</tr>
+<tr>
+  <td>8 workers, <strong>partitioned by order id</strong>, one 1 s stall</td>
+  <td><strong>0</strong></td>
+  <td>990 ms</td>
+</tr>
+</tbody>
+</table></div>
+<p>Three orders out of twenty thousand, 0.015%, where the CANCELLED event was
+applied first and the later PLACED event overwrote it.</p>
+<p>Those three orders are now <strong>permanently</strong> shown as active in the read model.
+Not stale. Not eventually consistent. Wrong forever. And a rebuild recreates the
+state correctly, so the two disagree and nobody knows why.</p>
+<p>The fix is the one your <a href="../53-kafka/notes.html#readme">kafka</a> lab already taught. <strong>Route by
+key.</strong> All events for one order go to the same worker, so they are applied in
+order relative to each other. Events for <em>different</em> orders are still parallel.</p>
+<p>The third row shows what that does. Zero corruption, and the stall turns into
+990 ms of extra latency for that partition.</p>
+<blockquote>
+<p><strong>Partitioning by key converts a correctness failure into a latency failure.</strong>
+That is the whole trade, and it is almost always the right one, because latency
+failures are visible and correctness failures are not.</p>
+</blockquote>
+<p>One honest note on the numbers, because the raw sweep looks like it says
+something it does not. Stalling <em>one</em> worker out of W corrupts fewer orders as W
+grows: 8 at W=2, 3 at W=8, 1 at W=16.</p>
+<p>That looks like &quot;more parallelism is safer&quot;. It is not. One stalled worker out of
+32 simply has a 1/32 blast radius. Let every worker stall once and the total is
+flat.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Workers</th>
+  <th>Total corrupted across one stall each</th>
+  <th>Avg per stall</th>
+  <th>What the row proves</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>2</td>
+  <td>18</td>
+  <td>9.00</td>
+  <td>few workers, big blast each</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>23</td>
+  <td>5.75</td>
+  <td>more workers, smaller blasts</td>
+</tr>
+<tr>
+  <td>8</td>
+  <td>29</td>
+  <td>3.63</td>
+  <td>the total has stopped moving</td>
+</tr>
+<tr>
+  <td>16</td>
+  <td>29</td>
+  <td>1.81</td>
+  <td>same total, halved per stall</td>
+</tr>
+<tr>
+  <td>32</td>
+  <td>29</td>
+  <td>0.91</td>
+  <td>same total again</td>
+</tr>
+</tbody>
+</table></div>
+<p>Flat from 8 workers up. Adding workers does not reduce your exposure. It divides
+the same exposure into smaller pieces.</p>
+<h3 id="readme-105--v5-what-happens-when-dev-is-interrupted-mid-board">10.5 — v5: what happens when Dev is interrupted mid-board?</h3>
+<blockquote>
+<p>This is the only step about being <em>right</em> rather than fast, and it cannot be
+skipped.</p>
+</blockquote>
+<p>The projector dies mid-batch. It has applied 60 of 100 events and has not yet
+committed its checkpoint. It restarts, reads from its old checkpoint, and applies
+those 60 events <strong>again</strong>.</p>
+<p>In the shop: Dev is halfway through chalking today's revenue when he is called
+away. He comes back, sees his pencil mark still at the old entry, and adds the
+same sales to the board a second time.</p>
+<p>Whether that is harmless or catastrophic depends on two independent properties.</p>
+<blockquote>
+<p><strong>🔮 Predict.</strong> Two protections are available: writing the board in a way that
+is safe to repeat, and moving the pencil mark in the same stroke as the
+chalking. You can have both, one, or neither. How many of the four combinations
+produce a wrong revenue number?</p>
+<details><summary>Reveal</summary>
+Exactly one: neither. If you guessed two or three, you assumed the protections
+stack. They do not — each one alone closes the hole completely, and the matrix
+below shows three zeros and one 5.39%.
+</details>
+
+</blockquote>
+<p>Here is the full matrix. 200,000 events, batch 100, one crash per 1,000 applies,
+210 crashes.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Apply is idempotent?</th>
+  <th>Checkpoint in the same transaction?</th>
+  <th>Revenue error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>yes</td>
+  <td>yes</td>
+  <td><strong>0.00%</strong></td>
+</tr>
+<tr>
+  <td>yes</td>
+  <td>no</td>
+  <td><strong>0.00%</strong></td>
+</tr>
+<tr>
+  <td>no</td>
+  <td>yes</td>
+  <td><strong>0.00%</strong></td>
+</tr>
+<tr>
+  <td><strong>no</strong></td>
+  <td><strong>no</strong></td>
+  <td><strong>+5.39%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Either protection alone is sufficient. Having neither reports revenue 5.39%
+too high.</strong> And this is the part that makes it dangerous: nothing is broken, no
+error is logged, no alert fires.</p>
+<p>The number on Meera's board is simply wrong, and it drifts further every time
+Dev restarts.</p>
+<p>The two protections are genuinely different mechanisms, and you should know which
+one you have.</p>
+<p><strong>Idempotent apply</strong> means re-applying an event is a no-op. This is a property of
+<em>how you write the projection</em>, and it is mostly a matter of avoiding
+accumulation.</p>
+<div class="code"><pre><code class="language-sql">-- NOT idempotent: applying twice double-counts
+UPDATE daily_revenue SET total = total + 120 WHERE day = &#x27;2026-09-01&#x27;;
+
+-- idempotent: applying twice is the same as applying once
+MERGE INTO customer_dashboard USING (...) ON (order_id = &#x27;ord-1&#x27;)
+  WHEN MATCHED THEN UPDATE SET status = &#x27;PLACED&#x27;, total = 120.00
+  WHEN NOT MATCHED THEN INSERT (...);
+
+-- idempotent accumulation: guard with the sequence you have already applied
+UPDATE daily_revenue SET total = total + 120, last_seq = 17
+  WHERE day = &#x27;2026-09-01&#x27; AND last_seq &lt; 17;
+</code></pre></div>
+<p>Upserts keyed by the aggregate's identity are naturally idempotent. <strong>Counters
+and sums are not</strong>, and that is where the 5.39% came from. Any projection with a
+<code>+=</code> in it needs the third form.</p>
+<p><strong>Atomic checkpoint</strong> means the applies and the checkpoint advance commit
+together, so a crash rolls back both and the batch is simply retried. Dev chalks
+the board and moves his pencil mark in one indivisible stroke.</p>
+<p>This is available only when the checkpoint lives in <strong>the read store</strong>. You write
+it to a <code>projector_state</code> table in the same database, in the same transaction. It
+is the cheaper protection when you can have it, and §13.2 explains the very
+common production situation where you cannot.</p>
+<p><strong>The blast radius is the batch size.</strong> With neither protection, the damage
+scales directly with how much work a crash throws away.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Batch size</th>
+  <th>Revenue error</th>
+  <th>What Meera's board says</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>+0.09%</td>
+  <td>essentially right</td>
+</tr>
+<tr>
+  <td>10</td>
+  <td>+0.49%</td>
+  <td>half a percent high, nobody notices</td>
+</tr>
+<tr>
+  <td>100</td>
+  <td>+5.39%</td>
+  <td>the canonical setting, visibly high</td>
+</tr>
+<tr>
+  <td>500</td>
+  <td>+32.92%</td>
+  <td>a third too high</td>
+</tr>
+<tr>
+  <td>2000</td>
+  <td><strong>+242.81%</strong></td>
+  <td>3.4× the truth</td>
+</tr>
+</tbody>
+</table></div>
+<p>At batch 2000 the reported revenue is <strong>3.4× the truth</strong>. Same crash rate, same
+events, same code. Only the batch size changed.</p>
+<p>And there is a second, subtler batch limit that applies <strong>even when you are fully
+correct</strong>. Every replayed event is itself exposed to the crash hazard, so a large
+enough batch spends most of its time replaying.</p>
+<p>Name the quantity in words first: <strong>how many crashes you expect inside one
+batch</strong>. That is the batch size multiplied by the chance of crashing on any one
+event. Written short, it is <strong>B·h</strong>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Batch</th>
+  <th>B·h (expected crashes per batch)</th>
+  <th>Wasted replay ÷ useful work</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>100</td>
+  <td>0.10</td>
+  <td>0.05×</td>
+</tr>
+<tr>
+  <td>500</td>
+  <td>0.50</td>
+  <td>0.33×</td>
+</tr>
+<tr>
+  <td>1000</td>
+  <td>1.00</td>
+  <td>0.76×</td>
+</tr>
+<tr>
+  <td>2000</td>
+  <td>2.00</td>
+  <td>2.43×</td>
+</tr>
+<tr>
+  <td>5000</td>
+  <td>5.00</td>
+  <td><strong>27.13×</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>At B·h = 5 the projector does 27 units of wasted work per unit of progress. It is
+still perfectly correct, because the atomic checkpoint guarantees that. It just
+barely moves.</p>
+<p>Engineers call this a <strong>poison batch</strong>: a batch large enough that a crash within
+it is likely, so it rarely completes, so it retries, so it crashes.</p>
+<p>The governing quantity is the dimensionless product B·h, confirmed at two
+independent hazard rates. Replay ratios were 0.13 / 0.29 / 0.70 / 1.96 at
+B·h = 0.25 / 0.5 / 1 / 2, against 0.05 / 0.33 / 0.76 / 2.43 at the other rate.</p>
+<p>Push it further and the projector stops being a projector. At B·h = 12, with batch 3,000 and one
+crash per 250 applies, it had applied <strong>1.5% of the feed</strong> before a work budget
+of 60× the useful work ran out. It was not slow. It had no forward
+progress at all, and it would have stayed that way indefinitely.</p>
+<p><strong>Keep B·h well under 1.</strong> If your projector crashes once per thousand events,
+batches of 100 are comfortable and batches of 5,000 are a trap.</p>
+<p>Note that this is a <em>self-inflicted</em> failure mode. It is caused entirely by the
+batch size you chose, and it gets worse exactly when the system is already
+unhealthy, because that is when the crash rate rises.</p>
+<h3 id="readme-checkpoint--what-can-you-now-explain">Checkpoint — what can you now explain?</h3>
+<p>You can now say what CQRS is. You can say why the split happens at all: §4's
+isolation plus the reads-per-change ratio. You can say what the split costs: a
+window whose mean is half the poll interval, stretched by utilisation.</p>
+<p>You can say how to make the window small — stream, do not poll. You can say how
+to add capacity without corrupting anything — partition by key. And you can say
+what makes a projection correct under crashes: idempotent applies, or an atomic
+checkpoint, and a batch size with B·h well under 1.</p>
+<p>Here are the three numbers to carry out of this section.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Number</th>
+  <th>Value</th>
+  <th>What it means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>The window's width</td>
+  <td>297.2 ms mean, 544.9 ms p99</td>
+  <td>how stale a board is at the canonical setting</td>
+</tr>
+<tr>
+  <td>The window's formula</td>
+  <td>(poll/2)·(1 + ρ) + apply + checkpoint</td>
+  <td>half the nap, stretched by how busy Dev is</td>
+</tr>
+<tr>
+  <td>The window's floor without a timer</td>
+  <td>8.1 ms mean, 15.5 ms p99</td>
+  <td>what deleting the nap buys, at the same capacity</td>
+</tr>
+</tbody>
+</table></div>
+<blockquote>
+<p><strong>Say it back.</strong> You have finished the intermediate layer. Without using the
+word <em>idempotent</em>, explain to a friend why Dev writing &quot;revenue = revenue +
+120&quot; is dangerous and writing &quot;this order's total is 120&quot; is not.</p>
+<details><summary>A good answer sounds like</summary>
+"If Dev is interrupted and starts the same page again, the first sentence adds
+the same sale to the board twice. The board never recovers, because there is
+no record of what it already counted. The second sentence just says what the
+order's total is, so saying it a second time changes nothing. Anything that
+<em>adds</em> has to also remember how far it got."
+</details>
+
+</blockquote>
+<p>What remains is what happens on a bad day. And the failure that matters most is
+not any of the above. It is the one in §11.2.</p>
+<hr />
+<h2 id="readme-11-what-do-the-failure-scenarios-actually-look-like">11. What do the failure scenarios actually look like?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight bad days. One of them costs money, three of them are
+invisible while they happen, and the graph everyone watches goes flat right up
+until it goes vertical.</p>
+</blockquote>
+<h3 id="readme-111--why-does-priya-not-believe-her-own-order-went-through">11.1 — Why does Priya not believe her own order went through?</h3>
+<p>Priya places an order. The command returns OK. The browser redirects to &quot;My
+Orders&quot; and queries the read model. The list is empty.</p>
+<p>This is not a bug. It is the pattern working exactly as designed. Dev has not
+walked over yet.</p>
+<p>The only question is how often it happens, and the answer is worse than most
+people guess. Read the table as: of everyone who places an order, what
+percentage sees nothing when their page asks this many milliseconds later.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Projector</th>
+  <th>after 100 ms</th>
+  <th>after 250 ms</th>
+  <th>after 500 ms</th>
+  <th>What Priya concludes</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>poll 5000 ms</td>
+  <td>99.6%</td>
+  <td>97.5%</td>
+  <td>92.5%</td>
+  <td>&quot;it did not save&quot;</td>
+</tr>
+<tr>
+  <td>poll 2000 ms</td>
+  <td>99.9%</td>
+  <td>95.7%</td>
+  <td>83.1%</td>
+  <td>&quot;it did not save&quot;</td>
+</tr>
+<tr>
+  <td><strong>poll 500 ms</strong></td>
+  <td><strong>89.4%</strong></td>
+  <td><strong>59.5%</strong></td>
+  <td><strong>9.5%</strong></td>
+  <td>&quot;sometimes it does not save&quot;</td>
+</tr>
+<tr>
+  <td>poll 100 ms</td>
+  <td>15.0%</td>
+  <td>0.0%</td>
+  <td>0.0%</td>
+  <td>mostly fine, occasionally odd</td>
+</tr>
+<tr>
+  <td><strong>streaming</strong></td>
+  <td><strong>0.0%</strong></td>
+  <td><strong>0.0%</strong></td>
+  <td><strong>0.0%</strong></td>
+  <td>it always works</td>
+</tr>
+</tbody>
+</table></div>
+<p>With a 500 ms poll, a completely ordinary configuration, <strong>89% of users see
+their own order missing</strong> if the page loads 100 ms later.</p>
+<p>This is the number that generates the bug report titled &quot;orders sometimes don't
+save&quot;. Which is then not something anyone can make happen again on demand,
+because by the time they look the window has closed.</p>
+<p>The fixes, cheapest first.</p>
+<ol>
+<li><strong>Render from the command result, not from a query.</strong> The confirmation page
+already knows the order succeeded. It does not need to ask. This costs nothing
+and removes the entire class of problem for the most common screen.</li>
+<li><strong>Stream instead of poll.</strong> The table's last row: 0.0% at every think time.
+This is the highest-leverage change available, and it is a config decision,
+not an architecture one.</li>
+<li><strong>Read-your-own-writes by waiting.</strong> Return the event's sequence number from
+the command. Have that user's next query block until the projector's checkpoint
+passes it. Precise, costs a little latency for one user, and requires plumbing
+the sequence number through your API.</li>
+<li><strong>Route that specific query to the write model.</strong> Correct, and a legitimate
+escape hatch. But if you find yourself doing it for most screens, you have
+discovered that this subsystem did not want CQRS.</li>
+</ol>
+<p>Now note what streaming does <em>not</em> fix. At higher load its own window grows, and
+the honest limits of fix 2 are in this table.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Condition</th>
+  <th>Mean window</th>
+  <th>p99</th>
+  <th>Users seeing a stale page</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>streaming, canonical load</td>
+  <td>8.1 ms</td>
+  <td>15.5 ms</td>
+  <td>0.0% at 100 ms</td>
+</tr>
+<tr>
+  <td>streaming at ρ = 0.92</td>
+  <td>89.6 ms</td>
+  <td>197 ms</td>
+  <td>87% of those querying 50 ms later</td>
+</tr>
+</tbody>
+</table></div>
+<p>One caveat on the first row, since it sets expectations: no network hop is
+modelled there. Add a real broker and a real network and it is tens of
+milliseconds, not zero. Still far inside any page load.</p>
+<p>The window is never zero unless the projection is synchronous, which is v1.</p>
+<h3 id="readme-112--the-one-that-matters-what-happens-when-a-command-asks-a-chalkboard">11.2 — THE ONE THAT MATTERS: what happens when a command asks a chalkboard?</h3>
+<p>This is the failure the entire lab is built around. It is the one that turns a
+latency property into lost money.</p>
+<p>Omar writes an inventory check. It is the obvious thing to write.</p>
+<div class="code"><pre><code>handlePlaceOrder(cmd):
+    sold = SELECT units_sold FROM product_stats WHERE sku = cmd.sku   -- READ MODEL
+    if sold &gt;= stock: reject(&quot;out of stock&quot;)
+    ... accept, write, emit OrderPlaced ...
+</code></pre></div>
+<p>It reads beautifully. <code>product_stats</code> is fast, it is already there, it is what
+the product page uses.</p>
+<p>And it is a correctness bug. The read model is by construction behind. So <strong>every
+order that arrives inside the consistency window sees a stock level that has
+already been spent.</strong></p>
+<p>In the shop: the cashier glanced at the chalkboard instead of the ledger. The
+board says one keyboard left. It has said that for three minutes, and eleven
+people have bought it.</p>
+<p>One unit left. Here is how many orders get accepted for it.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Setup</th>
+  <th>Mean window</th>
+  <th>Mean oversells</th>
+  <th>p99</th>
+  <th>Worst seen</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>λ=40/s, poll 2000 ms</td>
+  <td>1160.9 ms</td>
+  <td>46.66</td>
+  <td>97</td>
+  <td>117</td>
+</tr>
+<tr>
+  <td><strong>λ=40/s, poll 500 ms</strong></td>
+  <td>297.2 ms</td>
+  <td><strong>11.95</strong></td>
+  <td><strong>29</strong></td>
+  <td><strong>41</strong></td>
+</tr>
+<tr>
+  <td>λ=40/s, poll 100 ms</td>
+  <td>65.1 ms</td>
+  <td>2.61</td>
+  <td>9</td>
+  <td>15</td>
+</tr>
+<tr>
+  <td>λ=40/s, streaming</td>
+  <td>8.1 ms</td>
+  <td>0.33</td>
+  <td>2</td>
+  <td>5</td>
+</tr>
+<tr>
+  <td>λ=400/s, poll 500 ms</td>
+  <td>456.5 ms</td>
+  <td>182.54</td>
+  <td>325</td>
+  <td>385</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>One unit of stock. Twelve orders accepted on average, forty-one in the worst
+case.</strong></p>
+<p>The expected count is exactly what you would derive by hand. It is the order rate
+multiplied by the window. At 40 orders a second and a 297 ms window that is
+11.87, against 11.95 in the run.</p>
+<p>Now read the table for the lesson, because the lesson is not &quot;the window was too
+wide&quot;.</p>
+<blockquote>
+<p>Tightening the window from 2000 ms to streaming took the oversell from 46.66 to
+0.33. It never reached zero — and it cannot, because there is always <em>some</em>
+window. <strong>You cannot fix a decision made on stale data by making the data less
+stale. You can only move the decision.</strong></p>
+</blockquote>
+<p>The fix is to put the check where the truth is. Back to the ledger.</p>
+<div class="code"><pre><code>handlePlaceOrder(cmd):
+    BEGIN;
+      UPDATE stock SET units = units - 1
+        WHERE sku = cmd.sku AND units &gt;= 1;   -- write model, conditional
+      if rowsAffected = 0: rollback; reject(&quot;out of stock&quot;)
+      INSERT INTO orders ...; INSERT INTO events ...;
+    COMMIT;
+</code></pre></div>
+<p>One conditional write on the write model, and the oversell is exactly zero. At
+any window, any load, any poll interval.</p>
+<p>It is the same conditional-write move your
+<a href="../10-optimistic-vs-pessimistic-locking/notes.html#readme">optimistic-vs-pessimistic-locking</a> and
+<a href="../49-idempotency/notes.html#readme">idempotency</a> labs kept finding in different costumes.</p>
+<p><strong>How to find this in an existing codebase.</strong> Grep your command handlers for
+reads of any projection table. Every hit is either a bug, or a deliberate,
+documented decision that the staleness is acceptable for that rule. In my
+experience most hits are neither. They are someone reaching for the convenient
+table.</p>
+<p>The read model may still <em>show</em> stock. Showing is fine. Deciding is not.</p>
+<h3 id="readme-113--why-is-the-lag-graph-flat-right-up-until-it-is-vertical">11.3 — Why is the lag graph flat right up until it is vertical?</h3>
+<p>You are monitoring projector lag, as everyone advises. Arjun is on call and this
+graph is on his wall.</p>
+<blockquote>
+<p><strong>🔮 Predict.</strong> Traffic rises steadily until Dev is 98% busy. How much does the
+lag graph move on the way there? Then traffic rises another 2%. Now how much?</p>
+<details><summary>Reveal</summary>
+On the way to 98% it moves 1.7×, from 307 ms to 509 ms — almost nothing, on a
+graph you would call healthy. The next 2% multiplies it by 17×. If you expected
+the smooth M/M/1 hockey stick from your queueing lab, the reason it is flatter
+is below, and the reason it is more dangerous is the same reason.
+</details>
+
+</blockquote>
+<p>Here is what Arjun's monitor shows as the projector approaches saturation.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>ρ</th>
+  <th>λ</th>
+  <th>Mean window</th>
+  <th>p99</th>
+  <th>What Arjun would call this</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>0.10</td>
+  <td>49/s</td>
+  <td>307 ms</td>
+  <td>554 ms</td>
+  <td>healthy</td>
+</tr>
+<tr>
+  <td>0.50</td>
+  <td>244/s</td>
+  <td>384 ms</td>
+  <td>697 ms</td>
+  <td>healthy</td>
+</tr>
+<tr>
+  <td>0.80</td>
+  <td>390/s</td>
+  <td>445 ms</td>
+  <td>786 ms</td>
+  <td>healthy</td>
+</tr>
+<tr>
+  <td>0.90</td>
+  <td>439/s</td>
+  <td>463 ms</td>
+  <td>797 ms</td>
+  <td>healthy</td>
+</tr>
+<tr>
+  <td>0.95</td>
+  <td>463/s</td>
+  <td>468 ms</td>
+  <td>799 ms</td>
+  <td>healthy</td>
+</tr>
+<tr>
+  <td>0.98</td>
+  <td>478/s</td>
+  <td>509 ms</td>
+  <td>840 ms</td>
+  <td>healthy, and one bad minute from ruin</td>
+</tr>
+<tr>
+  <td>1.00</td>
+  <td>488/s</td>
+  <td>731 ms</td>
+  <td>1,334 ms</td>
+  <td>the first hint of trouble</td>
+</tr>
+<tr>
+  <td><strong>1.02</strong></td>
+  <td><strong>498/s</strong></td>
+  <td><strong>8,661 ms</strong></td>
+  <td><strong>16,538 ms</strong></td>
+  <td>the page fires, far too late</td>
+</tr>
+<tr>
+  <td>1.05</td>
+  <td>512/s</td>
+  <td>22,128 ms</td>
+  <td>43,105 ms</td>
+  <td>boards minutes behind</td>
+</tr>
+<tr>
+  <td>1.20</td>
+  <td>585/s</td>
+  <td>89,448 ms</td>
+  <td>176,383 ms</td>
+  <td>boards useless</td>
+</tr>
+</tbody>
+</table></div>
+<p>From ρ = 0.10 to ρ = 0.98, almost the entire operating range, the mean window
+moves from 307 ms to 509 ms. <strong>A 1.7× change while utilisation went up nearly
+tenfold.</strong></p>
+<p>Then a 2% further increase in traffic multiplies it by 17×. Past that it is not a
+number at all. At ρ = 1.05 the backlog age was 14.3 s after 5 minutes, 29.0 s
+after 10, 57.9 s after 20, and 118.2 s after 40.</p>
+<p>It doubles when you double the run. That is what &quot;unbounded&quot; looks like when you
+put a number on it instead of asserting it.</p>
+<p>Why so much flatter than the M/M/1 curve you know from
+<a href="../57-queueing-theory/notes.html#readme">queueing-theory</a>? Because a polling projector is a
+<strong>bulk-service</strong> queue. It does not serve events one at a time as they arrive. It
+sleeps, then drains everything at once.</p>
+<p>Below capacity, the window is set by the sleep, not by the queue. So the queue's
+growth is invisible until the drain no longer fits in one interval.</p>
+<p>The operational conclusion is uncomfortable and worth stating plainly.</p>
+<blockquote>
+<p><strong>Projector lag is not a leading indicator of projector saturation.</strong> By the
+time lag moves, you are already over capacity. You must monitor the projector's
+<em>utilisation</em>, meaning busy time ÷ wall time, as a separate signal.</p>
+</blockquote>
+<p>That is the same lesson your <a href="../58-load-shedding/notes.html#readme">load-shedding</a> lab reached
+about throughput. It saw 50.1/s during a total outage and 50.0/s during optimal
+operation. The metric everyone watches is the one that cannot distinguish healthy
+from doomed.</p>
+<h3 id="readme-114--what-happens-when-the-read-store-slows-and-no-alarm-knows">11.4 — What happens when the read store slows and no alarm knows?</h3>
+<p>Nothing changes about your traffic. The read store gets slower. A rebuilt index,
+a noisy neighbour, a table that outgrew its cache. Applies go from 2 ms to 20 ms.</p>
+<p>Dev has not changed. His handwriting has got slower. First, what that does to his
+capacity.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Apply cost</th>
+  <th>Capacity</th>
+  <th>ρ</th>
+  <th>What has happened to Dev</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>2 ms</td>
+  <td>487.8/s</td>
+  <td>0.082</td>
+  <td>loafing, the canonical setup</td>
+</tr>
+<tr>
+  <td>5 ms</td>
+  <td>198.0/s</td>
+  <td>0.202</td>
+  <td>comfortable</td>
+</tr>
+<tr>
+  <td>10 ms</td>
+  <td>99.5/s</td>
+  <td>0.402</td>
+  <td>working steadily</td>
+</tr>
+<tr>
+  <td>15 ms</td>
+  <td>66.4/s</td>
+  <td>0.602</td>
+  <td>busy</td>
+</tr>
+<tr>
+  <td>20 ms</td>
+  <td>49.9/s</td>
+  <td>0.802</td>
+  <td>one bad day from the cliff</td>
+</tr>
+<tr>
+  <td>24 ms</td>
+  <td>41.6/s</td>
+  <td>0.962</td>
+  <td>on the edge</td>
+</tr>
+<tr>
+  <td>~25 ms</td>
+  <td>40.0/s</td>
+  <td>1.00</td>
+  <td>he can no longer keep up at all</td>
+</tr>
+</tbody>
+</table></div>
+<p>And second, what it does to the window and to recovery.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Apply cost</th>
+  <th>Mean window</th>
+  <th>p99</th>
+  <th>Drain a 10,000-event backlog</th>
+  <th>What the same alarm means</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>2 ms</td>
+  <td>298 ms</td>
+  <td>543 ms</td>
+  <td><strong>0.4 min</strong></td>
+  <td>a shrug</td>
+</tr>
+<tr>
+  <td>5 ms</td>
+  <td>361 ms</td>
+  <td>618 ms</td>
+  <td>1.1 min</td>
+  <td>a shrug</td>
+</tr>
+<tr>
+  <td>10 ms</td>
+  <td>465 ms</td>
+  <td>750 ms</td>
+  <td>2.8 min</td>
+  <td>a coffee</td>
+</tr>
+<tr>
+  <td>15 ms</td>
+  <td>610 ms</td>
+  <td>1,493 ms</td>
+  <td>6.3 min</td>
+  <td>a real wait</td>
+</tr>
+<tr>
+  <td>20 ms</td>
+  <td>1,777 ms</td>
+  <td>3,388 ms</td>
+  <td>16.9 min</td>
+  <td>an incident</td>
+</tr>
+<tr>
+  <td>24 ms</td>
+  <td>3,748 ms</td>
+  <td>5,490 ms</td>
+  <td><strong>105.5 min</strong></td>
+  <td>a very long incident</td>
+</tr>
+<tr>
+  <td>~25 ms</td>
+  <td>—</td>
+  <td>—</td>
+  <td><strong>never</strong></td>
+  <td>it will not recover on its own</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two things to take from this.</p>
+<p>First, a 12× slowdown in the read store moves you from 8% to 96% utilisation, and
+puts you one small regression away from an unbounded window. <strong>Your write traffic
+never changed</strong>, so nothing in your capacity planning saw it coming.</p>
+<p>Second, look at the drain column against a typical alarm: <em>&quot;page when the
+projector is more than 10,000 events behind.&quot;</em> That threshold means 0.4 minutes
+of catch-up on a good day and 105.5 minutes on a bad one. <strong>A 264× difference in
+what the same alarm means.</strong></p>
+<p>This is exactly the trap your load-shedding lab named. Any threshold expressed in
+units of <em>work</em> secretly encodes how long that work takes.</p>
+<p><strong>Alarm on the age of the oldest unapplied event, not on the count.</strong> Age is in
+the unit your users experience and your SLA is written in. Count is in a unit
+whose meaning drifts.</p>
+<h3 id="readme-115--can-two-chalkboards-ever-agree-with-each-other">11.5 — Can two chalkboards ever agree with each other?</h3>
+<p>Meera's order page shows a list from the dashboard projection and a total from
+the revenue projection. Each is individually eventually consistent. Together they
+can show a combination that never existed in Asha's ledger.</p>
+<blockquote>
+<p><strong>🔮 Predict.</strong> Two boards. Identical code, identical load, identical 500 ms
+poll. The only difference is that their timers happen to fire 250 ms apart. On
+what percentage of page loads do they disagree?</p>
+<details><summary>Reveal</summary>
+100%. If you said "a few percent", you were imagining that identical
+configuration means identical position in the feed. It does not: two
+independent clerks have two independent pencil marks, and there is no instant
+at which both are at the same entry.
+</details>
+
+</blockquote>
+<p>Same commit stream. Board A is always a 500 ms poll. Board B varies. First, how
+often they disagree.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Board B</th>
+  <th>B's mean window</th>
+  <th>Page loads where the two disagree</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>revenue board, poll 5 s</td>
+  <td>2,506 ms</td>
+  <td><strong>100.0%</strong></td>
+</tr>
+<tr>
+  <td>identical 500 ms poll, timer offset 250 ms</td>
+  <td>297 ms</td>
+  <td><strong>100.0%</strong></td>
+</tr>
+<tr>
+  <td>identical 500 ms poll, timer offset 50 ms</td>
+  <td>298 ms</td>
+  <td>86.7%</td>
+</tr>
+<tr>
+  <td>500 ms poll, applies 5× slower</td>
+  <td>467 ms</td>
+  <td>31.1%</td>
+</tr>
+</tbody>
+</table></div>
+<p>And second, how far apart they are when they do. The gap is counted in events:
+how many facts one board has seen that the other has not.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Board B</th>
+  <th>Mean gap</th>
+  <th>p99</th>
+  <th>Max</th>
+  <th>What the gap costs Meera</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>revenue board, poll 5 s</td>
+  <td>90.6 events</td>
+  <td>200</td>
+  <td>238</td>
+  <td>a total that lags the list badly</td>
+</tr>
+<tr>
+  <td>identical 500 ms poll, timer offset 250 ms</td>
+  <td>10.1 events</td>
+  <td>18</td>
+  <td>25</td>
+  <td>ten orders listed but not counted</td>
+</tr>
+<tr>
+  <td>identical 500 ms poll, timer offset 50 ms</td>
+  <td>3.7 events</td>
+  <td>26</td>
+  <td>34</td>
+  <td>usually small, occasionally not</td>
+</tr>
+<tr>
+  <td>500 ms poll, applies 5× slower</td>
+  <td>21.5 events</td>
+  <td>32</td>
+  <td>36</td>
+  <td>disagrees rarely, badly when it does</td>
+</tr>
+</tbody>
+</table></div>
+<p>The second row is the one to sit with. <strong>Two read models with identical
+configuration, identical load, and identical code, differing only in when their
+timer happens to fire, disagree on 100% of page loads.</strong></p>
+<p>There is no tuning that fixes this. Independent projectors have independent
+checkpoints, and there is no instant at which both are at the same place.</p>
+<p>Consequences worth designing around:</p>
+<ul>
+<li><strong>Never compute a derived value by combining two read models.</strong> The arithmetic
+will occasionally be visibly impossible: 5 orders listed, revenue for 4.</li>
+<li>If a screen genuinely needs two things consistent with each other, they belong
+in <strong>one</strong> read model, maintained by <strong>one</strong> projector. That is a real and
+common reason to denormalise more aggressively than feels comfortable.</li>
+<li>If they must stay separate, show them as separately-timestamped facts,
+such as &quot;revenue as of 12:04:31&quot;, rather than as one coherent picture.</li>
+</ul>
+<h3 id="readme-116--why-is-reordering-permanent-and-how-would-you-ever-see-it">11.6 — Why is reordering permanent, and how would you ever see it?</h3>
+<p>Covered as a mechanism in §10.4. Here is what makes it a <em>failure</em> rather than a
+design note.</p>
+<p>Three orders in twenty thousand end up in a state Asha's ledger does not agree
+with. Silently. With no error and no retry.</p>
+<p>And it is permanent. The read model is not behind. It has converged to the wrong
+value.</p>
+<p>The detection story is the problem. Lag is zero. Error rate is zero.</p>
+<p>The only thing that would catch it is a <strong>reconciliation job</strong>: something that
+periodically compares a projection against a fresh replay, or against the write
+model. Almost nobody has one. §13.4 says what to do about that.</p>
+<h3 id="readme-117--why-is-a-crash-mid-batch-worse-than-reordering">11.7 — Why is a crash mid-batch worse than reordering?</h3>
+<p>Also covered mechanically, in §10.5. What makes it nastier than §11.6 is that it
+is <em>cumulative</em>.</p>
+<p>A reordering corrupts specific orders once. A non-idempotent accumulator
+over-counts a little on <strong>every</strong> crash, forever, and the error only grows.</p>
+<p>The 5.39% in §10.5 is 210 crashes' worth. Run for a year and the number is
+unbounded, and there is no point at which anything alerts.</p>
+<p>The tell, if you ever suspect it: <strong>rebuild the projection into a second table
+and compare.</strong> A correct projection rebuilds to the same numbers. A drifting one
+does not, and the difference is your accumulated error.</p>
+<h3 id="readme-118--what-does-just-rebuild-it-actually-cost">11.8 — What does &quot;just rebuild it&quot; actually cost?</h3>
+<p>&quot;Read models are disposable, just rebuild them&quot; is the pattern's proudest claim.
+It is true. And it comes with a bill nobody computes in advance.</p>
+<p>Rebuild time is not history divided by throughput. While you rebuild, live
+traffic keeps arriving and must also be applied.</p>
+<p>So say it in words first: <strong>your rebuild speed is not Dev's speed. It is Dev's
+speed minus the rate at which new sales arrive.</strong> Written short, with H for the
+history size:</p>
+<blockquote>
+<p><strong>rebuild time = H / (μ − λ)</strong></p>
+</blockquote>
+<p>Here μ is Dev's capacity in events per second, and λ is the live arrival rate.
+Replaying 50 million events at a capacity of 487.8/s gives this.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Live λ</th>
+  <th>ρ</th>
+  <th>Rebuild time</th>
+  <th>What it means for a schema change</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>40/s</td>
+  <td>0.08</td>
+  <td>31.0 hours (1.3 days)</td>
+  <td>plan it for a weekend</td>
+</tr>
+<tr>
+  <td>200/s</td>
+  <td>0.41</td>
+  <td>48.3 hours (2.0 days)</td>
+  <td>plan it for a long weekend</td>
+</tr>
+<tr>
+  <td>400/s</td>
+  <td>0.82</td>
+  <td>158.2 hours (<strong>6.6 days</strong>)</td>
+  <td>it is a project, not a task</td>
+</tr>
+<tr>
+  <td>450/s</td>
+  <td>0.92</td>
+  <td>367.4 hours (15.3 days)</td>
+  <td>practically out of reach</td>
+</tr>
+<tr>
+  <td>470/s</td>
+  <td>0.96</td>
+  <td>780.1 hours (32.5 days)</td>
+  <td>out of reach</td>
+</tr>
+<tr>
+  <td>488/s</td>
+  <td>1.00</td>
+  <td><strong>never finishes</strong></td>
+  <td>the schema can never change again</td>
+</tr>
+</tbody>
+</table></div>
+<p>The same rebuild is 31 hours on a quiet system and 6.6 days on a busy one. And
+the busy one is 82% utilised, which most teams would call healthy.</p>
+<p>Past ρ = 1 it does not complete at all. You have a read model you can never
+recreate, which means a schema change you can never make.</p>
+<blockquote>
+<p><strong>🔮 Predict.</strong> Your projector runs at ρ = 0.9 and you need to rebuild. What do
+you actually do? There are three real options.</p>
+<details><summary>Reveal</summary>
+§13.6 gives all three. If your answer was "reduce λ", that is the one option
+that is <em>not</em> available — you cannot turn off Asha's shop to fix her
+chalkboard. The three that work are about running the rebuild beside the live
+one, running it with far more workers, or having less history to replay.
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-12-what-are-you-actually-guaranteed-and-what-are-you-not">12. What are you actually guaranteed, and what are you not?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> You are guaranteed the rules are enforced once, in one
+place, and that every board can be rebuilt. You are not guaranteed that any
+board is current, that two boards agree, or that the window has a number.</p>
+</blockquote>
+<p><strong>Guaranteed, given the two invariants of §8:</strong></p>
+<ul>
+<li><strong>Business rules are enforced exactly once, on the write side.</strong> This is the
+guarantee that licenses everything else. The read side may be arbitrarily
+denormalised and duplicated <em>because it makes no decisions</em>.</li>
+<li><strong>Commands are atomic.</strong> Rejected means no trace anywhere. Accepted means
+recorded and announced together.</li>
+<li><strong>Convergence.</strong> Stop writing, wait, and every read model reaches exactly the
+state a from-scratch replay would produce. This holds provided applies are
+idempotent or checkpoints are atomic (§10.5), and provided per-key order is
+preserved (§10.4).</li>
+<li><strong>Rebuildability.</strong> Any read model can be recreated from the feed. This is what
+makes read-side schema change cheap and read-store choice free.</li>
+</ul>
+<p><strong>Not guaranteed:</strong></p>
+<ul>
+<li><strong>That a query reflects the write that just returned.</strong> 89.4% of the time it
+does not, at a 500 ms poll (§11.1). Priya is right and the system is fine.</li>
+<li><strong>That two read models agree with each other.</strong> 100% of the time they do not
+(§11.5). Meera's list and Meera's total are not one picture.</li>
+<li><strong>That the window is bounded.</strong> It is bounded only while ρ &lt; 1, and ρ is not
+visible in the lag metric (§11.3). Arjun's graph will not tell him.</li>
+<li><strong>Anything about write-side scale.</strong> CQRS scales <em>reads</em> and <em>shapes</em>. Asha's
+counter scales by the usual means — partitioning, bigger boxes — and this
+pattern does not help it. Believing otherwise is §14.4.</li>
+</ul>
+<p><strong>The assumptions all of that rests on:</strong></p>
+<ol>
+<li>The outbox invariant holds: state and event commit together.</li>
+<li>The feed preserves order per key, and the projector respects it.</li>
+<li>Applies are idempotent, or checkpoints are atomic, and B·h is well under 1.</li>
+<li><strong>No command reads a read model.</strong> If this one is false, none of the above
+guarantees mean anything, because the system is now making decisions from a
+store that is defined to be behind.</li>
+</ol>
+<p><strong>Traded away, permanently:</strong> the <code>INSERT</code> then <code>SELECT</code> sees it programming
+model.</p>
+<p>That loss infects UX design. It infects integration testing, because every test
+now needs to wait for a projector. It infects on-call, because every incident
+starts with &quot;is the projector behind?&quot;.</p>
+<p>It does not go away with maturity. It is the price, and §14.7 is about pretending
+otherwise.</p>
+<blockquote>
+<p><strong>Say it back.</strong> You have finished the engineering layer. Without using the
+words <em>consistency</em> or <em>guarantee</em>, tell a friend the one thing that makes
+Asha's chalkboards safe, and the one thing that would make them dangerous.</p>
+<details><summary>A good answer sounds like</summary>
+"The boards are safe because they only ever get looked at. Nobody uses one to
+say yes or no to anything. The moment a cashier checks a board before agreeing
+to a sale, everything changes. The board being a few minutes old stops being a
+small annoyance. It starts costing the shop stock it does not have."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-13-what-does-this-look-like-in-production-and-what-do-you-actually-operate">13. What does this look like in production, and what do you actually operate?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> The arrow this lab drew is one of three real things, the
+bookmark may not be yours to keep, and the work that never ends is the
+monitoring rather than the split.</p>
+</blockquote>
+<h3 id="readme-131-where-does-the-feed-actually-come-from">13.1 Where does the feed actually come from?</h3>
+<p>This lab drew an arrow between Asha's ledger and Dev. In production it is one of
+three things.</p>
+<p><strong>An outbox table polled or streamed by the application.</strong> Simplest, and it keeps
+the checkpoint in your own database. Which means the atomic checkpoint of §10.5
+is available to you. Covered by
+<a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a>.</p>
+<p><strong>CDC off the write database's log.</strong> Debezium reading the Postgres WAL or the
+MySQL binlog. No application change at all. Events describe row changes rather
+than domain facts, which is a real semantic difference your
+<a href="../52-change-data-capture/notes.html#readme">change-data-capture</a> lab covers in depth.</p>
+<p><strong>A broker the command side publishes to</strong>, usually Kafka. Usually fed by one of
+the first two rather than written to directly. Writing to the database and the
+broker separately is precisely the dual-write bug the outbox exists to prevent.</p>
+<h3 id="readme-132-why-does-kafka-take-one-of-your-two-protections-away">13.2 Why does Kafka take one of your two protections away?</h3>
+<p>This matters more than it sounds, and it is the most useful production fact in
+this lab.</p>
+<blockquote>
+<p><strong>🔮 Predict.</strong> §10.5 gave you two protections and said either one alone is
+enough. You move your feed to Kafka. How many do you still have?</p>
+<details><summary>Reveal</summary>
+One, and you do not get to choose which. If you assumed both survive, the
+reason they do not is that one of them requires the bookmark to live in the
+same database as the boards, and Kafka keeps the bookmark itself.
+</details>
+
+</blockquote>
+<p>In §10.5, the atomic checkpoint worked because the checkpoint was a row in the
+read store, written in the same transaction as the applies. Dev's pencil mark was
+on the board's own frame.</p>
+<p><strong>When your feed is Kafka, the checkpoint is a consumer offset, and it lives in
+Kafka.</strong> There is no transaction spanning your read store and
+<code>__consumer_offsets</code>. So:</p>
+<blockquote>
+<p>A Kafka-fed projection is structurally the &quot;non-atomic checkpoint&quot; column of
+§10.5's matrix. <strong>Idempotency is not optional for it — it is the only
+protection you have.</strong></p>
+</blockquote>
+<p>Two consequences. First, if you are on Kafka, audit every projection for
+accumulation and convert every <code>+=</code> to an upsert or a sequence-guarded update.</p>
+<p>Second, there is a well-known way to buy the atomicity back. <strong>Store the offset
+in the read store yourself</strong>, in the same transaction as the applies, and seek to
+it on startup instead of using Kafka's committed offset. Kafka supports this
+through <code>seek()</code> on partition assignment. Flink and Debezium do variants of it,
+and it is the standard move for exactly-once sinks.</p>
+<h3 id="readme-133-which-read-stores-can-you-actually-use">13.3 Which read stores can you actually use?</h3>
+<p>The freedom to pick a store per question is the practical payoff people actually
+enjoy. Elasticsearch for search, Redis for hot dashboards, Postgres tables for
+reports, ClickHouse for analytics. One feed, many stores.</p>
+<p>Note the cost of each addition. Every store is another projector, another
+checkpoint, another lag metric, and another entry in §11.5's disagreement table.</p>
+<h3 id="readme-134-what-should-arjun-put-on-the-dashboard">13.4 What should Arjun put on the dashboard?</h3>
+<p>In priority order, and the first is the one usually missing.</p>
+<ol>
+<li><strong>Projector utilisation</strong>, busy time divided by wall time. The only leading
+indicator of §11.3's cliff.</li>
+<li><strong>Age of the oldest unapplied event</strong>, per projector. Not event count
+(§11.4).</li>
+<li><strong>Time since the projector last made progress.</strong> This distinguishes &quot;behind&quot;
+from &quot;dead&quot;. It is your <a href="../28-eventual-consistency/notes.html#readme">eventual-consistency</a>
+lab's point exactly: the delivery clause's death produces no event, so you
+must alarm on the machinery's heartbeat.</li>
+<li><strong>Rebuild headroom</strong>: capacity minus arrival rate, and the implied rebuild
+time for your current history size. Compute it quarterly, before you need it.</li>
+<li><strong>Reconciliation residual</strong>: periodically rebuild a projection into a shadow
+table and diff it. This is the only thing that catches §11.6 and §11.7. Almost
+nobody runs it. Everyone who has been burned once does.</li>
+</ol>
+<h3 id="readme-135-how-do-real-systems-give-a-user-their-own-writes-back">13.5 How do real systems give a user their own writes back?</h3>
+<p>The sequence-number-and-wait approach from §11.1's third option has a standard
+shape.</p>
+<p>The command returns its event sequence. The client sends it back as a header or a
+cookie. The query layer either waits for the projector's checkpoint to pass it,
+or routes that one query to the write model.</p>
+<p>This is the same mechanism as a session token for bounded staleness in a
+replicated database. It is the same idea as your
+<a href="../29-causal-consistency/notes.html#readme">causal-consistency</a> lab's session guarantees.</p>
+<h3 id="readme-136-how-do-you-rebuild-at-scale--the-answer-to-118">13.6 How do you rebuild at scale — the answer to §11.8?</h3>
+<p>Three real options, and you should know which one you have.</p>
+<p><strong>Blue/green projections.</strong> Build v2 into a new table alongside the live v1, from
+sequence 0, while v1 keeps serving. When v2 catches up, flip reads. This is the
+standard answer, and it is exactly the snapshot plus delta plus cutover protocol
+from your <a href="../52-change-data-capture/notes.html#readme">change-data-capture</a> and
+<a href="../36-partitioning-and-rebalancing/notes.html#readme">partitioning-and-rebalancing</a> labs.</p>
+<p><strong>Parallel replay.</strong> Rebuild with far more workers than the live projector uses.
+The ordering constraint is per key, so replay parallelises well if you partition
+by key. This is how you turn 6.6 days into hours, and it is why §10.4's keying
+decision pays off twice.</p>
+<p><strong>Reduce the history.</strong> Snapshots, or a compacted topic, or simply not keeping
+ten years of events for a projection that only needs ninety days.</p>
+<p>The one thing you must not do is discover during an incident that the first
+option takes six days.</p>
+<h3 id="readme-137-which-frameworks-do-this-and-where-do-you-meet-it">13.7 Which frameworks do this, and where do you meet it?</h3>
+<p>Axon for Java, EventStoreDB, Marten and Lagom all package this.</p>
+<p>Most production CQRS is not built on any of them. It is command handlers, an
+outbox, a consumer, and idempotent upserts, exactly as drawn in §8.</p>
+<p>If you are on Spring, the honest description of a typical implementation is
+<code>@Transactional</code> command handlers writing an outbox table, Debezium or a
+scheduled poller draining it, and <code>@KafkaListener</code> projections doing upserts.</p>
+<p>Where you meet it in the wild: order management, where an &quot;orders&quot; page is almost
+always a projection. Banking and ledger systems. Inventory. And anywhere an audit
+trail and read scale have to coexist.</p>
+<h3 id="readme-138-what-did-this-lab-deliberately-leave-out">13.8 What did this lab deliberately leave out?</h3>
+<ul>
+<li><strong>Event schema evolution.</strong> Events outlive the code that wrote them, so
+rebuilds must be able to read five-year-old events. Versioned event types and
+upcasting are the standard answers. <a href="../50-event-sourcing/notes.html#readme">event-sourcing</a>
+covers them, and the concern is much sharper there.</li>
+<li><strong>Multi-tenancy and privacy.</strong> Deleting a user's data from a write model is
+easy. Deleting it from a feed that is replayed forever is not.</li>
+<li><strong>Backpressure</strong> between a fast write side and a slow projector, beyond &quot;the
+window grows&quot;.</li>
+<li><strong>Exactly how to size a read store.</strong> Treated here as a service with a fixed
+cost per apply, which is a real simplification.</li>
+</ul>
+<hr />
+<h2 id="readme-14-which-common-wrong-models-will-you-meet">14. Which common wrong models will you meet?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Eight sentences people say about CQRS that are not true.
+Three of them are confusions with a neighbouring idea, and five of them make
+teams adopt it for the wrong reason.</p>
+</blockquote>
+<h3 id="readme-141-cqrs-is-event-sourcing--is-it">14.1 &quot;CQRS is event sourcing&quot; — is it?</h3>
+<p>No, and this is the most common conflation. It is the one that makes people think
+CQRS is exotic.</p>
+<p><strong>CQRS</strong> says: read through a different model than you write through. The write
+model in this entire lab stores <strong>current state</strong>, normal rows in normal tables,
+and emits events as a <em>feed</em>. Delete the feed and Asha's ledger is still
+complete and correct.</p>
+<p><strong>Event sourcing</strong> says: the events <em>are</em> the state. There is no current-state
+table to fall back on. You derive state by folding the stream, as your
+<a href="../50-event-sourcing/notes.html#readme">event-sourcing</a> lab covered.</p>
+<p>They compose well. Event sourcing needs something like CQRS to be queryable at
+all. But each stands alone, and <strong>most production CQRS is not event sourced.</strong></p>
+<p>If you take one thing from this section: you can adopt CQRS on Tuesday without
+adopting event sourcing, and you probably should.</p>
+<h3 id="readme-142-cqrs-means-two-databases--does-it">14.2 &quot;CQRS means two databases&quot; — does it?</h3>
+<p>No. It means two <em>models</em>.</p>
+<p>§10.1's v1 is CQRS with one database, one transaction, and a zero-width
+consistency window. It is the right answer more often than the full asynchronous
+version.</p>
+<p>The number of databases is a deployment detail chosen later, driven by §10.1's
+three breaking points.</p>
+<h3 id="readme-143-cqrs-means-eventual-consistency--must-it">14.3 &quot;CQRS means eventual consistency&quot; — must it?</h3>
+<p>Only the asynchronous variant does. v1 is synchronous and has none.</p>
+<p>The eventual consistency is a consequence of <em>decoupling</em>, not of <em>splitting the
+model</em>. Conflating the two makes people reject the whole pattern because they
+cannot afford the window, when the version without a window was available.</p>
+<h3 id="readme-144-cqrs-scales-writes--does-it-help-ashas-counter">14.4 &quot;CQRS scales writes&quot; — does it help Asha's counter?</h3>
+<p>No. It scales reads and shapes.</p>
+<p>The command side is untouched, and if anything v1 makes it slower. Look again at
+§10.1's tables: 5 ms to 21 ms of service time for eight inline read models. A
+team adopting CQRS to fix write throughput has misdiagnosed.</p>
+<h3 id="readme-145-the-read-model-is-a-cache--is-a-chalkboard-a-cache">14.5 &quot;The read model is a cache&quot; — is a chalkboard a cache?</h3>
+<p>Superficially similar, structurally different. And the difference decides how you
+operate it.</p>
+<div class="table"><table><thead>
+<tr>
+  <th></th>
+  <th>Cache</th>
+  <th>Read model</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Population</td>
+  <td>on demand, on miss</td>
+  <td>eagerly, from the feed</td>
+</tr>
+<tr>
+  <td>Correctness mechanism</td>
+  <td>invalidation (a guess)</td>
+  <td>replay (a derivation)</td>
+</tr>
+<tr>
+  <td>On a miss</td>
+  <td>falls back to the source</td>
+  <td>there is no fallback; a miss is <em>the answer</em></td>
+</tr>
+<tr>
+  <td>Staleness</td>
+  <td>unbounded and unmeasured</td>
+  <td>a window you can measure and alarm on</td>
+</tr>
+<tr>
+  <td>Recovery</td>
+  <td>re-warm</td>
+  <td>rebuild deterministically</td>
+</tr>
+</tbody>
+</table></div>
+<p>The third row is the practically important one. A cache miss is a slow correct
+answer. A read model miss is a <strong>wrong answer</strong>, and that is why projection
+correctness in §10.5 needs the care it does.</p>
+<h3 id="readme-146-make-the-window-smaller-and-staleness-stops-mattering--does-it">14.6 &quot;Make the window smaller and staleness stops mattering&quot; — does it?</h3>
+<p>No, and §11.2's table is the counterexample.</p>
+<p>Going from a 2 s poll to streaming took oversells from 46.66 to 0.33. That is a
+140× improvement that is still not zero, and cannot be.</p>
+<p>Narrowing the window changes the <em>probability</em> of a stale-data decision. It never
+changes its possibility. Only moving the decision to the write model removes it.</p>
+<p>This is the same shape as your
+<a href="../43-distributed-locking/notes.html#readme">distributed-locking</a> lab's conclusion about
+shortening a lease. It reduces the window, not the possibility.</p>
+<h3 id="readme-147-well-adopt-cqrs-across-the-service--should-you">14.7 &quot;We'll adopt CQRS across the service&quot; — should you?</h3>
+<p>No. CQRS is a per-subsystem decision. You take it where §4b's reads-per-change
+ratio is high and the staleness is genuinely tolerable.</p>
+<p>Applied uniformly, it imposes the window on subsystems that gain nothing. And
+every one of those is a candidate for §11.2's bug, because the engineer working
+there has no reason to have internalised why a chalkboard must not be consulted.</p>
+<p>Start with CRUD. Adopt v1 where the shape war hurts. Adopt v2 and beyond only
+where v1's three breaking points actually bite.</p>
+<h3 id="readme-148-splitting-the-models-is-the-hard-part--is-it">14.8 &quot;Splitting the models is the hard part&quot; — is it?</h3>
+<p>No. The split is a day's work.</p>
+<p>The permanent work is everything in §13.4. Lag monitoring that measures age
+rather than count. A utilisation metric nobody asked for. A rebuild rehearsed
+before it is needed. And a reconciliation job that catches the two silent
+corruptions.</p>
+<p>Teams that fail at CQRS rarely fail at the split.</p>
+<blockquote>
+<p><strong>Say it back.</strong> You have finished the production layer. A colleague says &quot;we
+should do CQRS, we're getting big&quot;. Without using any of §16's vocabulary, say
+what you would ask them first, and what would make you say no.</p>
+<details><summary>A good answer sounds like</summary>
+"I would ask how many times a day the data changes, and how many times a day
+someone looks at it. If people look far more often than things change, doing
+the work up front is cheap and worth it. If things change more often than
+people look, we would be doing more work, not less. And I would say no outright
+if anything in the code decides whether to accept an order by reading the
+summary tables — that has to move first."
+</details>
+
+</blockquote>
+<hr />
+<h2 id="readme-15-where-does-this-sit-in-the-knowledge-map">15. Where does this sit in the knowledge map?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Three labs had to come first. Six follow on. The two boxes
+people mistake this one for are event sourcing and caching.</p>
+</blockquote>
+<pre class="mermaid">flowchart TD
+    OB[&quot;transactional-outbox ✓&quot;] --&gt; CQ[&quot;CQRS (this lab)&quot;]
+    ID[&quot;idempotency ✓&quot;] --&gt; CQ
+    QT[&quot;queueing-theory ✓&quot;] --&gt; CQ
+    CQ --&gt; ES[&quot;event-sourcing ✓ — events as the ONLY truth&quot;]
+    CQ --&gt; SG[&quot;saga ✓ — workflows over the same events&quot;]
+    CQ --&gt; CDC[&quot;change-data-capture ✓ — the feed without app events&quot;]
+    CQ --&gt; K[&quot;kafka ✓ — the production feed and its offsets&quot;]
+    CQ --&gt; MV[&quot;/learn materialized-views — the database&#x27;s own projector&quot;]
+    CQ --&gt; OBS[&quot;/learn observability-and-slos — the lag SLO this lab keeps assuming&quot;]
+</pre>
+<p><strong>Prerequisites, all already learned:</strong> transactional-outbox, idempotency,
+queueing-theory.</p>
+<p><strong>Commonly confused with:</strong></p>
+<ul>
+<li><em>Event sourcing</em> — CQRS splits the model; event sourcing replaces the state
+with its history. §14.1.</li>
+<li><em>CQS</em> — a rule about methods, not models. §7.</li>
+<li><em>Read replicas</em> — same shape elsewhere; adds capacity rather than removing
+work. §4b.</li>
+<li><em>Caching</em> — populated on demand and repaired by invalidation, not derived and
+repaired by replay. §14.5.</li>
+</ul>
+<p><strong>Suggested next:</strong></p>
+<div class="code"><pre><code>/learn materialized-views      # the same projection idea, run by the database
+/learn observability-and-slos  # this lab alarmed on four things and defined none
+/learn ddd-aggregates          # what decides where a write model&#x27;s boundary goes
+</code></pre></div>
+<hr />
+<h2 id="readme-16-glossary--what-does-every-word-mean-and-where-did-you-meet-it">16. GLOSSARY — what does every word mean, and where did you meet it?</h2>
+<blockquote>
+<p><strong>In one breath:</strong> Twenty-four words, grouped four ways: the two sides, the
+machinery between them, the numbers, and what keeps it correct. Each row says
+where in the shop you first met the thing.</p>
+</blockquote>
+<p>Split by theme, in roughly the order the lab earns them.</p>
+<p><strong>The two sides.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Command</strong></td>
+  <td>A request to change state. Imperatively named, may be rejected, returns success/failure rather than data</td>
+  <td>§7, Priya placing an order</td>
+</tr>
+<tr>
+  <td><strong>Query</strong></td>
+  <td>A request for data. Changes nothing, never rejected for a business reason</td>
+  <td>§7, Meera asking a question</td>
+</tr>
+<tr>
+  <td><strong>CQS</strong></td>
+  <td>Command–Query Separation (Meyer, 1988): a <em>method</em> either changes state or returns a value, never both. About methods, not models</td>
+  <td>§7, the confusion that costs a year</td>
+</tr>
+<tr>
+  <td><strong>CQRS</strong></td>
+  <td>Command Query Responsibility Segregation (Young, ~2010): the model you write through and the model you read through may be different models in different stores</td>
+  <td>§6, the napkin definition</td>
+</tr>
+<tr>
+  <td><strong>Write model / command side</strong></td>
+  <td>The model that validates commands and owns every business rule. Normalised, transactional, authoritative</td>
+  <td>§2, Asha's ledger and counter</td>
+</tr>
+<tr>
+  <td><strong>Read model / query side</strong></td>
+  <td>A store shaped like one family of questions. Denormalised, disposable, derived. Usually several</td>
+  <td>§2, the chalkboards on the wall</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The machinery between them.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Event</strong></td>
+  <td>A past-tense, immutable fact that a command succeeded, carrying a sequence number</td>
+  <td>§7, <code>OrderPlaced(seq=17, total=120.00)</code></td>
+</tr>
+<tr>
+  <td><strong>Event feed</strong></td>
+  <td>The ordered, append-only sequence of those facts. An outbox table, a CDC stream, or a broker topic</td>
+  <td>§10.2, the events table</td>
+</tr>
+<tr>
+  <td><strong>Projection / projector</strong></td>
+  <td>The consumer that reads events and updates a read model</td>
+  <td>§2, Dev walking over</td>
+</tr>
+<tr>
+  <td><strong>Checkpoint</strong></td>
+  <td>A projector's bookmark: the highest sequence it has applied. A Kafka consumer offset is one</td>
+  <td>§7, the pencil mark in the margin</td>
+</tr>
+<tr>
+  <td><strong>Poll interval</strong></td>
+  <td>How often a polling projector wakes. Sets the window's floor: mean ≈ (poll/2)(1+ρ)</td>
+  <td>§10.2, Dev's nap</td>
+</tr>
+<tr>
+  <td><strong>Streaming projector</strong></td>
+  <td>A projector notified of new events rather than waking on a timer. Collapses the floor, leaves capacity unchanged</td>
+  <td>§10.3, Asha ringing a bell</td>
+</tr>
+<tr>
+  <td><strong>Batch</strong></td>
+  <td>Events applied in one read-side transaction. Sets the crash blast radius</td>
+  <td>§10.5, the 5.39% table</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>The numbers.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Consistency window</strong></td>
+  <td>Time between an event committing on the write side and being visible in a read model. A distribution, not a constant</td>
+  <td>§7, and given edges in §10.2</td>
+</tr>
+<tr>
+  <td><strong>λ (lambda)</strong></td>
+  <td>Event commit rate</td>
+  <td>§11.3, the traffic that rises</td>
+</tr>
+<tr>
+  <td><strong>μ (mu)</strong></td>
+  <td>Projector capacity, <code>1000·batch/(batch·apply + ckpt)</code> events/s</td>
+  <td>§11.8, the rebuild formula</td>
+</tr>
+<tr>
+  <td><strong>ρ (rho)</strong></td>
+  <td>Projector utilisation, λ/μ. Bounded window requires ρ &lt; 1</td>
+  <td>§10.2, the term that stretches the nap</td>
+</tr>
+<tr>
+  <td><strong>B·h</strong></td>
+  <td>Batch size × per-event crash hazard. Expected crashes per batch; keep well under 1 or the projector replays more than it applies</td>
+  <td>§10.5, the poison batch</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Correctness and operations.</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Term</th>
+  <th>Meaning</th>
+  <th>Where you met it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><strong>Idempotent apply</strong></td>
+  <td>Re-applying an event is a no-op. Upserts are; <code>+=</code> accumulations are not</td>
+  <td>§10.5, the first protection</td>
+</tr>
+<tr>
+  <td><strong>Atomic checkpoint</strong></td>
+  <td>Applies and checkpoint advance commit in one read-store transaction, so a crash rolls back both. Unavailable when the offset lives in a broker</td>
+  <td>§10.5, the second protection</td>
+</tr>
+<tr>
+  <td><strong>Effectively-once</strong></td>
+  <td>The combination of at-least-once delivery with an idempotent consumer. The achievable version of &quot;exactly once&quot;</td>
+  <td>§8, invariant 2</td>
+</tr>
+<tr>
+  <td><strong>Read-your-own-writes</strong></td>
+  <td>The guarantee that a user sees their own change immediately, even while others see the old value</td>
+  <td>§11.1, Priya's empty order list</td>
+</tr>
+<tr>
+  <td><strong>Rebuild / backfill</strong></td>
+  <td>Recreating a read model by replaying the feed from sequence 0. Takes H/(μ − λ)</td>
+  <td>§11.8, the 6.6-day bill</td>
+</tr>
+<tr>
+  <td><strong>Blue/green projection</strong></td>
+  <td>Building a new version of a read model alongside the live one and cutting over when it catches up</td>
+  <td>§13.6, the first rebuild option</td>
+</tr>
+<tr>
+  <td><strong>Reconciliation</strong></td>
+  <td>Periodically rebuilding a projection into a shadow table and diffing, to catch silent divergence</td>
+  <td>§13.4, the check nobody runs</td>
+</tr>
+<tr>
+  <td><strong>CQRS-lite</strong></td>
+  <td>Synchronous projection inside the write transaction. Zero window, coupled latency and availability</td>
+  <td>§10.1, v1</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-17-about-this-lab">17. About this lab</h2>
+<h3 id="readme-what-are-the-lab-contents">What are the lab contents?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>File</th>
+  <th>What it is</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td><code>README.md</code></td>
+  <td>This document — the whole story, with every figure sourced</td>
+</tr>
+<tr>
+  <td><code>visualization.html</code></td>
+  <td><strong>The Two Desks</strong> — 5 panels. Move the poll interval and watch the window move; break a projector; run a rebuild</td>
+</tr>
+<tr>
+  <td><code>EXERCISES.md</code> / <code>SOLUTIONS.md</code></td>
+  <td>8 rungs, reasoning only, answers kept separate</td>
+</tr>
+<tr>
+  <td><code>_java-original/</code>, <code>_python-original/</code></td>
+  <td>Earlier generations of this lab, kept for reference. They are not part of the lesson</td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>No runnable code.</strong> Everything above is a hand-worked trace, a diagram, a short
+illustrative snippet, or a figure produced by the simulator embedded in
+<code>visualization.html</code>. Where a snippet appears, it is there to be <em>read</em>, not
+executed.</p>
+<h3 id="readme-where-does-this-sit-in-your-other-labs">Where does this sit in your other labs?</h3>
+<p>You have already built most of the machinery this lab needs. Nothing above is
+re-taught. This is the refresher line, and the sentence that says what CQRS adds.</p>
+<ul>
+<li><strong><a href="../48-transactional-outbox/notes.html#readme">transactional-outbox</a></strong> — how a state change
+and the announcement of that change get committed together. CQRS <em>assumes</em>
+this. If you do not have it, everything in this lab is built on sand. A read model
+updated from an event that does not correspond to a committed write is not
+stale. It is wrong.</li>
+<li><strong><a href="../49-idempotency/notes.html#readme">idempotency</a></strong> — retries are mandatory, so duplicates
+exist, so every consumer must survive them. A projection is a consumer. §10.5
+is that lab's rule applied to one specific consumer, and it is where this lab's
+only <em>correctness</em> requirement lives.</li>
+<li><strong><a href="../28-eventual-consistency/notes.html#readme">eventual-consistency</a></strong> — that lab ended by
+noting that CQRS and caching both talk about a &quot;consistency window&quot; without
+ever giving it edges. §10.2 gives it edges: a formula, a measured distribution,
+and the point at which it stops being finite.</li>
+<li><strong><a href="../52-change-data-capture/notes.html#readme">change-data-capture</a></strong> — filed the same
+complaint from the other side, and is one of the two ways real systems build
+the event feed this lab draws as an arrow. §13.1 connects them.</li>
+<li><strong><a href="../57-queueing-theory/notes.html#readme">queueing-theory</a></strong> and
+<strong><a href="../59-load-balancing/notes.html#readme">load-balancing</a></strong> — a projector is a server with a
+queue, so ρ = λ/μ governs it, and §11.3 is the ρ→1 cliff you already know,
+wearing a costume. §4 is the <em>pooling</em> result from the load-balancing lab run in
+reverse: pool identical work, separate dissimilar work.</li>
+<li><strong><a href="../53-kafka/notes.html#readme">kafka</a></strong> — &quot;each reader remembers its own position&quot; is exactly
+a projector's checkpoint. §13.2 explains why Kafka's version of that position
+makes one of this lab's two safety mechanisms structurally unavailable.</li>
+<li><strong><a href="../50-event-sourcing/notes.html#readme">event-sourcing</a></strong> — the neighbour CQRS is most often
+confused with. §14.1 draws the line properly. They are separable, and most
+production CQRS does not use event sourcing.</li>
+<li><strong><a href="../47-saga/notes.html#readme">saga</a></strong>, <strong><a href="../11-caching/notes.html#readme">caching</a></strong>,
+<strong><a href="../08-isolation-levels/notes.html#readme">isolation-levels</a></strong> — appear in passing.</li>
+</ul>
+<p>New here: the <strong>cost of the split, measured</strong>; the rule that decides whether the
+split is legal at all; and the four ways projections silently corrupt.</p>
+<h3 id="readme-how-were-the-numbers-in-this-document-produced">How were the numbers in this document produced?</h3>
+<p>Every figure above comes from a discrete-event simulator. The same simulator is
+embedded in <code>visualization.html</code>, so you can reproduce any figure by opening the
+page and setting the controls. The document and the page share one engine and
+agree digit for digit.</p>
+<p><strong>The model, stated so you can argue with it:</strong></p>
+<ul>
+<li>Commands commit to the write store as a Poisson process at rate <strong>λ</strong>. Each
+accepted command appends exactly one event, a sequence number and a commit
+timestamp, in the <em>same</em> transaction as the state change.</li>
+<li>A <strong>projector</strong> reads events after its checkpoint, applies each to a read
+store, then commits the checkpoint. One apply costs <code>applyMs</code>; committing the
+checkpoint costs <code>ckptMs</code>; one batch holds at most <code>batch</code> events.</li>
+<li>The applies and the checkpoint share one read-side transaction, so every event
+in a batch becomes visible <strong>at the same instant</strong>, at the batch commit.
+Visibility is quantised, not smooth. This matters in §10.2.</li>
+<li>Projector capacity is therefore <strong>μ = 1000·batch / (batch·applyMs + ckptMs)</strong>
+events per second.</li>
+</ul>
+<p><strong>Canonical setup</strong>, used wherever a figure does not say otherwise: λ = 40
+events/s, applyMs = 2, ckptMs = 5, batch = 100, poll = 500 ms, 15 simulated
+minutes. That gives <strong>μ = 487.8 events/s</strong> and <strong>ρ = 0.082</strong> — a projector
+loafing at 8% utilisation, which is what a healthy one looks like.</p>
+<p><strong>What was checked before any figure was believed:</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Check</th>
+  <th>Expected</th>
+  <th>Measured</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>M/M/1 mean sojourn, ρ = 0.8, S = 80 ms</td>
+  <td>400.0 ms</td>
+  <td><strong>399.1 ms</strong></td>
+</tr>
+<tr>
+  <td>M/M/4 mean sojourn, ρ = 0.8, S = 80 ms</td>
+  <td>140.0 ms</td>
+  <td><strong>141.5 ms</strong> (this lab's <code>queueing-theory</code> entry recorded 140)</td>
+</tr>
+<tr>
+  <td>Poll-mode window floor at negligible load</td>
+  <td>poll/2 + apply + ckpt</td>
+  <td>107 → <strong>108.3</strong>, 257 → <strong>263.3</strong>, 507 → <strong>520.1</strong>, 1007 → <strong>1040.4</strong> ms</td>
+</tr>
+<tr>
+  <td>Capacity formula at batch = 1, 10, 100</td>
+  <td>142.9, 400.0, 487.8 /s</td>
+  <td>identical, and measured utilisation tracked ρ to within 0.01 across ρ = 0.08…0.96</td>
+</tr>
+<tr>
+  <td>Lag at ρ &gt; 1 must grow without bound</td>
+  <td>linear in run length</td>
+  <td>14.3 → 29.0 → 57.9 → <strong>118.2 s</strong> as the run doubled four times</td>
+</tr>
+<tr>
+  <td>Idempotent + atomic projection under crashes</td>
+  <td>exactly 0% error</td>
+  <td><strong>0.00%</strong> across 210 crashes</td>
+</tr>
+<tr>
+  <td>Key-partitioned projectors</td>
+  <td>exactly 0 reorderings</td>
+  <td><strong>0</strong>, with the stall converted to 990 ms of delay</td>
+</tr>
+<tr>
+  <td>Blast-radius rule B·h, at two independent hazard rates</td>
+  <td>same curve vs B·h</td>
+  <td>replay/useful <strong>0.13 / 0.29 / 0.70 / 1.96</strong> at B·h = 0.25/0.5/1/2, matching the other rate's <strong>0.05 / 0.33 / 0.76 / 2.43</strong> at the same B·h</td>
+</tr>
+</tbody>
+</table></div>
+<p>Two things this simulator is <strong>not</strong>. It is not a database, and it is not proof
+that Postgres, Kafka or Debezium behave this way. It is a model of the
+<em>mechanism</em>. Wherever a claim is about a real product, it is sourced to that
+product's documentation and marked as such.</p>
+<p>Two further notes on figures quoted in the story. The streaming window of 8.1 ms
+mean and 15.5 ms p99 in §10.3 and §11.1 models no network hop, so a real broker
+adds tens of milliseconds. And §11.2's expected oversell count is derived by hand
+as λ times the window, 11.87, against 11.95 in the run — the agreement is the
+point, not the third digit.</p>
+<h3 id="readme-who-is-in-the-story">Who is in the story?</h3>
+<div class="table"><table><thead>
+<tr>
+  <th>Name</th>
+  <th>Role in the shop</th>
+  <th>Role in the system</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Asha</td>
+  <td>owns the shop and guards the ledger</td>
+  <td>the write model and its command handlers</td>
+</tr>
+<tr>
+  <td>Meera</td>
+  <td>the manager who wants totals</td>
+  <td>every query and every dashboard</td>
+</tr>
+<tr>
+  <td>Dev</td>
+  <td>the clerk who copies onto the boards</td>
+  <td>the projector</td>
+</tr>
+<tr>
+  <td>Priya</td>
+  <td>the customer placing an order</td>
+  <td>the user in §11.1 who sees an empty list</td>
+</tr>
+<tr>
+  <td>Ben</td>
+  <td>the analyst who wanted a merchandising page</td>
+  <td>the reporting query of §1</td>
+</tr>
+<tr>
+  <td>Omar</td>
+  <td>the engineer who trusted a chalkboard</td>
+  <td>the command handler bug of §11.2</td>
+</tr>
+<tr>
+  <td>Arjun</td>
+  <td>on call when a board goes quiet</td>
+  <td>the operator of §11.3 and §13.4</td>
+</tr>
+</tbody>
+</table></div>
+<hr />
+<h2 id="readme-sources-and-further-reading">Sources and further reading</h2>
+<p>Primary and near-primary, for the claims this lab attributes rather than
+measures:</p>
+<ul>
+<li><strong>Greg Young</strong>, <em>CQRS Documents</em> (2010) — the original statement of the
+pattern, and the source of the CQS/CQRS distinction in §7.</li>
+<li><strong>Martin Fowler</strong>, &quot;CQRS&quot; (bliki, 2011) — notably his warnings; §14.7 is
+essentially his position.</li>
+<li><strong>Bertrand Meyer</strong>, <em>Object-Oriented Software Construction</em> (1988) — CQS.</li>
+<li><strong>microservices.io</strong> — the CQRS and Transactional Outbox pattern pages.</li>
+<li><strong>Apache Kafka documentation</strong> — consumer offsets, <code>seek()</code> on assignment, and
+the delivery-semantics discussion behind §13.2.</li>
+<li><strong>Debezium documentation</strong> — CDC as a feed, and offset storage.</li>
+</ul>
+<p>Everything with a number attached in this document came from the simulator in
+<code>visualization.html</code> under the model stated in §17, not from any of the above.</p>
+</article><section id="exercises"><h2 class="part">Exercises</h2><h1 id="exercises-cqrs--exercises">CQRS — Exercises</h1>
+<p>Eight rungs, easiest first. Every one is reasoning, tracing, or design — none
+asks you to write code.</p>
+<p>Work them before opening <a href="notes.html#solutions"><code>SOLUTIONS.md</code></a>. Where an exercise says
+<em>check it</em>, the check is a control in <code>visualization.html</code>; do the reasoning
+first, then let the page score you.</p>
+<p>Notation used throughout: <strong>λ</strong> = commits per second, <strong>μ</strong> = projector
+capacity, <strong>ρ</strong> = λ/μ, and <em>the window</em> = the time between an event committing
+on the write side and becoming visible in a read model.</p>
+<hr />
+<h2 id="exercises-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> Explain to a colleague who has never heard of CQRS why it exists, in
+under 120 words, without using the words <em>command</em>, <em>query</em>, <em>projection</em> or
+<em>eventual</em>. Then say which of §1's two problems your explanation covered — the
+contention or the arithmetic — and add a sentence for the other.</p>
+<p><strong>1.2</strong> The lab claims the read model is <em>allowed</em> to be stale. What grants
+that permission? Answer in one sentence, then give the smallest change to a
+system that would revoke it.</p>
+<p><strong>1.3</strong> A teammate says &quot;we already do CQRS — our handlers are split into
+<code>PlaceOrderCommand</code> and <code>GetOrdersQuery</code> classes.&quot; What do they actually have,
+what is it called, and what does it buy them from §1's table?</p>
+<p><strong>1.4</strong> Why is &quot;read model&quot; a slightly misleading name? Propose a better one
+and say what misunderstanding it prevents.</p>
+<hr />
+<h2 id="exercises-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong> For each of these, say whether it lives on the write side, the read
+side, or neither, and why:</p>
+<ul>
+<li>a uniqueness constraint on order id</li>
+<li>a rule that an order must have at least one item</li>
+<li>the current stock level used to reject an order</li>
+<li>the stock level shown on the product page</li>
+<li>the customer's lifetime order count shown in the admin UI</li>
+<li>the customer's lifetime order count used to grant a loyalty discount at
+checkout</li>
+</ul>
+<p><strong>2.2</strong> In §8's engineering model, which single object makes a projector
+restartable, makes duplicates detectable, and makes lag measurable? Name its
+equivalent in Kafka and in Debezium.</p>
+<p><strong>2.3</strong> Given <code>applyMs = 4</code>, <code>ckptMs = 5</code>, <code>batch = 50</code>, compute μ. Then say
+what λ would put the projector at ρ = 0.8.</p>
+<p><strong>2.4</strong> A dashboard shows: projector lag 340 ms, error rate 0, throughput
+steady, CPU 30%. Everything is green. Name two distinct failures from §11
+that are fully consistent with this dashboard.</p>
+<hr />
+<h2 id="exercises-rung-3--predict">Rung 3 — Predict</h2>
+<p>Commit to an answer before checking.</p>
+<p><strong>3.1</strong> A projector polls every 800 ms at ρ ≈ 0.1. Predict the mean window to
+within 100 ms without running anything. State the formula you used.</p>
+<p><strong>3.2</strong> The team doubles the projector's batch size from 100 to 200, under
+streaming, at ρ = 0.08. Predict what happens to (a) the mean window, (b)
+capacity. Then check on panel 1.</p>
+<p><strong>3.3</strong> λ rises from 390/s to 478/s — a 23% traffic increase — on a projector
+with μ = 487.8/s. Predict the change in the mean window. Then predict the
+change when λ rises just 2% further, to 498/s. Check on panel 1's cliff chart.</p>
+<p><strong>3.4</strong> One unit of stock remains. The command checks a read model fed by a
+2-second poll, at 40 orders/second. Predict how many orders are accepted.
+Then predict it for streaming. Check on panel 2.</p>
+<p><strong>3.5</strong> Two read models are both fed by projectors polling every 500 ms, with
+identical code and identical load. Their timers happen to fire 250 ms apart.
+Predict the percentage of page loads on which they disagree.</p>
+<p><strong>3.6</strong> A projector crashes once per 1,000 applies. Its projection does
+<code>revenue += total</code> and it commits its Kafka offset after the applies succeed.
+Predict the sign and rough size of the error in reported revenue after 200,000
+events.</p>
+<hr />
+<h2 id="exercises-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Take the canonical setup (λ = 40/s, poll 500 ms, apply 2 ms, batch
+100). Change <strong>one</strong> thing to cut the mean window by at least 30×. What did
+you change, what did it cost, and what did it <em>not</em> change?</p>
+<p><strong>4.2</strong> The read store gets five times slower (apply 2 ms → 10 ms). Traffic is
+unchanged. Which of these move, and by how much: μ, ρ, mean window, p99
+window, time to drain a 10,000-event backlog? Which of them would page you
+under a typical alert configuration?</p>
+<p><strong>4.3</strong> You switch the alert from &quot;more than 10,000 events behind&quot; to &quot;oldest
+unapplied event is more than 60 seconds old&quot;. Give one incident the new alert
+catches that the old one missed, and one it catches <em>later</em> than the old one
+would have.</p>
+<p><strong>4.4</strong> You move the checkpoint out of the read store and into Kafka. Which
+row of §10.5's matrix do you now live on, which protection did you lose, and
+what must you audit in every existing projection?</p>
+<p><strong>4.5</strong> Your projector runs at ρ = 0.92 and you need to rebuild a 50 M-event
+read model. You cannot reduce λ. Give three ways to make the rebuild finish
+this week, and the drawback of each.</p>
+<hr />
+<h2 id="exercises-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1</strong> A projector polls every 500 ms, <code>applyMs = 2</code>, <code>ckptMs = 5</code>,
+<code>batch = 3</code>. Applies and the checkpoint share one read-side transaction, so a
+batch becomes visible at its commit. It drains immediately after a <em>full</em>
+batch, otherwise it sleeps to the next tick.</p>
+<p>Six events commit at t = <strong>120, 300, 460, 520, 700, 1400 ms</strong>.</p>
+<p>Fill in the table. Give the visibility time and the window for each event, and
+the mean window.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>seq</th>
+  <th>commit</th>
+  <th>visible</th>
+  <th>window</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>120</td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>300</td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>460</td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>520</td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>700</td>
+  <td></td>
+  <td></td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>1400</td>
+  <td></td>
+  <td></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>5.2</strong> Three events in your table share a visibility time but have three
+different windows; and one event committed just 60 ms after another yet waited
+438 ms longer than it did. Explain both, each in terms of one property of the
+design.</p>
+<p><strong>5.3</strong> Redo the trace for a streaming projector with the same costs. Then
+state, in one sentence, what the poll interval was actually buying.</p>
+<p><strong>5.4</strong> Now trace a crash. The projector is applying the batch <code>{4, 5}</code> at
+t = 1000. It applies event 4, then dies before the transaction commits. It
+restarts at t = 3000. Give the final state of the read model and the
+checkpoint under each of the four combinations of <em>(idempotent apply, atomic
+checkpoint)</em>, assuming each event adds 100 to a revenue total that started at 0
+after events 1–3 were applied.</p>
+<hr />
+<h2 id="exercises-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p>Each of these is a plausible design someone has actually shipped. For each:
+name the flaw, construct the <strong>smallest concrete scenario</strong> in which it
+produces a wrong result, and name the guarantee it violates.</p>
+<p><strong>6.1</strong> &quot;Our projections are idempotent, so we don't bother with ordering. We
+run 8 projector threads pulling from a shared queue.&quot;</p>
+<p><strong>6.2</strong> &quot;The command handler reads <code>product_stats.units_sold</code> to check stock.
+It's fine — our projector lag is under 50 ms, we alert on it.&quot;</p>
+<p><strong>6.3</strong> &quot;We write the order to Postgres, then publish <code>OrderPlaced</code> to Kafka.
+Two steps, but we retry the publish until it succeeds.&quot;</p>
+<p><strong>6.4</strong> &quot;To make the rebuild fast we set the batch size to 10,000. The
+checkpoint is in the same transaction, so it's safe.&quot;</p>
+<p><strong>6.5</strong> &quot;The order page shows the item list from the orders projection and the
+total from the revenue projection. Both are eventually consistent, so the page
+is eventually consistent.&quot;</p>
+<p><strong>6.6</strong> &quot;We alert when the projector falls more than 5,000 events behind.
+That's about 10 seconds of work, which is well inside our SLA.&quot;</p>
+<p><strong>6.7</strong> &quot;Our projection does <code>UPDATE daily_revenue SET total = total + :amt WHERE day = :day</code>. It's a single statement, so it's atomic, so it's safe to
+retry.&quot;</p>
+<p><strong>6.8</strong> &quot;We adopted CQRS across the whole service so every team works the same
+way.&quot;</p>
+<hr />
+<h2 id="exercises-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p>Design answers, not one-liners. Say what you would build and what it costs.</p>
+<p><strong>7.1</strong> A user places an order and is redirected to a page that queries the
+read model 120 ms later. With a 500 ms poll, 89% of users see nothing. Give
+four different fixes, ordered by cost, and say which screens each one suits.
+For the one you would ship, describe what has to change in the API contract.</p>
+<p><strong>7.2</strong> Your projector has been down for four hours. It comes back. Describe
+what happens over the next several minutes, what the lag graph looks like,
+what the <em>user-visible</em> symptom is, and how you would decide whether to let it
+catch up or to rebuild.</p>
+<p><strong>7.3</strong> You discover that a projection has been running with a non-idempotent
+accumulator for eight months. Describe how you would (a) determine whether it
+is actually wrong, (b) determine by how much, (c) fix it without downtime,
+and (d) prevent the class of bug. Note which of these is impossible to do
+from the read model alone, and why.</p>
+<p><strong>7.4</strong> Design the read-your-own-writes mechanism from §11.1 option 3
+end-to-end: what the command returns, what the client stores, what the query
+layer does, what happens when the projector is 30 seconds behind, and what
+happens when the user opens the page on a second device.</p>
+<p><strong>7.5</strong> Your feed is Kafka with 12 partitions, keyed by order id. A consumer
+group rebalance happens during a deploy. Explain precisely which duplicates
+and which reorderings are possible, which are not, and what your projection
+must do about each.</p>
+<hr />
+<h2 id="exercises-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1</strong> You own a service with 1,000,000 writes/day and 100,000 reads/day.
+A colleague proposes CQRS to &quot;get ready for scale&quot;. Using §4b's framework,
+give your answer with the arithmetic, and say what you would propose instead.</p>
+<p><strong>8.2</strong> Design the projections for an order-management system that must serve:
+a customer's order list, a per-day revenue report, full-text order search, and
+a live &quot;orders awaiting dispatch&quot; queue for warehouse staff. For each: the
+store you would choose, the projector's delivery mode, the acceptable window,
+and whether it may be combined with another projection. Justify every
+combination and every separation.</p>
+<p><strong>8.3</strong> Your company mandates that any read model must be rebuildable within
+4 hours. What does that constraint imply about λ, μ, retention, partitioning
+and deployment? Turn it into three specific numeric requirements you could put
+in a design doc.</p>
+<p><strong>8.4</strong> <strong>Counterfactual.</strong> Suppose the rule &quot;the read model makes no
+decisions&quot; did not exist — suppose read models were considered authoritative
+enough to validate against. Describe the smallest realistic system in which
+this produces a loss of money, then explain why the fix cannot be &quot;reduce the
+window&quot;. Finally: is there <em>any</em> class of decision that can safely be made
+from a read model? Characterise it precisely.</p>
+<p><strong>8.5</strong> <strong>Counterfactual.</strong> Suppose projectors could commit atomically across
+the write store, the read store and Kafka. Which sections of this lab would
+become unnecessary, and which would survive unchanged? What would you have
+paid for it?</p>
+<p><strong>8.6</strong> You are on call. Alert: &quot;orders-dashboard projector age &gt; 60s&quot;.
+Write the runbook: the first four things you check, in order, and what each
+one distinguishes. Include the check that tells you whether this is a
+projector problem or a read-store problem, and the one that tells you whether
+waiting will fix it.</p>
+</section><section id="solutions"><h2 class="part">Solutions</h2><details class="sol" id="solutions-fold"><summary>Show the solutions (try the exercises first)</summary><div><h1 id="solutions-cqrs--solutions">CQRS — Solutions</h1>
+<p>Work the exercise first. For the design rungs there is no single right answer,
+so what follows is a worked reasoning process and the traps to avoid, not a
+key to copy.</p>
+<p>Figures cited are from <code>README.md</code>, which is reproducible in
+<code>visualization.html</code>.</p>
+<hr />
+<h2 id="solutions-rung-1--explain">Rung 1 — Explain</h2>
+<p><strong>1.1</strong> A model answer:</p>
+<blockquote>
+<p>Recording a sale and reporting on sales want opposite things. Recording wants
+careful rules and small, exact updates. Reporting wants totals that are
+expensive to work out from scratch. If both go through one set of tables,
+the reports slow the sales down — they hold the database's workers for a long
+time while a sale needs one for a moment — and the reports stay slow, because
+the tables are laid out for recording, not for answering. So: keep the strict
+tables for recording, and keep separate tables that already hold the answers,
+updated whenever something changes. The answer tables are a little behind.
+For reporting that is fine.</p>
+</blockquote>
+<p>The first half of that covers the <strong>contention</strong>; the last three sentences
+cover the <strong>arithmetic</strong>. If your version only said &quot;reports are slow&quot;, add the
+contention: at 6 reports/second, checkout's p99 went from 23 ms to 1,590 ms
+without checkout changing at all.</p>
+<p><strong>1.2</strong> <em>Permission is granted by the fact that nothing depends on the read
+model being right at any particular instant — it makes no decisions.</em></p>
+<p>The smallest change that revokes it: have a command read from a read model.
+One <code>SELECT</code> in one command handler. That is exercise 6.2, and it turns a
+latency property into an oversell of 12 units per unit of stock.</p>
+<p><strong>1.3</strong> They have <strong>CQS</strong> — Command–Query Separation, Meyer 1988 — which is a
+rule about methods, not models. It is genuinely useful: it makes handlers
+easier to reason about and test. It buys <strong>nothing</strong> from §1's table, because
+both classes still hit the same schema on the same connection pool, so the
+reports still block checkout and the joins still run per query.</p>
+<p><strong>1.4</strong> &quot;Read model&quot; suggests a <em>view of</em> the write model — something derived
+live, like a SQL view or a projection in the mathematical sense. It is not: it
+is a <strong>separately stored answer</strong>, maintained by a process, that can be wrong
+if that process is broken. &quot;Answer table&quot;, &quot;materialised answer&quot; or the lab's
+&quot;chalkboard&quot; all carry that better. The misunderstanding it prevents: that a
+read model is automatically consistent with the write model, and therefore
+safe to validate against.</p>
+<hr />
+<h2 id="solutions-rung-2--identify">Rung 2 — Identify</h2>
+<p><strong>2.1</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Thing</th>
+  <th>Side</th>
+  <th>Why</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>uniqueness constraint on order id</td>
+  <td><strong>write</strong></td>
+  <td>It is a rule. Rules are enforced where the truth is</td>
+</tr>
+<tr>
+  <td>order must have ≥ 1 item</td>
+  <td><strong>write</strong></td>
+  <td>Same</td>
+</tr>
+<tr>
+  <td>stock level used to <em>reject</em> an order</td>
+  <td><strong>write</strong></td>
+  <td>It is an input to a decision, so it must be the truth. This is the §11.2 trap</td>
+</tr>
+<tr>
+  <td>stock level <em>shown</em> on the product page</td>
+  <td><strong>read</strong></td>
+  <td>Showing is not deciding. Being 300 ms stale here is fine</td>
+</tr>
+<tr>
+  <td>lifetime order count <em>shown</em> in admin</td>
+  <td><strong>read</strong></td>
+  <td>Display</td>
+</tr>
+<tr>
+  <td>lifetime order count used to <em>grant a discount</em></td>
+  <td><strong>write</strong></td>
+  <td>Deciding. Same trap wearing different clothes — and harder to spot, because &quot;count of orders&quot; feels like a reporting number</td>
+</tr>
+</tbody>
+</table></div>
+<p>The last two rows are the point of the exercise: <strong>the same number is a read
+model in one sentence and a write-model concern in the next.</strong> What decides is
+the verb, not the data.</p>
+<p><strong>2.2</strong> The <strong>checkpoint</strong>. Kafka calls it a <em>consumer offset</em>; Debezium (and
+Postgres logical replication) call it an <em>LSN</em>, and the slot's
+<code>confirmed_flush_lsn</code> is the durable form of it.</p>
+<p><strong>2.3</strong> μ = 1000 × 50 / (50 × 4 + 5) = 50,000 / 205 = <strong>243.9 events/s</strong>.
+ρ = 0.8 → λ = 0.8 × 243.9 = <strong>195.1 events/s</strong>.</p>
+<p><strong>2.4</strong> Several qualify; any two of:</p>
+<ul>
+<li><strong>§11.6 reordering.</strong> Three orders were cancelled and still show as active.
+Lag is zero, errors are zero, because nothing failed — events were applied in
+the wrong order and the result converged to the wrong value.</li>
+<li><strong>§11.7 non-idempotent accumulation.</strong> Revenue is 5.39% too high and
+climbing. Nothing errors; a number is simply wrong.</li>
+<li><strong>§11.3 the cliff.</strong> ρ could be 0.98, meaning a 2% traffic rise makes the
+window unbounded — and a 340 ms lag reading cannot distinguish ρ = 0.1 from
+ρ = 0.98 (307 ms vs 509 ms).</li>
+<li><strong>§11.5 cross-model skew.</strong> Every page load is showing a combination of two
+read models that never existed.</li>
+</ul>
+<hr />
+<h2 id="solutions-rung-3--predict">Rung 3 — Predict</h2>
+<p><strong>3.1</strong> Formula: mean ≈ (poll/2)(1 + ρ) + apply + ckpt.
+= 400 × 1.1 + 7 = <strong>447 ms</strong>. Anything in 400–460 is a good prediction. The
+thing to get right is that it is dominated by poll/2 and barely touched by
+anything else at low ρ.</p>
+<p><strong>3.2</strong> (a) The mean window does <strong>not change</strong> — 8.12 ms at batch 10, 100 and
+2000. (b) Capacity rises: 400.0 → 487.8 → 499.4/s.</p>
+<p>If you predicted a wider window you made the same mistake I did when designing
+this lab. The batch is <em>opportunistic</em> — it takes whatever has arrived, which
+at ρ = 0.08 is about one event, so a bigger limit changes nothing. Batching
+costs latency only when you <strong>wait</strong> to fill the batch, and that waiting has a
+name: it is a linger timer, and a poll interval is a linger timer. That is the
+entire 297 ms vs 8.1 ms difference between v2 and v3.</p>
+<p><strong>3.3</strong> 390 → 478/s (ρ 0.80 → 0.98): mean window 445 → <strong>509 ms</strong>. A 23%
+traffic rise bought a 14% window increase — nothing.</p>
+<p>478 → 498/s (ρ 0.98 → 1.02): mean window 509 → <strong>8,661 ms</strong>. A 2% traffic rise
+multiplied it by 17×, and the number is no longer meaningful anyway, because
+past ρ = 1 the window grows with how long you have been over capacity
+(14.3 s → 29.0 s → 57.9 s → 118.2 s as the run doubled).</p>
+<p>The lesson is not &quot;watch out near ρ = 1&quot;. It is that <strong>lag gives you no warning
+at all</strong> — it is flat across the entire safe range, so you must monitor
+projector utilisation as a separate signal.</p>
+<p><strong>3.4</strong> 2-second poll: <strong>46.66 on average</strong>, p99 97, worst seen 117.
+Streaming: <strong>0.33 on average</strong>, worst 5.</p>
+<p>Both numbers are λ × window: 40 × 1.161 = 46.4, and 40 × 0.0081 = 0.32.</p>
+<p>The prediction that matters is the second one. Most people predict zero for
+streaming. It is not zero, and it cannot be, because there is always some
+window.</p>
+<p><strong>3.5</strong> <strong>100%.</strong> Identical configuration, identical load, identical code —
+they disagree on every single sampled page load, with a mean gap of 10.1
+events. Independent projectors have independent checkpoints and there is no
+instant at which both are in the same place. No amount of tuning fixes this;
+only putting the two answers in one read model behind one projector does.</p>
+<p><strong>3.6</strong> Positive, and about <strong>+5%</strong> (measured: +5.39%).</p>
+<p>Positive because the failure mode is re-applying, and re-applying an
+accumulator adds again. The Kafka detail in the question is the important part:
+the offset lives in Kafka, so there is no transaction spanning the read store
+and the offset store, so you are structurally on the non-atomic row of §10.5's
+matrix and idempotency is your only protection — which <code>+=</code> does not provide.</p>
+<hr />
+<h2 id="solutions-rung-4--modify">Rung 4 — Modify</h2>
+<p><strong>4.1</strong> Switch the projector from polling to <strong>streaming</strong>: mean window
+297.2 ms → 8.1 ms, a <strong>37×</strong> reduction.</p>
+<ul>
+<li>What it cost: a notification path (LISTEN/NOTIFY, a broker, a CDC stream)
+and a long-lived connection to maintain, plus a process that is now
+event-driven rather than a cron-like loop.</li>
+<li>What it did <strong>not</strong> change: capacity, which is 487.8/s either way. Streaming
+fixes the floor of the window. The ceiling is untouched.</li>
+</ul>
+<p>Other single changes that also qualify — cutting the poll to 10 ms — are worse
+answers: they get you to a 65 ms window at poll 100 ms while multiplying the
+projector's wake-ups and its load on the feed, and they still leave a timer.</p>
+<p><strong>4.2</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>Quantity</th>
+  <th>2 ms</th>
+  <th>10 ms</th>
+  <th>Moves?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>μ</td>
+  <td>487.8/s</td>
+  <td>99.5/s</td>
+  <td><strong>4.9× worse</strong></td>
+</tr>
+<tr>
+  <td>ρ</td>
+  <td>0.082</td>
+  <td>0.402</td>
+  <td><strong>4.9× worse</strong></td>
+</tr>
+<tr>
+  <td>mean window</td>
+  <td>298 ms</td>
+  <td>465 ms</td>
+  <td>1.6× worse</td>
+</tr>
+<tr>
+  <td>p99 window</td>
+  <td>543 ms</td>
+  <td>750 ms</td>
+  <td>1.4× worse</td>
+</tr>
+<tr>
+  <td>drain 10,000 events</td>
+  <td>0.4 min</td>
+  <td>2.8 min</td>
+  <td><strong>7× worse</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p><strong>Which pages you: almost certainly none of them.</strong> A lag alert set anywhere
+sensible (say 5 s) is nowhere near 465 ms. The quantity that moved most — ρ —
+is the one nobody graphs. You have gone from 8% to 40% utilised, and you will
+find out at 100%.</p>
+<p><strong>4.3</strong> <em>Catches that the old one missed:</em> the §11.4 slowdown. When applies go
+from 2 ms to 24 ms, 10,000 events stop being 0.4 minutes of work and become
+105.5 minutes — the same count, a 264× different meaning. An age alarm notices
+because age is measured in the unit your users and your SLA are written in.</p>
+<p><em>Catches later:</em> a sudden burst on a healthy projector. 10,000 events can pile
+up in a couple of seconds during a spike and be drained in 24 seconds, and the
+count alarm fires immediately while the age alarm never reaches 60 s. That is
+usually the <em>correct</em> behaviour — you did not want to be paged — but it is a
+genuine loss of sensitivity, so if you care about bursts, alarm on both, with
+the count alarm as a ticket rather than a page.</p>
+<p><strong>4.4</strong> You move to the <strong>non-atomic checkpoint</strong> column — §10.5's second and
+fourth rows. You lose the atomic checkpoint, so <strong>idempotency becomes your only
+protection</strong>.</p>
+<p>What to audit: every projection statement for accumulation. Anything of the
+form <code>SET x = x + :v</code> is now unsafe. The fixes are an upsert keyed by the
+aggregate's identity, or a sequence-guarded update
+(<code>SET total = total + :v, last_seq = :seq WHERE ... AND last_seq &lt; :seq</code>).</p>
+<p>The alternative worth knowing: store the offset in the read store yourself, in
+the same transaction as the applies, and <code>seek()</code> to it on partition
+assignment. That buys the atomicity back and is the standard exactly-once sink
+pattern.</p>
+<p><strong>4.5</strong> At ρ = 0.92 with μ = 487.8/s, a 50 M-event rebuild takes 367 hours —
+15 days.</p>
+<ol>
+<li><strong>Blue/green with a parallel replay.</strong> Build v2 alongside v1 with many more
+workers than the live projector uses; the ordering constraint is only per
+key, so replay parallelises. 8× workers turns 15 days into under 2 days.
+<em>Drawback:</em> the extra workers load the same read store, so real speed-up is
+less than linear, and you need double the storage during the cutover.</li>
+<li><strong>Reduce H.</strong> Snapshot the read model as of some sequence and replay only
+from there, or shorten retention. <em>Drawback:</em> you give up the ability to
+rebuild from zero, which was one of the pattern's main benefits — now the
+snapshot is load-bearing state you must also protect.</li>
+<li><strong>Rebuild against a replica or a restored copy of the feed</strong>, off the
+production read store entirely, then swap. <em>Drawback:</em> cutover complexity,
+and the delta accumulated during the rebuild still has to be applied.</li>
+</ol>
+<p>The answer that is <em>not</em> available: reducing λ. That is why §13.4 says compute
+this number quarterly.</p>
+<hr />
+<h2 id="solutions-rung-5--trace">Rung 5 — Trace</h2>
+<p><strong>5.1</strong></p>
+<div class="table"><table><thead>
+<tr>
+  <th>seq</th>
+  <th>commit</th>
+  <th>visible</th>
+  <th>window</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>120</td>
+  <td>511</td>
+  <td><strong>391</strong></td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>300</td>
+  <td>511</td>
+  <td><strong>211</strong></td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>460</td>
+  <td>511</td>
+  <td><strong>51</strong></td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>520</td>
+  <td>1009</td>
+  <td><strong>489</strong></td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>700</td>
+  <td>1009</td>
+  <td><strong>309</strong></td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>1400</td>
+  <td>1507</td>
+  <td><strong>107</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>Mean window = 1558 / 6 = <strong>259.67 ms</strong>.</p>
+<p>The reasoning, step by step:</p>
+<ul>
+<li>First tick at t = 500. Events committed at or before 500: seq 1, 2, 3 — that
+is exactly <code>batch</code>, so the batch is full. Cost = 3 × 2 + 5 = 11 ms, so it
+commits at <strong>511</strong>, and all three become visible together.</li>
+<li>The batch was full, so the projector drains rather than sleeping. At t = 511
+nothing new is available (seq 4 committed at 520), so it sleeps to the next
+tick.</li>
+<li>Tick at t = 1000. Available: seq 4, 5. Cost = 2 × 2 + 5 = 9, commits at
+<strong>1009</strong>. Not a full batch, so it sleeps.</li>
+<li>Tick at 1500. Available: seq 6. Cost = 7, commits at <strong>1507</strong>.</li>
+</ul>
+<p><strong>5.2</strong></p>
+<p><em>Three events, one visibility time, three windows:</em> because the applies and the
+checkpoint share one transaction, <strong>visibility is quantised by the batch</strong> —
+every event in a batch becomes visible at the same instant regardless of when
+it committed. The window is measured from each event's own commit, so it
+differs even though visibility does not. This is why the window's distribution
+is a sawtooth rather than a bell.</p>
+<p><em>60 ms later, 438 ms longer:</em> seq 3 commits at 460 and just catches the 500 ms
+tick (window 51). Seq 4 commits at 520 and misses it by 20 ms, so it waits for
+the next one (window 489). <strong>The poll interval is a cliff, not a gradient</strong> —
+missing a tick by a millisecond costs a whole interval. That is the mechanism
+behind the whole <code>poll/2</code> term.</p>
+<p><strong>5.3</strong> Streaming, same costs:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>seq</th>
+  <th>commit</th>
+  <th>visible</th>
+  <th>window</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>1</td>
+  <td>120</td>
+  <td>127</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>300</td>
+  <td>307</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td>460</td>
+  <td>467</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td>520</td>
+  <td>527</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>700</td>
+  <td>707</td>
+  <td>7</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td>1400</td>
+  <td>1407</td>
+  <td>7</td>
+</tr>
+</tbody>
+</table></div>
+<p>Mean = <strong>7 ms</strong>, versus 259.67 ms. Every event costs exactly one apply plus one
+checkpoint commit and nothing else.</p>
+<blockquote>
+<p>The poll interval was buying <strong>nothing except a smaller number of wake-ups.</strong>
+It was not buying throughput (capacity is identical), it was not buying
+batching (the batches here are size 1 either way at this rate), and it was
+not buying safety. It cost 37× the window.</p>
+</blockquote>
+<p><strong>5.4</strong> Before the crash: events 1–3 applied, revenue = 300, checkpoint = 3.
+The projector applies event 4 (revenue → 400) and dies before committing.
+Truth after recovery should be <strong>500</strong>.</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Idempotent apply</th>
+  <th>Atomic checkpoint</th>
+  <th>After restart</th>
+  <th>Correct?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>yes</td>
+  <td>yes</td>
+  <td>Transaction rolled back → revenue 300, ckpt 3. Replays 4 and 5 → <strong>500</strong>, ckpt 5</td>
+  <td>✅</td>
+</tr>
+<tr>
+  <td>yes</td>
+  <td>no</td>
+  <td>Event 4's apply survived → revenue 400, ckpt 3. Replays 4 (no-op) and 5 → <strong>500</strong>, ckpt 5</td>
+  <td>✅</td>
+</tr>
+<tr>
+  <td>no</td>
+  <td>yes</td>
+  <td>Rolled back → revenue 300, ckpt 3. Replays both → <strong>500</strong>, ckpt 5</td>
+  <td>✅</td>
+</tr>
+<tr>
+  <td><strong>no</strong></td>
+  <td><strong>no</strong></td>
+  <td>Event 4 survived → revenue 400, ckpt 3. Replays 4 (<strong>+100 again</strong>) and 5 → <strong>600</strong>, ckpt 5</td>
+  <td>❌ <strong>+20%</strong></td>
+</tr>
+</tbody>
+</table></div>
+<p>The two protections work by different routes — one <em>undoes</em> the partial work,
+the other <em>tolerates</em> it — which is why either alone suffices, and why it
+matters which one you have when the checkpoint lives somewhere you cannot open
+a transaction on.</p>
+<hr />
+<h2 id="solutions-rung-6--spot-the-flaw">Rung 6 — Spot the flaw</h2>
+<p><strong>6.1 — Idempotency is not ordering.</strong>
+Smallest scenario: <code>OrderPlaced(ord-1)</code> and <code>OrderCancelled(ord-1)</code> 50 ms
+apart, handed to different threads; one thread stalls (GC pause) and the cancel
+is applied first, then the place overwrites it. Order ord-1 shows as active
+forever. Measured: <strong>3 orders in 20,000</strong> with one 1-second stall.
+<em>Violated:</em> convergence — the read model has converged to a state the write
+model does not agree with. It is not stale; it is wrong, permanently.
+<em>Fix:</em> partition by key, which converts the corruption into 990 ms of latency.</p>
+<p><strong>6.2 — A command reading a read model.</strong>
+Smallest scenario: one unit of stock, two orders 10 ms apart. Both read
+<code>units_sold</code> before the first order's event is visible, both are accepted.
+At 40 orders/s with a 50 ms window you oversell about <strong>2</strong>; at the lab's
+500 ms poll, <strong>12 on average and 41 at worst</strong>.
+<em>Violated:</em> the invariant the write model exists to enforce.
+<em>Fix:</em> a conditional write on the write model — <code>UPDATE stock SET units = units - 1 WHERE sku = ? AND units &gt;= 1</code>. Note the alert in the quote is
+irrelevant: a 50 ms lag alert firing correctly still leaves you overselling.</p>
+<p><strong>6.3 — The dual write.</strong>
+Smallest scenario: the Postgres commit succeeds, the process dies before the
+Kafka publish. The order exists and no event describing it ever will, so every
+read model is permanently missing it and a rebuild does not fix it — the feed
+has no record.
+<em>Violated:</em> invariant 1, atomicity at the source.
+<em>Fix:</em> the transactional outbox — write the event to a table in the same
+transaction and relay it separately. &quot;We retry until it succeeds&quot; does not
+help, because the process that would retry is the one that died.</p>
+<p><strong>6.4 — Correct, and still broken.</strong>
+The claim is true: with an atomic checkpoint, a batch of 10,000 is perfectly
+correct at any crash rate. The flaw is <strong>progress</strong>, not correctness. Every
+replayed event is itself exposed to the crash hazard, so the governing quantity
+is B·h. At B·h = 5 the projector wastes <strong>27× the useful work</strong>; at B·h = 12 it
+applied <strong>1.5% of the feed</strong> before hitting a work budget of 60× and would have
+stayed there indefinitely.
+<em>Violated:</em> liveness. The projector is not wrong, it is stuck.
+<em>Fix:</em> size the batch so B·h ≪ 1 — and note the trap that h rises exactly when
+things are already going badly.</p>
+<p><strong>6.5 — Two eventually-consistent things are not one eventually-consistent
+thing.</strong>
+Smallest scenario: the item list shows 5 orders while the total shows the sum
+of 4, because the two projectors are at different checkpoints. Measured: two
+projectors with <em>identical</em> 500 ms polls whose timers fire 250 ms apart
+disagree on <strong>100% of page loads</strong>.
+<em>Violated:</em> nothing formal — each model is individually fine. What is violated
+is the user's reasonable assumption that the page shows one moment in time.
+<em>Fix:</em> put anything that must be internally consistent in <strong>one</strong> read model
+behind <strong>one</strong> projector, or timestamp the two facts separately and show them
+as such.</p>
+<p><strong>6.6 — A threshold in units of work.</strong>
+Smallest scenario: the read store slows from 2 ms to 24 ms per apply. 5,000
+events was 10 seconds of drain; it is now over 50 minutes. The alarm's
+threshold did not change and its <em>meaning</em> changed by 264×.
+<em>Violated:</em> the alarm's relationship to the SLA it was written for.
+<em>Fix:</em> alarm on the <strong>age of the oldest unapplied event</strong>, which is in the same
+unit as the SLA.</p>
+<p><strong>6.7 — Statement atomicity is not idempotency.</strong>
+Smallest scenario: the statement commits, the projector dies before the offset
+is committed, the statement runs again. Revenue is 100 too high, forever, and
+nothing errors.
+<em>Violated:</em> effectively-once application — invariant 2.
+<em>Fix:</em> guard it — <code>SET total = total + :amt, last_seq = :seq WHERE day = :day AND last_seq &lt; :seq</code> — or restructure the projection so the row is an upsert of
+a computed value rather than an accumulation. &quot;Atomic&quot; answers a different
+question (&quot;can it half-happen?&quot;) from &quot;idempotent&quot; (&quot;what if it happens
+twice?&quot;).</p>
+<p><strong>6.8 — Uniformity as a value.</strong>
+Smallest scenario: a subsystem with R/N = 0.1 (§4b's last row) now pays
+11.11 CPU-hours/day of projection work to save 1.11 of query work, <em>and</em> has
+acquired a consistency window it gains nothing from — and an engineer working
+there, with no reason to have internalised §6's rule, writes exercise 6.2's
+inventory check.
+<em>Violated:</em> nothing technical. This is a judgement failure that manufactures
+opportunities for all the others.
+<em>Fix:</em> per-subsystem adoption, driven by the R/N ratio and by whether staleness
+is genuinely tolerable there.</p>
+<hr />
+<h2 id="solutions-rung-7--handle-failure">Rung 7 — Handle failure</h2>
+<p><strong>7.1</strong> Ordered by cost:</p>
+<ol>
+<li><strong>Render from the command result.</strong> The confirmation page already knows the
+order succeeded; it does not need to query anything. Free, and it removes
+the problem entirely for the single most common screen. Suits: confirmation
+pages, &quot;saved&quot; toasts, anything showing back what the user just submitted.</li>
+<li><strong>Stream instead of poll.</strong> 89.4% → 0.0% at every think time, for a config
+and deployment change. Suits: everything, and it is the highest-leverage
+single change available. Caveat: at ρ = 0.92 streaming's own window is
+89.6 ms mean / 197 ms p99, so it is not a licence to stop thinking.</li>
+<li><strong>Sequence-number wait (read-your-own-writes).</strong> Precise, per-user, and it
+costs a little latency for exactly the user who needs it. Suits: lists and
+detail pages the user was just redirected to.</li>
+<li><strong>Route that query to the write model.</strong> Always correct. Suits: rare,
+high-stakes screens. If you need it for most screens, this subsystem did not
+want CQRS.</li>
+</ol>
+<p><strong>API contract change for option 3:</strong> the command response stops being an empty
+<code>200 OK</code> and starts carrying a <strong>consistency token</strong> — the event's sequence
+number, or an opaque encoding of it. The client returns it on subsequent reads
+(header or cookie). The query layer either waits until the relevant projector's
+checkpoint ≥ the token, or routes to the write model, and it must <strong>cap the
+wait</strong> and degrade rather than hanging. This is the same mechanism as a session
+token for bounded staleness in a replicated database.</p>
+<p><strong>7.2</strong> Over the next several minutes:</p>
+<ul>
+<li>The projector resumes from its checkpoint and drains at μ, while λ keeps
+arriving, so it closes the gap at <strong>μ − λ</strong>, not μ. Four hours at 40/s is
+576,000 events; at 487.8/s capacity that is 576,000 / 447.8 ≈ <strong>21 minutes</strong>.</li>
+<li>The lag graph shows a sawtooth-free straight line down — a <em>linear</em> descent
+at a constant slope. Age falls at (1 − λ/μ) seconds per second: here, 0.92
+seconds of age per second of wall clock.</li>
+<li>The user-visible symptom is that read models are hours stale and then
+progressively less so. Crucially, <strong>writes were never affected</strong> — that
+decoupling is the feature you paid the window for.</li>
+</ul>
+<p><em>Catch up or rebuild?</em> Let it catch up if (a) the feed still retains everything
+back to the checkpoint, and (b) μ − λ gives an acceptable time. Rebuild if the
+retention window was exceeded during the outage — because then the checkpoint
+points at events that no longer exist, and catching up would silently skip
+them. <strong>That is the check to do first, and it is the one people forget:</strong> an
+expired offset is not a stalled projector, it is a permanently wrong read model.</p>
+<p><strong>7.3</strong></p>
+<ul>
+<li><strong>(a) Is it wrong?</strong> You cannot tell from the read model — a wrong number
+looks exactly like a right one. Rebuild the projection into a shadow table
+from sequence 0 and diff. This is the only reliable test, and it is why §13.4
+lists reconciliation.</li>
+<li><strong>(b) By how much?</strong> The diff gives it exactly, per row. Expect the error to
+correlate with crash/restart/rebalance history rather than with traffic —
+which is itself confirmation of the mechanism.</li>
+<li><strong>(c) Fix without downtime:</strong> blue/green. Build the corrected projection
+alongside, let it catch up, then flip reads. Do not try to &quot;repair&quot; the live
+table with a correction delta — you cannot compute one reliably, because you
+do not know how many times each event was applied.</li>
+<li><strong>(d) Prevent:</strong> convert accumulations to upserts or sequence-guarded
+updates; add reconciliation to the schedule; and if you are on Kafka, treat
+idempotency as mandatory rather than as good practice, because the atomic
+checkpoint is not available to you.</li>
+</ul>
+<p><strong>7.4</strong> Sketch:</p>
+<ul>
+<li>The command handler commits, and returns the event's sequence number as a
+token: <code>{&quot;status&quot;:&quot;ok&quot;,&quot;consistency&quot;:&quot;orders:184423&quot;}</code>.</li>
+<li>The client stores it — cookie for browser flows, header for API clients —
+scoped to that user's session, and sends it with subsequent reads.</li>
+<li>The query layer compares the token to the relevant projector's checkpoint. If
+the checkpoint is behind, it either waits (with a short cap, e.g. 200 ms) or
+routes to the write model.</li>
+<li><strong>Projector 30 s behind:</strong> waiting is not an option. The query layer must
+detect that the wait would exceed the cap and immediately fall back — to the
+write model if the query can be answered there, otherwise to serving stale
+data with a visible &quot;updated a moment ago&quot; marker. Silently hanging is the
+worst outcome and the most common implementation bug.</li>
+<li><strong>Second device:</strong> the token lives in the first device's session, so the
+second device has no token and reads normally — it may not see the write.
+That is correct and expected: read-your-own-writes is a <em>session</em> guarantee,
+not a global one. If you need it across devices, the token must be stored
+per-user server-side, which turns a cheap mechanism into a stateful one.</li>
+</ul>
+<p><strong>7.5</strong> With 12 partitions keyed by order id:</p>
+<ul>
+<li><strong>Guaranteed:</strong> events for a single order are in one partition, so their
+relative order is preserved end to end. Order-level reordering is
+<strong>impossible</strong>.</li>
+<li><strong>Possible: duplicates.</strong> A rebalance revokes partitions from a consumer that
+had applied records but not yet committed its offset. The new owner resumes
+from the last committed offset and re-delivers them. This is unavoidable —
+the offset lives in Kafka and cannot join your read store's transaction.</li>
+<li><strong>Possible: reordering <em>across</em> orders.</strong> Partition 3 may be seconds ahead of
+partition 7. Anything that assumes a global sequence across orders is broken.</li>
+<li><strong>What the projection must do:</strong> be idempotent per event (upserts or
+sequence-guarded updates), never assume a global order, and never derive a
+cross-order aggregate that must be internally consistent at an instant. If
+you need an exact global total, it belongs in one partition or is computed
+from the write model.</li>
+</ul>
+<hr />
+<h2 id="solutions-rung-8--design">Rung 8 — Design</h2>
+<p><strong>8.1</strong> The arithmetic: R/N = 100,000 / 1,000,000 = <strong>0.1</strong>. With J = 40 ms,
+read-time cost is 1.11 CPU-hours/day and projection-time cost is <strong>11.11
+CPU-hours/day</strong>. Projections would cost <strong>10× more</strong> than the thing they
+replace, and add a consistency window, a projector to operate, and a rebuild
+to plan.</p>
+<p>CQRS is a bet on a ratio, and this system is on the wrong side of it. &quot;Getting
+ready for scale&quot; has it backwards: growing this workload makes projections
+<em>relatively worse</em>, because N grows with it.</p>
+<p>What to propose instead: index the specific slow queries; cache if the same
+answers repeat; and if reads are interfering with writes, a <strong>read replica</strong> —
+which fixes contention without adding a projection. Revisit if R/N moves,
+which it will if you add a dashboard that a million people look at.</p>
+<p><strong>8.2</strong> A defensible design:</p>
+<div class="table"><table><thead>
+<tr>
+  <th>Read model</th>
+  <th>Store</th>
+  <th>Delivery</th>
+  <th>Window</th>
+  <th>Combine?</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+  <td>Customer's order list</td>
+  <td>Postgres table, one row per order</td>
+  <td>streaming</td>
+  <td>&lt; 100 ms; the user was just redirected here</td>
+  <td><strong>Yes — combine with the order total.</strong> Anything a single page shows together belongs to one projector (§11.5)</td>
+</tr>
+<tr>
+  <td>Per-day revenue report</td>
+  <td>Postgres or ClickHouse, aggregated by day</td>
+  <td>poll, minutes</td>
+  <td>minutes; nobody notices</td>
+  <td>Separate — different shape, different audience, no page shows it beside the order list</td>
+</tr>
+<tr>
+  <td>Full-text order search</td>
+  <td>Elasticsearch</td>
+  <td>streaming</td>
+  <td>seconds is fine</td>
+  <td>Separate — different store, and it is the reason v1 (synchronous projection) is not available</td>
+</tr>
+<tr>
+  <td>&quot;Awaiting dispatch&quot; queue</td>
+  <td>Postgres, indexed by status</td>
+  <td>streaming</td>
+  <td><strong>as small as possible</strong></td>
+  <td>Separate, and treat with care — see below</td>
+</tr>
+</tbody>
+</table></div>
+<p>The last row is the interesting one, and the trap. Warehouse staff <em>act</em> on
+that queue, so the temptation is to treat it as authoritative. It is not: two
+staff can pick the same order inside the window. The projection may <strong>show</strong> the
+queue; claiming an order must be a command against the write model with a
+conditional update (<code>WHERE status = 'AWAITING'</code>). This is §6's rule reappearing
+somewhere it does not look like inventory.</p>
+<p><strong>8.3</strong> &quot;Rebuildable in 4 hours&quot; is a constraint on <strong>spare</strong> capacity, since
+rebuild time = H/(μ − λ). Turning it into requirements:</p>
+<ol>
+<li><strong>μ − λ ≥ H / 14,400 s.</strong> With H = 50 M that is a required spare capacity of
+<strong>3,472 events/s</strong> — over 7× the lab's whole projector. So either μ must be
+much larger, or H much smaller, or the replay must be parallel.</li>
+<li><strong>Replay parallelism ≥ P</strong>, where P is chosen so P × (μ − λ) meets (1). This
+is only sound if the feed is partitioned by key, so the constraint
+propagates back into a <em>design</em> requirement on the feed, not just an
+operational one.</li>
+<li><strong>Retention ≥ the rebuild window plus margin</strong>, and <strong>H bounded</strong> by
+retention or snapshots — otherwise H grows monotonically and requirement (1)
+silently expires. Add an alert on projected rebuild time, not just on H.</li>
+</ol>
+<p>The broader lesson: a rebuild SLO is not an operational nicety, it constrains
+your partitioning key and your retention policy at design time.</p>
+<p><strong>8.4</strong> <em>Smallest realistic system where it loses money:</em> one product, one unit
+of stock, a checkout that validates against a projection. At 40 orders/second
+with an ordinary 500 ms poll you accept <strong>12 orders on average, 41 at worst</strong>,
+for one unit. Every one beyond the first is a refund, an apology, and possibly
+a regulatory problem if you charged for it.</p>
+<p><em>Why &quot;reduce the window&quot; cannot be the fix:</em> the window is never zero in any
+asynchronous design. Going from a 2 s poll to streaming took the oversell from
+46.66 to 0.33 — a 140× improvement that still is not zero, and the remaining
+0.33 is not a tuning failure, it is the definition of the design. Reducing the
+window changes the probability of a wrong decision, never its possibility. Only
+moving the decision to where the truth is makes it zero.</p>
+<p><em>Which decisions can safely be made from a read model?</em> Precisely those whose
+correctness does not depend on the read model being current — which is a real
+and non-empty class:</p>
+<ul>
+<li>Decisions that are <strong>advisory</strong> and will be re-validated later (&quot;show this
+banner&quot;, &quot;suggest this product&quot;, &quot;pre-fill this form&quot;).</li>
+<li>Decisions on <strong>monotone</strong> predicates that cannot be invalidated by events
+still in flight. If a fact can only ever become <em>more</em> true — an account was
+created, an order was placed at some point — then a stale &quot;no&quot; may be wrong
+but a stale &quot;yes&quot; cannot be. Note the asymmetry: you may act on the yes and
+must not act on the no.</li>
+<li>Decisions where the <strong>cost of being wrong is bounded and acceptable</strong>, and
+someone has actually written down what that bound is.</li>
+</ul>
+<p>Everything else — anything conserving a scarce resource, anything enforcing a
+limit, anything the business would call a rule — belongs on the write model.</p>
+<p><strong>8.5</strong> With a magic transaction spanning the write store, the read store and
+Kafka, what disappears:</p>
+<ul>
+<li>§10.5 in its entirety: no crash matrix, no idempotency requirement, no atomic
+checkpoint distinction, no B·h.</li>
+<li>§11.7's silent drift, and §11.6's reordering (a global transaction implies a
+global order).</li>
+<li>The outbox pattern itself — §13.1's whole first bullet.</li>
+</ul>
+<p>What <strong>survives unchanged</strong>:</p>
+<ul>
+<li>The consistency window, if the projection is still asynchronous — atomicity
+is not synchrony. If you make it synchronous to close the window, you are
+back at §10.1's v1 and you have re-acquired its latency and availability
+coupling.</li>
+<li>§11.2's oversell, if a command still reads a read model. Nothing about
+atomicity stops you from validating against a store that is behind.</li>
+<li>§11.5's cross-model skew, unless every read model is in the same transaction
+as every other — at which point you have one giant synchronous system.</li>
+<li>§11.8's rebuild arithmetic. H/(μ − λ) does not care about transactions.</li>
+<li>§4b's economics. The reason to do this at all is untouched.</li>
+</ul>
+<p><em>What you would have paid:</em> the availability and latency of a distributed
+transaction — your write path now blocks on the slowest and least reliable
+participant, which is exactly what §10.1's breaking points 2 and 3 were about,
+and exactly what your two-phase-commit lab priced. <strong>That is the honest summary
+of the whole pattern: CQRS is what you build when you decide that price is too
+high, and every remaining complication in this lab is change from that
+decision.</strong></p>
+<p><strong>8.6</strong> Runbook for <em>&quot;orders-dashboard projector age &gt; 60 s&quot;</em>:</p>
+<ol>
+<li><strong>Is it moving?</strong> Compare the checkpoint now with the checkpoint 30 seconds
+ago. This is the first check because it splits the entire problem space:
+a checkpoint that is advancing means <em>behind</em>; one that is not means <em>stuck
+or dead</em>, which is a completely different investigation (crash loop, poison
+batch, lost lease, expired offset).</li>
+<li><strong>Is it behind because of input or because of output?</strong> Compare λ now with
+λ an hour ago, and compare the projector's utilisation ρ now with before. λ
+up and ρ up means a traffic event. λ flat and ρ up means the <strong>read store
+got slower</strong> — this is §11.4, and it is the one that surprises people
+because nothing about your service changed.</li>
+<li><strong>Will waiting fix it?</strong> Compute μ − λ. If positive, age falls at
+(1 − λ/μ) seconds per second and you can state an ETA; if λ ≥ μ, waiting
+will <em>never</em> fix it and you must shed, scale the projector, or accept
+unbounded staleness. This is the check that turns the page into either &quot;I
+have an ETA&quot; or &quot;I have an incident&quot;.</li>
+<li><strong>Is the feed still retaining what the checkpoint points at?</strong> If the offset
+has expired, catching up would silently skip events, and the correct action
+is a rebuild, not patience. Check this before anyone &quot;restarts it to see if
+that helps&quot;.</li>
+</ol>
+<p>Two things deliberately <em>not</em> in the top four: restarting the projector (it
+destroys the evidence for check 1 and fixes only the case check 1 would have
+identified) and looking at error rates (all four of this lab's silent failures
+have an error rate of zero).</p>
+</div></details></section><nav class="pager" aria-label="Other labs"><a href="../50-event-sourcing/notes.html"><small>← Lab 50</small>event-sourcing</a><a href="../52-change-data-capture/notes.html" style="text-align:right"><small>Lab 52 →</small>change-data-capture</a></nav></main><aside aria-label="On this page"><h2>Read</h2><a href="#readme-1-why-did-checkout-die-when-nobody-touched-checkout">1. Why did checkout die when nobody touched checkout?</a><a href="#readme-2-what-are-the-two-jobs-one-ledger-is-being-asked-to-do">2. What are the two jobs one ledger is being asked to do?</a><a href="#readme-3-what-is-the-obvious-solution-and-why-should-you-try-it-first">3. What is the obvious solution, and why should you try it first?</a><a href="#readme-4-what-survives-the-read-replica-and-why-is-that-a-failure">4. What survives the read replica, and why is that a failure?</a><a href="#readme-5-what-is-the-real-requirement-said-in-plain-words-first">5. What is the real requirement, said in plain words first?</a><a href="#readme-6-what-is-the-key-idea-and-what-one-rule-licenses-it">6. What is the key idea, and what one rule licenses it?</a><a href="#readme-7-which-terminology-does-this-actually-need-and-which-two-words-get-confused">7. Which terminology does this actually need, and which two words get confused?</a><a href="#readme-8-what-are-the-mental-models-in-five-objects-and-two-promises">8. What are the mental models, in five objects and two promises?</a><a href="#readme-9-what-should-you-open-in-the-visualization-and-what-should-you-watch">9. What should you open in the visualization, and what should you watch?</a><a href="#readme-10-what-is-the-actual-mechanism-built-one-forced-step-at-a-time">10. What is the actual mechanism, built one forced step at a time?</a><a href="#readme-11-what-do-the-failure-scenarios-actually-look-like">11. What do the failure scenarios actually look like?</a><a href="#readme-12-what-are-you-actually-guaranteed-and-what-are-you-not">12. What are you actually guaranteed, and what are you not?</a><a href="#readme-13-what-does-this-look-like-in-production-and-what-do-you-actually-operate">13. What does this look like in production, and what do you actually operate?</a><a href="#readme-14-which-common-wrong-models-will-you-meet">14. Which common wrong models will you meet?</a><a href="#readme-15-where-does-this-sit-in-the-knowledge-map">15. Where does this sit in the knowledge map?</a><a href="#readme-16-glossary--what-does-every-word-mean-and-where-did-you-meet-it">16. GLOSSARY — what does every word mean, and where did you meet it?</a><a href="#readme-17-about-this-lab">17. About this lab</a><a href="#readme-sources-and-further-reading">Sources and further reading</a><h2>Exercises</h2><a href="#exercises">Top of exercises</a><h2>Solutions</h2><a href="#solutions">Top of solutions</a></aside></div><script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+(function () {
+  // the solutions stay folded until asked for: a link into them (or the Solutions tab) opens them
+  var sol = document.getElementById('solutions-fold');
+  function openFor(hash) {
+    if (!sol || !hash) return;
+    if (hash === '#solutions' || hash.indexOf('#solutions-') === 0) {
+      sol.open = true;
+      var el = document.getElementById(hash.slice(1));
+      if (el) el.scrollIntoView();
+    }
+  }
+  openFor(location.hash);
+  window.addEventListener('hashchange', function () { openFor(location.hash); });
+  if (window.hljs) document.querySelectorAll('.code code[class*="language-"]').forEach(function (el) {
+    try { hljs.highlightElement(el); } catch (e) {}
+  });
+  // claude.ai draws Mermaid only on an artifact's main page, so these pages draw their own diagrams
+  var diagrams = document.querySelectorAll('pre.mermaid');
+  if (diagrams.length) {
+    var s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.12.0/mermaid.min.js';
+    s.onload = function () {
+      var forced = document.documentElement.getAttribute('data-theme');
+      var dark = forced ? forced === 'dark' : !!(window.matchMedia && matchMedia('(prefers-color-scheme: dark)').matches);
+      mermaid.initialize({ startOnLoad: false, securityLevel: 'strict', suppressErrorRendering: true, theme: dark ? 'dark' : 'neutral',
+                           fontFamily: '"Source Sans 3", "Segoe UI", system-ui, sans-serif' });
+      // one at a time, and the text is replaced only by a drawing that worked: a diagram with a syntax error in
+      // the lab's source stays readable as text
+      [].reduce.call(diagrams, function (done, pre, i) {
+        return done.then(function () {
+          return mermaid.render('hub-diagram-' + i, pre.textContent).then(function (r) { pre.innerHTML = r.svg; }, function () {
+            pre.title = 'This diagram has a syntax error in the lab, so it is shown as its text';
+            var left = document.getElementById('dhub-diagram-' + i);
+            if (left) left.remove();
+          });
+        });
+      }, Promise.resolve());
+    };
+    document.head.appendChild(s);
+  }
+})();
+</script>
+<script>
+(function () {
+  var b = document.getElementById('hub-full');
+  if (b) {
+    if (!document.fullscreenEnabled) b.hidden = true;
+    var paint = function () {
+      var on = !!document.fullscreenElement;
+      b.setAttribute('aria-pressed', String(on));
+      b.title = on ? 'Leave full screen (Esc)' : 'Full screen';
+      var l = b.querySelector('.hub-full-label'); if (l) l.textContent = on ? 'Exit full screen' : 'Full screen';
+    };
+    b.addEventListener('click', function () {
+      if (document.fullscreenElement) document.exitFullscreen().catch(function () {});
+      else document.documentElement.requestFullscreen().catch(function () {});
+    });
+    document.addEventListener('fullscreenchange', paint); paint();
+  }
+  var here = document.documentElement.getAttribute('data-hub-lab');
+  if (here) try { localStorage.setItem('hub.last', JSON.stringify({ lab: here, page: location.pathname.split('/').pop() || 'notes.html', at: Date.now() })); } catch (e) {}
+})();
+</script>
+</body>
+</html>
