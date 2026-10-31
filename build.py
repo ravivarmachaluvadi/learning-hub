@@ -20,6 +20,7 @@ GH = HERE.parent
 TOOLS = {   # folder on the site: the tool's repo next to this one
     'claude': 'ClaudeLearningTool', 'lead-engineer': 'LeadEngineerLearningTool', 'ui': 'UILearningTool',
     'react': 'ReactLearningTool', 'python': 'PythonLearningTool', 'kotlin': 'KotlinLearningTool',
+    'java-concurrency': 'JavaConcurrencyLearningTool',
 }
 NOINDEX = '<meta name="robots" content="noindex">'
 
