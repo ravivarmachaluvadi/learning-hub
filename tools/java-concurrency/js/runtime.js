@@ -13,7 +13,7 @@
  *   JCLT.run.onChange(fn)    fn(info) now and after every change (the top-bar badge uses it)
  *   JCLT.run.ready()         a Promise for the info once the server answered, or did not
  *   JCLT.run.exec(req, onEvent)
- *                           req: {code, stdin, checks?, timeout?, files?: [{name, code}]};
+ *                           req: {code, stdin, checks?, timeout?, files?: [{name, code}], jdk?: '21'};
  *                           onEvent(kind, text) gets output while the program runs (from /api/peek). Resolves
  *                           with jclearn's result; never rejects. Runs are queued, one at a time. The code
  *                           is Main.java; files are the lesson's other Java files (Service.java…), compiled with it.
@@ -74,7 +74,7 @@
     return fetch('api/run', {
       method: 'POST', headers: { 'Content-Type': 'application/json', 'X-JcLearn': '1' },
       body: JSON.stringify({ id: id, code: req.code, stdin: req.stdin || '', checks: req.checks || null, timeout: req.timeout || DEFAULT_TIMEOUT,
-        files: req.files && req.files.length ? req.files : null })
+        files: req.files && req.files.length ? req.files : null, jdk: req.jdk || null })
     }).then(function (r) {
       if (!r.ok) throw new Error('the server answered ' + r.status);
       return r.json();

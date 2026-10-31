@@ -111,8 +111,15 @@
     (U.data.glossary || []).forEach(function (t) {
       add('Term', t.term, t.def, '#/glossary/' + t.id, t.keywords || [], 0.8);   // below lessons: a lesson teaches the term
     });
-    // later batches add their pages here: Explainers and the Java version map (2), Then and now, Reference (3),
-    // the Spring map (4), Practice, Predict the output and the Mock interview (5)
+    add('Page', 'Explainers', 'Hard ideas taken apart a step at a time, with a picture, each step proved by a real run.', '#/explain',
+      ['explainers', 'explainer', 'explain', 'step by step', 'visual', 'picture', 'how it works', 'animation'], 2.2);
+    (U.data.explainers || []).forEach(function (x) {
+      add('Explainer', x.title, x.summary, '#/explain/' + x.id, x.keywords || [], 2.2);
+    });
+    add('Page', 'Java versions', 'Every concurrency JEP from Java 19 to 27: preview or final, and what changed.', '#/versions',
+      ['java versions', 'versions', 'jep', 'jeps', 'preview', 'final', 'release', 'java 21', 'java 24', 'java 25', 'java 26', 'java 27', 'lts'], 2.2);
+    // later batches add their pages here: Then and now, Reference (3), the Spring map (4), Practice, Predict the output
+    // and the Mock interview (5)
     return idx;
   }
 

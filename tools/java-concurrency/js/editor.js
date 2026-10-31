@@ -32,7 +32,7 @@
     clearTimeout(hideTimer);
     tip.innerHTML = '';
     tip.setAttribute('data-kind', kind || 'habit');
-    tip.appendChild(U.h('div', { class: 'habit-tip-title' }, title || (msgs.length === 1 ? 'A Java habit?' : msgs.length + ' Java habits?')));
+    tip.appendChild(U.h('div', { class: 'habit-tip-title' }, title || (msgs.length === 1 ? 'A concurrency habit?' : msgs.length + ' concurrency habits?')));
     msgs.forEach(function (m) { tip.appendChild(U.h('div', { class: 'habit-tip-msg', html: U.md(m) })); });
     tip.hidden = false;
     var r = marker.getBoundingClientRect();

@@ -79,13 +79,52 @@ void main() throws Exception {
     IO.println("10,000 virtual threads, " + most.get() + " sleeping at once, on one carrier");
 }
 ` },
+    { id: 'scope-fan-out', title: 'A structured fan-out (preview)', code: `String call(String name, long ms, boolean fail) throws InterruptedException {
+    try {
+        Thread.sleep(ms);
+    } catch (InterruptedException e) {
+        IO.println(name + ": cancelled");
+        throw e;
+    }
+    if (fail) throw new IllegalStateException(name + " failed");
+    IO.println(name + ": done");
+    return name;
+}
+
+void main() throws Exception {
+    // Change which call fails, or open the scope with another Joiner.
+    try (var scope = StructuredTaskScope.open()) {
+        scope.fork(() -> call("users", 100, false));
+        scope.fork(() -> call("orders", 200, true));
+        scope.fork(() -> call("prices", 1_000, false));
+        scope.join();
+    } catch (StructuredTaskScope.FailedException e) {
+        IO.println("join() threw: " + e.getCause().getMessage());
+    }
+}
+` },
+    { id: 'scoped-value', title: 'A scoped value', code: `static final ScopedValue<String> USER = ScopedValue.newInstance();
+
+void handle() throws Exception {
+    IO.println("handling for " + USER.get());
+    try (var scope = StructuredTaskScope.open(StructuredTaskScope.Joiner.<String>allSuccessfulOrThrow())) {
+        scope.fork(() -> "a subtask sees " + USER.get());
+        scope.join().forEach(s -> IO.println(s.get()));
+    }
+}
+
+void main() throws Exception {
+    ScopedValue.where(USER, "ravi").call(() -> { handle(); return null; });
+    IO.println("after: bound? " + USER.isBound());
+}
+` },
     { id: 'pinning-check', title: 'Does it pin? (JFR)', code: `import jdk.jfr.consumer.RecordingStream;
 
 static class Slow {
     static final String VALUE;
     static {
         // try moving this sleep elsewhere
-        try { Thread.sleep(100); } catch (InterruptedException e) { }
+        try { Thread.sleep(100); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         VALUE = "ready";
     }
 }

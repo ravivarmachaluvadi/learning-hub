@@ -131,7 +131,7 @@ window.JCLT = window.JCLT || {};
   /** Colour the code blocks that U.md produced, once they are in the page. */
   U.enhance = function (root) {
     if (!window.CodeMirror || !window.CodeMirror.runMode) return root;
-    var modes = { java: 'text/x-java' };
+    var modes = { java: 'text/x-java', java21: 'text/x-java' };
     U.$$('pre.code[data-mode]', root).forEach(function (pre) {
       var mode = pre.getAttribute('data-mode');
       pre.removeAttribute('data-mode');

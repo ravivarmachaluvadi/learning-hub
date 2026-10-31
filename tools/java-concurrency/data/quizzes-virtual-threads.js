@@ -102,7 +102,7 @@
       answer: 0,
       why: 'JEP 491 lists what is left: blocking in a class initializer, waiting for another thread\'s class initialization, class loading during symbol resolution, and native frames that call back and block.' },
     { q: 'With one carrier on Java 25, a virtual thread sleeps 500 ms inside `synchronized`. What does this program print?',
-      code: 'void main() throws Exception {\n    System.setProperty("jdk.virtualThreadScheduler.parallelism", "1");\n    System.setProperty("jdk.virtualThreadScheduler.maxPoolSize", "1");\n    Object lock = new Object();\n    var ran = new AtomicBoolean();\n    Thread holder = Thread.ofVirtual().start(() -> {\n        synchronized (lock) {\n            try { Thread.sleep(500); } catch (InterruptedException e) { }\n        }\n    });\n    Thread.sleep(100);\n    Thread.ofVirtual().start(() -> ran.set(true)).join(300);\n    IO.println(ran.get());\n    holder.join();\n}',
+      code: 'void main() throws Exception {\n    System.setProperty("jdk.virtualThreadScheduler.parallelism", "1");\n    System.setProperty("jdk.virtualThreadScheduler.maxPoolSize", "1");\n    Object lock = new Object();\n    var ran = new AtomicBoolean();\n    Thread holder = Thread.ofVirtual().start(() -> {\n        synchronized (lock) {\n            try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }\n        }\n    });\n    Thread.sleep(100);\n    Thread.ofVirtual().start(() -> ran.set(true)).join(300);\n    IO.println(ran.get());\n    holder.join();\n}',
       choices: ['`true`', '`false`'],
       answer: 0,
       why: 'On Java 24 and later the sleeping holder unmounts, monitor and all, so the other virtual thread gets the carrier. On Java 21 the same program prints `false`.' },

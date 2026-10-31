@@ -16,10 +16,12 @@
     ['`synchronized` around I/O pins the carrier (Java 21 to 23)', 'Java 24 and later: `synchronized` no longer pins', 'lesson:vt-pinning'],
     ['`ThreadLocal` caches of costly objects', 'Shared or pooled objects; `ScopedValue` for context', 'lesson:vt-threadlocals'],
     ['`jstack`, a text thread dump', '`jcmd <pid> Thread.dump_to_file -format=json`, JFR\'s virtual-thread events', 'lesson:vt-observe'],
-    ['`invokeAll`, then cancelling the rest by hand on a failure', '`StructuredTaskScope`: a failure cancels the siblings (preview in 25)', 'track:structured'],
-    ['`InheritableThreadLocal` for request context', '`ScopedValue`, bound for a call and inherited by forked subtasks (final in 25)', 'track:scoped'],
-    ['`parallelStream()` with blocking calls inside', '`Gatherers.mapConcurrent(n, fn)` on virtual threads (Java 24)', 'track:scoped'],
-    ['Double-checked locking for a lazy singleton', 'The holder idiom, or `StableValue` (preview in 25)', 'track:scoped'],
+    ['`invokeAll`, then cancelling the rest by hand on a failure', '`StructuredTaskScope`: a failure cancels the siblings (preview in 25)', 'lesson:sc-failure'],
+    ['`CompletableFuture.anyOf`, then cancelling the losers', '`Joiner.anySuccessfulResultOrThrow()`: the losers are cancelled', 'lesson:sc-joiners'],
+    ['A timeout on every call, adding up', 'One deadline for the whole fan-out: `withTimeout`', 'lesson:sc-timeouts'],
+    ['`InheritableThreadLocal` for request context', '`ScopedValue`, bound for a call and inherited by forked subtasks (final in 25)', 'lesson:sv-inheritance'],
+    ['`parallelStream()` with blocking calls inside', '`Gatherers.mapConcurrent(n, fn)` on virtual threads (Java 24)', 'lesson:sv-map-concurrent'],
+    ['Double-checked locking for a lazy singleton', 'The holder idiom, or `StableValue` (preview in 25)', 'lesson:sv-lazy-init'],
     ['`server.tomcat.threads.max=400`', '`spring.threads.virtual.enabled=true` (Spring Boot 3.2 and later)', 'track:spring'],
     ['`@Async` on a `ThreadPoolTaskExecutor`', 'The same `@Async` on a virtual-thread `SimpleAsyncTaskExecutor`', 'track:spring']
   ];
@@ -27,7 +29,9 @@
   // what the tool holds: [link, kicker, title, text]
   function sections(c) {
     return [
-      ['#/lessons', c.lessons + ' lessons', 'Lessons', 'Virtual threads now; structured concurrency, scoped values, the memory model, java.util.concurrent and Spring in production arrive batch by batch. Each lesson shows where you meet it at work and ends with a checked challenge, a short quiz and the interview questions on it.'],
+      ['#/lessons', c.lessons + ' lessons', 'Lessons', 'Virtual threads, structured concurrency and scoped values now; the memory model, java.util.concurrent and Spring in production arrive batch by batch. Each lesson shows where you meet it at work and ends with a checked challenge, a short quiz and the interview questions on it.'],
+      ['#/explain', c.explainers + ' explainers', 'Explainers', 'What happens inside, a step at a time, with a picture: virtual threads on one carrier, synchronized on Java 21 and on 25, a scope tree cancelling its subtasks, scoped values binding and rebinding. Every printed line is proved by a real run.'],
+      ['#/versions', 'Java 19 to 27', 'Java versions', 'Every concurrency JEP: when virtual threads, structured concurrency, scoped values, gatherers and stable values were previews or final, and what changes in 26 and 27.'],
       ['#/interview', c.questions + ' questions', 'Interview Q&A', 'The questions Java backend interviews ask about concurrency, each with the answer to give in 30 seconds, the full answer with code that runs, and the follow-ups that come next. Practise them as flashcards, the ★★★ ones first.'],
       ['#/playground', 'Run anything', 'Playground', 'Write any Java 25 and run it, preview features on: a compact source file needs no class and no imports. Templates for virtual threads and executors; save snippets, download Main.java.'],
       ['#/glossary', c.glossary + ' terms', 'Glossary', 'Carrier thread, continuation, pinning, mount, Little\'s law and more, in plain language, each linked to where it is taught.']
@@ -44,7 +48,8 @@
       var resume = lastLesson && !done[lastLesson.id] ? lastLesson : nextLesson;
       var c = { lessons: lessons.length, quiz: U.quiz.questions().length, questions: (U.data.questions || []).length,
         checks: lessons.reduce(function (n, l) { return n + l.challenge.checks.length; }, 0),
-        glossary: (U.data.glossary || []).length, fast: (U.data.questions || []).filter(function (q) { return q.weight === 3; }).length };
+        glossary: (U.data.glossary || []).length, fast: (U.data.questions || []).filter(function (q) { return q.weight === 3; }).length,
+        explainers: (U.data.explainers || []).length };
 
       // --- hero: the same fan-out, the way it was written on a pool, and on virtual threads
       var before = U.codeBlock('ExecutorService pool = Executors.newFixedThreadPool(200);\ntry {\n    List<Future<String>> futures = new ArrayList<>();\n    for (String id : ids) {\n        futures.add(pool.submit(() -> fetch(id)));   // 200 at most\n    }\n    for (Future<String> f : futures) {\n        results.add(f.get());\n    }\n} finally {\n    pool.shutdown();\n}', 'java', { label: 'Before: a pool sized by guesswork', playground: false });
@@ -106,8 +111,9 @@
         '6. **Practise the interview questions** as flashcards: read the question, answer out loud, reveal, and grade yourself. Cards you knew come back after 1, 3, 7 and 21 days; cards you missed, at once. Start with the ★★★ ones.\n' +
         '7. **Want to try something?** The **Playground** runs any Java 25 program. Type what `IO.readln()` should read into the Input box, one line per call.\n' +
         '8. **Want more room for the code?** Drag the line between the two columns, or the bar under an editor; both are remembered. **Full screen**, beside the code, puts the text and the code across the whole window; **Esc** leaves.\n' +
-        '9. **Looking for something?** Press **Ctrl K** (or **/**) and type: `pinning`, `carrier`, `Semaphore`, `thread dump`, `Spring`…\n' +
-        '10. **Everything you do is stored in this browser only.** No account. Keep a backup file with **Your data** below.') }));
+        '9. **Looking for something?** Press **Ctrl K** (or **/**) and type: `pinning`, `carrier`, `Semaphore`, `joiner`, `scoped value`, `Spring`…\n' +
+        '10. **See it happen.** The **Explainers** step through a program with a picture (Step, Back, Play, or the ← → keys); **Java versions** says what is final or preview in each release. A ⚠ in an editor\'s margin marks a concurrency habit (a swallowed interrupt, a pool of virtual threads, `get()` before `join()`): hover it for the better way.\n' +
+        '11. **Everything you do is stored in this browser only.** No account. Keep a backup file with **Your data** below.') }));
 
       // --- then and now
       root.appendChild(h('h2', null, 'The way you wrote it, and the way Java 25 lets you'));

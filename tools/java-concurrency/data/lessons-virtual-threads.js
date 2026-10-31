@@ -524,8 +524,8 @@ c.ok(p.met(), "at most " + p.peak() + " of the 500 calls were in flight at once"
     var lock = new ReentrantLock();
     // main holds the lock for now
     lock.lock();
-    Thread taker = Thread.ofVirtual().start(() -> { try { queue.take(); } catch (InterruptedException e) { } });
-    Thread waiter = Thread.ofVirtual().start(() -> { try { gate.await(); } catch (InterruptedException e) { } });
+    Thread taker = Thread.ofVirtual().start(() -> { try { queue.take(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } });
+    Thread waiter = Thread.ofVirtual().start(() -> { try { gate.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } });
     Thread locker = Thread.ofVirtual().start(() -> { lock.lock(); lock.unlock(); });
     Thread.sleep(300);
     IO.println("queue taker: " + taker.getState());
@@ -589,12 +589,12 @@ B: finally got the carrier`),
                 IO.println("put " + i);
                 queue.put(i);
             }
-        } catch (InterruptedException e) { }
+        } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     });
     Thread consumer = Thread.ofVirtual().start(() -> {
         try {
             for (int i = 1; i <= 5; i++) IO.println("took " + queue.take());
-        } catch (InterruptedException e) { }
+        } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     });
     producer.join();
     consumer.join();
@@ -682,7 +682,7 @@ c.eq(c.call("sumThroughQueue", 20_000), 200_010_000L);` },
     Thread holder = Thread.ofVirtual().start(() -> {
         synchronized (lock) {
             // blocks while holding the monitor
-            try { Thread.sleep(500); } catch (InterruptedException e) { }
+            try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         }
     });
     Thread.sleep(100);
@@ -692,7 +692,10 @@ c.eq(c.call("sumThroughQueue", 20_000), 200_010_000L);` },
     holder.join();
 }`),
       out('the other thread ran while the monitor was held: true'),
-      'On Java 21 to 23 the same program prints `false`: the holder pinned the only carrier, so the other thread could not start until the sleep ended.',
+      'On Java 21 to 23 the same program prints `false`: the holder pinned the only carrier, so the other thread could not start until the sleep ended. This one runs on the JDK 21 installed on this PC (a Java 21 program, so a class with `main` and `System.out`):',
+      '```java21\npublic class Main {\n    public static void main(String[] args) throws Exception {\n        System.setProperty("jdk.virtualThreadScheduler.parallelism", "1");\n        System.setProperty("jdk.virtualThreadScheduler.maxPoolSize", "1");\n        Object lock = new Object();\n        var ran = new java.util.concurrent.atomic.AtomicBoolean();\n        Thread holder = Thread.ofVirtual().start(() -> {\n            synchronized (lock) {\n                try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }\n            }\n        });\n        Thread.sleep(100);\n        Thread.ofVirtual().start(() -> ran.set(true)).join(300);\n        System.out.println("Java " + Runtime.version().feature() + ": the other thread ran: " + ran.get());\n        holder.join();\n    }\n}\n```',
+      out('Java 21: the other thread ran: false'),
+      'The [[explain:pinning-21-25]] explainer steps through both runs side by side, on a timeline.',
       '## What still pins in Java 25',
       'JEP 491 lists what is left:',
       '- a virtual thread that calls **native code** (a JNI method or a foreign function), when that code calls back into Java that blocks;\n- **blocking inside a class initializer** (a `static { … }` block, or a static field\'s initial value);\n- waiting for **another thread to finish initialising a class**;\n- blocking while the JVM **loads a class** to resolve a name.',
@@ -701,7 +704,7 @@ c.eq(c.call("sumThroughQueue", 20_000), 200_010_000L);` },
     static final String VALUE;
     static {
         // stands for loading settings over the network
-        try { Thread.sleep(500); } catch (InterruptedException e) { }
+        try { Thread.sleep(500); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         VALUE = "loaded";
     }
 }
@@ -874,7 +877,7 @@ c.eq(p.calls(), 1);` },
             } else {
                 IO.println("busy: answer 503 and let the client retry");
             }
-        } catch (InterruptedException e) { }
+        } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
     });
     t.join();
     permits.release();
@@ -1318,7 +1321,7 @@ static class Settings {
     static final String VALUE;
     static {
         // blocks in a class initializer: pins
-        try { Thread.sleep(200); } catch (InterruptedException e) { }
+        try { Thread.sleep(200); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         VALUE = "loaded";
     }
 }

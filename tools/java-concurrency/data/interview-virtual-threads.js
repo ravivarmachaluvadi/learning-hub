@@ -83,7 +83,7 @@ same API: both are java.lang.Thread: true`),
     static final String VALUE;
     static {
         // blocking in a class initializer
-        try { Thread.sleep(400); } catch (InterruptedException e) { }
+        try { Thread.sleep(400); } catch (InterruptedException e) { Thread.currentThread().interrupt(); }
         VALUE = "loaded";
     }
 }
@@ -95,7 +95,7 @@ void main() throws Exception {
     Object lock = new Object();
     var ranBesideMonitor = new AtomicBoolean();
     Thread holder = Thread.ofVirtual().start(() -> {
-        synchronized (lock) { try { Thread.sleep(400); } catch (InterruptedException e) { } }
+        synchronized (lock) { try { Thread.sleep(400); } catch (InterruptedException e) { Thread.currentThread().interrupt(); } }
     });
     Thread.sleep(100);
     Thread.ofVirtual().start(() -> ranBesideMonitor.set(true)).join(250);
