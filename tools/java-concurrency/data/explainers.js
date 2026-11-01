@@ -1,8 +1,8 @@
 /*
- * data/explainers.js - the explainers (#/explain, js/views/explainers.js, batch 2): an idea that is hard to
+ * data/explainers.js - the explainers (#/explain, js/views/explainers.js, batches 2 and 3): an idea that is hard to
  * see in code, taken apart one step at a time with a picture, then run for real.
  *
- * Explainer shape: {id, track, picture: 'carriers' | 'timeline' | 'tree' | 'bindings', title, summary,
+ * Explainer shape: {id, track, picture: 'carriers' | 'timeline' | 'tree' | 'bindings' | 'memory', title, summary,
  *   keywords, intro (Markdown), outro (Markdown), related: ['lesson:<id>', 'q:<id>'],
  *   examples: [{id, label, desc (Markdown), code (a whole program), jdk?: '21', steps}]}
  * Each step is [line, [operations], what happens (Markdown)]; line is the code line to highlight, from 1
@@ -12,6 +12,9 @@
  * timeline:  lane ID LABEL · at MS · mark LANE TEXT
  * tree:      node ID PARENT LABEL (PARENT - for none) · state ID running|success|failed|cancelled|joining|closed
  * bindings:  bind NAME=VALUE · pop · child inherits|none LABEL
+ * memory:    cell NAME VALUE · thread ID LABEL · read T NAME (T's copy := memory) · set T NAME VALUE (T's copy
+ *            only) · write T NAME (memory := T's copy) · lock T LOCK · block T LOCK · unlock T LOCK · edge TEXT
+ *            (a happens-before edge made) · done T   (batch 3)
  *
  * What is proved: tests/check_data.py, that every step's line is in its program and every operation is
  * known and consistent; tests/test_content.py, that each program prints exactly the lines its steps log, in
@@ -344,6 +347,158 @@ void main() throws Exception {
           [10, ['child none an executor thread'], 'A thread from an executor inherits nothing: an executor cannot promise its threads end before the binding does.'],
           [10, ['log executor thread sees nothing'], 'There, `REQUEST` is unbound.'],
           [13, ['pop'], '`call` returns, and the binding ends.']
+        ] }
+    ]
+  });
+  /* ---------------------------------------------------------------- batch 3: memory */
+  X.push({
+    id: 'lost-update', track: 'threads', picture: 'memory',
+    title: 'A lost update, and happens-before',
+    summary: 'Each thread works on its own view of memory. Watch two increments become one, then the three fixes: a lock that makes the second thread wait, a compare-and-set that notices and retries, and the happens-before edges (volatile, start, join) that decide what a thread is sure to see.',
+    keywords: ['lost update', 'race', 'happens-before', 'memory model', 'volatile', 'synchronized', 'cas', 'visibility', 'start', 'join'],
+    intro: 'The picture has **main memory** (the shared variables, one copy each) and, for each thread, **its own view**: the values it has read into registers and caches, and the ones it has computed but not yet written. A thread sees another\'s write only when a **happens-before** edge connects them; the edges made so far are listed under the threads. Two of these programs hold a race window open with a latch, so they print the same on every run, as the tests prove. Without a happens-before edge a thread may see a stale value for ever (measured in [[lesson:th-visibility]]: a plain flag never seen in 12 runs of 12); that program is not here, because what it prints depends on the JIT, and every program here must print exactly what its steps say.',
+    outro: 'Three ways out of the lost update: a lock (the second thread waits, and the unlock-then-lock edge shows it the first one\'s write), a compare-and-set (the second thread\'s write is refused because the value changed, and it retries), or no shared mutable state at all. And for visibility, an edge: `volatile`, a lock, `start()`, `join()`, or a `java.util.concurrent` hand-off.',
+    related: ['lesson:th-races', 'lesson:th-visibility', 'lesson:th-synchronized', 'lesson:juc-atomics', 'q:th-happens-before'],
+    examples: [
+      { id: 'lost', label: 'Two increments, one lost',
+        desc: 'Both threads read `count` before either writes. A latch holds them there, so it happens every run.',
+        code: `int count = 0;
+
+void main() throws InterruptedException {
+    var bothRead = new CountDownLatch(2);
+    Runnable increment = () -> {
+        int seen = count;
+        bothRead.countDown();
+        try { bothRead.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
+        count = seen + 1;
+    };
+    Thread a = Thread.ofPlatform().start(increment);
+    Thread b = Thread.ofPlatform().start(increment);
+    a.join();
+    b.join();
+    IO.println("two increments, count = " + count);
+}`,
+        steps: [
+          [1, ['cell count 0', 'thread m main'], '`count` is a field: one copy, in main memory, 0.'],
+          [11, ['thread a A'], 'Thread A starts, running `increment`.'],
+          [12, ['thread b B'], 'Thread B starts, running the same code.'],
+          [6, ['read a count'], 'A reads `count` into its local `seen`: 0.'],
+          [6, ['read b count'], 'B reads `count` too, before A has written anything: also 0.'],
+          [8, [], 'The latch keeps both here until both have read: the race window, held open. Without it the window is nanoseconds wide, and the bug shows only now and then.'],
+          [9, ['set a count 1', 'write a count'], 'A computes 0 + 1 and writes 1 to main memory.'],
+          [9, ['set b count 1', 'write b count'], 'B computes **its** 0 + 1 and writes 1 over A\'s 1. A\'s increment is lost.'],
+          [14, ['done a', 'done b', 'edge everything A and B did → main\'s join() returns'], 'Both threads end; `join()` makes what they wrote visible to main.'],
+          [15, ['read m count', 'log two increments, count = 1'], 'Main reads 1. Two increments ran; one survived.']
+        ] },
+      { id: 'synchronized', label: 'The same, with synchronized',
+        desc: 'The read and the write are now one critical section. Which thread goes first changes from run to run; the result does not.',
+        code: `int count = 0;
+
+synchronized void increment() {
+    int seen = count;
+    count = seen + 1;
+}
+
+void main() throws InterruptedException {
+    Thread a = Thread.ofPlatform().start(this::increment);
+    Thread b = Thread.ofPlatform().start(this::increment);
+    a.join();
+    b.join();
+    IO.println("two increments, count = " + count);
+}`,
+        steps: [
+          [1, ['cell count 0', 'thread m main', 'thread a A', 'thread b B'], 'Main memory holds `count = 0`; two threads will each call `increment()`.'],
+          [3, ['lock a this'], 'A enters the synchronized method: it takes the monitor of `this`.'],
+          [3, ['block b this'], 'B wants the same monitor and waits for it, `BLOCKED`. It cannot read `count` yet.'],
+          [4, ['read a count'], 'A reads 0.'],
+          [5, ['set a count 1', 'write a count'], 'A writes 1.'],
+          [6, ['unlock a this', 'edge A unlocks this → B locks this', 'done a'], 'A leaves the method and releases the monitor. Unlocking happens-before the next lock of the same monitor.'],
+          [3, ['lock b this'], 'B takes the monitor. Because of that edge, B is sure to see everything A did.'],
+          [4, ['read b count'], 'B reads 1, not 0.'],
+          [5, ['set b count 2', 'write b count'], 'B writes 2.'],
+          [6, ['unlock b this', 'done b'], 'B releases the monitor and ends.'],
+          [11, ['edge everything A and B did → main\'s join() returns'], 'Main joins both.'],
+          [13, ['read m count', 'log two increments, count = 2'], 'Both increments survive.']
+        ] },
+      { id: 'cas', label: 'Compare-and-set notices, and retries',
+        desc: 'No lock: both threads read 0 again, but a compare-and-set writes only if the value is still what the thread read.',
+        code: `void main() throws InterruptedException {
+    var count = new AtomicInteger(0);
+    var bothRead = new CountDownLatch(2);
+    List<String> log = Collections.synchronizedList(new ArrayList<>());
+    Runnable increment = () -> {
+        int seen = count.get();
+        bothRead.countDown();
+        try { bothRead.await(); } catch (InterruptedException e) { Thread.currentThread().interrupt(); return; }
+        while (!count.compareAndSet(seen, seen + 1)) {
+            log.add("a CAS failed: expected " + seen + ", found " + count.get() + "; retry");
+            seen = count.get();
+        }
+    };
+    Thread a = Thread.ofPlatform().start(increment);
+    Thread b = Thread.ofPlatform().start(increment);
+    a.join();
+    b.join();
+    log.forEach(IO::println);
+    IO.println("count = " + count.get());
+}`,
+        steps: [
+          [2, ['cell count 0', 'thread m main'], 'An `AtomicInteger`: one value in main memory, 0, changed only by atomic operations.'],
+          [14, ['thread a A', 'thread b B'], 'Two threads start.'],
+          [6, ['read a count', 'read b count'], 'Both read 0, held at the latch as before.'],
+          [9, ['set a count 1', 'write a count'], 'A: `compareAndSet(0, 1)`. The value is still 0, so it writes 1 and returns `true`. Which thread wins changes from run to run; that one of them loses does not.'],
+          [9, ['set b count 1'], 'B: `compareAndSet(0, 1)`. The value is 1 now, not the 0 B expected: **nothing is written**, and it returns `false`.'],
+          [11, ['read b count'], 'B notes the failure and reads again: 1.'],
+          [9, ['set b count 2', 'write b count'], 'B: `compareAndSet(1, 2)` succeeds.'],
+          [17, ['done a', 'done b', 'edge everything A and B did → main\'s join() returns'], 'Both threads end.'],
+          [18, ['log a CAS failed: expected 0, found 1; retry'], 'The one failed CAS, from whichever thread lost.'],
+          [19, ['read m count', 'log count = 2'], 'No update lost, and no thread ever waited.']
+        ] },
+      { id: 'volatile', label: 'A volatile flag carries data with it',
+        desc: 'Main writes `data`, then the volatile `ready`. A reader that sees `ready == true` is sure to see `data = 42`.',
+        code: `static int data;
+static volatile boolean ready;
+
+void main() throws InterruptedException {
+    Thread reader = Thread.ofPlatform().start(() -> {
+        while (!ready) Thread.onSpinWait();
+        IO.println("reader sees data = " + data);
+    });
+    data = 42;
+    ready = true;
+    reader.join();
+}`,
+        steps: [
+          [1, ['cell data 0', 'cell ready false', 'thread m main'], 'Two fields in main memory: a plain `data` and a `volatile` `ready`.'],
+          [5, ['thread r reader', 'edge main\'s actions so far → the reader starts'], 'Main starts the reader: everything main did before `start()` is visible to it.'],
+          [6, ['read r ready'], 'The reader reads `ready`: false. Being volatile, it is read from memory every time round the loop.'],
+          [9, ['set m data 42', 'write m data'], 'Main writes `data = 42`: a plain write.'],
+          [10, ['set m ready true', 'write m ready', 'edge main writes ready (volatile) → the reader\'s read that sees it'], 'Main writes `ready = true`. A volatile write happens-before every later read of it, and `data = 42` came before it in main\'s program order.'],
+          [6, ['read r ready'], 'The reader sees `true` and leaves the loop.'],
+          [7, ['read r data', 'log reader sees data = 42'], 'By transitivity (data written, then ready written, then ready read, then data read) the reader must see 42. With the two writes swapped, it need not.'],
+          [11, ['done r', 'edge the reader\'s actions → main\'s join() returns'], 'Main joins the reader.']
+        ] },
+      { id: 'start-join', label: 'start() and join() are edges too',
+        desc: 'No volatile, no lock: the array element is plain, and still both reads are guaranteed.',
+        code: `int[] box = new int[1];
+
+void main() throws InterruptedException {
+    box[0] = 1;
+    Thread t = Thread.ofPlatform().start(() -> {
+        IO.println("the thread sees " + box[0]);
+        box[0] = 2;
+    });
+    t.join();
+    IO.println("main sees " + box[0]);
+}`,
+        steps: [
+          [1, ['cell box[0] 0', 'thread m main'], 'An array element: shared, plain, 0.'],
+          [4, ['set m box[0] 1', 'write m box[0]'], 'Main writes 1.'],
+          [5, ['thread t T', 'edge everything main did before start() → T\'s actions'], '`start()` happens-before everything the new thread does.'],
+          [6, ['read t box[0]', 'log the thread sees 1'], 'So T is sure to see 1.'],
+          [7, ['set t box[0] 2', 'write t box[0]'], 'T writes 2 and ends.'],
+          [9, ['done t', 'edge everything T did → main\'s join() returns'], 'Everything a thread did happens-before another thread\'s `join()` on it returns.'],
+          [10, ['read m box[0]', 'log main sees 2'], 'So main is sure to see 2. These two edges are why handing work to a thread, or an executor, and waiting for it is safe.']
         ] }
     ]
   });

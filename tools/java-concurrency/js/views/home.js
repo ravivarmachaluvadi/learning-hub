@@ -29,8 +29,10 @@
   // what the tool holds: [link, kicker, title, text]
   function sections(c) {
     return [
-      ['#/lessons', c.lessons + ' lessons', 'Lessons', 'Virtual threads, structured concurrency and scoped values now; the memory model, java.util.concurrent and Spring in production arrive batch by batch. Each lesson shows where you meet it at work and ends with a checked challenge, a short quiz and the interview questions on it.'],
-      ['#/explain', c.explainers + ' explainers', 'Explainers', 'What happens inside, a step at a time, with a picture: virtual threads on one carrier, synchronized on Java 21 and on 25, a scope tree cancelling its subtasks, scoped values binding and rebinding. Every printed line is proved by a real run.'],
+      ['#/lessons', c.lessons + ' lessons', 'Lessons', 'Threads and the memory model, the java.util.concurrent toolkit, virtual threads, structured concurrency and scoped values; Spring in production comes in batch 4. Each lesson shows where you meet it at work and ends with a checked challenge, a short quiz and the interview questions on it.'],
+      ['#/explain', c.explainers + ' explainers', 'Explainers', 'What happens inside, a step at a time, with a picture: a lost update and happens-before, virtual threads on one carrier, synchronized on Java 21 and on 25, a scope tree cancelling its subtasks, scoped values binding and rebinding. Every printed line is proved by a real run.'],
+      ['#/then-now', c.pairs + ' pairs', 'Then ↔ now', 'The way concurrent Java was written before Java 21, next to the Java 21 to 25 way: two whole programs that print the same, run on your JDK.'],
+      ['#/reference', c.reference + ' entries', 'Reference', 'The JDK\'s concurrency APIs, from Thread and synchronized to StructuredTaskScope: the release each arrived in, preview or final, an example and what it prints. Hover a name in any editor to see its entry.'],
       ['#/versions', 'Java 19 to 27', 'Java versions', 'Every concurrency JEP: when virtual threads, structured concurrency, scoped values, gatherers and stable values were previews or final, and what changes in 26 and 27.'],
       ['#/interview', c.questions + ' questions', 'Interview Q&A', 'The questions Java backend interviews ask about concurrency, each with the answer to give in 30 seconds, the full answer with code that runs, and the follow-ups that come next. Practise them as flashcards, the ★★★ ones first.'],
       ['#/playground', 'Run anything', 'Playground', 'Write any Java 25 and run it, preview features on: a compact source file needs no class and no imports. Templates for virtual threads and executors; save snippets, download Main.java.'],
@@ -49,7 +51,7 @@
       var c = { lessons: lessons.length, quiz: U.quiz.questions().length, questions: (U.data.questions || []).length,
         checks: lessons.reduce(function (n, l) { return n + l.challenge.checks.length; }, 0),
         glossary: (U.data.glossary || []).length, fast: (U.data.questions || []).filter(function (q) { return q.weight === 3; }).length,
-        explainers: (U.data.explainers || []).length };
+        explainers: (U.data.explainers || []).length, pairs: (U.data.thenNow || []).length, reference: (U.data.reference || []).length };
 
       // --- hero: the same fan-out, the way it was written on a pool, and on virtual threads
       var before = U.codeBlock('ExecutorService pool = Executors.newFixedThreadPool(200);\ntry {\n    List<Future<String>> futures = new ArrayList<>();\n    for (String id : ids) {\n        futures.add(pool.submit(() -> fetch(id)));   // 200 at most\n    }\n    for (Future<String> f : futures) {\n        results.add(f.get());\n    }\n} finally {\n    pool.shutdown();\n}', 'java', { label: 'Before: a pool sized by guesswork', playground: false });
@@ -112,11 +114,13 @@
         '7. **Want to try something?** The **Playground** runs any Java 25 program. Type what `IO.readln()` should read into the Input box, one line per call.\n' +
         '8. **Want more room for the code?** Drag the line between the two columns, or the bar under an editor; both are remembered. **Full screen**, beside the code, puts the text and the code across the whole window; **Esc** leaves.\n' +
         '9. **Looking for something?** Press **Ctrl K** (or **/**) and type: `pinning`, `carrier`, `Semaphore`, `joiner`, `scoped value`, `Spring`…\n' +
-        '10. **See it happen.** The **Explainers** step through a program with a picture (Step, Back, Play, or the ← → keys); **Java versions** says what is final or preview in each release. A ⚠ in an editor\'s margin marks a concurrency habit (a swallowed interrupt, a pool of virtual threads, `get()` before `join()`): hover it for the better way.\n' +
-        '11. **Everything you do is stored in this browser only.** No account. Keep a backup file with **Your data** below.') }));
+        '10. **See it happen.** The **Explainers** step through a program with a picture (Step, Back, Play, or the ← → keys); **Java versions** says what is final or preview in each release; **Then ↔ now** puts the old way beside the new. A ⚠ in an editor\'s margin marks a concurrency habit (a swallowed interrupt, a pool of virtual threads, `get()` before `join()`): hover it for the better way.\n' +
+        '11. **Help as you type.** In any editor, suggestions appear as you type (Ctrl+Space any time): your own names, keywords, and after a dot the methods of `Executors.`, `Thread.` or a variable whose type the code shows. Hover a name for its **Reference** entry; Ctrl+click opens it.\n' +
+        '12. **Everything you do is stored in this browser only.** No account. Keep a backup file with **Your data** below.') }));
 
       // --- then and now
       root.appendChild(h('h2', null, 'The way you wrote it, and the way Java 25 lets you'));
+      root.appendChild(h('p', { class: 'muted' }, 'In short below; with both programs, run and compared, on ', h('a', { href: '#/then-now' }, 'Then ↔ now'), '.'));
       root.appendChild(h('div', { class: 'table-wrap' }, h('table', { class: 'table' },
         h('thead', null, h('tr', null, h('th', null, 'Before Java 21'), h('th', null, 'Java 21 to 25'), h('th', null, 'Where to learn it'))),
         h('tbody', null, THEN_NOW.map(function (r) {

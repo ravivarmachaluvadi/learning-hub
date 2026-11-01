@@ -13,6 +13,8 @@
  *              cancelled, waiting in join() or closed
  *   bindings   the scoped-value bindings the current thread sees (innermost on top), and what each thread
  *              it starts sees
+ *   memory     (batch 3) main memory's shared variables, each thread's own view of them (what it has read
+ *              or computed), the monitors it holds or waits for, and the happens-before edges made so far
  * Every picture also has "Printed": each `log` so far, which is what the real program prints by then.
  * tests/test_content.py proves the program prints exactly the steps' logs; tests/test_ui.py ("explain")
  * steps every example to its end.
@@ -33,7 +35,32 @@
   function explainers() { return U.data.explainers || []; }
 
   function fresh() {
-    return { printed: [], carriers: [], vts: [], jobs: [], lanes: [], clock: 0, marks: [], frames: [], children: [] };
+    return { printed: [], carriers: [], vts: [], jobs: [], lanes: [], clock: 0, marks: [], frames: [], children: [],
+      mem: { cells: [], threads: [], edges: [], changed: {} } };
+  }
+
+  /** The memory picture's operations (batch 3): each thread's own view of the shared variables, main memory, locks, edges. */
+  function memoryOp(st, verb, arg, last) {
+    var m = st.mem, w = arg.split(' ');
+    function thread(id) { return m.threads.filter(function (t) { return t.id === id; })[0]; }
+    function cell(name) { return m.cells.filter(function (c) { return c.name === name; })[0]; }
+    function mark(key) { if (last) m.changed[key] = true; }
+    var t = thread(w[0]);
+    if (verb === 'cell') { m.cells.push({ name: w[0], value: w.slice(1).join(' ') }); mark('cell:' + w[0]); }
+    else if (verb === 'thread') { m.threads.push({ id: w[0], label: w.slice(1).join(' ') || w[0], view: {}, order: [], holds: [], blocked: null, done: false }); mark('thread:' + w[0]); }
+    else if (verb === 'edge') { m.edges.push(arg); if (last) m.changed['edge:' + (m.edges.length - 1)] = true; }
+    else if (!t) return;
+    else if (verb === 'read' || verb === 'set') {
+      var c = cell(w[1]);
+      if (t.order.indexOf(w[1]) < 0) t.order.push(w[1]);
+      t.view[w[1]] = verb === 'read' ? (c ? c.value : '?') : w.slice(2).join(' ');
+      mark('view:' + t.id + ':' + w[1]);
+    }
+    else if (verb === 'write') { var c2 = cell(w[1]); if (c2) { c2.value = t.view[w[1]]; mark('cell:' + w[1]); } }
+    else if (verb === 'lock') { t.blocked = null; if (t.holds.indexOf(w[1]) < 0) t.holds.push(w[1]); mark('thread:' + t.id); }
+    else if (verb === 'unlock') { t.holds = t.holds.filter(function (x) { return x !== w[1]; }); mark('thread:' + t.id); }
+    else if (verb === 'block') { t.blocked = w[1]; mark('thread:' + t.id); }
+    else if (verb === 'done') { t.done = true; t.blocked = null; mark('thread:' + t.id); }
   }
 
   function words(arg) { var sp = arg.indexOf(' '); return sp < 0 ? [arg, ''] : [arg.slice(0, sp), arg.slice(sp + 1)]; }
@@ -48,6 +75,7 @@
       ex.steps[i][1].forEach(function (op) {
         var w = words(op), verb = w[0], arg = w[1];
         if (verb === 'log') { st.printed.push(arg); return; }
+        if (picture === 'memory') { memoryOp(st, verb, arg, i === k - 1); return; }
         var a = words(arg);
         if (verb === 'carrier') st.carriers.push({ id: a[0], label: a[1], vt: null });
         else if (verb === 'vt') st.vts.push({ id: a[0], label: a[1], state: 'ready', on: null, pinned: false });
@@ -161,7 +189,29 @@
     ];
   }
 
-  var DRAW = { carriers: drawCarriers, timeline: drawTimeline, tree: drawTree, bindings: drawBindings };
+  function drawMemory(st) {
+    var m = st.mem, ch = m.changed;
+    function changed(key) { return ch[key] ? ' xp-mem-changed' : ''; }
+    return [
+      h('div', { class: 'xp-box xp-mem-main' }, h('div', { class: 'xp-box-title' }, 'Main memory: one copy of each shared variable'),
+        m.cells.length ? h('div', { class: 'xp-mem-cells' }, m.cells.map(function (c) {
+          return h('code', { class: 'xp-mem-cell' + changed('cell:' + c.name), 'data-cell': c.name }, c.name + ' = ' + c.value);
+        })) : h('p', { class: 'xp-free' }, 'Nothing shared yet.')),
+      m.threads.length ? h('div', { class: 'xp-mem-threads' }, m.threads.map(function (t) {
+        var status = t.done ? 'ended' : t.blocked ? 'BLOCKED, waiting for the monitor of ' + t.blocked : t.holds.length ? 'holds the monitor of ' + t.holds.join(', ') : 'running';
+        return h('div', { class: 'xp-box xp-mem-thread' + (t.done ? ' xp-mem-done' : t.blocked ? ' xp-mem-blocked' : t.holds.length ? ' xp-mem-holding' : '') + changed('thread:' + t.id), 'data-thread': t.id },
+          h('div', { class: 'xp-box-title' }, 'Thread ' + t.label + ': its own view'),
+          h('div', { class: 'xp-mem-status' }, status),
+          t.order.length ? h('div', { class: 'xp-mem-cells' }, t.order.map(function (name) {
+            return h('code', { class: 'xp-mem-cell' + changed('view:' + t.id + ':' + name) }, name + ' = ' + t.view[name]);
+          })) : h('p', { class: 'xp-free' }, 'Has read nothing yet.'));
+      })) : null,
+      m.edges.length ? h('div', { class: 'xp-box xp-mem-edges' }, h('div', { class: 'xp-box-title' }, 'Happens-before edges made so far'),
+        h('ul', null, m.edges.map(function (e, i) { return h('li', { class: changed('edge:' + i).trim() || null }, e); }))) : null
+    ];
+  }
+
+  var DRAW = { carriers: drawCarriers, timeline: drawTimeline, tree: drawTree, bindings: drawBindings, memory: drawMemory };
 
   /* ---------- the index (#/explain) ---------- */
 

@@ -145,12 +145,12 @@ window.JCLT = window.JCLT || {};
 
   /**
    * Route for a cross-reference such as ("lesson", "vt-why"); also track:<id>, q:<interview question>,
-   * term:<glossary term>, lab:<Learning lab folder>, and (from later batches) ref:<Reference entry>,
-   * java:<then <-> now pair>, explain:<explainer> and kata:<practice kata>.
+   * term:<glossary term>, lab:<Learning lab folder>, ref:<Reference entry>, then:<then <-> now pair>,
+   * explain:<explainer>, and (from batch 5) kata:<practice kata>.
    */
   U.linkFor = function (kind, id) {
     if (kind === 'lab') return U.labUrl(id);
-    var map = { lesson: '#/lessons/', track: '#/lessons?track=', q: '#/interview/', term: '#/glossary/', ref: '#/reference/', java: '#/java/', explain: '#/explain/',
+    var map = { lesson: '#/lessons/', track: '#/lessons?track=', q: '#/interview/', term: '#/glossary/', ref: '#/reference/', then: '#/then-now/', explain: '#/explain/',
       kata: '#/practice/' };
     return (map[kind] || '#/') + encodeURIComponent(id);
   };
@@ -158,7 +158,7 @@ window.JCLT = window.JCLT || {};
   U.labUrl = function (id) { return 'https://ravivarmachaluvadi.github.io/learning-hub/' + encodeURIComponent(id) + '/'; };
   U.labelFor = function (kind, id) {
     if (kind === 'lab') return U.esc('Learning lab ' + id.replace(/^(\d+)-/, '$1: ').replace(/-/g, ' '));
-    var lists = { lesson: 'lessons', track: 'tracks', q: 'questions', term: 'glossary', ref: 'reference', java: 'javakt', explain: 'explainers', kata: 'katas' };
+    var lists = { lesson: 'lessons', track: 'tracks', q: 'questions', term: 'glossary', ref: 'reference', then: 'thenNow', explain: 'explainers', kata: 'katas' };
     var e = lists[kind] ? U.find(lists[kind], id) : null;
     return e ? U.esc(e.title || e.term || e.q) : U.esc(id);
   };

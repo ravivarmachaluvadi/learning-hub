@@ -118,8 +118,19 @@
     });
     add('Page', 'Java versions', 'Every concurrency JEP from Java 19 to 27: preview or final, and what changed.', '#/versions',
       ['java versions', 'versions', 'jep', 'jeps', 'preview', 'final', 'release', 'java 21', 'java 24', 'java 25', 'java 26', 'java 27', 'lts'], 2.2);
-    // later batches add their pages here: Then and now, Reference (3), the Spring map (4), Practice, Predict the output
-    // and the Mock interview (5)
+    // batch 3: Then <-> now and the Reference
+    add('Page', 'Then ↔ now', 'Concurrent Java the way it was written before Java 21, next to the Java 21 to 25 way: both whole programs that print the same.', '#/then-now',
+      ['then and now', 'then now', 'old and new', 'before and after', 'modern java', 'migration', 'java 8', 'java 21', 'java 25'], 2.2);
+    (U.data.thenNow || []).forEach(function (p) {
+      add('Then ↔ now', p.title, p.note, '#/then-now/' + p.id, p.keywords || [], 1.5);
+    });
+    add('Page', 'Reference', 'The JDK\'s concurrency APIs: each with the Java release it arrived in, whether it is a preview, an example and what it prints.', '#/reference',
+      ['reference', 'api', 'apis', 'javadoc', 'docs', 'since', 'methods', 'classes'], 2.2);
+    (U.data.reference || []).forEach(function (e) {
+      // only the entry's own names: a type's members should not crowd out the lesson that teaches the type
+      add('Reference', e.title, e.summary, '#/reference/' + e.id, [e.name, e.title].concat(e.covers || []), 1.2);
+    });
+    // later batches add their pages here: the Spring map (4), Practice, Predict the output and the Mock interview (5)
     return idx;
   }
 
@@ -165,7 +176,7 @@
       current = U.search(input.value);
       results.innerHTML = '';
       if (!input.value.trim()) {
-        results.appendChild(h('div', { class: 'search-empty' }, 'Try: virtual thread, carrier, pinning, Semaphore, ThreadLocal, thread dump, Little\'s law, synchronized, Spring Boot'));
+        results.appendChild(h('div', { class: 'search-empty' }, 'Try: volatile, deadlock, ConcurrentHashMap, CompletableFuture, virtual thread, pinning, Semaphore, ThreadLocal, thread dump, Spring Boot'));
         return;
       }
       if (!current.length) {

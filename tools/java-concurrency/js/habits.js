@@ -129,6 +129,8 @@
       test: function (line, i, s) {
         var m = /^\s*(?:final\s+)?(?:ExecutorService|var)\s+(\w+)\s*=\s*Executors\s*\.\s*new\w*\(/.exec(line);
         if (!m) return false;
+        // a resource of a try-with-resources header that spans lines is closed by the try (batch 3)
+        if (new RegExp('\\btry\\s*\\([^{]*\\b' + m[1] + '\\s*=').test(s.code)) return false;
         return !new RegExp('\\b' + m[1] + '\\s*\\.\\s*(close|shutdown|shutdownNow)\\s*\\(').test(s.code);
       },
       msg: 'This compiles, but **the executor is never closed**, so nothing waits for its tasks and its threads may outlive the work. Open it in a try-with-resources block: `close()` at its end waits for every task (Java 19 and later).',
@@ -216,6 +218,9 @@
     'vt-create body block 2:virtual-daemon-false': true, 'q vt-daemon block 1:virtual-daemon-false': true,
     'vt-pinning body block 1:sleep-holding-lock': true, 'vt-pinning example:sleep-holding-lock': true, 'q vt-pinning block 1:sleep-holding-lock': true,
     'vt-threadlocals body block 1:threadlocal-virtual': true, 'q vt-threadlocal block 1:threadlocal-virtual': true,
-    'sc-basics body block 2:get-before-join': true, 'sc-failure body block 2:swallowed-interrupt': true, 'q sc-cancellation block 1:swallowed-interrupt': true
+    'sc-basics body block 2:get-before-join': true, 'sc-failure body block 2:swallowed-interrupt': true, 'q sc-cancellation block 1:swallowed-interrupt': true,
+    // batch 3: the classic new Thread, a wait() under an if (the bug the lesson shows), what newCachedThreadPool builds
+    'th-basics body block 1:raw-new-thread': true, 'th-wait-notify body block 2:wait-without-loop': true,
+    'juc-executors body block 1:cached-pool': true, 'ref executors-new-cached-thread-pool:cached-pool': true
   };
 })(window.JCLT);
