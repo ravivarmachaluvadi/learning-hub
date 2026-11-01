@@ -134,7 +134,19 @@
       // only the entry's own names: a type's members should not crowd out the lesson that teaches the type
       add('Reference', e.title, e.summary, '#/reference/' + e.id, [e.name, e.title].concat(e.covers || []), 1.2);
     });
-    // later batches add their pages here: the Spring map (4), Practice, Predict the output and the Mock interview (5)
+    // batch 5: the katas, the predictions (as one page: a single program's title would give its answer away) and the mock
+    add('Page', 'Practice: katas', 'Checked exercises from easy to hard: the concurrency patterns interviews ask for, and old programs to rewrite the Java 25 way.',
+      '#/practice', ['practice', 'kata', 'katas', 'exercises', 'exercise', 'problems', 'coding', 'drill', 'challenges'], 2.4);
+    add('Page', 'The old way to Java 25', 'Katas that start from a working program, written the way it was before Java 21, and ask for the Java 25 way.',
+      '#/practice?kind=rewrite', ['rewrite', 'rewrites', 'modernise', 'modernize', 'refactor', 'migrate'], 2.2);
+    (U.data.katas || []).forEach(function (k) {
+      add('Kata', k.title, k.summary, '#/practice/' + k.id, (k.keywords || []).concat(['kata']), 0);
+      idx[idx.length - 1].factor = 0.6;    // practice ranks below the lessons and questions that teach the same words
+    });
+    add('Page', 'Predict the output', 'Short programs built around the traps of concurrent Java: read, type what each prints, see why.', '#/predict',
+      ['predict', 'output', 'what does this print', 'trap', 'traps', 'quiz', 'puzzle', 'puzzles'], 2.2);
+    add('Page', 'Mock interview', 'A timed rehearsal: questions answered out loud, then predictions, then a kata against a clock, and a scorecard.', '#/mock',
+      ['mock', 'mock interview', 'rehearse', 'rehearsal', 'practice interview', 'timed'], 2.2);
     return idx;
   }
 

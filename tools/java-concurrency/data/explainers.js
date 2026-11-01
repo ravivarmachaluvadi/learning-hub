@@ -839,7 +839,7 @@ void main() throws Exception {
         params: { rps: 100, serviceMs: 200, threads: 0, connections: 10, holdMs: 20, seconds: 10 } }
     ],
     proof: {
-      note: 'The first example, for real: a real Tomcat with 10 threads, then virtual threads, serving 200 requests of 200 ms each. The model says 200 × 200 ms ÷ 10 = 4 s at the least with 10 threads.',
+      note: 'The first example, for real: a real Tomcat with 10 threads, then virtual threads, serving 200 requests of 200 ms each. The model says 200 × 200 ms ÷ 10 = 4 s at the least with 10 threads. It counts the answers too: a load test that does not check its responses can pass on load it never delivered.',
       code: `import org.springframework.boot.*;
 import org.springframework.boot.autoconfigure.*;
 import org.springframework.context.annotation.*;
@@ -859,27 +859,46 @@ static class Web {
 @Import(Web.class)
 static class App { }
 
+static final AtomicInteger answered = new AtomicInteger();
+
+// A burst can overflow the queue of connections waiting to be accepted: a refused one tries again.
+static void send(HttpClient http, HttpRequest request) throws Exception {
+    while (true) {
+        try {
+            if (http.send(request, HttpResponse.BodyHandlers.ofString()).statusCode() == 200) answered.incrementAndGet();
+            return;
+        } catch (java.net.ConnectException refused) {
+            Thread.sleep(20);
+        }
+    }
+}
+
 long load(String... args) throws Exception {
+    answered.set(0);
     try (var ctx = SpringApplication.run(App.class, args)) {
         var http = HttpClient.newHttpClient();
         var request = HttpRequest.newBuilder(URI.create("http://localhost:" + ctx.getEnvironment().getProperty("local.server.port") + "/slow")).build();
         long start = System.nanoTime();
         try (var clients = Executors.newVirtualThreadPerTaskExecutor()) {
             for (int i = 0; i < 200; i++) {
-                clients.submit(() -> http.send(request, HttpResponse.BodyHandlers.ofString()));
+                clients.submit(() -> { send(http, request); return null; });
             }
         }
-        return (System.nanoTime() - start) / 1_000_000;
+        long ms = (System.nanoTime() - start) / 1_000_000;
+        IO.println(answered + " of 200 answered");
+        return ms;
     }
 }
 
 void main() throws Exception {
-    long pool = load("--server.tomcat.threads.max=10");
-    long virtual = load("--spring.threads.virtual.enabled=true");
+    long pool = load("--server.tomcat.threads.max=10", "--server.tomcat.accept-count=1000");
+    long virtual = load("--spring.threads.virtual.enabled=true", "--server.tomcat.accept-count=1000");
     IO.println("10 threads: took at least the 4 s the model says: " + (pool >= 4000));
     IO.println("virtual threads: took less than half of that: " + (virtual < 2000));
 }`,
-      output: `10 threads: took at least the 4 s the model says: true
+      output: `200 of 200 answered
+200 of 200 answered
+10 threads: took at least the 4 s the model says: true
 virtual threads: took less than half of that: true`
     }
   });

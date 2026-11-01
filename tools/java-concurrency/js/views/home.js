@@ -29,9 +29,12 @@
   // what the tool holds: [link, kicker, title, text]
   function sections(c) {
     return [
-      ['#/lessons', c.lessons + ' lessons', 'Lessons', 'Threads and the memory model, the java.util.concurrent toolkit, virtual threads, structured concurrency and scoped values; Spring in production comes in batch 4. Each lesson shows where you meet it at work and ends with a checked challenge, a short quiz and the interview questions on it.'],
+      ['#/lessons', c.lessons + ' lessons', 'Lessons', 'Threads and the memory model, the java.util.concurrent toolkit, virtual threads, structured concurrency, scoped values, and Spring in production. Each lesson shows where you meet it at work and ends with a checked challenge, a short quiz and the interview questions on it.'],
       ['#/explain', c.explainers + ' explainers', 'Explainers', 'What happens inside, a step at a time, with a picture: a lost update and happens-before, virtual threads on one carrier, synchronized on Java 21 and on 25, a scope tree cancelling its subtasks, scoped values binding and rebinding. Every printed line is proved by a real run.'],
       ['#/then-now', c.pairs + ' pairs', 'Then ↔ now', 'The way concurrent Java was written before Java 21, next to the Java 21 to 25 way: two whole programs that print the same, run on your JDK.'],
+      ['#/practice', c.katas + ' katas', 'Practice', 'Checked exercises from easy to hard: a bounded buffer, a bulkhead, a hedged call, a circuit breaker, and old programs to rewrite the Java 25 way. No check reads a clock.'],
+      ['#/predict', c.predictions + ' programs', 'Predict the output', 'Short programs built around the traps of concurrent Java: read one, type what it prints, and see why.'],
+      ['#/mock', 'A timed rehearsal', 'Mock interview', 'Questions answered out loud against a clock with a follow-up after each, then "what does this print?", then a kata against its own clock, and a scorecard.'],
       ['#/spring', 'Spring Boot 4.1', 'The Spring map', 'Each Spring feature, the thread it runs on with and without virtual threads, and the lesson that explains it: the threads are what a real application printed.'],
       ['#/reference', c.reference + ' entries', 'Reference', 'The JDK\'s concurrency APIs, from Thread and synchronized to StructuredTaskScope: the release each arrived in, preview or final, an example and what it prints. Hover a name in any editor to see its entry.'],
       ['#/versions', 'Java 19 to 27', 'Java versions', 'Every concurrency JEP: when virtual threads, structured concurrency, scoped values, gatherers and stable values were previews or final, and what changes in 26 and 27.'],
@@ -52,7 +55,7 @@
       var c = { lessons: lessons.length, quiz: U.quiz.questions().length, questions: (U.data.questions || []).length,
         checks: lessons.reduce(function (n, l) { return n + l.challenge.checks.length; }, 0),
         glossary: (U.data.glossary || []).length, fast: (U.data.questions || []).filter(function (q) { return q.weight === 3; }).length,
-        explainers: (U.data.explainers || []).length, pairs: (U.data.thenNow || []).length, reference: (U.data.reference || []).length };
+        explainers: (U.data.explainers || []).length, pairs: (U.data.thenNow || []).length, katas: (U.data.katas || []).length, predictions: (U.data.predictions || []).length, reference: (U.data.reference || []).length };
 
       // --- hero: the same fan-out, the way it was written on a pool, and on virtual threads
       var before = U.codeBlock('ExecutorService pool = Executors.newFixedThreadPool(200);\ntry {\n    List<Future<String>> futures = new ArrayList<>();\n    for (String id : ids) {\n        futures.add(pool.submit(() -> fetch(id)));   // 200 at most\n    }\n    for (Future<String> f : futures) {\n        results.add(f.get());\n    }\n} finally {\n    pool.shutdown();\n}', 'java', { label: 'Before: a pool sized by guesswork', playground: false });
