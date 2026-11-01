@@ -215,6 +215,9 @@
 
   /* Content that shows a habit on purpose: '<where>:<rule id>', where is how tests/test_ui.py names it. */
   U.habitAllowed = {
+    // batch 4: each shows what the habit costs in a real Spring app
+    'sp-db-pool body block 3:common-pool-async': true, 'sp-context body block 1:common-pool-async': true, 'sp-context body block 3:threadlocal-virtual': true,
+    'sp-migrate body block 2:threadlocal-virtual': true, 'q sp-migration block 1:threadlocal-virtual': true,
     'vt-create body block 2:virtual-daemon-false': true, 'q vt-daemon block 1:virtual-daemon-false': true,
     'vt-pinning body block 1:sleep-holding-lock': true, 'vt-pinning example:sleep-holding-lock': true, 'q vt-pinning block 1:sleep-holding-lock': true,
     'vt-threadlocals body block 1:threadlocal-virtual': true, 'q vt-threadlocal block 1:threadlocal-virtual': true,

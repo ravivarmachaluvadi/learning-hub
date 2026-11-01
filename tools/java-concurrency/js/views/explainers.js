@@ -22,6 +22,8 @@
  * Through jclearn, "Run it" runs the program (an example with jdk: '21' on the JDK 21 found on this PC);
  * opened from disk, the page says how to start jclearn, and every step still works.
  *
+ * The throughput explainer (batch 4) is not stepped: sliders drive a small model of one service, simulate(params).
+ *
  * For the tests: JCLT.explain.stateAt(picture, example, k) is the picture after the first k steps.
  */
 (function (U) {
@@ -222,7 +224,7 @@
     root.appendChild(h('div', { class: 'cards' }, explainers().map(function (x) {
       var t = U.find('tracks', x.track);
       return h('a', { class: 'card xp-card', href: '#/explain/' + x.id },
-        h('div', { class: 'card-kicker' }, (t ? t.title : x.track) + ' · ' + U.plural(x.examples.length, 'example', 'examples')),
+        h('div', { class: 'card-kicker' }, (t ? t.title : x.track) + ' · ' + (x.picture === 'simulator' ? 'a simulator' : U.plural(x.examples.length, 'example', 'examples'))),
         h('h3', null, x.title), h('p', { class: 'muted', style: { margin: 0 } }, x.summary));
     })));
   }
@@ -378,13 +380,170 @@
     choose(ex);
   }
 
+  /* ---------- the throughput simulator (batch 4) ---------- */
+
+  /**
+   * One service, one deterministic run. Requests arrive evenly for `seconds`. Each takes a thread for its whole
+   * serviceMs (threads 0: no limit, as on virtual threads), and needs a connection for the first holdMs of it
+   * (connections 0: no database). Whoever comes first gets the next free one.
+   * -> {requests, capacity, limitedBy, throughput, p50, p99, maxLatency, peakInFlight, series: [in flight, per slice]}
+   */
+  function simulate(p) {
+    var n = Math.max(1, Math.round(p.rps * p.seconds)), gap = 1000 / p.rps;
+    var threads = p.threads > 0 ? new Array(p.threads).fill(0) : null;
+    var conns = p.connections > 0 && p.holdMs > 0 ? new Array(p.connections).fill(0) : null;
+    function earliest(a) { var b = 0; for (var i = 1; i < a.length; i++) if (a[i] < a[b]) b = i; return b; }
+    var spans = [], latencies = [], last = 0;
+    for (var i = 0; i < n; i++) {
+      var arrive = i * gap, begin = arrive, t = -1, c = -1;
+      if (threads) { t = earliest(threads); begin = Math.max(begin, threads[t]); }
+      var holdEnd = begin;
+      if (conns) { c = earliest(conns); begin = Math.max(begin, conns[c]); holdEnd = begin + p.holdMs; conns[c] = holdEnd; }
+      var end = Math.max(holdEnd, begin) + (conns ? Math.max(0, p.serviceMs - p.holdMs) : p.serviceMs);
+      if (threads) threads[t] = end;
+      spans.push([arrive, end]);
+      latencies.push(end - arrive);
+      if (end > last) last = end;
+    }
+    var byThreads = threads ? p.threads * 1000 / p.serviceMs : Infinity;
+    var byConns = conns ? p.connections * 1000 / p.holdMs : Infinity;
+    var capacity = Math.min(byThreads, byConns);
+    var sorted = latencies.slice().sort(function (a, b) { return a - b; });
+    var SLICES = 40, series = new Array(SLICES).fill(0), events = [];
+    spans.forEach(function (s) {
+      var from = Math.floor(s[0] / last * SLICES), to = Math.min(SLICES - 1, Math.floor(s[1] / last * SLICES));
+      for (var k = from; k <= to; k++) series[k]++;
+      events.push([s[0], 1], [s[1], -1]);
+    });
+    events.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    var now = 0, peak = 0;
+    events.forEach(function (e) { now += e[1]; if (now > peak) peak = now; });
+    return {
+      requests: n, capacity: capacity, limitedBy: capacity >= p.rps ? 'nothing' : byConns < byThreads ? 'connections' : 'threads',
+      throughput: n / (last / 1000), p50: sorted[Math.floor(n * 0.5)], p99: sorted[Math.min(n - 1, Math.floor(n * 0.99))],
+      maxLatency: sorted[n - 1], peakInFlight: peak, series: series, lastMs: last
+    };
+  }
+
+  var SLIDERS = [
+    { key: 'rps', label: 'Requests a second', min: 10, max: 1000, step: 10 },
+    { key: 'serviceMs', label: 'Each request takes (ms)', min: 10, max: 2000, step: 10 },
+    { key: 'threads', label: 'Threads (0 = virtual threads: no limit)', min: 0, max: 400, step: 5 },
+    { key: 'connections', label: 'Database connections (0 = no database)', min: 0, max: 100, step: 5 },
+    { key: 'holdMs', label: 'Each holds a connection for (ms)', min: 0, max: 2000, step: 10 }
+  ];
+
+  function simulatorPage(root, x, exId) {
+    var ex = x.examples.filter(function (e) { return e.id === exId; })[0] || x.examples[0];
+    var p = Object.assign({}, ex.params);
+    var t = U.find('tracks', x.track);
+    root.appendChild(h('div', { class: 'crumbs' }, h('a', { href: '#/explain' }, 'Explainers'), ' › ', t ? h('a', { href: '#/lessons?track=' + t.id }, t.title) : x.track));
+    var page = h('article', { class: 'xp-page sim-page', 'data-id': x.id });
+    root.appendChild(page);
+    page.appendChild(h('h1', null, x.title));
+    page.appendChild(U.enhance(h('div', { class: 'xp-intro', html: U.md(x.intro) })));
+    var chips = h('div', { class: 'row xp-chips', role: 'group', 'aria-label': 'Examples' });
+    var desc = h('div', { class: 'xp-desc' });
+    page.appendChild(chips);
+    page.appendChild(desc);
+    var controls = h('div', { class: 'card sim-controls' });
+    var inputs = {};
+    SLIDERS.forEach(function (s) {
+      var value = h('output', { class: 'sim-value', 'data-for': s.key });
+      var input = h('input', { type: 'range', class: 'sim-input', 'data-key': s.key, min: String(s.min), max: String(s.max), step: String(s.step), 'aria-label': s.label });
+      input.addEventListener('input', function () { p[s.key] = +input.value; markChips(null); draw(); });
+      inputs[s.key] = { input: input, value: value };
+      controls.appendChild(h('label', { class: 'sim-slider' }, h('span', { class: 'sim-label' }, s.label), input, value));
+    });
+    page.appendChild(controls);
+    var verdict = h('div', { class: 'xp-says sim-verdict', 'aria-live': 'polite' });
+    var tiles = h('div', { class: 'sim-tiles' });
+    var bars = h('div', { class: 'sim-bars', role: 'img' });
+    page.appendChild(verdict);
+    page.appendChild(tiles);
+    page.appendChild(h('div', { class: 'xp-box-title' }, 'Requests in flight, from the first arrival to the last answer'));
+    page.appendChild(bars);
+
+    function tile(label, value, cls) {
+      return h('div', { class: 'sim-tile ' + (cls || '') }, h('div', { class: 'sim-tile-value' }, value), h('div', { class: 'sim-tile-label' }, label));
+    }
+    function ms(v) { return v >= 1000 ? (v / 1000).toFixed(1) + ' s' : Math.round(v) + ' ms'; }
+    function draw() {
+      SLIDERS.forEach(function (s) { inputs[s.key].input.value = String(p[s.key]); inputs[s.key].value.textContent = String(p[s.key]); });
+      var r = simulate(p);
+      verdict.innerHTML = '';
+      var text = r.limitedBy === 'nothing'
+        ? 'The service keeps up: it could do **' + Math.round(r.capacity === Infinity ? p.rps : r.capacity) + '** a second' + (r.capacity === Infinity ? ' at least' : '') + ', and **' + p.rps + '** arrive.'
+        : 'Limited by **' + r.limitedBy + '**: it can do **' + Math.round(r.capacity) + '** a second, and **' + p.rps + '** arrive, so a queue grows for as long as they keep coming.';
+      verdict.appendChild(U.enhance(h('div', { html: U.md(text) })));
+      verdict.setAttribute('data-limit', r.limitedBy);
+      tiles.innerHTML = '';
+      tiles.appendChild(tile('served a second', String(Math.round(r.throughput)), 'sim-throughput'));
+      tiles.appendChild(tile('typical wait (p50)', ms(r.p50), 'sim-p50'));
+      tiles.appendChild(tile('slowest 1% (p99)', ms(r.p99), 'sim-p99'));
+      tiles.appendChild(tile('most in flight at once', String(r.peakInFlight), 'sim-peak'));
+      bars.innerHTML = '';
+      bars.setAttribute('aria-label', 'At most ' + r.peakInFlight + ' requests in flight');
+      var top = Math.max.apply(null, r.series) || 1;
+      r.series.forEach(function (v) { bars.appendChild(h('span', { class: 'sim-bar', style: { height: Math.max(2, Math.round(v / top * 100)) + '%' } })); });
+    }
+    function markChips(id) {
+      U.$$('.xp-chip', chips).forEach(function (b) {
+        var on = b.getAttribute('data-ex') === id;
+        b.classList.toggle('active', on);
+        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+      });
+    }
+    function choose(e, picked) {
+      ex = e;
+      p = Object.assign({}, e.params);
+      markChips(e.id);
+      desc.innerHTML = '';
+      if (e.desc) desc.appendChild(U.enhance(h('div', { html: U.md(e.desc) })));
+      if (picked) { try { history.replaceState(null, '', '#/explain/' + x.id + '/' + e.id); } catch (err) { /* file:// may refuse: the chip still works */ } }
+      draw();
+    }
+    x.examples.forEach(function (e) {
+      chips.appendChild(h('button', { class: 'btn btn-small xp-chip', type: 'button', 'data-ex': e.id, onclick: function () { choose(e, true); } }, e.label));
+    });
+
+    // the model against the real thing
+    page.appendChild(h('h2', null, 'Now for real'));
+    page.appendChild(h('p', { class: 'muted' }, x.proof.note));
+    var runNote = h('div', { class: 'xp-run-note' });
+    var runBtn = h('button', { class: 'btn btn-primary xp-run', type: 'button' }, '▶ Run it');
+    var panelHolder = h('div');
+    page.appendChild(runNote);
+    page.appendChild(h('div', { class: 'row run-bar' }, runBtn,
+      h('button', { class: 'btn', type: 'button', onclick: function () { U.openInPlayground({ title: x.title, code: x.proof.code }); } }, 'Open in Playground')));
+    page.appendChild(panelHolder);
+    var panel = null;
+    runBtn.addEventListener('click', function () {
+      if (!panel) { panel = U.runPanel({ title: 'What it really printed' }); panelHolder.appendChild(panel.el); }
+      runBtn.disabled = true;
+      panel.start();
+      U.run.exec({ code: x.proof.code, stdin: '', timeout: 60 }, panel.append).then(function (res) { panel.show(res); runBtn.disabled = false; });
+    });
+    U.run.ready().then(function () { if (!U.run.available() && runNote.isConnected) runNote.appendChild(U.serverNote('#/explain/' + x.id)); });
+    if (x.outro) page.appendChild(U.enhance(h('div', { class: 'xp-outro', html: U.md(x.outro) })));
+    if ((x.related || []).length) {
+      page.appendChild(h('div', { class: 'row see-also' }, h('span', { class: 'faint' }, 'Learn more:'), x.related.map(function (r) {
+        var m = /^(\w+):(.+)$/.exec(r);
+        return h('a', { class: 'btn btn-small', href: U.linkFor(m[1], m[2]), html: U.labelFor(m[1], m[2]) });
+      })));
+    }
+    choose(ex);
+  }
+
   U.views.explain = {
     render: function (root, params) {
       var x = params[0] && U.find('explainers', params[0]);
-      if (x) explainerPage(root, x, params[1]); else indexPage(root);
+      if (x && x.picture === 'simulator') simulatorPage(root, x, params[1]);
+      else if (x) explainerPage(root, x, params[1]);
+      else indexPage(root);
     },
     destroy: function () { if (current) current.stop(); current = null; }
   };
   U.route('explain', U.views.explain);
-  U.explain = { stateAt: stateAt };
+  U.explain = { stateAt: stateAt, simulate: simulate };
 })(window.JCLT);

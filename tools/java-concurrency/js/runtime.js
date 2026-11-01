@@ -43,7 +43,7 @@
     Object.assign(info, patch);
     if (info.state === 'ready') info.label = 'Java ' + info.java + ' · your PC';
     else if (info.state === 'warming') info.label = 'Java ' + info.java + ' · warming up…';
-    else if (info.state === 'offline') info.label = 'Reading only: start jclearn to run';
+    else if (info.state === 'offline') { info.label = 'Reading only'; info.detail = info.detail || 'Reading only: start jclearn to run code.'; }
     else if (info.state === 'error') info.label = 'Compiler unavailable';
     listeners.forEach(function (fn) { try { fn(info); } catch (e) { console.error(e); } });
     if (info.state !== 'loading') {

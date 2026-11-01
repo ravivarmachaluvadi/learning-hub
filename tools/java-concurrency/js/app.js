@@ -116,6 +116,10 @@
     (U.data.explainers || []).forEach(function (x) {
       add('Explainer', x.title, x.summary, '#/explain/' + x.id, x.keywords || [], 2.2);
     });
+    add('Page', 'The Spring map', 'Each Spring feature, the thread it runs on with and without virtual threads, and the lesson that explains it.', '#/spring', ['spring', 'map', 'thread', 'async', 'scheduled', 'tomcat', 'where does it run'], 1.5);
+    ((U.data.springMap || {}).rows || []).forEach(function (r) {
+      add('Spring map', r.feature, r.note, '#/spring', ['spring', r.feature], 0.8);
+    });
     add('Page', 'Java versions', 'Every concurrency JEP from Java 19 to 27: preview or final, and what changed.', '#/versions',
       ['java versions', 'versions', 'jep', 'jeps', 'preview', 'final', 'release', 'java 21', 'java 24', 'java 25', 'java 26', 'java 27', 'lts'], 2.2);
     // batch 3: Then <-> now and the Reference

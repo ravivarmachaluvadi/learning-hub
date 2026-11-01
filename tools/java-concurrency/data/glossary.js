@@ -1,7 +1,7 @@
 /*
  * data/glossary.js - concurrency words in plain language (#/glossary), each linked to where it is taught.
  * Batch 1 held the words of virtual threads, batch 2 those of structured concurrency and scoped values;
- * batch 3 completes it with the foundations: threads and the memory model, and java.util.concurrent.
+ * batch 3 added the foundations: threads and the memory model, and java.util.concurrent; batch 4, Spring and production.
  *
  * Term shape: {id, term, def (Markdown), see: ['lesson:<id>' | 'q:<id>' | 'term:<id>'], keywords}
  */
@@ -195,6 +195,33 @@
     { id: 'work-stealing', term: 'Work stealing', see: ['lesson:juc-forkjoin', 'q:juc-forkjoin'], keywords: ['deque', 'ForkJoinPool', 'steal'],
       def: 'Each worker keeps its own queue of tasks; an idle one takes the oldest task from another\'s. The pool balances itself without a shared queue to fight over.' },
     { id: 'parallel-stream', term: 'Parallel stream', see: ['lesson:juc-forkjoin'], keywords: ['parallelStream', 'parallel', 'common pool'],
-      def: 'A stream whose work is split over the common pool and the calling thread. For large, CPU-bound, side-effect-free work; never for blocking calls.' }
+      def: 'A stream whose work is split over the common pool and the calling thread. For large, CPU-bound, side-effect-free work; never for blocking calls.' },
+    /* batch 4: Spring and production */
+    { id: 'spring-virtual-property', term: 'spring.threads.virtual.enabled', see: ['lesson:sp-virtual', 'q:sp-what-switches'], keywords: ['spring boot', 'virtual threads in spring'],
+      def: 'The Spring Boot property that moves Spring\'s own threads to virtual threads: Tomcat\'s requests, `@Async`, `@Scheduled`. Your own pools stay as they are, and the pool properties stop having any effect.' },
+    { id: 'keep-alive', term: 'spring.main.keep-alive', see: ['lesson:sp-virtual'], keywords: ['daemon', 'jvm exit', 'worker'],
+      def: 'Keeps the JVM up when only daemon threads are left. An app with no web server needs it on virtual threads: measured, without it the JVM exited after 1.6 s with code 0.' },
+    { id: 'application-task-executor', term: 'applicationTaskExecutor', see: ['lesson:sp-virtual', 'lesson:sp-async'], keywords: ['task executor', 'ThreadPoolTaskExecutor', 'SimpleAsyncTaskExecutor'],
+      def: 'The executor Spring Boot makes for `@Async` and MVC `Callable`: a `ThreadPoolTaskExecutor` of 8 core threads, or with virtual threads a `SimpleAsyncTaskExecutor`, a new virtual thread per task.' },
+    { id: 'spring-proxy', term: 'Proxy (Spring AOP)', see: ['lesson:sp-async', 'q:sp-self-invocation'], keywords: ['cglib', 'aop', 'subclass'],
+      def: 'A subclass of your bean that Spring makes at run time and hands out in its place, to add behaviour around methods: `@Async`, `@Transactional`, `@Retryable`. Only calls through it get that behaviour.' },
+    { id: 'self-invocation', term: 'Self-invocation', see: ['lesson:sp-async', 'q:sp-self-invocation'], keywords: ['this', 'proxy', 'async not working', 'transactional not working'],
+      def: 'A bean calling its own method through `this`. It skips the proxy, so `@Async` runs on the caller and `@Transactional` starts nothing. Nothing warns you.' },
+    { id: 'hikari', term: 'HikariCP', see: ['lesson:sp-db-pool', 'q:sp-pool-limit'], keywords: ['connection pool', 'hikari', 'jdbc pool', 'maximum-pool-size'],
+      def: 'The connection pool Spring Boot picks when it is there. Measured here: 10 connections, and callers wait 30 s for one. On virtual threads it is usually the real limit, and it should be.' },
+    { id: 'task-decorator', term: 'TaskDecorator', see: ['lesson:sp-context', 'explain:spring-context'], keywords: ['context propagation', 'mdc', 'wrap task'],
+      def: 'Wraps each task given to a Spring executor. Its outer code runs on the submitting thread and its inner code on the new one, which is how context is carried across. Boot applies a `TaskDecorator` bean to `applicationTaskExecutor`.' },
+    { id: 'mdc', term: 'MDC', see: ['lesson:sp-context', 'q:sp-context-lost'], keywords: ['mapped diagnostic context', 'trace id', 'slf4j', 'logging context'],
+      def: 'SLF4J\'s Mapped Diagnostic Context: key-value pairs added to every log line from this thread, such as a trace id. A `ThreadLocal`, so it does not follow your work to another thread.' },
+    { id: 'security-context-holder', term: 'SecurityContextHolder', see: ['lesson:sp-context', 'q:sp-context-lost'], keywords: ['spring security', 'current user', 'authentication'],
+      def: 'Where Spring Security keeps the current user: a `ThreadLocal` by default (measured). `DelegatingSecurityContextExecutor` carries it to another thread.' },
+    { id: 'aggregator', term: 'Aggregator endpoint', see: ['lesson:sp-aggregator', 'q:sp-fanout'], keywords: ['fan-out', 'bff', 'backend for frontend', 'composition'],
+      def: 'One request that calls several services and combines their answers. Called together it costs the slowest, not the sum. What matters is what it does when one fails or runs late.' },
+    { id: 'retry-storm', term: 'Retry storm', see: ['lesson:sp-resilience', 'q:sp-retry-timeouts'], keywords: ['retry', 'amplification', 'jitter', 'backoff'],
+      def: 'Retries that multiply load on a service that is already struggling. Three layers each trying 3 times make 27 calls. Retry at one layer, with growing delays and random jitter.' },
+    { id: 'fixed-rate', term: 'fixedRate and fixedDelay', see: ['lesson:sp-jobs', 'q:sp-scheduled'], keywords: ['@Scheduled', 'overlap', 'schedule', 'SimpleAsyncTaskScheduler'],
+      def: '`fixedRate` starts a job every N ms; `fixedDelay` waits N ms after each run ends. On virtual threads a `fixedRate` job longer than its rate overlaps itself (measured: peak 5); `fixedDelay` still runs one at a time.' },
+    { id: 'hidden-limit', term: 'Hidden limit', see: ['lesson:sp-migrate', 'q:sp-migration'], keywords: ['implicit limit', 'thread pool limit', 'migration'],
+      def: 'A limit nobody chose: a pool of 200 threads also meant at most 200 calls to everything behind it. Moving to virtual threads removes it, under load, unless you write it down as a real one.' }
   ]);
 })(window.JCLT);
