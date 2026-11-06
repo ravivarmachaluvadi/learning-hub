@@ -12,7 +12,7 @@
 
    To remove it one day: publish a sw.js whose install handler calls self.registration.unregister(). */
 'use strict';
-const VERSION = "site-adf554b6ab";
+const VERSION = "site-5213412f9c";
 const CORE = ["./", "static.js", "outcheck.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "data/tree.json", "data/files.json", "data/practice.json", "drive-sync.js"];
 const VENDOR = ["vendor/marked@18.0.14/lib/marked.umd.js", "vendor/monaco-editor@0.52.2/min/vs/base/browser/ui/codicons/codicon/codicon.ttf", "vendor/monaco-editor@0.52.2/min/vs/base/worker/workerMain.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/css/css.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/html/html.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/ini/ini.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/java/java.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/javascript/javascript.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/kotlin/kotlin.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/markdown/markdown.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/python/python.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/shell/shell.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/sql/sql.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/typescript/typescript.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/xml/xml.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/yaml/yaml.js", "vendor/monaco-editor@0.52.2/min/vs/editor/editor.main.css", "vendor/monaco-editor@0.52.2/min/vs/editor/editor.main.js", "vendor/monaco-editor@0.52.2/min/vs/loader.js"];
 const SITE_CACHE = 'java-practice-' + VERSION, VENDOR_CACHE = 'java-practice-vendor';
