@@ -489,6 +489,12 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
   #rootSel:disabled { opacity: 1; cursor: default; }
   .status.away { color: var(--muted); }
   .help .site-note { margin: 0 0 12px; max-width: 72ch; }
+  /* Drive sync (Personal Apps' drive-sync.js) in Code Viewer's colours; its menu opens upward */
+  #cvSyncWrap { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; position: relative;
+                --surface: var(--panel); --surface-2: var(--hover); --line: var(--border); --faint: var(--muted); }
+  #cvSyncWrap .ds { font-size: 11px; }
+  #cvSyncWrap .ds .ds-google { padding: 4px 9px; font-size: 12px; background: var(--bg); color: var(--text); }
+  #cvSyncWrap .ds-menu { top: auto; bottom: calc(100% + 6px); right: auto; left: 0; background: var(--panel); color: var(--text); }
   /* a phone: the file list or the file, one at a time (static.js hides the list once a file opens).
      The file's bar wraps: the name on the first line, then Run and Copy first, then the rest. */
   @media (max-width: 760px) {
@@ -755,7 +761,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
 
 <div class="help" id="help" hidden>
   <h3>Website copy</h3>
-  <p class="site-note">This is Code Viewer's website copy. Reading, Practice, Hint, Compare, Visual, Next, Done / Revise, the file filter and Search in code work here. JavaScript files run in this browser and UI pages (.html) run with their tests, both with ✓ / ✗ on each expected line, so a solved practice marks itself done. Your progress, drafts and attempts are kept in this browser only. Java and Python cannot run here: ▶ Run shows how to run the file on a PC (copy it into an IntelliJ scratch file, or <code>java File.java</code>). Save, new files, Push and Java suggestions need Code Viewer on the laptop.</p>
+  <p class="site-note">This is Code Viewer's website copy. Reading, Practice, Hint, Compare, Visual, Next, Done / Revise, the file filter and Search in code work here. JavaScript files run in this browser and UI pages (.html) run with their tests, both with ✓ / ✗ on each expected line, so a solved practice marks itself done. Drafts and practice attempts are kept in this browser. Done / Revise marks too, until you press <b>Continue with Google</b> under the file list: then they are saved in your Google Drive (Personal Apps / java-practice.json) and every browser you sign in on shows the same marks. It works offline after one visit. Java and Python cannot run here: ▶ Run shows how to run the file on a PC (copy it into an IntelliJ scratch file, or <code>java File.java</code>). Save, new files, Push and Java suggestions need Code Viewer on the laptop.</p>
   <h3>Shortcuts</h3>
   <table>
     <tr><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td>Hide / show the file list</td></tr>
@@ -821,7 +827,9 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
   <div class="mv-canvas"><div class="mv-stage"></div></div>
 </div>
 
-<script>window.CV_SITE = {"version": "site-f8830f2ec5", "root": "java-interview-practice", "built": "06 Nov 2026"};</script>
+<script>window.CV_SITE = {"version": "site-adf554b6ab", "root": "java-interview-practice", "built": "07 Nov 2026"};</script>
+<script>window.APP_CONFIG = {"googleClientId": "183243723057-nmgqs0v8lgsav4e00m7fr8gnjk1semja.apps.googleusercontent.com", "driveFolderName": "Personal Apps"};</script>
+<script src="drive-sync.js"></script>
 <script src="outcheck.js"></script>
 <script src="static.js"></script>
 <!-- marked must load before Monaco's AMD loader, or it registers as an AMD module instead of a global.
@@ -836,7 +844,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
 if (location.hostname === 'localhost') { location.replace(location.href.replace('//localhost', '//127.0.0.1')); return; }
 const MONACO =new URL('vendor/monaco-editor@0.52.2/min', location.href).href.replace(/\/$/, '');   // absolute: the worker needs it
 const MONACO_LOCAL = MONACO.startsWith(location.origin + '/');
-const PAGE_VERSION = 'site-f8830f2ec5';      // filled in by the server; compared with /api/info
+const PAGE_VERSION = 'site-adf554b6ab';      // filled in by the server; compared with /api/info
 const MERMAID_SRC = 'vendor/mermaid@11.15.0/dist/mermaid.min.js';        // the diagram library: this PC's copy once downloaded, else cdnjs
 const SCRATCH = 'scratch';
 const SCRATCH_TEMPLATE = `// Scratch pad: kept in this browser, never written to a file.
@@ -1465,6 +1473,7 @@ async function refreshFromDisk() {
   else if (c.kind === 'md' && !c.source) renderMd(c.path, d.text);
 }
 window.addEventListener('focus', refreshFromDisk);
+window.addEventListener('cv-progress', async () => { try { await loadProgress(); renderTree(); refreshBar(); } catch {} });
 setInterval(refreshFromDisk, 20000);
 
 /* ------------------------------------------------------------ filter (Ctrl+P) */
@@ -5571,7 +5580,7 @@ function renderOutput(res) {
     out.innerHTML = c && isCode(c) && (c.kind === 'java' || c.kind === 'py') && window.CV_STATIC ? `<div class="hint">This website cannot run ${KIND_NAME[c.kind]}. Copy the code (the copy button above) to run it on your PC; ▶ Run shows how.</div>`
       : c && isCode(c) ? `<div class="hint">Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> or ▶ Run to ${what}.</div>`
       : c && KIND_NAME[c.kind] ? `<div class="hint">${esc(cannotRun(c.kind))}</div>`
-      : '<div class="hint">Java, Python, JavaScript and UI (.html) files run. Open one on the left, or the Scratch pad.</div>';
+      : '<div class="hint">JavaScript and UI (.html) files run here; on Java and Python files ▶ Run shows how to run them on your PC. Open one on the left, or the Scratch pad.</div>';
     return;
   }
   const [label, cls] = runStatus(res);

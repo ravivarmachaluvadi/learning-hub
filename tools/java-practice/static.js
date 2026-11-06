@@ -24,13 +24,55 @@
     return r.json();
   }).catch(e => { delete loads[name]; throw e; }));
 
-  // ---------------------------------------------------------------- progress (localStorage)
+  // ---------------------------------------------------------------- progress
+  /* Done / Revise marks. With Personal Apps' drive-sync.js loaded (build_site.py copies it), they
+     live in a DriveStore: kept in this browser at once, and in My Drive / Personal Apps /
+     java-practice.json once "Continue with Google" is pressed, so every device shows the same
+     marks. Each mark carries the time it changed and the newer one wins; a cleared mark is a
+     tombstone, so an old device cannot bring it back. Without it: this browser only. */
   const PKEY = 'cvsite:progress';
-  const readProgress = () => { try { return JSON.parse(localStorage.getItem(PKEY)) || {}; } catch { return {}; } };
-  const writeProgress = p => {
-    try { localStorage.setItem(PKEY, JSON.stringify(p)); }
+  const localProgress = () => { try { return JSON.parse(localStorage.getItem(PKEY)) || {}; } catch { return {}; } };
+  let store = null;
+  if (window.DriveStore && window.APP_CONFIG && APP_CONFIG.googleClientId) {
+    store = DriveStore.open({
+      file: 'java-practice.json', cacheKey: 'cvsite:drive', empty: () => ({ v: 1, items: {} }),
+      onChange: (doc, how) => { if (how === 'remote') dispatchEvent(new Event('cv-progress')); },
+    });
+    try {                          // marks made here before sync existed join the synced ones, once
+      if (!localStorage.getItem('cvsite:migrated')) {
+        const add = Object.entries(localProgress()).filter(([k]) => !store.doc.items[k]), now = Date.now();
+        if (add.length) store.mutate(doc => { for (const [k, e] of add) doc.items[k] = { ...e, updatedAt: now }; });
+        localStorage.setItem('cvsite:migrated', '1');
+      }
+    } catch {}
+    window.cvSync = store;
+    // the sign-in button and sync state, under the file list's progress line
+    const wrap = document.createElement('div'), label = document.createElement('span'), slot = document.createElement('span');
+    wrap.className = 'side-foot'; wrap.id = 'cvSyncWrap';
+    label.textContent = 'Marks on every device:';
+    label.title = 'Done / Revise marks are saved in your Google Drive (My Drive / Personal Apps / java-practice.json) once '
+      + 'you continue with Google, so every browser you sign in on shows the same ones. Until then they stay in this browser.';
+    wrap.append(label, slot);
+    const foot = document.getElementById('count');
+    if (foot) { foot.after(wrap); DriveStore.mountStatus(slot, store); }
+  }
+  function readProgress() {
+    if (!store) return localProgress();
+    const out = {};
+    for (const [k, it] of Object.entries(store.doc.items)) if (it && !it.deleted) { const { updatedAt, ...e } = it; out[k] = e; }
+    return out;
+  }
+  function putEntry(rel, e) {
+    if (store) {
+      const now = Date.now();
+      store.mutate(doc => { doc.items[rel] = Object.keys(e).length ? { ...e, updatedAt: now } : { deleted: true, updatedAt: now }; });
+      return;
+    }
+    const files = localProgress();
+    if (Object.keys(e).length) files[rel] = e; else delete files[rel];
+    try { localStorage.setItem(PKEY, JSON.stringify(files)); }
     catch { throw new Error('This browser would not save your progress (storage full or blocked).'); }
-  };
+  }
   const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
   function whole(v, what, most) {
     if (v === null || v === undefined) return null;
@@ -42,7 +84,7 @@
   /* codeview.py State.set_progress, line for line */
   function setProgress(rel, status, pass, secs, hints) {
     secs = whole(secs, 'secs', 7 * 86400); hints = whole(hints, 'hints', 100);
-    const files = readProgress(), e = files[rel] || {};
+    const e = { ...(readProgress()[rel] || {}) };
     if (status === 'done' && e.s === 'done' && pass) e.r = (e.r || 0) + 1;
     else if (status === 'revise' || status === 'none' || (status === 'done' && e.s !== 'done')) delete e.r;
     if (pass && secs !== null) { e.secs = secs; e.best = Math.min(secs, e.best ?? secs); }
@@ -50,8 +92,7 @@
     if (status === 'done' || status === 'revise') { e.s = status; e.t = today(); }
     else if (status === 'none') delete e.s;
     if (pass !== null && pass !== undefined) { e.practiced = today(); e.pass = !!pass; }
-    if (Object.keys(e).length) files[rel] = e; else delete files[rel];
-    writeProgress(files);
+    putEntry(rel, e);
     return e;
   }
   /* State.restore_progress: put an entry back exactly as it was (the page's Undo) */
@@ -66,9 +107,7 @@
       else if (k === 'pass' && typeof v === 'boolean') clean[k] = v;
       else throw new Error(`cannot restore ${k}=${JSON.stringify(v)}`);
     }
-    const files = readProgress();
-    if (Object.keys(clean).length) files[rel] = clean; else delete files[rel];
-    writeProgress(files);
+    putEntry(rel, clean);
     return clean;
   }
 
