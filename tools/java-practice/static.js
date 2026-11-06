@@ -323,6 +323,13 @@ self.onmessage = ({ data }) => {
     throw new Error('That ' + LAPTOP);
   }
 
+  /* Offline after one visit, and installable: the service worker (tools/site_sw.js, sw.js here)
+     keeps a copy of the site. Browsers allow one only on https or on this computer. */
+  const SW_URL = new URL('sw.js', document.currentScript.src);
+  if ('serviceWorker' in navigator && window.isSecureContext) {
+    addEventListener('load', () => { navigator.serviceWorker.register(SW_URL).catch(() => {}); });
+  }
+
   /* On a phone the file list fills the screen (build_site.py's CSS); opening a file hides it,
      and the list button at the top left brings it back. */
   const narrow = matchMedia('(max-width: 760px)');
