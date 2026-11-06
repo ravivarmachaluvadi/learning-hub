@@ -12,7 +12,7 @@
 
    To remove it one day: publish a sw.js whose install handler calls self.registration.unregister(). */
 'use strict';
-const VERSION = "site-5213412f9c";
+const VERSION = "site-5681018dba";
 const CORE = ["./", "static.js", "outcheck.js", "manifest.webmanifest", "icon-192.png", "icon-512.png", "data/tree.json", "data/files.json", "data/practice.json", "drive-sync.js"];
 const VENDOR = ["vendor/marked@18.0.14/lib/marked.umd.js", "vendor/monaco-editor@0.52.2/min/vs/base/browser/ui/codicons/codicon/codicon.ttf", "vendor/monaco-editor@0.52.2/min/vs/base/worker/workerMain.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/css/css.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/html/html.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/ini/ini.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/java/java.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/javascript/javascript.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/kotlin/kotlin.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/markdown/markdown.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/python/python.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/shell/shell.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/sql/sql.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/typescript/typescript.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/xml/xml.js", "vendor/monaco-editor@0.52.2/min/vs/basic-languages/yaml/yaml.js", "vendor/monaco-editor@0.52.2/min/vs/editor/editor.main.css", "vendor/monaco-editor@0.52.2/min/vs/editor/editor.main.js", "vendor/monaco-editor@0.52.2/min/vs/loader.js"];
 const SITE_CACHE = 'java-practice-' + VERSION, VENDOR_CACHE = 'java-practice-vendor';
@@ -62,13 +62,17 @@ async function cacheFirst(req) {
   const hit = await cache.match(req);
   if (hit) return hit;
   const res = await fetch(req);
-  if (res.ok) await cache.put(req, res.clone());
+  if (res.ok || res.type === 'opaque') await cache.put(req, res.clone());
   return res;
 }
+
+// Python on Pyodide (site_static.js) comes from jsDelivr under a versioned path: kept once used
+const PYODIDE_URL = 'https://cdn.jsdelivr.net/npm/pyodide@';
 
 self.addEventListener('fetch', event => {
   const req = event.request;
   if (req.method !== 'GET') return;
+  if (req.url.startsWith(PYODIDE_URL)) { event.respondWith(cacheFirst(req)); return; }
   const url = new URL(req.url);
   if (url.origin !== location.origin || !url.pathname.startsWith(SCOPE)) return;   // fonts and the rest: as usual
   event.respondWith(url.pathname.startsWith(SCOPE + 'vendor/') ? cacheFirst(req) : networkFirst(req));

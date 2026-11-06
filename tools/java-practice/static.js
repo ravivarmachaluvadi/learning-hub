@@ -178,7 +178,7 @@
                  '', 'Or paste it into the browser console (F12), if it uses no Node modules.');
     }
     lines.push('', 'Everything else works here: Practice, Hint, Compare, Next, Done / Revise and search.',
-               'JavaScript files and UI pages (.html) do run here, with ticks.');
+               'Python and JavaScript files and UI pages (.html) do run here, with ticks.');
     return { phase: 'elsewhere', ok: true, exitCode: 0, file: name, output: lines.join('\n'), runner: 'not on this website' };
   }
 
@@ -281,6 +281,129 @@ self.onmessage = ({ data }) => {
 };
 })();
 `;
+  // ---------------------------------------------------------------- Python runs here (Pyodide)
+  /* A .py file runs on Pyodide (Python compiled for the browser), the same version the Learning
+     Hub's Python tool uses, from cdn.jsdelivr.net (about 10 MB the first time; the browser and the
+     service worker keep it). As on the laptop: Python's own syntax report first, then the file
+     runs as __main__, stdout and stderr together, a traceback that shows the file's lines, exit
+     code from sys.exit(). The time limit ends the worker; the next run loads Python again. If
+     Python cannot load (offline, or jsDelivr blocked), Run says why and how to run it on a PC. */
+  const PYODIDE = '0.29.5', PY_CDN = 'https://cdn.jsdelivr.net/npm/pyodide@' + PYODIDE + '/';
+  const PY_RUNNER = [
+    'import io, linecache, sys, traceback, warnings',
+    'def __cv_run(code, fname, stdin):',
+    '    try:',
+    '        with warnings.catch_warnings():',
+    '            warnings.simplefilter("ignore")',
+    '            co = compile(code, fname, "exec", dont_inherit=True)',
+    '    except SyntaxError as e:',
+    '        return ("compile", "".join(traceback.format_exception_only(e)), 1)',
+    '    except ValueError as e:',
+    '        return ("compile", f"{fname}: {e}\\n", 1)',
+    '    linecache.cache[fname] = (len(code), None, code.splitlines(True), fname)',
+    '    sys.stdin = io.StringIO(stdin)',
+    '    g = {"__name__": "__main__", "__file__": fname, "__builtins__": __builtins__}',
+    '    status = 0',
+    '    try:',
+    '        exec(co, g)',
+    '    except SystemExit as e:',
+    '        if e.code is None:',
+    '            status = 0',
+    '        elif isinstance(e.code, int):',
+    '            status = e.code',
+    '        else:',
+    '            print(e.code, file=sys.stderr)',
+    '            status = 1',
+    '    except BaseException as e:',
+    '        tb = e.__traceback__',
+    '        while tb is not None and tb.tb_frame.f_code.co_filename != fname:',
+    '            tb = tb.tb_next',
+    '        traceback.print_exception(type(e), e, tb)',
+    '        status = 1',
+    '    finally:',
+    '        sys.stdout.flush()',
+    '        sys.stderr.flush()',
+    '    return ("run", "", status)',
+  ].join('\n');
+  const PY_WORKER = String.raw`(() => {
+'use strict';
+let py = null;
+self.onmessage = async ({ data: m }) => {
+  if (m.type === 'init') {
+    try {
+      importScripts(m.cdn + 'pyodide.js');
+      py = await loadPyodide({ indexURL: m.cdn });
+      for (const [name, set] of [['out', 'setStdout'], ['err', 'setStderr']]) {
+        const dec = new TextDecoder();
+        py[set]({ write: buf => { postMessage({ t: 'out', s: dec.decode(buf, { stream: true }) }); return buf.length; } });
+      }
+      py.runPython(m.runner);
+      postMessage({ t: 'ready', version: py.runPython('import sys; sys.version.split()[0]') });
+    } catch (e) { postMessage({ t: 'failed', s: String(e && e.message || e) }); }
+    return;
+  }
+  if (m.type === 'run') {
+    try {
+      const f = py.globals.get('__cv_run');
+      const r = f(m.code, m.file, m.stdin).toJs();
+      f.destroy();
+      postMessage({ t: 'done', phase: r[0], text: r[1], code: r[2] });
+    } catch (e) { postMessage({ t: 'done', phase: 'run', text: String(e && e.message || e) + '\n', code: 1 }); }
+  }
+};
+})();
+`;
+  let pyWorker = null, pyReady = null, pyVersion = '';
+  function pyStart() {
+    pyWorker = new Worker(URL.createObjectURL(new Blob([PY_WORKER], { type: 'text/javascript' })));
+    const w = pyWorker;
+    pyReady = new Promise(resolve => {
+      w.onmessage = ({ data }) => {
+        if (data.t === 'ready') { pyVersion = data.version; resolve(true); }
+        else if (data.t === 'failed') resolve(data.s);
+      };
+      w.onerror = e => { e.preventDefault(); resolve(e.message || 'the worker could not start'); };
+    });
+    w.postMessage({ type: 'init', cdn: PY_CDN, runner: PY_RUNNER });
+    return pyReady;
+  }
+  async function runPy(req) {
+    const file = (req.path || '').split('/').pop() || 'Scratch.py', limit = Math.max(1, Math.min(+req.timeout || 10, 60)) * 1000;
+    const loaded = await (pyReady || pyStart());
+    if (loaded !== true) {
+      if (pyWorker) pyWorker.terminate();
+      pyWorker = pyReady = null;
+      const r = await runElsewhere(req);
+      r.output = `Python could not be loaded in this browser (${loaded}). It comes from cdn.jsdelivr.net, which may be `
+        + 'blocked on this network, or you are offline and it was never loaded here.\n\n' + r.output;
+      return r;
+    }
+    const w = pyWorker, parts = [], t0 = performance.now();
+    let size = 0, cut = false;
+    return new Promise(resolve => {
+      const finish = (phase, exitCode, timedOut, tail) => {
+        clearTimeout(timer);
+        if (tail) parts.push(tail);
+        let output = parts.join('');
+        if (cut) output += '\n[output cut at 256 KB]\n';
+        if (phase === 'compile') return resolve({ phase, ok: false, file, output, compileMs: Math.round(performance.now() - t0) });
+        const { verdicts, checks } = checkLines(output);
+        resolve({ phase: 'run', ok: exitCode === 0 && !timedOut, exitCode, timedOut, truncated: cut, file,
+                  runner: `Python ${pyVersion} in this browser`, runMs: Math.round(performance.now() - t0), output, verdicts, checks });
+      };
+      const timer = setTimeout(() => { w.terminate(); pyWorker = pyReady = null; finish('run', 1, true); }, limit);
+      w.onmessage = ({ data }) => {
+        if (data.t === 'out') {
+          if (cut) return;
+          size += data.s.length;
+          if (size > 256 * 1024) { cut = true; return; }
+          parts.push(data.s);
+        } else if (data.t === 'done') finish(data.phase, data.code, false, data.text);
+      };
+      w.postMessage({ type: 'run', code: req.code || '', file, stdin: req.stdin || '' });
+    });
+  }
+
   let workerUrl = null;
   function runJs(req) {
     const file = (req.path || '').split('/').pop() || 'Scratch.js', limit = Math.max(1, Math.min(+req.timeout || 10, 60)) * 1000;
@@ -319,9 +442,8 @@ self.onmessage = ({ data }) => {
     files: false, langs: ['py', 'js', 'html'], python: false, node: null, pyassist: false,
     pill: 'Website copy',
     pillTitle: 'This is the website copy of Code Viewer (built ' + (SITE.built || '?') + '). Reading, Practice, Hint, Compare, '
-      + 'Next, Done / Revise and search work here; progress is kept in this browser. JavaScript and UI pages run here with '
-      + 'ticks. ▶ Run on a Java or Python file shows how to run it on a PC. Save, new files and Java suggestions need '
-      + 'Code Viewer on the laptop.',
+      + 'Next, Done / Revise and search work here. Python, JavaScript and UI pages run here with ticks. ▶ Run on a Java '
+      + 'file shows how to run it on a PC. Save, new files and Java suggestions need Code Viewer on the laptop.',
   };
 
   async function get(path, q) {
@@ -348,7 +470,7 @@ self.onmessage = ({ data }) => {
   }
   async function post(path, b) {
     switch (path) {
-      case '/api/run': return b.lang === 'js' ? runJs(b) : runElsewhere(b);
+      case '/api/run': return b.lang === 'js' ? runJs(b) : b.lang === 'py' ? runPy(b) : runElsewhere(b);
       case '/api/check': return checkLines(b.output || '');
       case '/api/syntax': return { errors: [] };
       case '/api/progress':

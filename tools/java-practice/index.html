@@ -761,7 +761,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
 
 <div class="help" id="help" hidden>
   <h3>Website copy</h3>
-  <p class="site-note">This is Code Viewer's website copy. Reading, Practice, Hint, Compare, Visual, Next, Done / Revise, the file filter and Search in code work here. JavaScript files run in this browser and UI pages (.html) run with their tests, both with ✓ / ✗ on each expected line, so a solved practice marks itself done. Drafts and practice attempts are kept in this browser. Done / Revise marks too, until you press <b>Continue with Google</b> under the file list: then they are saved in your Google Drive (Personal Apps / java-practice.json) and every browser you sign in on shows the same marks. It works offline after one visit. Java and Python cannot run here: ▶ Run shows how to run the file on a PC (copy it into an IntelliJ scratch file, or <code>java File.java</code>). Save, new files, Push and Java suggestions need Code Viewer on the laptop.</p>
+  <p class="site-note">This is Code Viewer's website copy. Reading, Practice, Hint, Compare, Visual, Next, Done / Revise, the file filter and Search in code work here. Python files (Pyodide, loaded from cdn.jsdelivr.net the first time) and JavaScript files run in this browser, and UI pages (.html) run with their tests, all with ✓ / ✗ on each expected line, so a solved practice marks itself done. Drafts and practice attempts are kept in this browser. Done / Revise marks too, until you press <b>Continue with Google</b> under the file list: then they are saved in your Google Drive (Personal Apps / java-practice.json) and every browser you sign in on shows the same marks. It works offline after one visit. Java cannot run here: ▶ Run shows how to run the file on a PC (copy it into an IntelliJ scratch file, or <code>java File.java</code>). Save, new files, Push and Java suggestions need Code Viewer on the laptop.</p>
   <h3>Shortcuts</h3>
   <table>
     <tr><td><kbd>Ctrl</kbd>+<kbd>B</kbd></td><td>Hide / show the file list</td></tr>
@@ -827,7 +827,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
   <div class="mv-canvas"><div class="mv-stage"></div></div>
 </div>
 
-<script>window.CV_SITE = {"version": "site-5213412f9c", "root": "java-interview-practice", "built": "07 Nov 2026"};</script>
+<script>window.CV_SITE = {"version": "site-5681018dba", "root": "java-interview-practice", "built": "07 Nov 2026"};</script>
 <script>window.APP_CONFIG = {"googleClientId": "183243723057-nmgqs0v8lgsav4e00m7fr8gnjk1semja.apps.googleusercontent.com", "driveFolderName": "Personal Apps"};</script>
 <script src="drive-sync.js"></script>
 <script src="outcheck.js"></script>
@@ -844,7 +844,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
 if (location.hostname === 'localhost') { location.replace(location.href.replace('//localhost', '//127.0.0.1')); return; }
 const MONACO =new URL('vendor/monaco-editor@0.52.2/min', location.href).href.replace(/\/$/, '');   // absolute: the worker needs it
 const MONACO_LOCAL = MONACO.startsWith(location.origin + '/');
-const PAGE_VERSION = 'site-5213412f9c';      // filled in by the server; compared with /api/info
+const PAGE_VERSION = 'site-5681018dba';      // filled in by the server; compared with /api/info
 const MERMAID_SRC = 'vendor/mermaid@11.15.0/dist/mermaid.min.js';        // the diagram library: this PC's copy once downloaded, else cdnjs
 const SCRATCH = 'scratch';
 const SCRATCH_TEMPLATE = `// Scratch pad: kept in this browser, never written to a file.
@@ -1062,7 +1062,7 @@ const boot = (async () => {
 })().catch(e => { $('#count').textContent = e.message; });
 
 window.MonacoEnvironment = {
-  getWorkerUrl: () => 'data:text/javascript;charset=utf-8,' + encodeURIComponent(
+  getWorkerUrl: () => window.CV_STATIC ? MONACO + '/vs/base/worker/workerMain.js' : 'data:text/javascript;charset=utf-8,' + encodeURIComponent(
     `self.MonacoEnvironment={baseUrl:'${MONACO}/'};importScripts('${MONACO}/vs/base/worker/workerMain.js');`),
 };
 require.config({ paths: { vs: MONACO + '/vs' } });
@@ -2634,7 +2634,7 @@ function toggleTry() {
     const gone = showTry(fileView);
     if (moving) dropDraft(c);
     toast((moving ? 'Your unsaved edit moved into this Try copy.' + (saved ? '' : ' The file is back to its original.')
-                  : 'Try: a copy to change freely; Copy takes it to your PC to run. The file is never touched; Discard when you are done.'
+                  : 'Try: a copy to change freely (Python and JavaScript run here; for Java, Copy takes it to your PC). The file is never touched; Discard when you are done.'
                     + (drafted ? ' You also have an unsaved edit on the file itself.' : ''))
           + (gone.length ? ` Only one copy at a time, so your try copy of ${gone.join(', ')} was deleted.` : ''));
     if (saved) showBanner('You saved changes to this file since you opened it. Move them into this Try copy and put the file back as it was?', [
@@ -5583,10 +5583,10 @@ function renderOutput(res) {
     status.textContent = ''; status.className = 'status'; meta.textContent = '';
     const c = S.cur, what = c && { java: 'compile and run what is in the editor', py: 'run what is in the editor with Python',
       js: 'run what is in the editor with Node.js', html: "run the page's test block (the page itself shows beside the code)" }[c.kind];
-    out.innerHTML = c && isCode(c) && (c.kind === 'java' || c.kind === 'py') && window.CV_STATIC ? `<div class="hint">This website cannot run ${KIND_NAME[c.kind]}. Copy the code (the copy button above) to run it on your PC; ▶ Run shows how.</div>`
+    out.innerHTML = c && isCode(c) && c.kind === 'java' && window.CV_STATIC ? `<div class="hint">This website cannot run ${KIND_NAME[c.kind]}. Copy the code (the copy button above) to run it on your PC; ▶ Run shows how.</div>`
       : c && isCode(c) ? `<div class="hint">Press <kbd>Ctrl</kbd>+<kbd>Enter</kbd> or ▶ Run to ${what}.</div>`
       : c && KIND_NAME[c.kind] ? `<div class="hint">${esc(cannotRun(c.kind))}</div>`
-      : '<div class="hint">JavaScript and UI (.html) files run here; on Java and Python files ▶ Run shows how to run them on your PC. Open one on the left, or the Scratch pad.</div>';
+      : '<div class="hint">Python, JavaScript and UI (.html) files run here; on Java files ▶ Run shows how to run them on your PC. Open one on the left, or the Scratch pad.</div>';
     return;
   }
   const [label, cls] = runStatus(res);
