@@ -139,20 +139,138 @@
                  '', 'Or paste it into the browser console (F12), if it uses no Node modules.');
     }
     lines.push('', 'Everything else works here: Practice, Hint, Compare, Next, Done / Revise and search.',
-               'UI pages (.html) do run here, with their tests.');
+               'JavaScript files and UI pages (.html) do run here, with ticks.');
     return { phase: 'elsewhere', ok: true, exitCode: 0, file: name, output: lines.join('\n'), runner: 'not on this website' };
   }
 
-  /* A UI page's test output (the page ran here): the laptop server ticks it with outcheck.py.
-     That is not ported, so lines are shown without ticks and counted as not checked. */
-  function checkLines(output) {
-    const text = String(output).replace(/\r\n?/g, '\n').replace(/\n$/, '');
-    const verdicts = [], checks = { pass: 0, fail: 0, unchecked: 0 };
-    for (const line of text.split('\n')) {
-      verdicts.push(null);
-      if (/expected/i.test(line)) checks.unchecked++;
+  /* Ticks and crosses: outcheck.js, the port of the laptop's outcheck.py (same verdict on every
+     line the repo prints; test_codeview.py OutcheckJsTest). Loaded before this file. */
+  const checkLines = output => window.outcheck.checkLines(output);
+
+  // ---------------------------------------------------------------- JavaScript runs here
+  /* A .js file (or a JavaScript Scratch pad / Try block) runs in a Web Worker: its own thread,
+     so an endless loop cannot freeze the page, and terminate() ends it at the time limit. Like
+     Node, the program ends when no timer is left; console output is formatted the way Node's
+     util.inspect does for the usual values. Node-only things (require, process, fs) are not
+     there; the error says so. */
+  // All of it inside one function: a name declared at the worker's top level would clash with the
+  // program's own (C01_EventLoopOrder.js has function timers(); "already been declared", 6 Nov).
+  const WORKER = String.raw`(() => {
+'use strict';
+const send = (t, s) => postMessage({ t, s });
+const IDENT = /^[A-Za-z_$][\w$]*$/;
+function inspect(v, depth = 0, seen = new Set()) {
+  if (v === null) return 'null';
+  switch (typeof v) {
+    case 'string': return depth ? (v.includes("'") && !v.includes('"') ? '"' + v + '"' : "'" + v.replace(/'/g, "\\'") + "'") : v;
+    case 'number': return Object.is(v, -0) ? '-0' : String(v);
+    case 'bigint': return v + 'n';
+    case 'undefined': return 'undefined';
+    case 'boolean': return String(v);
+    case 'symbol': return v.toString();
+    case 'function': {
+      if (/^class\b/.test(Function.prototype.toString.call(v))) return '[class ' + (v.name || '(anonymous)') + ']';
+      const kind = v.constructor && v.constructor.name === 'AsyncFunction' ? 'AsyncFunction' : 'Function';
+      return '[' + kind + (v.name ? ': ' + v.name : ' (anonymous)') + ']';
     }
-    return { verdicts, checks };
+  }
+  if (seen.has(v)) return '[Circular *1]';
+  if (v instanceof Error) return v.stack || String(v);
+  if (v instanceof Date) return isNaN(v) ? 'Invalid Date' : v.toISOString();
+  if (v instanceof RegExp) return String(v);
+  if (v instanceof Promise) return 'Promise { <pending> }';
+  if (depth > 2) return Array.isArray(v) ? '[Array]' : '[Object]';
+  seen = new Set(seen).add(v);
+  const inner = x => inspect(x, depth + 1, seen);
+  const wrap = (open, items, close) => items.length ? open + ' ' + items.join(', ') + ' ' + close : open + close;
+  if (Array.isArray(v)) {
+    const items = [];
+    let holes = 0;
+    for (let i = 0; i < v.length; i++) {
+      if (!(i in v)) { holes++; continue; }
+      if (holes) { items.push('<' + holes + ' empty item' + (holes > 1 ? 's' : '') + '>'); holes = 0; }
+      items.push(inner(v[i]));
+    }
+    if (holes) items.push('<' + holes + ' empty item' + (holes > 1 ? 's' : '') + '>');
+    return wrap('[', items, ']');
+  }
+  if (v instanceof Map) return wrap('Map(' + v.size + ') {', [...v].map(([k, x]) => inner(k) + ' => ' + inner(x)), '}');
+  if (v instanceof Set) return wrap('Set(' + v.size + ') {', [...v].map(inner), '}');
+  const proto = Object.getPrototypeOf(v);
+  const name = proto === null ? '[Object: null prototype]' : proto === Object.prototype ? '' : (proto.constructor && proto.constructor.name) || '';
+  const items = Object.keys(v).map(k => (IDENT.test(k) ? k : "'" + k + "'") + ': ' + inner(v[k]));
+  return (name ? name + ' ' : '') + wrap('{', items, '}');
+}
+const line = args => args.map(a => typeof a === 'string' ? a : inspect(a)).join(' ');
+for (const k of ['log', 'info', 'debug', 'warn', 'error', 'trace']) console[k] = (...a) => send('out', line(a));
+console.dir = v => send('out', inspect(v));
+console.table = v => send('out', inspect(v));
+console.assert = (ok, ...a) => { if (!ok) send('out', 'Assertion failed' + (a.length ? ': ' + line(a) : '')); };
+const counts = {}, timers = {};
+console.count = (l = 'default') => send('out', l + ': ' + (counts[l] = (counts[l] || 0) + 1));
+console.time = (l = 'default') => { timers[l] = performance.now(); };
+console.timeEnd = (l = 'default') => send('out', l + ': ' + (performance.now() - timers[l]).toFixed(3) + 'ms');
+
+// like Node, the program has ended when no timer is left to fire
+const live = new Set(), st = setTimeout, ct = clearTimeout, si = setInterval, ci = clearInterval;
+self.setTimeout = (fn, ms, ...a) => { const id = st(() => { live.delete(id); if (typeof fn === 'function') fn(...a); }, ms); live.add(id); return id; };
+self.clearTimeout = id => { live.delete(id); ct(id); };
+self.setInterval = (fn, ms, ...a) => { const id = si(fn, ms, ...a); live.add(id); return id; };
+self.clearInterval = id => { live.delete(id); ci(id); };
+self.setImmediate = (fn, ...a) => self.setTimeout(fn, 0, ...a);
+
+let file = 'main.js';
+function crash(e) {
+  if (!(e instanceof Error)) { send('crash', 'Uncaught ' + inspect(e, 1)); return; }
+  const at = (e.stack || '').match(new RegExp('\\(?' + file.replace(/[.$]/g, '\\$&') + ':(\\d+):\\d+'));
+  const missing = e instanceof ReferenceError && /^(require|process|module|exports|__dirname|__filename|Buffer|global)\b/.test(e.message);
+  const stack = (e.stack || '').split('\n').filter(l => /^\s+at /.test(l) && l.includes(file)).map(l => l.replace(/^\s+/, '    '));
+  send('crash', (at ? file + ':' + at[1] + '\n' : '') + e.name + ': ' + e.message + (stack.length ? '\n' + stack.join('\n') : '')
+       + (missing ? '\n(' + e.message.split(' ')[0] + ' is part of Node.js, which this website does not have: run this file with node on your PC.)' : ''));
+}
+self.addEventListener('error', ev => { ev.preventDefault(); crash(ev.error || new Error(ev.message)); });
+self.addEventListener('unhandledrejection', ev => { ev.preventDefault(); crash(ev.reason); });
+self.onmessage = ({ data }) => {
+  file = data.file;
+  try { (0, eval)(data.code + '\n//# sourceURL=' + data.file); }
+  catch (e) { crash(e); return; }
+  // no timer left, twice in a row: the browser reports a promise rejected with nothing to catch
+  // it in a task of its own, which must get its turn before the program counts as ended
+  let quiet = 0;
+  const idle = () => { quiet = live.size ? 0 : quiet + 1; if (quiet >= 2) send('done'); else st(idle, quiet ? 1 : 4); };
+  st(idle, 0);
+};
+})();
+`;
+  let workerUrl = null;
+  function runJs(req) {
+    const file = (req.path || '').split('/').pop() || 'Scratch.js', limit = Math.max(1, Math.min(+req.timeout || 10, 60)) * 1000;
+    workerUrl = workerUrl || URL.createObjectURL(new Blob([WORKER], { type: 'text/javascript' }));
+    return new Promise(resolve => {
+      const w = new Worker(workerUrl), lines = [], t0 = performance.now();
+      let size = 0, cut = false;
+      const finish = (exitCode, timedOut, tail) => {
+        clearTimeout(timer); w.terminate();
+        if (tail) lines.push(tail);
+        let output = lines.join('\n') + (lines.length ? '\n' : '');
+        if (cut) output += '\n[output cut at 256 KB]\n';
+        const { verdicts, checks } = checkLines(output);
+        resolve({ phase: 'run', ok: exitCode === 0 && !timedOut, exitCode, timedOut, truncated: cut, file,
+                  runner: 'in this browser', runMs: Math.round(performance.now() - t0), output, verdicts, checks });
+      };
+      const timer = setTimeout(() => finish(1, true), limit);
+      w.onmessage = ({ data }) => {
+        if (data.t === 'out') {
+          if (cut) return;
+          size += data.s.length + 1;
+          if (size > 256 * 1024) { cut = true; return; }
+          lines.push(data.s);
+        } else if (data.t === 'crash') finish(1, false, data.s);
+        else if (data.t === 'done') finish(0, false);
+      };
+      w.onerror = e => { e.preventDefault(); finish(1, false, 'Error: ' + (e.message || 'the program could not start')); };
+      w.postMessage({ code: req.code || '', file });
+    });
   }
 
   // ---------------------------------------------------------------- the routes
@@ -162,8 +280,9 @@
     files: false, langs: ['py', 'js', 'html'], python: false, node: null, pyassist: false,
     pill: 'Website copy',
     pillTitle: 'This is the website copy of Code Viewer (built ' + (SITE.built || '?') + '). Reading, Practice, Hint, Compare, '
-      + 'Next, Done / Revise and search work here; progress is kept in this browser. ▶ Run on a Java file shows how to '
-      + 'run it on a PC. Run with ticks, Save, new files and Java suggestions need Code Viewer on the laptop.',
+      + 'Next, Done / Revise and search work here; progress is kept in this browser. JavaScript and UI pages run here with '
+      + 'ticks. ▶ Run on a Java or Python file shows how to run it on a PC. Save, new files and Java suggestions need '
+      + 'Code Viewer on the laptop.',
   };
 
   async function get(path, q) {
@@ -190,7 +309,7 @@
   }
   async function post(path, b) {
     switch (path) {
-      case '/api/run': return runElsewhere(b);
+      case '/api/run': return b.lang === 'js' ? runJs(b) : runElsewhere(b);
       case '/api/check': return checkLines(b.output || '');
       case '/api/syntax': return { errors: [] };
       case '/api/progress':
