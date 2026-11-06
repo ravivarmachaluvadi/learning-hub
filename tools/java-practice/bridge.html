@@ -48,19 +48,34 @@
     onChange: (doc, how) => { if (how === 'remote') send({ cv: 'doc', items: doc.items }); },
   });
   DriveStore.mountStatus(slot, store);
+  // practice attempts (code, timer, hints, last solved): a second file; the page sends changes in
+  // batches at most every 5 s ({cv: 'aput'} in, {cv: 'adoc', items, synced} out; synced once Drive has been read)
+  let attemptsRead = false;
+  const attempts = DriveStore.open({
+    file: 'java-practice-attempts.json', cacheKey: 'cvbridge:attempts', empty: () => ({ v: 1, items: {} }),
+    onChange: (doc, how) => { if (how === 'remote') send({ cv: 'adoc', items: doc.items, synced: true }); },
+    onStatus: s => {
+      if (s.state === 'saved' && !attemptsRead) { attemptsRead = true; send({ cv: 'adoc', items: attempts.doc.items, synced: true }); }
+    },
+  });
+  const putNewer = (target, items) => {
+    const newer = Object.entries(items).filter(([p, it]) => {
+      const cur = target.doc.items[p];
+      return it && (!cur || (+it.updatedAt || 0) > (+cur.updatedAt || 0));
+    });
+    if (newer.length) target.mutate(doc => { for (const [p, it] of newer) doc.items[p] = it; });
+  };
   addEventListener('message', e => {
     if (e.source !== window.parent || e.origin !== anc) return;
     const m = e.data || {};
-    if (m.cv !== 'put' || !m.items) return;
-    const newer = Object.entries(m.items).filter(([p, it]) => {
-      const cur = store.doc.items[p];
-      return it && (!cur || (+it.updatedAt || 0) > (+cur.updatedAt || 0));
-    });
-    if (newer.length) store.mutate(doc => { for (const [p, it] of newer) doc.items[p] = it; });
+    if (m.cv === 'put' && m.items) putNewer(store, m.items);
+    else if (m.cv === 'aput' && m.items) putNewer(attempts, m.items);
   });
   new ResizeObserver(() => send({ cv: 'size', h: document.documentElement.scrollHeight })).observe(document.body);
   send({ cv: 'doc', items: store.doc.items });
+  send({ cv: 'adoc', items: attempts.doc.items, synced: false });
   window.cvBridge = store;
+  window.cvBridgeAttempts = attempts;
 })();
 </script>
 </body>

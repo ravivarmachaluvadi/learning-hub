@@ -830,7 +830,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
   <div class="mv-canvas"><div class="mv-stage"></div></div>
 </div>
 
-<script>window.CV_SITE = {"version": "site-bdc98e08f2", "root": "java-interview-practice", "built": "07 Nov 2026"};</script>
+<script>window.CV_SITE = {"version": "site-5c5645504e", "root": "java-interview-practice", "built": "07 Nov 2026"};</script>
 <script>window.APP_CONFIG = {"googleClientId": "183243723057-nmgqs0v8lgsav4e00m7fr8gnjk1semja.apps.googleusercontent.com", "driveFolderName": "Personal Apps"};</script>
 <script src="drive-sync.js"></script>
 <script src="outcheck.js"></script>
@@ -847,7 +847,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
 if (location.hostname === 'localhost') { location.replace(location.href.replace('//localhost', '//127.0.0.1')); return; }
 const MONACO =new URL('vendor/monaco-editor@0.52.2/min', location.href).href.replace(/\/$/, '');   // absolute: the worker needs it
 const MONACO_LOCAL = MONACO.startsWith(location.origin + '/');
-const PAGE_VERSION = 'site-bdc98e08f2';      // filled in by the server; compared with /api/info
+const PAGE_VERSION = 'site-5c5645504e';      // filled in by the server; compared with /api/info
 const MERMAID_SRC = 'vendor/mermaid@11.15.0/dist/mermaid.min.js';        // the diagram library: this PC's copy once downloaded, else cdnjs
 const SCRATCH = 'scratch';
 const SCRATCH_TEMPLATE = `// Scratch pad: kept in this browser, never written to a file.
@@ -912,8 +912,8 @@ const STATUS_NEXT = { undefined: 'done', done: 'revise', revise: 'none' };
 const $ = s => document.querySelector(s);
 const store = {
   get(k, d) { try { const v = localStorage.getItem('cv:' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
-  set(k, v) { try { localStorage.setItem('cv:' + k, JSON.stringify(v)); return true; } catch { return false; } },   // false: storage full
-  del(k) { try { localStorage.removeItem('cv:' + k); } catch {} },
+  set(k, v) { try { localStorage.setItem('cv:' + k, JSON.stringify(v)); } catch { return false; } attemptWritten(k, v); return true; },   // false: storage full
+  del(k) { try { localStorage.removeItem('cv:' + k); } catch {} attemptWritten(k, null); },
   has(k) { try { return localStorage.getItem('cv:' + k) !== null; } catch { return false; } },
 };
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
@@ -1146,6 +1146,7 @@ async function switchRoot(id, openSomething) {
   renderTree();
   refreshGit();
   bridgeSetup();
+  window.dispatchEvent(new Event('cv-root'));          // the website's attempts sync waits for this (7 Nov)
   if (openSomething) {
     const last = store.get('last:' + id, null);
     const pick = last && (S.byPath.has(last) || S.dirs.has(last)) ? last
@@ -1513,8 +1514,146 @@ window.addEventListener('message', e => {
     bridgeState.live = true;
     bridgeState.lastDoc = m.items || {};
     bridgeMerge(bridgeState.lastDoc).catch(() => {});
+  } else if (m.cv === 'adoc' && bridgeWanted()) {      // practice attempts, through the same frame
+    bridgeState.live = true;
+    window.cvAttemptSink = items => bridgeSend({ cv: 'aput', items });
+    const up = mergeAttempts(m.items || {});
+    if (m.synced) attemptsReady();
+    if (Object.keys(up).length) bridgeSend({ cv: 'aput', items: up });
   }
 });
+
+/* ------------------------------------------------------------ practice attempts on every device (7 Nov) */
+/* Ravi: "continue a practice attempt on another device". A practice attempt is four browser keys
+   per problem: the code (practice:), its timer (timer:), the hints opened (hints:) and the last
+   solved code (lastSolved:); Try copies and edit drafts stay per device. They are synced as
+   My Drive / Personal Apps / java-practice-attempts.json: on the website by site_static.js, here
+   through the bridge frame. Each key's newer change wins; this browser keeps when each key last
+   changed in cv:attemptTimes. Two guards: a change Drive just brought in is not sent back when
+   the editor saves it again, and anything written in the first 8 seconds before the first Drive
+   check counts as older than Drive (opening a problem starts its timer, which must not beat the
+   attempt made on the other device). Only this repo's own problems are synced. */
+const ATTEMPT_PARTS = ['practice', 'timer', 'hints', 'lastSolved'];
+const ATTEMPT_TIMES = 'cv:attemptTimes';
+const attemptStartedAt = Date.now();
+const attemptApplied = new Map();          // key -> the JSON text Drive just put there
+let attemptsSynced = false;
+function attemptsReady() { attemptsSynced = true; }
+window.cvAttemptsReady = attemptsReady;
+function syncedAttempt(k) {
+  const i = k.indexOf(':');
+  if (i < 0 || !ATTEMPT_PARTS.includes(k.slice(0, i))) return false;
+  let rootId;
+  try { rootId = (S.roots.find(r => r.default) || {}).id; } catch { return false; }   // S not set up yet
+  return !!rootId && k.startsWith(k.slice(0, i + 1) + rootId + '/');
+}
+const attemptTimes = () => { try { return JSON.parse(localStorage.getItem(ATTEMPT_TIMES)) || {}; } catch { return {}; } };
+const saveAttemptTimes = t => { try { localStorage.setItem(ATTEMPT_TIMES, JSON.stringify(t)); } catch {} };
+const attemptItem = (v, t) => v === null ? { deleted: true, updatedAt: t } : { v, updatedAt: t };
+/* every store.set / store.del comes here. try: setSide() and others save before this section's
+   consts exist, and reading one then throws (temporal dead zone): those keys are not attempts */
+function attemptWritten(k, v) {
+  try {
+    if (!syncedAttempt(k)) return;
+    const text = v === null ? null : JSON.stringify(v);
+    if (attemptApplied.has(k) && attemptApplied.get(k) === text) { attemptApplied.delete(k); return; }
+    const t = attemptsSynced || Date.now() - attemptStartedAt > 8000 ? Date.now() : 1;
+    const times = attemptTimes();
+    times[k] = t;
+    saveAttemptTimes(times);
+    attemptQueue(k, v, t);
+  } catch {}
+}
+/* Sent in batches, at most every 5 s and when the page is left: the practice timer saves every
+   second, and each send restarted drive-sync's wait, so nothing was ever saved while a timer ran
+   (7 Nov test). window.cvAttemptSink(items) is set by the website (site_static.js) or the bridge. */
+const attemptPending = new Map();
+let attemptFlushTimer = null, attemptFlushAt = 0;
+function attemptQueue(k, v, t) {
+  attemptPending.set(k, attemptItem(v, t));
+  // a timer tick alone waits up to 30 s (it changes every second); code, hints: 5 s
+  const at = Date.now() + (k.startsWith('timer:') ? 30000 : 5000);
+  if (attemptFlushTimer && attemptFlushAt <= at) return;
+  clearTimeout(attemptFlushTimer);
+  attemptFlushAt = at;
+  attemptFlushTimer = setTimeout(attemptFlush, at - Date.now());
+}
+function attemptFlush() {
+  clearTimeout(attemptFlushTimer);
+  attemptFlushTimer = null;
+  if (!attemptPending.size || !window.cvAttemptSink) return;
+  const items = Object.fromEntries(attemptPending);
+  attemptPending.clear();
+  try { window.cvAttemptSink(items); } catch {}
+}
+window.addEventListener('pagehide', attemptFlush);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') attemptFlush(); });
+/* Drive's attempts against this browser's: Drive's newer ones are put here (and shown, when the
+   problem is open and not changed since); -> this browser's newer ones, to send up */
+/* The same attempt on two devices (no Reset between): its timer keeps the larger elapsed time and
+   a solve or a peek from either side, whichever side changed last. Opening a problem on the
+   second device starts its timer before Drive has answered, and that newer, smaller time must not
+   wipe the time spent on the first device (7 Nov test). A Reset is marked with resetAt. */
+const sameAttempt = (a, b) => (a && a.resetAt || 0) === (b && b.resetAt || 0);
+function combineTimer(newer, older) {
+  if (!newer || !older || typeof newer !== 'object' || typeof older !== 'object' || !sameAttempt(newer, older)) return newer;
+  const out = { ...newer, ms: Math.max(newer.ms || 0, older.ms || 0), solved: !!(newer.solved || older.solved) };
+  if (newer.peeked || older.peeked) out.peeked = true;
+  return out;
+}
+const parseOr = (text, d) => { try { return JSON.parse(text); } catch { return d; } };
+function mergeAttempts(items) {
+  const times = attemptTimes(), up = {};
+  for (const [k, it] of Object.entries(items)) {
+    if (!syncedAttempt(k) || !it) continue;
+    const part = k.slice(0, k.indexOf(':')), rt = +it.updatedAt || 0, lt = times[k] || 0;
+    const raw = localStorage.getItem('cv:' + k), local = raw === null ? null : parseOr(raw, null);
+    const remote = it.deleted ? null : it.v, remoteText = remote === null ? null : JSON.stringify(remote);
+    let value = rt > lt ? remote : local;
+    const other = rt > lt ? local : remote;
+    if (value !== null && other !== null) {
+      if (part === 'timer') value = combineTimer(value, other);
+      else if (part === 'hints' && typeof value === 'number' && typeof other === 'number') value = Math.max(value, other);
+    }
+    const text = value === null ? null : JSON.stringify(value);
+    if (text !== raw) {                                     // this browser gets the merged value
+      try { if (text === null) localStorage.removeItem('cv:' + k); else localStorage.setItem('cv:' + k, text); } catch { continue; }
+      attemptApplied.set(k, text);
+      showArrivedAttempt(k, raw, text);
+    }
+    if (text === remoteText) times[k] = rt;
+    else {                                                  // Drive gets it: this side was newer, or the merge added to it
+      const t = Math.max(lt, rt + 1);
+      times[k] = t;
+      up[k] = attemptItem(value, t);
+    }
+  }
+  for (let i = 0; i < localStorage.length; i++) {          // here, and not in Drive at all yet
+    const full = localStorage.key(i);
+    if (!full || !full.startsWith('cv:')) continue;
+    const k = full.slice(3);
+    if (!syncedAttempt(k) || items[k]) continue;
+    up[k] = { v: parseOr(localStorage.getItem(full), null), updatedAt: times[k] || 1 };
+  }
+  saveAttemptTimes(times);
+  return up;
+}
+window.cvMergeAttempts = mergeAttempts;
+function showArrivedAttempt(k, before, text) {
+  const part = k.slice(0, k.indexOf(':')), fileKey = k.slice(part.length + 1);
+  try {
+    if (part === 'practice' && S.pmodels.has(fileKey)) {
+      const m = S.pmodels.get(fileKey), was = before === null ? S.skeletons.get(fileKey) : JSON.parse(before);
+      if (!m.isDisposed() && m.getValue() === was) {       // not typed in here since: show the newer one
+        const now = text === null ? S.skeletons.get(fileKey) : JSON.parse(text);
+        if (now != null) replaceAll(m, now);
+        if (S.cur && S.cur.key === fileKey) toast('Your practice attempt from another device is here.');
+      }
+    }
+    if (S.cur && S.cur.key === fileKey) { paintTimer(); paintHints(); refreshBar(); }
+    if (!$('#attemptsPane').hidden) renderAttempts();
+  } catch {}
+}
 function cycleProgress() {
   const c = S.cur;
   if (!c || c.path === SCRATCH || c.kind === 'dir') return;
@@ -4145,7 +4284,7 @@ function restartAttempt(k) {
   if (m && timerOf(k).solved && m.getValue() !== blank) store.set('lastSolved:' + k, m.getValue());
   if (m && blank != null && m.getValue() !== blank) replaceAll(m, blank);
   if (m && editor.getModel() === m) atCode(m, null);
-  setTimer(k, { ms: 0, paused: false, solved: false, at: Date.now() });
+  setTimer(k, { ms: 0, paused: false, solved: false, at: Date.now(), resetAt: Date.now() });   // resetAt: a new attempt (sync)
   store.del('hints:' + k);
   overToastFor = null;
   $('#hintCard').hidden = true;
@@ -5828,7 +5967,7 @@ $('#menu').addEventListener('click', async e => {
     case 'restartTimer':
       if (!timed(c)) { toast('The timer runs in practice mode (Alt+P) and in the Scratch pad.'); break; }
       // a peek stays a peek: restarting the clock does not make the attempt fresh again
-      setTimer(c.key, { ms: 0, paused: false, solved: false, at: Date.now(), ...(timerOf(c.key).peeked ? { peeked: true } : {}) });
+      setTimer(c.key, { ms: 0, paused: false, solved: false, at: Date.now(), resetAt: Date.now(), ...(timerOf(c.key).peeked ? { peeked: true } : {}) });
       overToastFor = null; paintTimer();
       toast(c.path === SCRATCH ? 'Scratch timer restarted from zero' : 'Practice timer restarted');
       break;

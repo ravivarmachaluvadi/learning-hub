@@ -55,6 +55,26 @@
     wrap.append(label, slot);
     const foot = document.getElementById('count');
     if (foot) { foot.after(wrap); DriveStore.mountStatus(slot, store); }
+
+    /* Practice attempts too (code, timer, hints, last solved), in java-practice-attempts.json:
+       codeview.html's mergeAttempts() decides key by key, newer wins, and hands changes over in
+       batches at most every 5 s. The first merge waits for the page's folder list (cv-root),
+       which says whose keys are ours. */
+    const attempts = DriveStore.open({
+      file: 'java-practice-attempts.json', cacheKey: 'cvsite:attempts', empty: () => ({ v: 1, items: {} }),
+      onChange: (doc, how) => { if (how === 'remote' && window.cvMergeAttempts) putAttempts(window.cvMergeAttempts(doc.items)); },
+      onStatus: s => { if (s.state === 'saved' && window.cvAttemptsReady) window.cvAttemptsReady(); },
+    });
+    const putAttempts = up => {
+      const newer = Object.entries(up).filter(([k, it]) => { const cur = attempts.doc.items[k]; return !cur || it.updatedAt > (+cur.updatedAt || 0); });
+      if (newer.length) attempts.mutate(doc => { for (const [k, it] of newer) doc.items[k] = it; });
+    };
+    addEventListener('cv-root', () => {
+      if (!window.cvMergeAttempts) return;
+      window.cvAttemptSink = putAttempts;
+      putAttempts(window.cvMergeAttempts(attempts.doc.items));
+    }, { once: true });
+    window.cvSyncAttempts = attempts;
   }
   function readProgress() {
     if (!store) return localProgress();
