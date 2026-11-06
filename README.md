@@ -16,7 +16,7 @@ lessons, quiz reviews, drafts) stays in the browser you use.
 | Python Learning Tool | [tools/python/](https://ravivarmachaluvadi.github.io/learning-hub/tools/python/) | Python runs in the page (Pyodide from cdn.jsdelivr.net, about 12 MB the first time) |
 | Kotlin Learning Tool | [tools/kotlin/](https://ravivarmachaluvadi.github.io/learning-hub/tools/kotlin/) | Reading; running Kotlin needs the tool's local server |
 | Java Concurrency Learning Tool | [tools/java-concurrency/](https://ravivarmachaluvadi.github.io/learning-hub/tools/java-concurrency/) | Reading; running Java needs jclearn and JDK 25 on the laptop |
-| Java Interview Practice (Code Viewer) | [tools/java-practice/](https://ravivarmachaluvadi.github.io/learning-hub/tools/java-practice/) | Reading, Practice with hints, Compare, Done / Revise, filter by difficulty, search in code, UI pages with their tests. Java, Python and JavaScript cannot run here: Run shows how to run the file on a PC |
+| Java Interview Practice (Code Viewer) | [tools/java-practice/](https://ravivarmachaluvadi.github.io/learning-hub/tools/java-practice/) | Reading, Practice with hints, Compare, filter by difficulty, search in code; JavaScript and UI pages run with ✓ / ✗; Done / Revise sync through Google Drive; works offline and installs as an app. Java and Python cannot run here: Run shows how to run the file on a PC. Updates itself on each Code Viewer Push |
 
 ## How it is made
 
