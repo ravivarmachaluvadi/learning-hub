@@ -7,6 +7,7 @@ It rebuilds this folder from the repos next to it; nothing here is edited by han
     index.html, atlas.html, NN-slug/   the Learning Hub's pages, from ../Learning (tools/build-hub.py --site)
     tools/<name>/                      each learning tool: its index.html and the files its artifact.py lists
                                        (stylesheets, scripts, data, vendor/), with vendor/'s version and licence notes
+    tools/java-practice/               Code Viewer's website copy, from ../java-interview-practice (tools/build_site.py)
 
 Every page asks search engines not to index it (<meta name="robots" content="noindex">). The tools' sources,
 tests and notes stay in their private repos. To update the site: python -I build.py, then commit and push.
@@ -56,6 +57,11 @@ for name, repo in TOOLS.items():
     size = sum(p.stat().st_size for p in out.rglob('*') if p.is_file())
     total += size
     print(f'tools/{name}/: {len(files) + len(notes) + 1} files, {size // 1024} KB')
+
+# Java interview practice: Code Viewer's website copy, which that repo's own script builds (its page, the
+# practice files as data, and the editor libraries); its README says what works there
+print(run([sys.executable, '-I', str(GH / 'java-interview-practice' / 'tools' / 'build_site.py'),
+           str(HERE / 'tools' / 'java-practice')], GH / 'java-interview-practice').strip())
 
 (HERE / '.nojekyll').write_text('', encoding='utf-8')   # serve every file as it is (no Jekyll)
 pages = sum(1 for _ in HERE.rglob('*.html'))

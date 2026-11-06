@@ -2,7 +2,7 @@
 
 **Open it:** <https://ravivarmachaluvadi.github.io/learning-hub/>
 
-Six learning tools and 71 study labs (distributed systems, databases, the JVM, system design), as plain
+Seven learning tools, the Java interview practice files in Code Viewer, and 71 study labs (distributed systems, databases, the JVM, system design), as plain
 static pages that open in any browser. Every page asks search engines not to index it. Progress (finished
 lessons, quiz reviews, drafts) stays in the browser you use.
 
@@ -15,6 +15,8 @@ lessons, quiz reviews, drafts) stays in the browser you use.
 | React Learning Tool | [tools/react/](https://ravivarmachaluvadi.github.io/learning-hub/tools/react/) | Everything; components run on React 19.3 |
 | Python Learning Tool | [tools/python/](https://ravivarmachaluvadi.github.io/learning-hub/tools/python/) | Python runs in the page (Pyodide from cdn.jsdelivr.net, about 12 MB the first time) |
 | Kotlin Learning Tool | [tools/kotlin/](https://ravivarmachaluvadi.github.io/learning-hub/tools/kotlin/) | Reading; running Kotlin needs the tool's local server |
+| Java Concurrency Learning Tool | [tools/java-concurrency/](https://ravivarmachaluvadi.github.io/learning-hub/tools/java-concurrency/) | Reading; running Java needs jclearn and JDK 25 on the laptop |
+| Java Interview Practice (Code Viewer) | [tools/java-practice/](https://ravivarmachaluvadi.github.io/learning-hub/tools/java-practice/) | Reading, Practice with hints, Compare, Done / Revise, filter by difficulty, search in code, UI pages with their tests. Java, Python and JavaScript cannot run here: Run shows how to run the file on a PC |
 
 ## How it is made
 
@@ -30,4 +32,7 @@ the pages still work: system fonts, diagrams shown as their text, plain code.
 
 Each tool's `vendor/` folder holds unmodified copies of open-source libraries, all under the MIT licence:
 CodeMirror 5.65.19, js-beautify 1.15.1, @babel/standalone 8.0.6, Prettier 3.9.9, React and ReactDOM 19.3.0.
-Each library's `VERSION.txt` says where it came from.
+Each library's `VERSION.txt` says where it came from. The Java practice copy carries Monaco Editor 0.52.2,
+marked 18.0.14 and Mermaid 11.15.0 (also MIT) in `tools/java-practice/vendor/`, so it loads nothing from
+other sites except its fonts (Google Fonts; without them it uses system fonts); its `vendor/README.txt` says
+where they came from.
