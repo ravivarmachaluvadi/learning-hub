@@ -174,6 +174,9 @@ aside.side { display: flex; flex-direction: column; min-height: 0; background: v
 .sres mark { background: var(--mark); color: inherit; border-radius: 2px; }
 .sres .note { padding: 10px 12px; color: var(--muted); }
 .side-foot { padding: 6px 10px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11px; line-height: 1.5; }
+/* the marks-sync frame (the website's bridge.html) under the progress line, 7 Nov */
+.bridge-wrap { border-top: 1px solid var(--border); background: var(--panel); }
+iframe.bridge { display: block; width: 100%; height: 30px; border: 0; background: var(--panel); }
 .side-foot b { color: var(--text); font-weight: 600; }
 .vsplit { cursor: col-resize; background: var(--border); }
 .vsplit:hover, .vsplit.live { background: var(--accent); }
@@ -827,7 +830,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
   <div class="mv-canvas"><div class="mv-stage"></div></div>
 </div>
 
-<script>window.CV_SITE = {"version": "site-5681018dba", "root": "java-interview-practice", "built": "07 Nov 2026"};</script>
+<script>window.CV_SITE = {"version": "site-bdc98e08f2", "root": "java-interview-practice", "built": "07 Nov 2026"};</script>
 <script>window.APP_CONFIG = {"googleClientId": "183243723057-nmgqs0v8lgsav4e00m7fr8gnjk1semja.apps.googleusercontent.com", "driveFolderName": "Personal Apps"};</script>
 <script src="drive-sync.js"></script>
 <script src="outcheck.js"></script>
@@ -844,7 +847,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
 if (location.hostname === 'localhost') { location.replace(location.href.replace('//localhost', '//127.0.0.1')); return; }
 const MONACO =new URL('vendor/monaco-editor@0.52.2/min', location.href).href.replace(/\/$/, '');   // absolute: the worker needs it
 const MONACO_LOCAL = MONACO.startsWith(location.origin + '/');
-const PAGE_VERSION = 'site-5681018dba';      // filled in by the server; compared with /api/info
+const PAGE_VERSION = 'site-bdc98e08f2';      // filled in by the server; compared with /api/info
 const MERMAID_SRC = 'vendor/mermaid@11.15.0/dist/mermaid.min.js';        // the diagram library: this PC's copy once downloaded, else cdnjs
 const SCRATCH = 'scratch';
 const SCRATCH_TEMPLATE = `// Scratch pad: kept in this browser, never written to a file.
@@ -1002,6 +1005,7 @@ function applyTheme() {
   if (S.theme === 'auto') delete document.documentElement.dataset.theme; else document.documentElement.dataset.theme = S.theme;
   if (window.monaco) monaco.editor.setTheme(monacoTheme());
   rethemeMd();                                // a .md showing: its code and diagrams in the new colours
+  bridgeTheme();                              // the marks-sync frame under the file list
 }
 matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyTheme);
 applyTheme();
@@ -1141,6 +1145,7 @@ async function switchRoot(id, openSomething) {
   await Promise.all([loadTree(), loadProgress()]);
   renderTree();
   refreshGit();
+  bridgeSetup();
   if (openSomething) {
     const last = store.get('last:' + id, null);
     const pick = last && (S.byPath.has(last) || S.dirs.has(last)) ? last
@@ -1430,8 +1435,86 @@ async function setProgress(path, status, pass, extra = {}) {
     if (Object.keys(entry).length) S.progress[path] = entry; else delete S.progress[path];
     renderTree();
     refreshBar();
+    bridgePut(path, entry);
   } catch (e) { toast(e.message); }
 }
+
+/* ------------------------------------------------------------ marks on every device (7 Nov) */
+/* Ravi: one set of Done / Revise marks for the laptop and the website. The website keeps them in
+   Google Drive (My Drive / Personal Apps / java-practice.json, through Personal Apps'
+   drive-sync.js), and Google accepts that sign-in only from the website's own address. So, for
+   this repo, the file list's footer shows the website's bridge.html in a small frame: it signs in
+   and syncs there, and passes marks to and from this page by postMessage. The newer change wins
+   per file (u here, updatedAt in Drive); marks made here before are uploaded the first time.
+   The server's CODEVIEW_BRIDGE="" turns it off. */
+const BRIDGE_URL = '';
+var bridgeState = null;        // var, not let: applyTheme() calls bridgeTheme() before this line has run
+function bridgeWanted() {
+  const r = rootObj();
+  return !window.CV_STATIC && /^https?:\/\//.test(BRIDGE_URL) && !!r && !!r.default;
+}
+function bridgeSetup() {
+  const want = bridgeWanted();
+  if (bridgeState) {
+    bridgeState.wrap.hidden = !want;
+    if (want && bridgeState.lastDoc) bridgeMerge(bridgeState.lastDoc).catch(() => {});
+    return;
+  }
+  if (!want) return;
+  const wrap = document.createElement('div'), frame = document.createElement('iframe');
+  wrap.className = 'bridge-wrap';
+  frame.className = 'bridge';
+  frame.title = 'Done / Revise marks on every device, through Google Drive';
+  frame.src = BRIDGE_URL + '#' + (isDark() ? 'dark' : 'light');
+  wrap.append(frame);
+  $('#count').after(wrap);
+  bridgeState = { wrap, frame, origin: new URL(BRIDGE_URL).origin, live: false, lastDoc: null };
+}
+/* only when the theme really changed: setting the same src again reloads the frame (initEditor
+   calls applyTheme() once more, 7 Nov test); a new #hash alone is not a reload */
+function bridgeTheme() {
+  if (!bridgeState) return;
+  const src = BRIDGE_URL + '#' + (isDark() ? 'dark' : 'light');
+  if (bridgeState.frame.src !== src) bridgeState.frame.src = src;
+}
+function bridgeSend(msg) { if (bridgeState && bridgeState.live) bridgeState.frame.contentWindow.postMessage(msg, bridgeState.origin); }
+/* when a mark last changed: u (ms) from this server; marks from before 7 Nov have only their date */
+const markTime = e => !e ? 0 : e.u || (e.t ? Date.parse(e.t + 'T00:00:00') || 0 : 0);
+const markItem = e => { const { u, ...rest } = e; return { ...rest, updatedAt: markTime(e) || Date.now() }; };
+function bridgePut(path, entry) {
+  if (!bridgeWanted()) return;
+  bridgeSend({ cv: 'put', items: { [path]: entry && Object.keys(entry).length ? markItem(entry) : { deleted: true, updatedAt: Date.now() } } });
+}
+/* Drive's marks (items) against this server's: the newer of each wins; ours that Drive lacks go up */
+async function bridgeMerge(items) {
+  if (!S.root || !bridgeWanted()) return;
+  const up = {};
+  let changed = false;
+  for (const [p, r] of Object.entries(items)) {
+    const mine = S.progress[p], mt = markTime(mine), rt = +r.updatedAt || 0;
+    if (rt > mt) {
+      if (r.deleted && !mine) continue;
+      const { updatedAt, deleted, ...fields } = r;
+      try {
+        await api('/api/progress', { root: S.root, path: p, restore: deleted ? {} : { ...fields, u: rt } });
+        changed = true;
+      } catch { /* a mark this server cannot take: left as it is */ }
+    } else if (mine && mt > rt) up[p] = markItem(mine);
+  }
+  for (const [p, mine] of Object.entries(S.progress)) if (!(p in items)) up[p] = markItem(mine);
+  if (Object.keys(up).length) bridgeSend({ cv: 'put', items: up });
+  if (changed) { await loadProgress(); renderTree(); refreshBar(); }
+}
+window.addEventListener('message', e => {
+  if (!bridgeState || e.source !== bridgeState.frame.contentWindow || e.origin !== bridgeState.origin) return;
+  const m = e.data || {};
+  if (m.cv === 'size') bridgeState.frame.style.height = clamp(+m.h || 0, 20, 260) + 'px';
+  else if (m.cv === 'doc') {
+    bridgeState.live = true;
+    bridgeState.lastDoc = m.items || {};
+    bridgeMerge(bridgeState.lastDoc).catch(() => {});
+  }
+});
 function cycleProgress() {
   const c = S.cur;
   if (!c || c.path === SCRATCH || c.kind === 'dir') return;
@@ -4092,10 +4175,13 @@ function notePeek(c) {
       const t2 = timerOf(c.key); delete t2.peeked; setTimer(c.key, t2);
       if (before.s !== 'revise') {
         try {
-          const entry = await api('/api/progress', { root: S.root, path: c.path, restore: before });
+          // the Undo is the newest change: stamped now, so the synced marks take it (7 Nov)
+          const back = Object.keys(before).length ? { ...before, u: Date.now() } : {};
+          const entry = await api('/api/progress', { root: S.root, path: c.path, restore: back });
           delete entry._status;
           if (Object.keys(entry).length) S.progress[c.path] = entry; else delete S.progress[c.path];
           renderTree();
+          bridgePut(c.path, entry);
           // a server started before this feature ignores restore and leaves the revise mark
           if ((entry.s || '') !== (before.s || '')) return toast('Undo needs Code Viewer restarted once (Quit from the tray, then start it again). The ↻ revise mark is still on.');
         } catch (e) { return toast(e.message); }

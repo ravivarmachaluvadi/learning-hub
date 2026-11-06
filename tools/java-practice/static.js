@@ -105,6 +105,7 @@
       else if (k === 'r' || k === 'hints') clean[k] = whole(v, k, 100);
       else if (k === 'secs' || k === 'best') clean[k] = whole(v, k, 7 * 86400);
       else if (k === 'pass' && typeof v === 'boolean') clean[k] = v;
+      else if (k === 'u') continue;               // the laptop's change time; Drive keeps its own (updatedAt)
       else throw new Error(`cannot restore ${k}=${JSON.stringify(v)}`);
     }
     putEntry(rel, clean);

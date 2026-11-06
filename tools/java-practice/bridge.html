@@ -1,0 +1,67 @@
+<!doctype html>
+<!-- site_bridge.html - written as bridge.html by tools/build_site.py (7 Nov 2026).
+     Code Viewer on the laptop (http://127.0.0.1:...) shows this page in a small frame under its
+     file list, so the laptop's Done / Revise marks and the website's are one set: this page signs
+     in to Google Drive (Google accepts the website's address, not the laptop's) and syncs
+     My Drive / Personal Apps / java-practice.json with Personal Apps' drive-sync.js, and talks to
+     the laptop page by postMessage:
+       laptop -> here  {cv: 'put', items: {path: {...mark, updatedAt} or {deleted, updatedAt}}}
+       here -> laptop  {cv: 'doc', items}   at start and whenever Drive brought a change
+                       {cv: 'size', h}      this page's height, so the frame fits it
+     It answers only a page on this computer (127.0.0.1 / localhost). -->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="robots" content="noindex">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Viewer · marks sync</title>
+<style>
+  :root { --text: #1f2328; --muted: #6a737d; --panel: #f7f8fa; --border: #d0d7de; --bg: #fff; --hover: #eaeef2; color-scheme: light; }
+  :root.dark { --text: #dfe1e5; --muted: #8c9099; --panel: #2b2d30; --border: #393b40; --bg: #1e1f22; --hover: #35383d; color-scheme: dark; }
+  html, body { margin: 0; background: var(--panel); color: var(--muted); font: 11px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  body { padding: 5px 10px; }
+  .row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+         --surface: var(--panel); --surface-2: var(--hover); --line: var(--border); --faint: var(--muted); }
+  .ds { font-size: 11px; }
+  .ds .ds-google { padding: 4px 9px; font-size: 12px; background: var(--bg); color: var(--text); }
+  .ds-menu { position: static !important; margin-top: 6px; box-shadow: none !important; background: var(--panel) !important; color: var(--text) !important; }
+</style>
+<script>window.APP_CONFIG = {"googleClientId": "183243723057-nmgqs0v8lgsav4e00m7fr8gnjk1semja.apps.googleusercontent.com", "driveFolderName": "Personal Apps"};</script>
+<script src="drive-sync.js"></script>
+</head>
+<body>
+<div class="row"><span>Marks on every device:</span><span id="s"></span></div>
+<script>
+(() => {
+  'use strict';
+  const theme = () => document.documentElement.classList.toggle('dark', location.hash === '#dark');
+  theme();
+  addEventListener('hashchange', theme);
+  const anc = (location.ancestorOrigins && location.ancestorOrigins[0])
+    || (document.referrer ? new URL(document.referrer).origin : '');
+  const here = /^http:\/\/(127\.0\.0\.1|localhost)(:\d+)?$/.test(anc) && window.parent !== window;
+  const slot = document.getElementById('s');
+  if (!here || !window.DriveStore) { slot.textContent = 'This page works only inside Code Viewer on your laptop.'; return; }
+  const send = m => window.parent.postMessage(m, anc);
+  const store = DriveStore.open({
+    file: 'java-practice.json', cacheKey: 'cvbridge:drive', empty: () => ({ v: 1, items: {} }),
+    onChange: (doc, how) => { if (how === 'remote') send({ cv: 'doc', items: doc.items }); },
+  });
+  DriveStore.mountStatus(slot, store);
+  addEventListener('message', e => {
+    if (e.source !== window.parent || e.origin !== anc) return;
+    const m = e.data || {};
+    if (m.cv !== 'put' || !m.items) return;
+    const newer = Object.entries(m.items).filter(([p, it]) => {
+      const cur = store.doc.items[p];
+      return it && (!cur || (+it.updatedAt || 0) > (+cur.updatedAt || 0));
+    });
+    if (newer.length) store.mutate(doc => { for (const [p, it] of newer) doc.items[p] = it; });
+  });
+  new ResizeObserver(() => send({ cv: 'size', h: document.documentElement.scrollHeight })).observe(document.body);
+  send({ cv: 'doc', items: store.doc.items });
+  window.cvBridge = store;
+})();
+</script>
+</body>
+</html>
