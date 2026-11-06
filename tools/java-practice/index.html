@@ -489,12 +489,19 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
   #rootSel:disabled { opacity: 1; cursor: default; }
   .status.away { color: var(--muted); }
   .help .site-note { margin: 0 0 12px; max-width: 72ch; }
-  /* a phone: the file list or the file, one at a time (static.js hides the list once a file opens) */
+  /* a phone: the file list or the file, one at a time (static.js hides the list once a file opens).
+     The file's bar wraps: the name on the first line, then Run and Copy first, then the rest. */
   @media (max-width: 760px) {
     body:not(.side-collapsed) { grid-template-columns: 100vw 0 0 !important; }
     body:not(.side-collapsed) .vsplit, body:not(.side-collapsed) main { display: none; }
-    #jdk { display: none; }
-    main .bar { overflow-x: auto; }
+    #jdk, #timeoutSel, main .bar .spacer { display: none; }
+    main { grid-template-rows: auto auto minmax(0, 1fr) 4px var(--out-h, 230px); }
+    main.out-collapsed { grid-template-rows: auto auto minmax(0, 1fr) 4px 36px; }
+    main .bar { flex-wrap: wrap; row-gap: 6px; padding: 6px 8px; }
+    main .bar .crumbs { flex: 1 1 0; }
+    main .bar .tools { flex: 1 1 100%; flex-wrap: wrap; row-gap: 6px; }
+    #runBtn { order: -2; }
+    #copyBtn { order: -1; }
   }
 </style>
 </head>
@@ -571,7 +578,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
   </div>
   <div class="pane" id="filesPane">
     <div class="search">
-      <input id="filter" placeholder="Find a file…   Ctrl+P" autocomplete="off" spellcheck="false">
+      <input id="filter" placeholder="Find a file…   Ctrl+P" title="Finds files by name, among the ones the Show choice below lists" autocomplete="off" spellcheck="false">
       <div class="line">
         <select id="showSel" title="Which files to list">
           <option value="all">Show: all files</option>
@@ -811,7 +818,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
   <div class="mv-canvas"><div class="mv-stage"></div></div>
 </div>
 
-<script>window.CV_SITE = {"version": "site-c5111075cb", "root": "java-interview-practice", "built": "06 Nov 2026"};</script>
+<script>window.CV_SITE = {"version": "site-30462ede3e", "root": "java-interview-practice", "built": "06 Nov 2026"};</script>
 <script src="static.js"></script>
 <!-- marked must load before Monaco's AMD loader, or it registers as an AMD module instead of a global.
      The server fills in this PC's copy (tools/offline.py) once it has one, else cdnjs. -->
@@ -825,7 +832,7 @@ kbd { font: 11px var(--code); border: 1px solid var(--border); border-bottom-wid
 if (location.hostname === 'localhost') { location.replace(location.href.replace('//localhost', '//127.0.0.1')); return; }
 const MONACO =new URL('vendor/monaco-editor@0.52.2/min', location.href).href.replace(/\/$/, '');   // absolute: the worker needs it
 const MONACO_LOCAL = MONACO.startsWith(location.origin + '/');
-const PAGE_VERSION = 'site-c5111075cb';      // filled in by the server; compared with /api/info
+const PAGE_VERSION = 'site-30462ede3e';      // filled in by the server; compared with /api/info
 const MERMAID_SRC = 'vendor/mermaid@11.15.0/dist/mermaid.min.js';        // the diagram library: this PC's copy once downloaded, else cdnjs
 const SCRATCH = 'scratch';
 const SCRATCH_TEMPLATE = `// Scratch pad: kept in this browser, never written to a file.
@@ -1476,11 +1483,17 @@ function doFilter() {
   if (!q) { res.hidden = true; $('#tree').hidden = false; return; }
   const toks = q.split(/\s+/);
   const nameHit = f => toks.every(t => f.name.toLowerCase().includes(t));
-  S.hits = S.files.filter(f => toks.every(t => f.path.toLowerCase().includes(t)))
+  // 6 Nov, Ravi: the name search keeps to the Show choice, so "tree" with Show: C medium finds
+  // only the medium tree problems
+  S.hits = S.files.filter(f => visible(f) && toks.every(t => f.path.toLowerCase().includes(t)))
     .sort((a, b) => (nameHit(b) - nameHit(a)) || a.path.localeCompare(b.path)).slice(0, 300);
   S.hitIdx = 0;
   res.textContent = '';
-  if (!S.hits.length) res.innerHTML = '<div class="row" style="padding-left:12px;color:var(--muted)">No file name matches</div>';
+  if (!S.hits.length) {
+    const outside = S.show !== 'all' && S.files.some(f => toks.every(t => f.path.toLowerCase().includes(t)));
+    res.innerHTML = '<div class="row" style="padding-left:12px;color:var(--muted)">No file name matches'
+      + (outside ? ' in this Show choice. Set Show to "all files" to find it.' : '') + '</div>';
+  }
   for (const f of S.hits) {
     const a = fileRow(f, 0);
     a.style.paddingLeft = '';
@@ -1844,7 +1857,8 @@ async function doPush() {
   toast(r.pushed === false ? r.note
     : `Pushed ${r.files ? r.files + ' file' + (r.files > 1 ? 's' : '') : 'your commits'} to GitHub (${r.commit})`
       + (r.rebased ? ', after taking in newer commits from GitHub' : '') + '.'
-      + (r.readmes && r.readmes.length ? ' The README problem list was updated too.' : ''));
+      + (r.readmes && r.readmes.length ? ' The README problem list was updated too.' : '')
+      + (!r.site ? '' : r.site.ok ? ' ' + r.site.note : ' The website copy was not updated: ' + r.site.error));
   refreshGit();
 }
 $('#pushBtn').onclick = openPush;
@@ -2601,7 +2615,7 @@ function toggleTry() {
     const gone = showTry(fileView);
     if (moving) dropDraft(c);
     toast((moving ? 'Your unsaved edit moved into this Try copy.' + (saved ? '' : ' The file is back to its original.')
-                  : 'Try: a copy to change and run freely. The file is never touched; Discard when you are done.'
+                  : 'Try: a copy to change freely; Copy takes it to your PC to run. The file is never touched; Discard when you are done.'
                     + (drafted ? ' You also have an unsaved edit on the file itself.' : ''))
           + (gone.length ? ` Only one copy at a time, so your try copy of ${gone.join(', ')} was deleted.` : ''));
     if (saved) showBanner('You saved changes to this file since you opened it. Move them into this Try copy and put the file back as it was?', [
